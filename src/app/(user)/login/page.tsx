@@ -1,8 +1,12 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
+  const router = useRouter();
+
   async function handleGoogleLogin() {
     const supabase = createClient();
     const origin = window.location.origin;
@@ -16,20 +20,29 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen px-6">
+    <div className="relative flex flex-col items-center justify-center min-h-[calc(100vh-56px)] px-6">
+      {/* 뒤로가기 */}
+      <button
+        onClick={() => router.back()}
+        className="absolute top-4 left-4 text-muted-foreground hover:text-foreground transition-colors"
+        aria-label="뒤로가기"
+      >
+        <ArrowLeft className="size-5" />
+      </button>
+
       <div className="w-full max-w-sm flex flex-col items-center gap-8">
-        {/* 로고 영역 */}
+        {/* 로고 */}
         <div className="text-center">
           <h1 className="text-3xl font-bold tracking-tight">reCree</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            크리에이터를 위한 공간
+            recreate your travel memories
           </p>
         </div>
 
-        {/* 로그인 버튼 */}
+        {/* Google 로그인 */}
         <button
           onClick={handleGoogleLogin}
-          className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl font-semibold text-black bg-[#C8FF09] hover:opacity-90 active:scale-95 transition-all"
+          className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl font-semibold text-black bg-brand hover:opacity-90 active:scale-95 transition-all"
         >
           <GoogleIcon />
           Google로 계속하기
