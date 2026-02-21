@@ -6,3 +6,335 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  USER
+  EDITOR
+  ADMIN
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum PlaceSource {
+  ADMIN
+  USER
+}
+
+enum PlaceStatus {
+  OPEN
+  CLOSED_TEMP
+  CLOSED_PERMANENT
+}
+
+enum ReCreeshotStatus {
+  ACTIVE
+  REPORTED
+  HIDDEN
+  DELETED
+}
+
+enum TopicType {
+  CATEGORY
+  GROUP
+  PERSON
+  WORK
+  SEASON
+  OTHER
+}
+
+enum TagGroup {
+  FOOD
+  SPOT
+  EXPERIENCE
+  ITEM
+  BEAUTY
+}
+
+enum SaveTarget {
+  POST
+  RECREESHOT
+}
+
+enum SectionType {
+  MANUAL
+  AUTO_NEW
+  AUTO_HOT
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model User {
+  id              String   @id @db.Uuid
+  email           String   @unique
+  nickname        String?
+  bio             String?
+  profileImageUrl String?
+  role            UserRole @default(USER)
+  language        String   @default("en")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  posts       Post[]
+  reCreeshots ReCreeshot[]
+  saves       Save[]
+}
+
+model Topic {
+  id        String    @id @default(uuid()) @db.Uuid
+  nameKo    String
+  nameEn    String
+  slug      String    @unique
+  type      TopicType
+  subtype   String?
+  level     Int       @default(0)
+  parentId  String?   @db.Uuid
+  colorHex  String?
+  isActive  Boolean   @default(true)
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  parent   Topic?  @relation("TopicHierarchy", fields: [parentId], references: [id])
+  children Topic[] @relation("TopicHierarchy")
+
+  postTopics        PostTopic[]
+  placeTopics       PlaceTopic[]
+  reCreeshotTopics  ReCreeshotTopic[]
+  curatedSections   CuratedSection[]  @relation("FilterTopic")
+}
+
+model Tag {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique
+  nameKo    String
+  slug      String   @unique
+  group     TagGroup
+  colorHex  String?
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  postTags        PostTag[]
+  placeTags       PlaceTag[]
+  reCreeshotTags  ReCreeshotTag[]
+  curatedSections CuratedSection[] @relation("FilterTag")
+}
+
+model Post {
+  id             String     @id @default(uuid()) @db.Uuid
+  titleKo        String
+  titleEn        String
+  slug           String     @unique
+  subtitleKo     String?
+  subtitleEn     String?
+  bodyKo         String?
+  bodyEn         String?
+  thumbnailUrl   String?
+  images         String[]
+  status         PostStatus @default(DRAFT)
+  source         String?
+  viewCount      Int        @default(0)
+  saveCount      Int        @default(0)
+  authorId       String?    @db.Uuid
+  translatedAt   DateTime?
+  publishedAt    DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  author      User?        @relation(fields: [authorId], references: [id])
+  postTopics  PostTopic[]
+  postTags    PostTag[]
+  postPlaces  PostPlace[]
+  homeBanners HomeBanner[]
+}
+
+model Place {
+  id             String      @id @default(uuid()) @db.Uuid
+  nameKo         String
+  nameEn         String?
+  addressKo      String?
+  addressEn      String?
+  latitude       Float?
+  longitude      Float?
+  googlePlaceId  String?     @unique
+  naverPlaceId   String?
+  phone          String?
+  operatingHours Json?
+  imageUrl       String?
+  source         PlaceSource @default(ADMIN)
+  isVerified     Boolean     @default(false)
+  status         PlaceStatus @default(OPEN)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  postPlaces   PostPlace[]
+  placeTags    PlaceTag[]
+  placeTopics  PlaceTopic[]
+  reCreeshots  ReCreeshot[]
+}
+
+model ReCreeshot {
+  id               String           @id @default(uuid()) @db.Uuid
+  userId           String           @db.Uuid
+  placeId          String?          @db.Uuid
+  linkedPostId     String?          @db.Uuid
+  imageUrl         String
+  referencePhotoUrl String?
+  story            String?
+  tips             String?
+  locationName     String?
+  locationLat      Float?
+  locationLng      Float?
+  matchScore       Float?
+  showBadge        Boolean          @default(false)
+  status           ReCreeshotStatus @default(ACTIVE)
+  saveCount        Int              @default(0)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  user            User              @relation(fields: [userId], references: [id])
+  place           Place?            @relation(fields: [placeId], references: [id])
+  reCreeshotTopics ReCreeshotTopic[]
+  reCreeshotTags   ReCreeshotTag[]
+}
+
+// ─── M:N 조인 테이블 ──────────────────────────────────────────────────────────
+
+model PostTopic {
+  postId    String   @db.Uuid
+  topicId   String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  post  Post  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@id([postId, topicId])
+}
+
+model PostTag {
+  postId    String   @db.Uuid
+  tagId     String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+}
+
+model PostPlace {
+  postId      String   @db.Uuid
+  placeId     String   @db.Uuid
+  context     String?
+  vibe        String[]
+  mustTry     String?
+  tip         String?
+  reference   String?
+  insightEn   Json?
+  createdAt   DateTime @default(now())
+
+  post  Post  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
+
+  @@id([postId, placeId])
+}
+
+model PlaceTopic {
+  placeId   String   @db.Uuid
+  topicId   String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@id([placeId, topicId])
+}
+
+model PlaceTag {
+  placeId   String   @db.Uuid
+  tagId     String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  tag   Tag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([placeId, tagId])
+}
+
+model ReCreeshotTopic {
+  reCreeshotId String   @db.Uuid
+  topicId      String   @db.Uuid
+  createdAt    DateTime @default(now())
+
+  reCreeshot ReCreeshot @relation(fields: [reCreeshotId], references: [id], onDelete: Cascade)
+  topic      Topic      @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@id([reCreeshotId, topicId])
+}
+
+model ReCreeshotTag {
+  reCreeshotId String   @db.Uuid
+  tagId        String   @db.Uuid
+  createdAt    DateTime @default(now())
+
+  reCreeshot ReCreeshot @relation(fields: [reCreeshotId], references: [id], onDelete: Cascade)
+  tag        Tag        @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([reCreeshotId, tagId])
+}
+
+// ─── 기타 모델 ────────────────────────────────────────────────────────────────
+
+model Save {
+  id         String     @id @default(uuid()) @db.Uuid
+  userId     String     @db.Uuid
+  targetType SaveTarget
+  targetId   String     @db.Uuid
+  createdAt  DateTime   @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, targetType, targetId])
+}
+
+model HomeBanner {
+  id       String  @id @default(uuid()) @db.Uuid
+  postId   String  @db.Uuid
+  order    Int     @default(0)
+  isActive Boolean @default(true)
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+}
+
+model CuratedSection {
+  id            String      @id @default(uuid()) @db.Uuid
+  titleEn       String
+  titleKo       String
+  type          SectionType @default(MANUAL)
+  postIds       String[]    @db.Uuid
+  filterTopicId String?     @db.Uuid
+  filterTagId   String?     @db.Uuid
+  maxCount      Int         @default(10)
+  order         Int         @default(0)
+  isActive      Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  filterTopic Topic? @relation("FilterTopic", fields: [filterTopicId], references: [id])
+  filterTag   Tag?   @relation("FilterTag", fields: [filterTagId], references: [id])
+}
+
+model PopularSearch {
+  id        String   @id @default(uuid()) @db.Uuid
+  keyword   String   @unique
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
