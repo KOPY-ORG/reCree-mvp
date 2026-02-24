@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Toaster } from "sonner";
 import { getCurrentUser } from "@/lib/auth";
 import { AdminSidebar } from "./_components/AdminSidebar";
 
@@ -44,6 +45,7 @@ export default async function AdminLayout({
 
   return (
     <>
+      <Toaster richColors position="top-right" />
       {/* 모바일: 데스크탑 접속 안내 */}
       <div className="flex lg:hidden h-screen items-center justify-center p-8 text-center">
         <div className="space-y-2">
