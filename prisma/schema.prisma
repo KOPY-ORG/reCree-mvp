@@ -170,6 +170,7 @@ model Place {
   latitude       Float?
   longitude      Float?
   googlePlaceId  String?     @unique
+  googleMapsUrl  String?
   naverPlaceId   String?
   phone          String?
   operatingHours Json?
