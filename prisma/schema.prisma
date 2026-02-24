@@ -38,14 +38,6 @@ enum ReCreeshotStatus {
   DELETED
 }
 
-enum TopicType {
-  CATEGORY
-  GROUP
-  PERSON
-  WORK
-  SEASON
-  OTHER
-}
 
 enum TagGroup {
   FOOD
@@ -89,12 +81,12 @@ model Topic {
   nameKo    String
   nameEn    String
   slug      String    @unique
-  type      TopicType
-  subtype   String?
   level     Int       @default(0)
   parentId  String?   @db.Uuid
   colorHex     String?
   colorHex2    String?   // 그라데이션 끝 색 (null = 단색)
+  gradientDir  String    @default("to bottom")  // 그라데이션 방향
+  gradientStop Int       @default(150)           // 그라데이션 종료 위치 (%)
   textColorHex String?
   isActive     Boolean  @default(true)
   sortOrder    Int      @default(0)
@@ -116,8 +108,9 @@ model Tag {
   nameKo    String
   slug      String   @unique
   group     TagGroup
-  colorHex     String   @default("#C6FD09")
-  textColorHex String   @default("#000000")
+  colorHex     String?   // null = 그룹 색 상속
+  colorHex2    String?   // 그라데이션 끝 색 (null = 단색)
+  textColorHex String?   // null = 그룹 색 상속
   isActive     Boolean  @default(true)
   sortOrder    Int      @default(0)
   createdAt    DateTime @default(now())
@@ -127,6 +120,17 @@ model Tag {
   placeTags       PlaceTag[]
   reCreeshotTags  ReCreeshotTag[]
   curatedSections CuratedSection[] @relation("FilterTag")
+}
+
+model TagGroupConfig {
+  group        TagGroup @id
+  nameEn       String   @default("")
+  colorHex     String   @default("#C6FD09")
+  colorHex2    String?
+  gradientDir  String   @default("to bottom")
+  gradientStop Int      @default(150)
+  textColorHex String   @default("#000000")
+  updatedAt    DateTime @updatedAt
 }
 
 model Post {

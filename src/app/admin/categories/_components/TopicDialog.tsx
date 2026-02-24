@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useTransition, useRef, useMemo } from "react";
 import { toast } from "sonner";
-import { TopicType } from "@prisma/client";
+import { ChevronDown } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -13,15 +13,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { createTopic, updateTopic, deleteTopic } from "../actions";
+import { createTopic, updateTopic, deleteTopic, checkTopicSlug } from "../actions";
 import type { TopicNode } from "./SortableTopicList";
 
 // ─── 타입 ─────────────────────────────────────────────────────────────────────
@@ -34,6 +27,8 @@ interface FlatTopic {
   parentId: string | null;
   effectiveColorHex: string;
   effectiveColorHex2: string | null;
+  effectiveGradientDir: string;
+  effectiveGradientStop: number;
   effectiveTextColorHex: string;
 }
 
@@ -42,20 +37,19 @@ interface TopicDialogProps {
   topic: TopicNode | null;           // null = 생성 모드
   defaultParentId?: string | null;   // 생성 모드일 때 preset 부모
   allTopics: FlatTopic[];
-  parentEffectiveColor: { hex: string; hex2: string | null; textHex: string } | null;
+  parentEffectiveColor: { hex: string; hex2: string | null; gradientDir: string; gradientStop: number; textHex: string } | null;
   onClose: () => void;
 }
 
 // ─── 상수 ─────────────────────────────────────────────────────────────────────
 
-const TYPE_OPTIONS: { value: TopicType; label: string }[] = [
-  { value: "CATEGORY", label: "카테고리" },
-  { value: "GROUP", label: "그룹" },
-  { value: "PERSON", label: "인물" },
-  { value: "WORK", label: "작품" },
-  { value: "SEASON", label: "시즌" },
-  { value: "OTHER", label: "기타" },
-];
+
+// ─── 자손 ID 계산 (클라이언트) ──────────────────────────────────────────────────
+
+function getDescendantIds(topicId: string, topics: FlatTopic[]): string[] {
+  const children = topics.filter((t) => t.parentId === topicId);
+  return children.flatMap((c) => [c.id, ...getDescendantIds(c.id, topics)]);
+}
 
 // ─── slug 자동 생성 ────────────────────────────────────────────────────────────
 
@@ -72,17 +66,21 @@ function ColorPreview({
   label,
   colorHex,
   colorHex2,
+  gradientDir = "to bottom",
+  gradientStop = 150,
   textColorHex,
   dimmed,
 }: {
   label: string;
   colorHex: string;
   colorHex2: string | null;
+  gradientDir?: string;
+  gradientStop?: number;
   textColorHex: string;
   dimmed?: boolean;
 }) {
   const background = colorHex2
-    ? `linear-gradient(to bottom, ${colorHex}, ${colorHex2} 150%)`
+    ? `linear-gradient(${gradientDir}, ${colorHex}, ${colorHex2} ${gradientStop}%)`
     : colorHex;
   return (
     <span
@@ -126,40 +124,252 @@ function ColorPicker({
   );
 }
 
+// ─── 깊이 유틸 ────────────────────────────────────────────────────────────────
+
+function getSubtreeDepth(topicId: string, topics: FlatTopic[]): number {
+  const children = topics.filter((t) => t.parentId === topicId);
+  if (children.length === 0) return 0;
+  return 1 + Math.max(...children.map((c) => getSubtreeDepth(c.id, topics)));
+}
+
+// allTopics는 level 오름차순 정렬 → 부모가 항상 먼저 처리됨
+function buildRootIdMap(topics: FlatTopic[]): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const t of topics) {
+    if (!t.parentId) map.set(t.id, t.id);
+    else map.set(t.id, map.get(t.parentId) ?? t.id);
+  }
+  return map;
+}
+
+// ─── ParentPicker ──────────────────────────────────────────────────────────────
+
+function ParentPicker({
+  value,
+  onChange,
+  allTopics,
+  allowedTopics,
+  rootIdMap,
+  rootTopics,
+}: {
+  value: string | null;
+  onChange: (id: string | null) => void;
+  allTopics: FlatTopic[];
+  allowedTopics: FlatTopic[];
+  rootIdMap: Map<string, string>;
+  rootTopics: FlatTopic[];
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+
+  // 외부 클릭 시 닫기
+  useEffect(() => {
+    if (!open) return;
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const selected = value ? allTopics.find((t) => t.id === value) : null;
+  const q = search.trim().toLowerCase();
+  const filtered = q
+    ? allowedTopics.filter(
+        (t) =>
+          t.nameKo.includes(search.trim()) ||
+          t.nameEn.toLowerCase().includes(q)
+      )
+    : allowedTopics;
+
+  function select(id: string | null) {
+    onChange(id);
+    setOpen(false);
+    setSearch("");
+  }
+
+  return (
+    <div className="relative" ref={ref}>
+      {/* 트리거 버튼 */}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full h-9 px-3 rounded-md border border-input bg-transparent text-sm flex items-center gap-2 text-left hover:bg-muted/30 transition-colors"
+      >
+        {selected ? (
+          <>
+            <span
+              className="w-2.5 h-2.5 rounded-full shrink-0"
+              style={{ background: selected.effectiveColorHex }}
+            />
+            <span className="flex-1 truncate">{selected.nameKo}</span>
+            <span className="text-xs text-muted-foreground shrink-0">
+              L{selected.level}
+            </span>
+          </>
+        ) : (
+          <span className="text-muted-foreground">없음 (루트 — Level 0)</span>
+        )}
+        <ChevronDown className="w-3.5 h-3.5 ml-1 shrink-0 text-muted-foreground" />
+      </button>
+
+      {/* 드롭다운 */}
+      {open && (
+        <div className="absolute z-50 left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg">
+          {/* 검색 */}
+          <div className="p-2 border-b border-border">
+            <input
+              autoFocus
+              type="text"
+              placeholder="이름으로 검색…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full px-2 py-1 text-sm bg-transparent focus:outline-none"
+            />
+          </div>
+
+          <div className="max-h-56 overflow-y-auto">
+            {/* 없음 (루트) */}
+            <button
+              type="button"
+              onClick={() => select(null)}
+              className={`w-full text-left px-3 py-2 text-sm hover:bg-muted/50 transition-colors ${
+                !value ? "bg-muted/30 font-medium" : ""
+              }`}
+            >
+              없음 (루트 — Level 0)
+            </button>
+
+            {/* 루트별 그룹 */}
+            {rootTopics.map((root) => {
+              const isRootAllowed = !!allowedTopics.find((t) => t.id === root.id);
+              const children = filtered.filter(
+                (t) => rootIdMap.get(t.id) === root.id && t.id !== root.id
+              );
+              if (!isRootAllowed && children.length === 0) return null;
+
+              return (
+                <div key={root.id}>
+                  {/* 루트 자체: 선택 가능하면 클릭 가능 */}
+                  <button
+                    type="button"
+                    disabled={!isRootAllowed}
+                    onClick={isRootAllowed ? () => select(root.id) : undefined}
+                    className={`w-full text-left px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5
+                      ${
+                        isRootAllowed
+                          ? "hover:bg-muted/50 cursor-pointer"
+                          : "cursor-default text-muted-foreground"
+                      }
+                      ${value === root.id ? "bg-muted/30" : "bg-muted/20"}`}
+                  >
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ background: root.effectiveColorHex }}
+                    />
+                    {root.nameKo}
+                    {isRootAllowed && (
+                      <span className="ml-auto font-normal text-muted-foreground">
+                        L0
+                      </span>
+                    )}
+                  </button>
+
+                  {/* 자식 항목 */}
+                  {children.map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => select(t.id)}
+                      className={`w-full text-left py-1.5 pr-3 text-sm hover:bg-muted/50 transition-colors flex items-center gap-2 ${
+                        value === t.id ? "bg-muted/30" : ""
+                      }`}
+                      style={{ paddingLeft: `${12 + t.level * 12}px` }}
+                    >
+                      <span
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ background: t.effectiveColorHex }}
+                      />
+                      <span className="truncate">{t.nameKo}</span>
+                      <span className="text-xs text-muted-foreground shrink-0">
+                        ({t.nameEn})
+                      </span>
+                      <span className="ml-auto text-xs text-muted-foreground shrink-0">
+                        L{t.level}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              );
+            })}
+
+            {filtered.length === 0 && q && (
+              <p className="px-3 py-3 text-sm text-muted-foreground text-center">
+                검색 결과 없음
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── TopicDialog ───────────────────────────────────────────────────────────────
 
 export function TopicDialog({ open, topic, defaultParentId, allTopics, parentEffectiveColor, onClose }: TopicDialogProps) {
   const isEdit = topic !== null;
   const [isPending, startTransition] = useTransition();
 
+  // ─ slug 중복 체크 상태 ─
+  const [slugDuplicate, setSlugDuplicate] = useState(false);
+  const [slugChecking, setSlugChecking] = useState(false);
+
   // ─ 폼 상태 ─
   const [nameKo, setNameKo] = useState("");
   const [nameEn, setNameEn] = useState("");
   const [slug, setSlug] = useState("");
   const [slugManual, setSlugManual] = useState(false);
-  const [type, setType] = useState<TopicType>("PERSON");
   const [parentId, setParentId] = useState<string | null>(null);
   const [inheritColor, setInheritColor] = useState(true);  // true = 부모 색 상속
   const [isGradient, setIsGradient] = useState(false);     // true = 그라데이션
   const [colorHex, setColorHex] = useState("#C6FD09");
   const [colorHex2, setColorHex2] = useState("#ffffff");   // 그라데이션 끝 색
+  const [gradientDir, setGradientDir] = useState<"to bottom" | "to right">("to bottom");
+  const [gradientStop, setGradientStop] = useState(150);
   const [textColorHex, setTextColorHex] = useState<"#000000" | "#FFFFFF">("#000000");
   const [isActive, setIsActive] = useState(true);
+
+  // slug 실시간 중복 체크
+  useEffect(() => {
+    if (!slug.trim()) { setSlugDuplicate(false); return; }
+    setSlugChecking(true);
+    const timer = setTimeout(async () => {
+      const { exists } = await checkTopicSlug(slug, topic?.id ?? undefined);
+      setSlugDuplicate(exists);
+      setSlugChecking(false);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [slug, topic?.id]);
 
   // dialog 열릴 때 초기값 설정
   useEffect(() => {
     if (open) {
+      setSlugDuplicate(false);
+      setSlugChecking(false);
       if (isEdit && topic) {
         setNameKo(topic.nameKo);
         setNameEn(topic.nameEn);
         setSlug(topic.slug ?? "");
         setSlugManual(false);
-        setType(topic.type);
         setParentId(topic.parentId);
         setInheritColor(topic.colorHex === null);
         setIsGradient(topic.colorHex2 !== null);
         setColorHex(topic.colorHex ?? parentEffectiveColor?.hex ?? "#C6FD09");
         setColorHex2(topic.colorHex2 ?? parentEffectiveColor?.hex2 ?? "#ffffff");
+        setGradientDir((topic.gradientDir as "to bottom" | "to right") ?? "to bottom");
+        setGradientStop(topic.gradientStop ?? 150);
         setTextColorHex(
           (topic.textColorHex ?? parentEffectiveColor?.textHex ?? "#000000") === "#FFFFFF"
             ? "#FFFFFF"
@@ -171,12 +381,13 @@ export function TopicDialog({ open, topic, defaultParentId, allTopics, parentEff
         setNameEn("");
         setSlug("");
         setSlugManual(false);
-        setType("PERSON");
         setParentId(defaultParentId ?? null);
         setInheritColor(true);
         setIsGradient(parentEffectiveColor?.hex2 != null);
         setColorHex(parentEffectiveColor?.hex ?? "#C6FD09");
         setColorHex2(parentEffectiveColor?.hex2 ?? "#ffffff");
+        setGradientDir((parentEffectiveColor?.gradientDir as "to bottom" | "to right") ?? "to bottom");
+        setGradientStop(parentEffectiveColor?.gradientStop ?? 150);
         setTextColorHex(
           (parentEffectiveColor?.textHex ?? "#000000") === "#FFFFFF" ? "#FFFFFF" : "#000000"
         );
@@ -204,17 +415,35 @@ export function TopicDialog({ open, topic, defaultParentId, allTopics, parentEff
     }
   }
 
+  const descendantIds = isEdit && topic ? getDescendantIds(topic.id, allTopics) : [];
+
   const parentTopic = allTopics.find((t) => t.id === parentId);
   const computedLevel = parentTopic ? parentTopic.level + 1 : 0;
   const hasChildren = isEdit && topic
     ? allTopics.some((t) => t.parentId === topic.id)
     : false;
 
+  // 깊이 제약
+  const selfSubtreeDepth = isEdit && topic ? getSubtreeDepth(topic.id, allTopics) : 0;
+  const maxAllowedParentLevel = 2 - selfSubtreeDepth;
+
+  const rootIdMap = useMemo(() => buildRootIdMap(allTopics), [allTopics]);
+  const rootTopics = useMemo(() => allTopics.filter((t) => !t.parentId), [allTopics]);
+
+  const allowedParentTopics = allTopics.filter(
+    (t) =>
+      t.id !== topic?.id &&
+      !descendantIds.includes(t.id) &&
+      t.level <= maxAllowedParentLevel
+  );
+
   // 미리보기용 현재 effective 색
   const previewHex = inheritColor ? (parentEffectiveColor?.hex ?? "#C6FD09") : colorHex;
   const previewHex2 = inheritColor
     ? (parentEffectiveColor?.hex2 ?? null)
     : (isGradient ? colorHex2 : null);
+  const previewDir = inheritColor ? (parentEffectiveColor?.gradientDir ?? "to bottom") : gradientDir;
+  const previewStop = inheritColor ? (parentEffectiveColor?.gradientStop ?? 150) : gradientStop;
   const previewText = inheritColor ? (parentEffectiveColor?.textHex ?? "#000000") : textColorHex;
 
   // ─ 제출 ─
@@ -223,15 +452,19 @@ export function TopicDialog({ open, topic, defaultParentId, allTopics, parentEff
       toast.error("이름(KO/EN)과 slug는 필수입니다.");
       return;
     }
-
+    if (slugDuplicate) {
+      toast.error("이미 사용 중인 slug입니다.");
+      return;
+    }
     const data = {
       nameKo: nameKo.trim(),
       nameEn: nameEn.trim(),
       slug: slug.trim(),
-      type,
       parentId: parentId || null,
       colorHex: inheritColor ? null : colorHex,
       colorHex2: inheritColor ? null : (isGradient ? colorHex2 : null),
+      gradientDir,
+      gradientStop,
       textColorHex: inheritColor ? null : textColorHex,
       isActive,
     };
@@ -310,49 +543,34 @@ export function TopicDialog({ open, topic, defaultParentId, allTopics, parentEff
               onChange={(e) => handleSlugChange(e.target.value)}
               placeholder="예: iu"
             />
-          </div>
-
-          {/* type */}
-          <div className="space-y-1.5">
-            <Label>타입 *</Label>
-            <Select value={type} onValueChange={(v) => setType(v as TopicType)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TYPE_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {slugChecking && <p className="text-xs text-muted-foreground mt-1">확인 중…</p>}
+            {!slugChecking && slugDuplicate && (
+              <p className="text-xs text-destructive mt-1">이미 사용 중인 slug입니다.</p>
+            )}
           </div>
 
           {/* parentId */}
           <div className="space-y-1.5">
             <Label>부모 Topic</Label>
-            <Select
-              value={parentId ?? "__none__"}
-              onValueChange={(v) => setParentId(v === "__none__" ? null : v)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="없음 (루트)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">없음 (루트 — Level 0)</SelectItem>
-                {allTopics
-                  .filter((t) => !isEdit || t.id !== topic?.id)
-                  .map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {"—".repeat(t.level)} {t.nameKo}
-                      <span className="text-muted-foreground ml-1 text-xs">
-                        ({t.nameEn})
-                      </span>
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
+            {/* 깊이 제약 경고 */}
+            {selfSubtreeDepth > 2 && (
+              <p className="text-xs text-amber-600">
+                ⚠ 이 항목의 하위 트리 깊이({selfSubtreeDepth})로 인해 루트 이외 부모를 선택할 수 없습니다.
+              </p>
+            )}
+            {selfSubtreeDepth > 0 && selfSubtreeDepth <= 2 && (
+              <p className="text-xs text-muted-foreground">
+                하위 트리 깊이({selfSubtreeDepth})로 인해 L{maxAllowedParentLevel} 이하 항목만 선택 가능합니다.
+              </p>
+            )}
+            <ParentPicker
+              value={parentId}
+              onChange={setParentId}
+              allTopics={allTopics}
+              allowedTopics={allowedParentTopics}
+              rootIdMap={rootIdMap}
+              rootTopics={rootTopics}
+            />
             <p className="text-xs text-muted-foreground">
               Level: <span className="font-medium">{computedLevel}</span>
             </p>
@@ -376,6 +594,8 @@ export function TopicDialog({ open, topic, defaultParentId, allTopics, parentEff
                   label={nameEn || "nameEn"}
                   colorHex={previewHex}
                   colorHex2={previewHex2}
+                  gradientDir={previewDir}
+                  gradientStop={previewStop}
                   textColorHex={previewText}
                   dimmed
                 />
@@ -430,6 +650,51 @@ export function TopicDialog({ open, topic, defaultParentId, allTopics, parentEff
                   )}
                 </div>
 
+                {/* 그라데이션 방향 + 범위 */}
+                {isGradient && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">방향</Label>
+                      <div className="flex gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setGradientDir("to bottom")}
+                          className={`flex-1 py-1 rounded text-xs font-medium border transition-all ${
+                            gradientDir === "to bottom"
+                              ? "bg-foreground text-background border-foreground"
+                              : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
+                          }`}
+                        >
+                          세로 ↓
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setGradientDir("to right")}
+                          className={`flex-1 py-1 rounded text-xs font-medium border transition-all ${
+                            gradientDir === "to right"
+                              ? "bg-foreground text-background border-foreground"
+                              : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
+                          }`}
+                        >
+                          가로 →
+                        </button>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">끝 위치 (%)</Label>
+                      <input
+                        type="number"
+                        min={50}
+                        max={300}
+                        step={10}
+                        value={gradientStop}
+                        onChange={(e) => setGradientStop(Number(e.target.value))}
+                        className="w-full h-8 rounded border border-border px-2 text-xs font-mono bg-transparent"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {/* 글자색 */}
                 <div className="space-y-1.5">
                   <Label className="text-xs text-muted-foreground">글자색</Label>
@@ -465,6 +730,8 @@ export function TopicDialog({ open, topic, defaultParentId, allTopics, parentEff
                     label={nameEn || "nameEn"}
                     colorHex={colorHex}
                     colorHex2={isGradient ? colorHex2 : null}
+                    gradientDir={gradientDir}
+                    gradientStop={gradientStop}
                     textColorHex={textColorHex}
                   />
                   <span className="text-sm text-muted-foreground">
