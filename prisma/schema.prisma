@@ -93,11 +93,12 @@ model Topic {
   subtype   String?
   level     Int       @default(0)
   parentId  String?   @db.Uuid
-  colorHex  String?
-  isActive  Boolean   @default(true)
-  sortOrder Int       @default(0)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  colorHex     String   @default("#C6FD09")
+  textColorHex String   @default("#000000")
+  isActive     Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   parent   Topic?  @relation("TopicHierarchy", fields: [parentId], references: [id])
   children Topic[] @relation("TopicHierarchy")
@@ -114,11 +115,12 @@ model Tag {
   nameKo    String
   slug      String   @unique
   group     TagGroup
-  colorHex  String?
-  isActive  Boolean  @default(true)
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  colorHex     String   @default("#C6FD09")
+  textColorHex String   @default("#000000")
+  isActive     Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   postTags        PostTag[]
   placeTags       PlaceTag[]
