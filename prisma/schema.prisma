@@ -177,6 +177,8 @@ model Place {
   source         PlaceSource @default(ADMIN)
   isVerified     Boolean     @default(false)
   status         PlaceStatus @default(OPEN)
+  country        String      @default("KR")
+  city           String?
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
