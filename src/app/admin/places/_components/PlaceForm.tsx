@@ -1,9 +1,20 @@
 "use client";
 
-import { useTransition, useState } from "react";
+import { useCallback, useMemo, useTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  Loader2,
+  Map,
+  MapPin,
+  RotateCcw,
+  Search,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import type { PlaceStatus, TagGroup } from "@prisma/client";
 import { Button } from "@/components/ui/button";
@@ -17,10 +28,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import {
-  PlaceSearchInput,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  PlaceSearchDialog,
   type PlaceSelectResult,
-} from "@/components/maps/PlaceSearchInput";
+} from "@/components/maps/PlaceSearchDialog";
 import { MapPreview } from "@/components/maps/MapPreview";
 import type { PlaceFormData } from "../actions";
 
@@ -38,6 +57,8 @@ export type TopicForForm = {
   nameKo: string;
   level: number;
   parentId: string | null;
+  colorHex: string | null;
+  textColorHex: string | null;
 };
 
 export type PlaceInitialData = {
@@ -97,6 +118,65 @@ const STATUS_LABELS: Record<PlaceStatus, string> = {
   CLOSED_PERMANENT: "폐업",
 };
 
+// ─── 유틸 ──────────────────────────────────────────────────────────────────────
+
+function getDescendants(
+  topicId: string,
+  allTopics: TopicForForm[],
+): TopicForForm[] {
+  const children = allTopics.filter((t) => t.parentId === topicId);
+  if (children.length === 0) return [];
+  return [
+    ...children,
+    ...children.flatMap((c) => getDescendants(c.id, allTopics)),
+  ];
+}
+
+// ─── 토픽 칩 ───────────────────────────────────────────────────────────────────
+
+interface TopicChipProps {
+  topic: TopicForForm;
+  selected: boolean;
+  onToggle: (id: string) => void;
+  showX?: boolean;
+  size?: "sm" | "md";
+}
+
+function TopicChip({
+  topic,
+  selected,
+  onToggle,
+  showX = false,
+  size = "md",
+}: TopicChipProps) {
+  const px = size === "sm" ? "px-2 py-0.5 text-xs" : "px-2.5 py-1 text-sm";
+  const style: React.CSSProperties =
+    selected && topic.colorHex
+      ? { backgroundColor: topic.colorHex, color: topic.textColorHex ?? "#fff" }
+      : selected
+        ? {
+            backgroundColor: "hsl(var(--foreground))",
+            color: "hsl(var(--background))",
+          }
+        : {};
+
+  return (
+    <button
+      type="button"
+      onClick={() => onToggle(topic.id)}
+      className={`inline-flex items-center gap-1 rounded-full border font-medium transition-colors ${px} ${
+        selected
+          ? "border-transparent"
+          : "border-border bg-background text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+      }`}
+      style={style}
+    >
+      {topic.nameKo}
+      {showX && <X className="h-3 w-3 opacity-70" />}
+    </button>
+  );
+}
+
 // ─── 컴포넌트 ──────────────────────────────────────────────────────────────────
 
 export function PlaceForm({
@@ -109,7 +189,10 @@ export function PlaceForm({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  // 폼 상태
+  const isEdit = !!initialData;
+  const pageTitle = isEdit ? "장소 수정" : "새 장소 등록";
+
+  // ── 폼 상태 ────────────────────────────────────────────────────────────────
   const [nameKo, setNameKo] = useState(initialData?.nameKo ?? "");
   const [nameEn, setNameEn] = useState(initialData?.nameEn ?? "");
   const [addressKo, setAddressKo] = useState(initialData?.addressKo ?? "");
@@ -144,10 +227,55 @@ export function PlaceForm({
   const [selectedTopicIds, setSelectedTopicIds] = useState<Set<string>>(
     new Set(initialData?.placeTopics.map((pt) => pt.topicId) ?? []),
   );
-  const [topicSearch, setTopicSearch] = useState("");
 
-  // Google Maps 장소 선택 핸들러
-  const handlePlaceSelect = (place: PlaceSelectResult) => {
+  // ── UI 상태 ────────────────────────────────────────────────────────────────
+  const [searchDialogOpen, setSearchDialogOpen] = useState(false);
+  const [mapDialogOpen, setMapDialogOpen] = useState(false);
+  const [showAddressEdit, setShowAddressEdit] = useState(false);
+
+  // 토픽 탐색 상태
+  const [topicSearch, setTopicSearch] = useState("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
+    null,
+  );
+
+  // ── 파생값 ─────────────────────────────────────────────────────────────────
+  const hasLocation =
+    !!addressKo || (latitude !== null && longitude !== null);
+
+  const rootTopics = useMemo(
+    () => allTopics.filter((t) => t.level === 0),
+    [allTopics],
+  );
+
+  const selectedTopics = useMemo(
+    () => allTopics.filter((t) => selectedTopicIds.has(t.id)),
+    [allTopics, selectedTopicIds],
+  );
+
+  const level1Sections = useMemo(() => {
+    if (!selectedCategoryId) return [];
+    return allTopics.filter((t) => t.parentId === selectedCategoryId);
+  }, [allTopics, selectedCategoryId]);
+
+  const searchResults = useMemo(() => {
+    if (!topicSearch.trim()) return [];
+    return allTopics.filter((t) => t.nameKo.includes(topicSearch));
+  }, [allTopics, topicSearch]);
+
+  const tagsByGroup = useMemo(
+    () =>
+      allTags.reduce<Partial<Record<TagGroup, TagForForm[]>>>((acc, tag) => {
+        if (!acc[tag.group]) acc[tag.group] = [];
+        acc[tag.group]!.push(tag);
+        return acc;
+      }, {}),
+    [allTags],
+  );
+
+  // ── 핸들러 ─────────────────────────────────────────────────────────────────
+
+  const handlePlaceSelect = useCallback((place: PlaceSelectResult) => {
     setNameKo(place.name);
     setAddressKo(place.address);
     if (place.nameEn) setNameEn(place.nameEn);
@@ -158,9 +286,10 @@ export function PlaceForm({
     setLatitude(place.lat);
     setLongitude(place.lng);
     setGooglePlaceId(place.googlePlaceId);
-  };
+    if (place.status) setStatus(place.status);
+    setShowAddressEdit(false);
+  }, []);
 
-  // 태그 토글
   const toggleTag = (tagId: string) => {
     setSelectedTagIds((prev) => {
       const next = new Set(prev);
@@ -170,7 +299,6 @@ export function PlaceForm({
     });
   };
 
-  // 토픽 토글
   const toggleTopic = (topicId: string) => {
     setSelectedTopicIds((prev) => {
       const next = new Set(prev);
@@ -180,8 +308,13 @@ export function PlaceForm({
     });
   };
 
-  // 폼 제출
-  const handleSubmit = (e: React.FormEvent) => {
+  const toggleCategory = (categoryId: string) => {
+    setSelectedCategoryId((prev) =>
+      prev === categoryId ? null : categoryId,
+    );
+  };
+
+  const handleSubmit = (e: { preventDefault(): void }) => {
     e.preventDefault();
 
     if (!nameKo.trim()) {
@@ -221,359 +354,615 @@ export function PlaceForm({
       if (result.error) {
         toast.error(result.error);
       } else {
-        toast.success(
-          initialData ? "장소가 수정되었습니다." : "장소가 등록되었습니다.",
-        );
+        toast.success(isEdit ? "장소가 수정되었습니다." : "장소가 등록되었습니다.");
         router.push("/admin/places");
       }
     });
   };
 
-  // 태그 그룹별 분류
-  const tagsByGroup = allTags.reduce<Partial<Record<TagGroup, TagForForm[]>>>(
-    (acc, tag) => {
-      if (!acc[tag.group]) acc[tag.group] = [];
-      acc[tag.group]!.push(tag);
-      return acc;
-    },
-    {},
-  );
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-      {/* 섹션 A: 위치 검색 */}
-      <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-          위치 검색
-        </h2>
-        <div className="rounded-lg border p-4 space-y-4">
-          <div className="space-y-1.5">
-            <Label>Google Maps 검색</Label>
-            <PlaceSearchInput
-              onSelect={handlePlaceSelect}
-              defaultValue={initialData?.nameKo ?? ""}
-              placeholder="장소명, 주소로 검색..."
-            />
-            <p className="text-xs text-muted-foreground">
-              장소를 선택하면 <strong>한국어명/주소, 영어명/주소</strong>, 좌표가 자동으로 입력됩니다.
-            </p>
-          </div>
-
-          {latitude !== null && longitude !== null && (
-            <MapPreview
-              key={`${latitude}-${longitude}`}
-              lat={latitude}
-              lng={longitude}
-              height={200}
-            />
-          )}
-        </div>
-      </section>
-
-      {/* 섹션 B: 기본 정보 */}
-      <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-          기본 정보
-        </h2>
-        <div className="rounded-lg border p-4 grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="nameKo">
-              한국어 장소명 <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="nameKo"
-              value={nameKo}
-              onChange={(e) => setNameKo(e.target.value)}
-              placeholder="예: 방탄소년단 방문 카페"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="nameEn">
-              영어 장소명 <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="nameEn"
-              value={nameEn}
-              onChange={(e) => setNameEn(e.target.value)}
-              placeholder="Google Maps 검색 시 자동 입력"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="addressKo">한국어 주소</Label>
-            <Input
-              id="addressKo"
-              value={addressKo}
-              onChange={(e) => setAddressKo(e.target.value)}
-              placeholder="예: 서울특별시 강남구 ..."
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="addressEn">영어 주소</Label>
-            <Input
-              id="addressEn"
-              value={addressEn}
-              onChange={(e) => setAddressEn(e.target.value)}
-              placeholder="Google Maps 검색 시 자동 입력"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="phone">전화번호</Label>
-            <Input
-              id="phone"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="구글 맵스 검색 시 자동 입력"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="googleMapsUrl">Google Maps 링크</Label>
-            <Input
-              id="googleMapsUrl"
-              value={googleMapsUrl}
-              onChange={(e) => setGoogleMapsUrl(e.target.value)}
-              placeholder="구글 맵스 검색 시 자동 입력"
-            />
-          </div>
-          {operatingHours.length > 0 && (
-            <div className="col-span-2 space-y-1.5">
-              <Label>영업시간</Label>
-              <div className="rounded-md border bg-muted/30 px-3 py-2 space-y-0.5">
-                {operatingHours.map((line, i) => (
-                  <p key={i} className="text-sm text-muted-foreground">
-                    {line}
-                  </p>
-                ))}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                구글 맵스에서 자동 가져옴. 수정이 필요하면 장소를 다시 검색하세요.
-              </p>
+    <>
+      <form onSubmit={handleSubmit} className="flex min-h-full flex-col">
+        {/* ── 상단 sticky 액션바 ────────────────────────────────────────────── */}
+        <div className="sticky top-0 z-40 shrink-0 border-b bg-background">
+          <div className="flex h-14 items-center justify-between px-6">
+            <div className="flex items-center gap-3">
+              <Link
+                href="/admin/places"
+                className="flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-muted"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Link>
+              <h1 className="text-base font-semibold">{pageTitle}</h1>
             </div>
-          )}
-        </div>
-      </section>
-
-      {/* 섹션 C: 위치 정보 */}
-      <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-          위치 정보
-        </h2>
-        <div className="rounded-lg border p-4 grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="country">
-              나라 <span className="text-destructive">*</span>
-            </Label>
-            <Select value={country} onValueChange={setCountry}>
-              <SelectTrigger id="country">
-                <SelectValue placeholder="나라 선택" />
-              </SelectTrigger>
-              <SelectContent>
-                {COUNTRIES.map((c) => (
-                  <SelectItem key={c.code} value={c.code}>
-                    {c.label} ({c.code})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="city">도시</Label>
-            <Input
-              id="city"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              placeholder="예: 서울, 부산"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="latitude">위도 (Latitude)</Label>
-            <Input
-              id="latitude"
-              type="number"
-              step="any"
-              value={latitude ?? ""}
-              onChange={(e) =>
-                setLatitude(e.target.value ? Number(e.target.value) : null)
-              }
-              placeholder="Google Maps 검색 시 자동 입력"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="longitude">경도 (Longitude)</Label>
-            <Input
-              id="longitude"
-              type="number"
-              step="any"
-              value={longitude ?? ""}
-              onChange={(e) =>
-                setLongitude(e.target.value ? Number(e.target.value) : null)
-              }
-              placeholder="Google Maps 검색 시 자동 입력"
-            />
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/admin/places">취소</Link>
+              </Button>
+              <Button type="submit" size="sm" disabled={isPending}>
+                {isPending && (
+                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                )}
+                {submitLabel}
+              </Button>
+            </div>
           </div>
         </div>
-      </section>
 
-      {/* 섹션 D-1: 태그 */}
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-          태그
-        </h2>
-        <div className="rounded-lg border p-4 space-y-4">
-          {Object.keys(tagsByGroup).length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              등록된 태그가 없습니다.
-            </p>
-          ) : (
-            (Object.keys(tagsByGroup) as TagGroup[]).map((group) => (
-              <div key={group} className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">
-                  {TAG_GROUP_LABELS[group] ?? group}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {tagsByGroup[group]!.map((tag) => {
-                    const checked = selectedTagIds.has(tag.id);
-                    return (
-                      <button
-                        key={tag.id}
-                        type="button"
-                        onClick={() => toggleTag(tag.id)}
-                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
-                          checked
-                            ? "border-transparent"
-                            : "border-border bg-background text-muted-foreground hover:border-foreground/30"
-                        }`}
-                        style={
-                          checked && tag.colorHex
-                            ? {
-                                backgroundColor: tag.colorHex,
-                                color: "#fff",
-                                borderColor: tag.colorHex,
-                              }
-                            : checked
-                              ? {
-                                  backgroundColor: "hsl(var(--foreground))",
-                                  color: "hsl(var(--background))",
-                                }
-                              : {}
-                        }
-                      >
-                        {tag.nameKo}
-                      </button>
-                    );
-                  })}
+        {/* ── 단일 컬럼 폼 ──────────────────────────────────────────────────── */}
+        <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-8">
+
+          {/* 카드 1: 기본 정보 */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                기본 정보
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {/* 장소명 한/영 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="nameKo">
+                    한국어 장소명 <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="nameKo"
+                    value={nameKo}
+                    onChange={(e) => setNameKo(e.target.value)}
+                    placeholder="예: 방탄소년단 방문 카페"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="nameEn">
+                    영어 장소명 <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="nameEn"
+                    value={nameEn}
+                    onChange={(e) => setNameEn(e.target.value)}
+                    placeholder="위치 검색 시 자동 입력"
+                  />
                 </div>
               </div>
-            ))
-          )}
-        </div>
-      </section>
 
-      {/* 섹션 D-2: 토픽 */}
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-          토픽
-        </h2>
-        <div className="rounded-lg border p-4 space-y-3">
-          {allTopics.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              등록된 토픽이 없습니다.
-            </p>
-          ) : (
-            <>
-              <Input
-                placeholder="토픽 검색..."
-                value={topicSearch}
-                onChange={(e) => setTopicSearch(e.target.value)}
-                className="h-8 text-sm"
-              />
-              <div className="max-h-72 overflow-y-auto flex flex-col">
-                {(topicSearch
-                  ? allTopics.filter((t) =>
-                      t.nameKo.includes(topicSearch),
-                    )
-                  : allTopics
-                ).map((topic) => {
-                  const checked = selectedTopicIds.has(topic.id);
-                  return (
-                    <label
-                      key={topic.id}
-                      className={`flex items-center gap-2 cursor-pointer rounded px-2 py-1 hover:bg-muted/50 transition-colors ${
-                        topic.level === 0
-                          ? "bg-muted/30 font-medium text-sm"
-                          : "text-sm"
-                      }`}
-                      style={
-                        !topicSearch && topic.level > 0
-                          ? { paddingLeft: `${8 + topic.level * 16}px` }
-                          : undefined
-                      }
+              <Separator />
+
+              {/* 위치 정보 영역 */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">위치 정보</Label>
+                  {hasLocation ? (
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 gap-1.5 text-xs"
+                        onClick={() => setSearchDialogOpen(true)}
+                      >
+                        <RotateCcw className="h-3 w-3" />
+                        위치 재검색
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 gap-1.5 text-xs"
+                        onClick={() => setMapDialogOpen(true)}
+                      >
+                        <Map className="h-3 w-3" />
+                        지도 보기
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 gap-1.5 text-xs"
+                        onClick={() => setShowAddressEdit((v) => !v)}
+                      >
+                        {showAddressEdit ? (
+                          <>
+                            <ChevronUp className="h-3 w-3" />
+                            접기
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="h-3 w-3" />
+                            수동 수정
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
+
+                {!hasLocation ? (
+                  /* 주소 없을 때 */
+                  <div className="flex items-center justify-center rounded-lg border border-dashed py-8">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="gap-2"
+                      onClick={() => setSearchDialogOpen(true)}
                     >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleTopic(topic.id)}
-                        className="rounded border-input shrink-0"
-                      />
-                      <span>{topic.nameKo}</span>
-                    </label>
-                  );
-                })}
+                      <Search className="h-4 w-4" />
+                      위치 검색
+                    </Button>
+                  </div>
+                ) : (
+                  /* 주소 있을 때 */
+                  <div className="space-y-2">
+                    <div className="rounded-lg border bg-muted/30 px-4 py-3 space-y-1.5">
+                      {addressKo && (
+                        <div className="flex items-start gap-2">
+                          <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                          <p className="text-sm">{addressKo}</p>
+                        </div>
+                      )}
+                      {addressEn && (
+                        <div className="flex items-start gap-2">
+                          <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
+                          <p className="text-sm text-muted-foreground">
+                            {addressEn}
+                          </p>
+                        </div>
+                      )}
+                      {(latitude !== null || longitude !== null) && (
+                        <p className="pl-5 text-xs text-muted-foreground/70">
+                          {latitude?.toFixed(6)}, {longitude?.toFixed(6)}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* 수동 수정 토글 영역 */}
+                    {showAddressEdit && (
+                      <div className="space-y-3 rounded-lg border p-4">
+                        <p className="text-xs text-muted-foreground">
+                          아래 필드를 직접 수정할 수 있습니다.
+                        </p>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="addressKo" className="text-xs">
+                            한국어 주소
+                          </Label>
+                          <Input
+                            id="addressKo"
+                            value={addressKo}
+                            onChange={(e) => setAddressKo(e.target.value)}
+                            placeholder="예: 서울특별시 강남구 ..."
+                            className="h-9 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="addressEn" className="text-xs">
+                            영어 주소
+                          </Label>
+                          <Input
+                            id="addressEn"
+                            value={addressEn}
+                            onChange={(e) => setAddressEn(e.target.value)}
+                            placeholder="위치 검색 시 자동 입력"
+                            className="h-9 text-sm"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <Label htmlFor="latitude" className="text-xs">
+                              위도 (Latitude)
+                            </Label>
+                            <Input
+                              id="latitude"
+                              type="number"
+                              step="any"
+                              value={latitude ?? ""}
+                              onChange={(e) =>
+                                setLatitude(
+                                  e.target.value
+                                    ? Number(e.target.value)
+                                    : null,
+                                )
+                              }
+                              placeholder="37.5665"
+                              className="h-9 text-sm"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="longitude" className="text-xs">
+                              경도 (Longitude)
+                            </Label>
+                            <Input
+                              id="longitude"
+                              type="number"
+                              step="any"
+                              value={longitude ?? ""}
+                              onChange={(e) =>
+                                setLongitude(
+                                  e.target.value
+                                    ? Number(e.target.value)
+                                    : null,
+                                )
+                              }
+                              placeholder="126.9780"
+                              className="h-9 text-sm"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            </>
-          )}
-        </div>
-      </section>
 
-      {/* 섹션 E: 상태 */}
-      <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-          상태
-        </h2>
-        <div className="rounded-lg border p-4 flex items-center gap-8">
-          <div className="space-y-1.5 flex-1">
-            <Label htmlFor="status">영업 상태</Label>
-            <Select
-              value={status}
-              onValueChange={(v) => setStatus(v as PlaceStatus)}
-            >
-              <SelectTrigger id="status" className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(STATUS_LABELS) as PlaceStatus[]).map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {STATUS_LABELS[s]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center gap-3">
-            <Switch
-              id="isVerified"
-              checked={isVerified}
-              onCheckedChange={setIsVerified}
-            />
-            <Label htmlFor="isVerified" className="cursor-pointer">
-              검증된 장소
-            </Label>
-          </div>
-        </div>
-      </section>
+              <Separator />
 
-      {/* 하단 액션 */}
-      <div className="flex items-center justify-between pt-2 border-t">
-        <Button variant="ghost" asChild>
-          <Link href="/admin/places">
-            <ArrowLeft className="h-4 w-4 mr-1.5" />
-            목록으로
-          </Link>
-        </Button>
-        <Button type="submit" disabled={isPending}>
-          {isPending && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
-          {submitLabel}
-        </Button>
-      </div>
-    </form>
+              {/* 나라 / 도시 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="country">
+                    나라 <span className="text-destructive">*</span>
+                  </Label>
+                  <Select value={country} onValueChange={setCountry}>
+                    <SelectTrigger id="country">
+                      <SelectValue placeholder="나라 선택" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {COUNTRIES.map((c) => (
+                        <SelectItem key={c.code} value={c.code}>
+                          {c.label} ({c.code})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="city">도시</Label>
+                  <Input
+                    id="city"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    placeholder="예: 서울, 부산"
+                  />
+                </div>
+              </div>
+
+              {/* 전화번호 / Google Maps 링크 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="phone">전화번호</Label>
+                  <Input
+                    id="phone"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="위치 검색 시 자동 입력"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="googleMapsUrl">Google Maps 링크</Label>
+                  <div className="flex gap-1.5">
+                    <Input
+                      id="googleMapsUrl"
+                      value={googleMapsUrl}
+                      onChange={(e) => setGoogleMapsUrl(e.target.value)}
+                      placeholder="위치 검색 시 자동 입력"
+                    />
+                    {googleMapsUrl && (
+                      <a
+                        href={googleMapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-10 w-10 shrink-0"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 카드 2: 운영 정보 */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                운영 정보
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-8">
+                <div className="w-48 space-y-1.5">
+                  <Label htmlFor="status">영업 상태</Label>
+                  <Select
+                    value={status}
+                    onValueChange={(v) => setStatus(v as PlaceStatus)}
+                  >
+                    <SelectTrigger id="status">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(Object.keys(STATUS_LABELS) as PlaceStatus[]).map(
+                        (s) => (
+                          <SelectItem key={s} value={s}>
+                            {STATUS_LABELS[s]}
+                          </SelectItem>
+                        ),
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-3 pt-6">
+                  <Switch
+                    id="isVerified"
+                    checked={isVerified}
+                    onCheckedChange={setIsVerified}
+                  />
+                  <Label htmlFor="isVerified" className="cursor-pointer">
+                    검증된 장소
+                  </Label>
+                </div>
+              </div>
+
+              {operatingHours.length > 0 && (
+                <div className="space-y-1.5">
+                  <Label>영업시간</Label>
+                  <div className="rounded-md border bg-muted/30 px-3 py-2 space-y-0.5">
+                    {operatingHours.map((line, i) => (
+                      <p key={i} className="text-sm text-muted-foreground">
+                        {line}
+                      </p>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    구글 맵스에서 자동으로 가져왔습니다. 수정이 필요하면 위치를 재검색하세요.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* 카드 3: 태그 */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                태그
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {Object.keys(tagsByGroup).length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  등록된 태그가 없습니다.
+                </p>
+              ) : (
+                (Object.keys(tagsByGroup) as TagGroup[]).map((group) => (
+                  <div key={group} className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      {TAG_GROUP_LABELS[group] ?? group}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {tagsByGroup[group]!.map((tag) => {
+                        const checked = selectedTagIds.has(tag.id);
+                        return (
+                          <button
+                            key={tag.id}
+                            type="button"
+                            onClick={() => toggleTag(tag.id)}
+                            className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
+                              checked
+                                ? "border-transparent"
+                                : "border-border bg-background text-muted-foreground hover:border-foreground/30"
+                            }`}
+                            style={
+                              checked && tag.colorHex
+                                ? {
+                                    backgroundColor: tag.colorHex,
+                                    color: "#fff",
+                                    borderColor: tag.colorHex,
+                                  }
+                                : checked
+                                  ? {
+                                      backgroundColor:
+                                        "hsl(var(--foreground))",
+                                      color: "hsl(var(--background))",
+                                    }
+                                  : {}
+                            }
+                          >
+                            {tag.nameKo}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          {/* 카드 4: 토픽 */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                토픽
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {allTopics.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  등록된 토픽이 없습니다.
+                </p>
+              ) : (
+                <>
+                  {/* 선택된 토픽 */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      선택됨
+                    </p>
+                    {selectedTopics.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedTopics.map((t) => (
+                          <TopicChip
+                            key={t.id}
+                            topic={t}
+                            selected
+                            onToggle={toggleTopic}
+                            showX
+                            size="sm"
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        선택된 토픽이 없습니다.
+                      </p>
+                    )}
+                  </div>
+
+                  <Separator />
+
+                  {/* 검색 */}
+                  <Input
+                    placeholder="토픽 검색..."
+                    value={topicSearch}
+                    onChange={(e) => {
+                      setTopicSearch(e.target.value);
+                      if (e.target.value) setSelectedCategoryId(null);
+                    }}
+                    className="h-8 text-sm"
+                  />
+
+                  {/* 검색 결과 */}
+                  {topicSearch ? (
+                    <div className="space-y-1.5">
+                      {searchResults.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          검색 결과가 없습니다.
+                        </p>
+                      ) : (
+                        <div className="flex flex-wrap gap-1.5">
+                          {searchResults.map((t) => (
+                            <TopicChip
+                              key={t.id}
+                              topic={t}
+                              selected={selectedTopicIds.has(t.id)}
+                              onToggle={toggleTopic}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      {/* 카테고리 필터 (level-0) */}
+                      {rootTopics.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium text-muted-foreground">
+                            카테고리
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {rootTopics.map((cat) => (
+                              <button
+                                key={cat.id}
+                                type="button"
+                                onClick={() => toggleCategory(cat.id)}
+                                className={`rounded-md border px-3 py-1.5 text-sm font-medium transition-all ${
+                                  selectedCategoryId === cat.id
+                                    ? "border-transparent bg-foreground text-background"
+                                    : "border-border bg-background text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+                                }`}
+                              >
+                                {cat.nameKo}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 카테고리 하위 토픽 */}
+                      {selectedCategoryId ? (
+                        level1Sections.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">
+                            하위 토픽이 없습니다.
+                          </p>
+                        ) : (
+                          <div className="space-y-4">
+                            {level1Sections.map((l1) => {
+                              const descendants = getDescendants(
+                                l1.id,
+                                allTopics,
+                              );
+                              return (
+                                <div key={l1.id} className="space-y-2">
+                                  <TopicChip
+                                    topic={l1}
+                                    selected={selectedTopicIds.has(l1.id)}
+                                    onToggle={toggleTopic}
+                                  />
+                                  {descendants.length > 0 && (
+                                    <div className="flex flex-wrap gap-1.5 pl-3">
+                                      {descendants.map((t) => (
+                                        <TopicChip
+                                          key={t.id}
+                                          topic={t}
+                                          selected={selectedTopicIds.has(t.id)}
+                                          onToggle={toggleTopic}
+                                        />
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )
+                      ) : (
+                        !topicSearch && (
+                          <p className="text-sm text-muted-foreground">
+                            카테고리를 선택하거나 검색해서 토픽을 추가하세요.
+                          </p>
+                        )
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </form>
+
+      {/* 위치 검색 Dialog */}
+      <PlaceSearchDialog
+        open={searchDialogOpen}
+        onOpenChange={setSearchDialogOpen}
+        onSelect={handlePlaceSelect}
+      />
+
+      {/* 지도 보기 Dialog */}
+      {latitude !== null && longitude !== null && (
+        <Dialog open={mapDialogOpen} onOpenChange={setMapDialogOpen}>
+          <DialogContent className="max-w-2xl p-0 overflow-hidden">
+            <DialogHeader className="px-6 pt-6 pb-4">
+              <DialogTitle>
+                {addressKo || "지도 보기"}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="px-6 pb-6">
+              <MapPreview
+                key={`map-${latitude}-${longitude}`}
+                lat={latitude}
+                lng={longitude}
+                height={420}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+    </>
   );
 }

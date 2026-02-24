@@ -8,6 +8,7 @@ import {
   Bookmark,
   CheckCircle,
   XCircle,
+  Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -82,9 +83,6 @@ export function PlacesTable({ places, isFiltered }: Props) {
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">
                 장소명
               </th>
-              <th className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">
-                나라/도시
-              </th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">
                 태그
               </th>
@@ -112,14 +110,14 @@ export function PlacesTable({ places, isFiltered }: Props) {
               <th className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">
                 등록일
               </th>
-              <th className="w-10 px-2 py-3" />
+              <th className="w-24 px-2 py-3" />
             </tr>
           </thead>
           <tbody>
             {places.length === 0 && (
               <tr>
                 <td
-                  colSpan={12}
+                  colSpan={11}
                   className="px-4 py-16 text-center text-sm text-muted-foreground"
                 >
                   {isFiltered
@@ -131,10 +129,7 @@ export function PlacesTable({ places, isFiltered }: Props) {
             {places.map((place) => (
               <tr
                 key={place.id}
-                onClick={() =>
-                  router.push(`/admin/places/${place.id}/edit`)
-                }
-                className="cursor-pointer hover:bg-muted/30 border-b last:border-b-0 transition-colors"
+                className="border-b last:border-b-0 transition-colors hover:bg-muted/30"
               >
                 {/* 장소명 */}
                 <td className="px-4 py-3 min-w-[160px]">
@@ -142,16 +137,6 @@ export function PlacesTable({ places, isFiltered }: Props) {
                   {place.nameEn && (
                     <div className="text-xs text-muted-foreground mt-0.5 leading-tight">
                       {place.nameEn}
-                    </div>
-                  )}
-                </td>
-
-                {/* 나라/도시 */}
-                <td className="px-4 py-3 min-w-[80px]">
-                  <div className="font-medium text-xs">{place.country}</div>
-                  {place.city && (
-                    <div className="text-xs text-muted-foreground mt-0.5">
-                      {place.city}
                     </div>
                   )}
                 </td>
@@ -264,34 +249,35 @@ export function PlacesTable({ places, isFiltered }: Props) {
                   {formatDate(place.createdAt)}
                 </td>
 
-                {/* 더보기 */}
-                <td
-                  className="px-2 py-3"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={() =>
-                          router.push(`/admin/places/${place.id}/edit`)
-                        }
-                      >
-                        수정
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="text-destructive focus:text-destructive"
-                        onClick={() => handleDelete(place.id, place.nameKo)}
-                      >
-                        삭제
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                {/* 액션 */}
+                <td className="px-2 py-3">
+                  <div className="flex items-center justify-end gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() =>
+                        router.push(`/admin/places/${place.id}/edit`)
+                      }
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => handleDelete(place.id, place.nameKo)}
+                        >
+                          삭제
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </td>
               </tr>
             ))}

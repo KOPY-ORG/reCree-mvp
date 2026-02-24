@@ -38,7 +38,14 @@ export default async function EditPlacePage({ params }: Props) {
       orderBy: [{ group: "asc" }, { sortOrder: "asc" }, { nameKo: "asc" }],
     }),
     prisma.topic.findMany({
-      select: { id: true, nameKo: true, level: true, parentId: true },
+      select: {
+        id: true,
+        nameKo: true,
+        level: true,
+        parentId: true,
+        colorHex: true,
+        textColorHex: true,
+      },
       orderBy: [{ level: "asc" }, { sortOrder: "asc" }, { nameKo: "asc" }],
     }),
   ]);
@@ -46,21 +53,15 @@ export default async function EditPlacePage({ params }: Props) {
   if (!place) notFound();
 
   return (
-    <div className="p-8 max-w-4xl">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold">장소 수정</h1>
-        <p className="text-sm text-muted-foreground mt-1">{place.nameKo}</p>
-      </div>
-      <PlaceFormWrapper
-        mode="edit"
-        placeId={place.id}
-        initialData={{
-          ...place,
-          operatingHours: (place.operatingHours as string[] | null) ?? null,
-        }}
-        allTags={allTags}
-        allTopics={allTopics}
-      />
-    </div>
+    <PlaceFormWrapper
+      mode="edit"
+      placeId={place.id}
+      initialData={{
+        ...place,
+        operatingHours: (place.operatingHours as string[] | null) ?? null,
+      }}
+      allTags={allTags}
+      allTopics={allTopics}
+    />
   );
 }
