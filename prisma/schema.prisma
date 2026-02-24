@@ -93,8 +93,9 @@ model Topic {
   subtype   String?
   level     Int       @default(0)
   parentId  String?   @db.Uuid
-  colorHex     String   @default("#C6FD09")
-  textColorHex String   @default("#000000")
+  colorHex     String?
+  colorHex2    String?   // 그라데이션 끝 색 (null = 단색)
+  textColorHex String?
   isActive     Boolean  @default(true)
   sortOrder    Int      @default(0)
   createdAt    DateTime @default(now())

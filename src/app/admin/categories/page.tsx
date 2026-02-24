@@ -1,14 +1,21 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { SortableTopicList, type TopicNode } from "./_components/SortableTopicList";
+import { type TopicNode } from "./_components/SortableTopicList";
+import { CategoriesTabContent } from "./_components/CategoriesTabContent";
+
+// ─── 색상 상속 상수 ────────────────────────────────────────────────────────────
+
+const DEFAULT_COLOR = "#C6FD09";
+const DEFAULT_TEXT = "#000000";
 
 // ─── 트리 유틸 ────────────────────────────────────────────────────────────────
 
-/** flat Topic 배열 → parentId 기준 계층 트리 변환 (sortOrder 정렬 포함) */
-function buildTree(topics: Omit<TopicNode, "children">[]): TopicNode[] {
+type RawTopic = Omit<TopicNode, "children" | "effectiveColorHex" | "effectiveColorHex2" | "effectiveTextColorHex">;
+
+function buildTree(topics: RawTopic[]): TopicNode[] {
   const map = new Map<string, TopicNode>();
   for (const t of topics) {
-    map.set(t.id, { ...t, children: [] });
+    map.set(t.id, { ...t, effectiveColorHex: "", effectiveColorHex2: null, effectiveTextColorHex: "", children: [] });
   }
 
   const roots: TopicNode[] = [];
@@ -29,40 +36,20 @@ function sortNodes(nodes: TopicNode[]) {
   for (const n of nodes) sortNodes(n.children);
 }
 
-function countDescendants(node: TopicNode): number {
-  return node.children.reduce((acc, c) => acc + 1 + countDescendants(c), 0);
-}
-
-// ─── Level 0 컬럼 ─────────────────────────────────────────────────────────────
-
-function CategoryColumn({ root }: { root: TopicNode }) {
-  const totalCount = countDescendants(root);
-
-  return (
-    <div className="border border-border rounded-xl overflow-hidden bg-background">
-      {/* 컬럼 헤더 */}
-      <div className="px-4 py-3 border-b border-border flex items-center gap-2 bg-muted/30">
-        <span className="font-bold text-sm tracking-wide">{root.nameKo}</span>
-        {root.nameEn && (
-          <span className="text-xs text-muted-foreground">{root.nameEn}</span>
-        )}
-        <span className="ml-auto text-sm font-semibold tabular-nums">
-          {totalCount}
-        </span>
-      </div>
-
-      {/* Level 1 목록 (드래그앤드롭) */}
-      <div>
-        {root.children.length === 0 ? (
-          <p className="px-4 py-3 text-sm text-muted-foreground">
-            하위 항목 없음
-          </p>
-        ) : (
-          <SortableTopicList items={root.children} level={1} />
-        )}
-      </div>
-    </div>
-  );
+// DFS로 effective color 계산 (colorHex null = 부모 상속)
+// colorHex2: colorHex가 null이면 부모로부터 상속, colorHex가 있으면 colorHex2 그대로 사용 (null=단색)
+function resolveColors(
+  nodes: TopicNode[],
+  parentHex = DEFAULT_COLOR,
+  parentHex2: string | null = null,
+  parentTextHex = DEFAULT_TEXT
+) {
+  for (const node of nodes) {
+    node.effectiveColorHex = node.colorHex ?? parentHex;
+    node.effectiveColorHex2 = node.colorHex !== null ? node.colorHex2 : parentHex2;
+    node.effectiveTextColorHex = node.textColorHex ?? parentTextHex;
+    resolveColors(node.children, node.effectiveColorHex, node.effectiveColorHex2, node.effectiveTextColorHex);
+  }
 }
 
 // ─── 페이지 ───────────────────────────────────────────────────────────────────
@@ -80,8 +67,11 @@ export default async function CategoriesPage({
       id: true,
       nameKo: true,
       nameEn: true,
+      slug: true,
       type: true,
+      subtype: true,
       colorHex: true,
+      colorHex2: true,
       textColorHex: true,
       isActive: true,
       sortOrder: true,
@@ -90,8 +80,27 @@ export default async function CategoriesPage({
     },
   });
 
-  const totalCount = rawTopics.length;
+  // 트리 빌드 후 색상 상속 계산
   const tree = buildTree(rawTopics);
+  resolveColors(tree);
+
+  // flat 목록에도 effective color 계산 (TopicDialog 부모 색 미리보기용)
+  // rawTopics는 level asc로 이미 정렬되어 있어 부모가 먼저 처리됨
+  const effectiveMap = new Map<string, { hex: string; hex2: string | null; textHex: string }>();
+  for (const t of rawTopics) {
+    const parent = t.parentId ? effectiveMap.get(t.parentId) : null;
+    const hex = t.colorHex ?? parent?.hex ?? DEFAULT_COLOR;
+    const hex2 = t.colorHex !== null ? t.colorHex2 : (parent?.hex2 ?? null);
+    const textHex = t.textColorHex ?? parent?.textHex ?? DEFAULT_TEXT;
+    effectiveMap.set(t.id, { hex, hex2, textHex });
+  }
+
+  const allTopicsWithEffective = rawTopics.map((t) => ({
+    ...t,
+    effectiveColorHex: effectiveMap.get(t.id)!.hex,
+    effectiveColorHex2: effectiveMap.get(t.id)!.hex2,
+    effectiveTextColorHex: effectiveMap.get(t.id)!.textHex,
+  }));
 
   return (
     <div className="p-8">
@@ -128,21 +137,7 @@ export default async function CategoriesPage({
       </div>
 
       {tab === "topic" && (
-        <div className="mt-6">
-          {/* 요약 stat */}
-          <p className="text-sm text-muted-foreground mb-4">
-            {tree.map((r) => r.nameKo).join(" · ")} 아티스트, 작품 분류 관리
-            &nbsp;
-            <span className="font-medium text-foreground">전체 {totalCount}</span>
-          </p>
-
-          {/* 2컬럼 그리드 */}
-          <div className="grid grid-cols-2 gap-4">
-            {tree.map((root) => (
-              <CategoryColumn key={root.id} root={root} />
-            ))}
-          </div>
-        </div>
+        <CategoriesTabContent tree={tree} allTopics={allTopicsWithEffective} />
       )}
 
       {tab === "tag" && (

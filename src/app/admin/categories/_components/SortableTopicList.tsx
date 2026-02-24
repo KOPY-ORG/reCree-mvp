@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useId, useEffect } from "react";
 import {
   DndContext,
   closestCenter,
@@ -16,7 +16,7 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical } from "lucide-react";
+import { GripVertical, Pencil, Plus } from "lucide-react";
 import { TopicType } from "@prisma/client";
 import { reorderTopics } from "../actions";
 
@@ -26,9 +26,15 @@ export interface TopicNode {
   id: string;
   nameKo: string;
   nameEn: string;
+  slug: string;
   type: TopicType;
-  colorHex: string;
-  textColorHex: string;
+  subtype: string | null;
+  colorHex: string | null;           // DB 값 (null = 부모 상속)
+  colorHex2: string | null;          // 그라데이션 끝 색 (null = 단색)
+  textColorHex: string | null;
+  effectiveColorHex: string;         // 해석된 배경 시작 색
+  effectiveColorHex2: string | null; // 해석된 그라데이션 끝 색 (null = 단색)
+  effectiveTextColorHex: string;
   isActive: boolean;
   sortOrder: number;
   parentId: string | null;
@@ -81,19 +87,56 @@ function TypeBadge({ type }: { type: TopicType }) {
 function ColorLabel({
   nameEn,
   colorHex,
+  colorHex2,
   textColorHex,
 }: {
   nameEn: string;
   colorHex: string;
+  colorHex2: string | null;
   textColorHex: string;
 }) {
+  const background = colorHex2
+    ? `linear-gradient(to bottom, ${colorHex}, ${colorHex2} 150%)`
+    : colorHex;
   return (
     <span
-      style={{ backgroundColor: colorHex, color: textColorHex }}
+      style={{ background, color: textColorHex }}
       className="px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0"
     >
       {nameEn}
     </span>
+  );
+}
+
+function EditButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      className="opacity-0 group-hover/row:opacity-100 transition-opacity p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground shrink-0"
+      aria-label="편집"
+    >
+      <Pencil className="w-3 h-3" />
+    </button>
+  );
+}
+
+function AddButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      className="opacity-0 group-hover/row:opacity-100 transition-opacity p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground shrink-0"
+      aria-label="하위 추가"
+    >
+      <Plus className="w-3 h-3" />
+    </button>
   );
 }
 
@@ -121,7 +164,7 @@ function DragHandle({
 
 // ─── Level 3 정렬 가능한 행 ───────────────────────────────────────────────────
 
-function SortableLevel3Item({ item }: { item: TopicNode }) {
+function SortableLevel3Item({ item, onEdit }: { item: TopicNode; onEdit?: (t: TopicNode) => void }) {
   const [handleHovered, setHandleHovered] = useState(false);
   const {
     attributes,
@@ -161,10 +204,12 @@ function SortableLevel3Item({ item }: { item: TopicNode }) {
         <span className="text-sm truncate min-w-0">{item.nameKo}</span>
         <ColorLabel
           nameEn={item.nameEn}
-          colorHex={item.colorHex}
-          textColorHex={item.textColorHex}
+          colorHex={item.effectiveColorHex}
+          colorHex2={item.effectiveColorHex2}
+          textColorHex={item.effectiveTextColorHex}
         />
         <TypeBadge type={item.type} />
+        {onEdit && <EditButton onClick={() => onEdit(item)} />}
       </div>
     </div>
   );
@@ -172,7 +217,7 @@ function SortableLevel3Item({ item }: { item: TopicNode }) {
 
 // ─── Level 2 정렬 가능한 행 ────────────────────────────────────────────────────
 
-function SortableLevel2Item({ item }: { item: TopicNode }) {
+function SortableLevel2Item({ item, onEdit, onAdd }: { item: TopicNode; onEdit?: (t: TopicNode) => void; onAdd?: (t: TopicNode) => void }) {
   const [handleHovered, setHandleHovered] = useState(false);
   const {
     attributes,
@@ -199,8 +244,9 @@ function SortableLevel2Item({ item }: { item: TopicNode }) {
       <span className="text-sm truncate min-w-0">{item.nameKo}</span>
       <ColorLabel
         nameEn={item.nameEn}
-        colorHex={item.colorHex}
-        textColorHex={item.textColorHex}
+        colorHex={item.effectiveColorHex}
+        colorHex2={item.effectiveColorHex2}
+        textColorHex={item.effectiveTextColorHex}
       />
       {hasChildren && (
         <span className="text-xs text-muted-foreground shrink-0 group-open/l2:hidden">
@@ -230,6 +276,8 @@ function SortableLevel2Item({ item }: { item: TopicNode }) {
         <div className="flex items-center gap-2 pl-1 pr-2 py-1.5 text-sm flex-1 min-w-0">
           <span className="w-3 shrink-0" />
           {rowContent}
+          {onAdd && <AddButton onClick={() => onAdd(item)} />}
+          {onEdit && <EditButton onClick={() => onEdit(item)} />}
         </div>
       </div>
     );
@@ -261,10 +309,12 @@ function SortableLevel2Item({ item }: { item: TopicNode }) {
             ›
           </span>
           {rowContent}
+          {onAdd && <AddButton onClick={() => onAdd(item)} />}
+          {onEdit && <EditButton onClick={() => onEdit(item)} />}
         </summary>
         {/* 자식 목록: 부모 핸들 hover 시 함께 하이라이트 */}
         <div className={highlighted ? "bg-muted/30" : ""}>
-          <SortableTopicList items={item.children} level={3} />
+          <SortableTopicList items={item.children} level={3} onEdit={onEdit} />
         </div>
       </details>
     </div>
@@ -273,7 +323,7 @@ function SortableLevel2Item({ item }: { item: TopicNode }) {
 
 // ─── Level 1 정렬 가능한 행 ────────────────────────────────────────────────────
 
-function SortableLevel1Item({ item }: { item: TopicNode }) {
+function SortableLevel1Item({ item, onEdit, onAdd }: { item: TopicNode; onEdit?: (t: TopicNode) => void; onAdd?: (t: TopicNode) => void }) {
   const [handleHovered, setHandleHovered] = useState(false);
   const {
     attributes,
@@ -321,20 +371,23 @@ function SortableLevel1Item({ item }: { item: TopicNode }) {
           <span className="font-semibold text-sm">{item.nameKo}</span>
           <ColorLabel
             nameEn={item.nameEn}
-            colorHex={item.colorHex}
-            textColorHex={item.textColorHex}
+            colorHex={item.effectiveColorHex}
+            colorHex2={item.effectiveColorHex2}
+            textColorHex={item.effectiveTextColorHex}
           />
           {hasChildren && (
             <span className="text-xs text-muted-foreground group-open/l1:hidden">
               +{item.children.length}
             </span>
           )}
+          {onAdd && <AddButton onClick={() => onAdd(item)} />}
+          {onEdit && <EditButton onClick={() => onEdit(item)} />}
         </summary>
 
         {/* 자식 목록: 부모 핸들 hover 시 함께 하이라이트 */}
         {hasChildren && (
           <div className={highlighted ? "bg-muted/30" : ""}>
-            <SortableTopicList items={item.children} level={2} />
+            <SortableTopicList items={item.children} level={2} onEdit={onEdit} onAdd={onAdd} />
           </div>
         )}
       </details>
@@ -347,12 +400,22 @@ function SortableLevel1Item({ item }: { item: TopicNode }) {
 export function SortableTopicList({
   items,
   level,
+  onEdit,
+  onAdd,
 }: {
   items: TopicNode[];
   level: 1 | 2 | 3;
+  onEdit?: (topic: TopicNode) => void;
+  onAdd?: (topic: TopicNode) => void;
 }) {
   const [orderedItems, setOrderedItems] = useState(items);
   const [, startTransition] = useTransition();
+  const dndId = useId();
+
+  // 서버에서 새 데이터가 내려오면 로컬 state 동기화
+  useEffect(() => {
+    setOrderedItems(items);
+  }, [items]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -376,6 +439,7 @@ export function SortableTopicList({
 
   return (
     <DndContext
+      id={dndId}
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}
@@ -386,9 +450,9 @@ export function SortableTopicList({
       >
         <div>
           {orderedItems.map((item) => {
-            if (level === 1) return <SortableLevel1Item key={item.id} item={item} />;
-            if (level === 2) return <SortableLevel2Item key={item.id} item={item} />;
-            return <SortableLevel3Item key={item.id} item={item} />;
+            if (level === 1) return <SortableLevel1Item key={item.id} item={item} onEdit={onEdit} onAdd={onAdd} />;
+            if (level === 2) return <SortableLevel2Item key={item.id} item={item} onEdit={onEdit} onAdd={onAdd} />;
+            return <SortableLevel3Item key={item.id} item={item} onEdit={onEdit} />;
           })}
         </div>
       </SortableContext>
