@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@prisma/client";
 import type { PlaceStatus } from "@prisma/client";
 
 export type PlaceFormData = {
@@ -27,6 +28,12 @@ export type PlaceFormData = {
 
 export async function deletePlace(id: string): Promise<{ error?: string }> {
   try {
+    const postCount = await prisma.postPlace.count({ where: { placeId: id } });
+    if (postCount > 0) {
+      return {
+        error: `이 장소를 사용 중인 포스트가 ${postCount}개 있습니다. 먼저 연결을 해제해주세요.`,
+      };
+    }
     await prisma.place.delete({ where: { id } });
     revalidatePath("/admin/places");
     return {};
@@ -54,7 +61,7 @@ export async function createPlace(
         naverMapsUrl: data.naverMapsUrl || null,
         kakaoMapsUrl: data.kakaoMapsUrl || null,
         phone: data.phone || null,
-        operatingHours: data.operatingHours?.length ? data.operatingHours : undefined,
+        operatingHours: data.operatingHours?.length ? data.operatingHours : Prisma.DbNull,
         status: data.status,
         isVerified: data.isVerified,
         placeTags: {
@@ -96,7 +103,7 @@ export async function updatePlace(
           naverMapsUrl: data.naverMapsUrl || null,
           kakaoMapsUrl: data.kakaoMapsUrl || null,
           phone: data.phone || null,
-          operatingHours: data.operatingHours?.length ? data.operatingHours : undefined,
+          operatingHours: data.operatingHours?.length ? data.operatingHours : Prisma.DbNull,
           status: data.status,
           isVerified: data.isVerified,
           placeTags: {
