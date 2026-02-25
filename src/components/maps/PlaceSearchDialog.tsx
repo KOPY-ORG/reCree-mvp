@@ -9,6 +9,7 @@ import {
   AdvancedMarker,
 } from "@vis.gl/react-google-maps";
 import type { PlaceStatus } from "@prisma/client";
+import { Romanize } from "hangul-romanize";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -122,7 +123,11 @@ function PlaceSearchContent({
         );
         if (res.ok) {
           const data = await res.json();
-          nameEn = data.displayName?.text ?? "";
+          const rawNameEn = data.displayName?.text ?? "";
+          // Google이 영문명 없이 한글 그대로 반환하는 경우 로마자 변환
+          nameEn = /[\uAC00-\uD7A3]/.test(rawNameEn)
+            ? Romanize.from(selected.displayName ?? "")
+            : rawNameEn;
           addressEn = data.formattedAddress ?? "";
           operatingHours = data.regularOpeningHours?.weekdayDescriptions ?? [];
 

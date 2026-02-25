@@ -24,6 +24,8 @@ export default async function EditPlacePage({ params }: Props) {
         longitude: true,
         googlePlaceId: true,
         googleMapsUrl: true,
+        naverMapsUrl: true,
+        kakaoMapsUrl: true,
         phone: true,
         operatingHours: true,
         status: true,

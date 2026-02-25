@@ -15,6 +15,8 @@ export type PlaceFormData = {
   longitude: number | null;
   googlePlaceId: string | null;
   googleMapsUrl: string | null;
+  naverMapsUrl: string | null;
+  kakaoMapsUrl: string | null;
   phone: string;
   operatingHours: string[] | null;
   status: PlaceStatus;
@@ -49,6 +51,8 @@ export async function createPlace(
         longitude: data.longitude,
         googlePlaceId: data.googlePlaceId || null,
         googleMapsUrl: data.googleMapsUrl || null,
+        naverMapsUrl: data.naverMapsUrl || null,
+        kakaoMapsUrl: data.kakaoMapsUrl || null,
         phone: data.phone || null,
         operatingHours: data.operatingHours?.length ? data.operatingHours : undefined,
         status: data.status,
@@ -89,6 +93,8 @@ export async function updatePlace(
           longitude: data.longitude,
           googlePlaceId: data.googlePlaceId || null,
           googleMapsUrl: data.googleMapsUrl || null,
+          naverMapsUrl: data.naverMapsUrl || null,
+          kakaoMapsUrl: data.kakaoMapsUrl || null,
           phone: data.phone || null,
           operatingHours: data.operatingHours?.length ? data.operatingHours : undefined,
           status: data.status,

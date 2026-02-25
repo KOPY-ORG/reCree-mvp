@@ -172,6 +172,8 @@ model Place {
   googlePlaceId  String?     @unique
   googleMapsUrl  String?
   naverPlaceId   String?
+  naverMapsUrl   String?
+  kakaoMapsUrl   String?
   phone          String?
   operatingHours Json?
   imageUrl       String?
