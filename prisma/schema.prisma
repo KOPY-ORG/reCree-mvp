@@ -170,13 +170,18 @@ model Place {
   latitude       Float?
   longitude      Float?
   googlePlaceId  String?     @unique
+  googleMapsUrl  String?
   naverPlaceId   String?
+  naverMapsUrl   String?
+  kakaoMapsUrl   String?
   phone          String?
   operatingHours Json?
   imageUrl       String?
   source         PlaceSource @default(ADMIN)
   isVerified     Boolean     @default(false)
   status         PlaceStatus @default(OPEN)
+  country        String      @default("KR")
+  city           String?
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
