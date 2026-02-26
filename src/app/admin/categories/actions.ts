@@ -2,7 +2,6 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { TagGroup } from "@prisma/client";
 
 /**
  * Topic 순서를 일괄 업데이트합니다.
@@ -197,7 +196,7 @@ export type TagFormData = {
   name: string;
   nameKo: string;
   slug: string;
-  group: TagGroup;
+  group: string;
   colorHex: string | null;      // null = 그룹 색 상속
   colorHex2: string | null;
   textColorHex: string | null;  // null = 그룹 색 상속
@@ -222,7 +221,20 @@ export async function reorderTags(orderedIds: string[]) {
   revalidatePath("/admin/categories");
 }
 
-export async function createTag(data: TagFormData): Promise<{ error?: string }> {
+export type TagSavedData = {
+  id: string;
+  name: string;
+  nameKo: string;
+  slug: string;
+  group: string;
+  colorHex: string | null;
+  colorHex2: string | null;
+  textColorHex: string | null;
+  isActive: boolean;
+  sortOrder: number;
+};
+
+export async function createTag(data: TagFormData): Promise<{ error?: string; created?: TagSavedData }> {
   try {
     const siblings = await prisma.tag.findMany({
       where: { group: data.group },
@@ -232,7 +244,7 @@ export async function createTag(data: TagFormData): Promise<{ error?: string }> 
     });
     const nextSortOrder = siblings.length > 0 ? siblings[0].sortOrder + 1 : 0;
 
-    await prisma.tag.create({
+    const created = await prisma.tag.create({
       data: {
         name: data.name,
         nameKo: data.nameKo,
@@ -244,10 +256,11 @@ export async function createTag(data: TagFormData): Promise<{ error?: string }> 
         isActive: data.isActive,
         sortOrder: nextSortOrder,
       },
+      select: { id: true, name: true, nameKo: true, slug: true, group: true, colorHex: true, colorHex2: true, textColorHex: true, isActive: true, sortOrder: true },
     });
 
     revalidatePath("/admin/categories");
-    return {};
+    return { created };
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     if (msg.includes("Unique constraint") && msg.includes("slug")) {
@@ -260,9 +273,9 @@ export async function createTag(data: TagFormData): Promise<{ error?: string }> 
   }
 }
 
-export async function updateTag(id: string, data: TagFormData): Promise<{ error?: string }> {
+export async function updateTag(id: string, data: TagFormData): Promise<{ error?: string; updated?: TagSavedData }> {
   try {
-    await prisma.tag.update({
+    const updated = await prisma.tag.update({
       where: { id },
       data: {
         name: data.name,
@@ -274,10 +287,11 @@ export async function updateTag(id: string, data: TagFormData): Promise<{ error?
         textColorHex: data.textColorHex,
         isActive: data.isActive,
       },
+      select: { id: true, name: true, nameKo: true, slug: true, group: true, colorHex: true, colorHex2: true, textColorHex: true, isActive: true, sortOrder: true },
     });
 
     revalidatePath("/admin/categories");
-    return {};
+    return { updated };
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     if (msg.includes("Unique constraint") && msg.includes("slug")) {
@@ -324,19 +338,86 @@ export async function checkTagSlug(
   return { exists: count > 0 };
 }
 
+export type TagGroupConfigData = {
+  group: string;
+  nameEn: string;
+  colorHex: string;
+  colorHex2: string | null;
+  gradientDir: string;
+  gradientStop: number;
+  textColorHex: string;
+  sortOrder: number;
+};
+
 export async function upsertTagGroupConfig(
-  group: TagGroup,
+  group: string,
   data: TagGroupConfigFormData
-): Promise<{ error?: string }> {
+): Promise<{ error?: string; updated?: TagGroupConfigData }> {
   try {
-    await prisma.tagGroupConfig.upsert({
+    const updated = await prisma.tagGroupConfig.upsert({
       where: { group },
       update: { nameEn: data.nameEn, colorHex: data.colorHex, colorHex2: data.colorHex2, gradientDir: data.gradientDir, gradientStop: data.gradientStop, textColorHex: data.textColorHex },
       create: { group, nameEn: data.nameEn, colorHex: data.colorHex, colorHex2: data.colorHex2, gradientDir: data.gradientDir, gradientStop: data.gradientStop, textColorHex: data.textColorHex },
+      select: { group: true, nameEn: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true, sortOrder: true },
     });
+    revalidatePath("/admin/categories");
+    return { updated };
+  } catch {
+    return { error: "저장 중 오류가 발생했습니다." };
+  }
+}
+
+export async function reorderTagGroups(orderedGroups: string[]): Promise<void> {
+  await prisma.$transaction(
+    orderedGroups.map((group, index) =>
+      prisma.tagGroupConfig.update({ where: { group }, data: { sortOrder: index } })
+    )
+  );
+  revalidatePath("/admin/categories");
+}
+
+export type TagGroupConfigCreated = {
+  group: string;
+  nameEn: string;
+  colorHex: string;
+  colorHex2: string | null;
+  gradientDir: string;
+  gradientStop: number;
+  textColorHex: string;
+  sortOrder: number;
+};
+
+export async function createTagGroup(
+  data: TagGroupConfigFormData
+): Promise<{ error?: string; created?: TagGroupConfigCreated }> {
+  const group = data.nameEn.trim().toUpperCase().replace(/\W+/g, "_");
+  if (!group) return { error: "그룹 이름(영어)을 입력해주세요." };
+  try {
+    const existing = await prisma.tagGroupConfig.findUnique({ where: { group } });
+    if (existing) return { error: `이미 존재하는 그룹 키입니다: ${group}` };
+    const last = await prisma.tagGroupConfig.findFirst({ orderBy: { sortOrder: "desc" }, select: { sortOrder: true } });
+    const sortOrder = (last?.sortOrder ?? -1) + 1;
+    const created = await prisma.tagGroupConfig.create({
+      data: { group, nameEn: data.nameEn.trim(), colorHex: data.colorHex, colorHex2: data.colorHex2, gradientDir: data.gradientDir, gradientStop: data.gradientStop, textColorHex: data.textColorHex, sortOrder },
+      select: { group: true, nameEn: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true, sortOrder: true },
+    });
+    revalidatePath("/admin/categories");
+    return { created };
+  } catch {
+    return { error: "그룹 생성 중 오류가 발생했습니다." };
+  }
+}
+
+export async function deleteTagGroup(group: string): Promise<{ error?: string }> {
+  try {
+    const tagCount = await prisma.tag.count({ where: { group } });
+    if (tagCount > 0) {
+      return { error: `해당 그룹에 태그가 ${tagCount}개 있어 삭제할 수 없습니다. 먼저 태그를 삭제해주세요.` };
+    }
+    await prisma.tagGroupConfig.delete({ where: { group } });
     revalidatePath("/admin/categories");
     return {};
   } catch {
-    return { error: "저장 중 오류가 발생했습니다." };
+    return { error: "그룹 삭제 중 오류가 발생했습니다." };
   }
 }

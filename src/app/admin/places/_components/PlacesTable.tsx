@@ -100,10 +100,10 @@ export function PlacesTable({ places, isFiltered }: Props) {
 
   return (
     <>
-      <div className="mt-6 border rounded-lg overflow-hidden">
+      <div className="mt-6 rounded-xl overflow-hidden shadow-sm bg-white">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-muted/50 border-b">
+            <thead className="bg-zinc-50 border-b border-zinc-100">
               <tr>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">
                   장소명
@@ -154,7 +154,7 @@ export function PlacesTable({ places, isFiltered }: Props) {
               {places.map((place) => (
                 <tr
                   key={place.id}
-                  className="border-b last:border-b-0 transition-colors hover:bg-muted/30"
+                  className="border-b border-zinc-100 last:border-b-0 transition-colors hover:bg-zinc-50"
                 >
                   {/* 장소명 */}
                   <td className="px-4 py-3 min-w-[160px]">

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useTransition } from "react";
 import { toast } from "sonner";
-import { TagGroup } from "@prisma/client";
 import {
   Dialog,
   DialogContent,
@@ -21,18 +20,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { createTag, updateTag, deleteTag, checkTagSlug } from "../actions";
+import { createTag, updateTag, deleteTag, checkTagSlug, type TagSavedData } from "../actions";
 import type { TagItem } from "./SortableTagList";
-
-// ─── 상수 ─────────────────────────────────────────────────────────────────────
-
-const GROUP_OPTIONS: { value: TagGroup; label: string }[] = [
-  { value: "FOOD", label: "음식" },
-  { value: "SPOT", label: "장소" },
-  { value: "EXPERIENCE", label: "경험" },
-  { value: "ITEM", label: "아이템" },
-  { value: "BEAUTY", label: "뷰티" },
-];
 
 // ─── slug 자동 생성 ────────────────────────────────────────────────────────────
 
@@ -48,13 +37,16 @@ function generateSlug(name: string): string {
 interface TagDialogProps {
   open: boolean;
   tag: TagItem | null;
-  defaultGroup?: TagGroup | null;
+  defaultGroup?: string | null;
+  groupOptions: { value: string; label: string }[];
   onClose: () => void;
+  onSaved?: (data: TagSavedData) => void;
+  onDeleted?: (id: string) => void;
 }
 
 // ─── TagDialog ─────────────────────────────────────────────────────────────────
 
-export function TagDialog({ open, tag, defaultGroup, onClose }: TagDialogProps) {
+export function TagDialog({ open, tag, defaultGroup, groupOptions, onClose, onSaved, onDeleted }: TagDialogProps) {
   const isEdit = tag !== null;
   const [isPending, startTransition] = useTransition();
 
@@ -64,7 +56,7 @@ export function TagDialog({ open, tag, defaultGroup, onClose }: TagDialogProps) 
   const [slugManual, setSlugManual] = useState(false);
   const [slugDuplicate, setSlugDuplicate] = useState(false);
   const [slugChecking, setSlugChecking] = useState(false);
-  const [group, setGroup] = useState<TagGroup>("FOOD");
+  const [group, setGroup] = useState<string>("");
   const [isActive, setIsActive] = useState(true);
 
   // slug 실시간 중복 체크
@@ -95,11 +87,11 @@ export function TagDialog({ open, tag, defaultGroup, onClose }: TagDialogProps) 
         setNameKo("");
         setSlug("");
         setSlugManual(false);
-        setGroup(defaultGroup ?? "FOOD");
+        setGroup(defaultGroup ?? groupOptions[0]?.value ?? "");
         setIsActive(true);
       }
     }
-  }, [open, isEdit, tag, defaultGroup]);
+  }, [open, isEdit, tag, defaultGroup, groupOptions]);
 
   function handleNameChange(val: string) {
     setName(val);
@@ -126,22 +118,31 @@ export function TagDialog({ open, tag, defaultGroup, onClose }: TagDialogProps) 
       nameKo: nameKo.trim(),
       slug: slug.trim(),
       group,
-      colorHex: null,      // 항상 그룹 색 사용
-      colorHex2: null,
-      textColorHex: null,
+      colorHex: null as string | null,
+      colorHex2: null as string | null,
+      textColorHex: null as string | null,
       isActive,
     };
 
     startTransition(async () => {
-      const result = isEdit
-        ? await updateTag(tag!.id, data)
-        : await createTag(data);
-
-      if (result.error) {
-        toast.error(result.error);
+      if (isEdit) {
+        const result = await updateTag(tag!.id, data);
+        if (result.error) {
+          toast.error(result.error);
+        } else {
+          if (result.updated) onSaved?.(result.updated);
+          toast.success("수정되었습니다.");
+          onClose();
+        }
       } else {
-        toast.success(isEdit ? "수정되었습니다." : "생성되었습니다.");
-        onClose();
+        const result = await createTag(data);
+        if (result.error) {
+          toast.error(result.error);
+        } else {
+          if (result.created) onSaved?.(result.created);
+          toast.success("생성되었습니다.");
+          onClose();
+        }
       }
     });
   }
@@ -155,6 +156,7 @@ export function TagDialog({ open, tag, defaultGroup, onClose }: TagDialogProps) 
       if (result.error) {
         toast.error(result.error);
       } else {
+        onDeleted?.(tag.id);
         toast.success("삭제되었습니다.");
         onClose();
       }
@@ -214,12 +216,12 @@ export function TagDialog({ open, tag, defaultGroup, onClose }: TagDialogProps) 
           {/* group */}
           <div className="space-y-1.5">
             <Label>그룹 *</Label>
-            <Select value={group} onValueChange={(v) => setGroup(v as TagGroup)}>
+            <Select value={group} onValueChange={setGroup}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {GROUP_OPTIONS.map((opt) => (
+                {groupOptions.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>
                     {opt.label}
                   </SelectItem>

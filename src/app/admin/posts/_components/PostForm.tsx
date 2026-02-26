@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import type { PostStatus, TagGroup } from "@prisma/client";
+import type { PostStatus } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,7 +45,7 @@ const MDEditor = dynamic(() => import("@uiw/react-md-editor"), { ssr: false });
 export type TagForForm = {
   id: string;
   nameKo: string;
-  group: TagGroup;
+  group: string;
   colorHex: string | null;
 };
 
@@ -101,21 +101,6 @@ interface PostFormProps {
 
 // ─── 상수 ──────────────────────────────────────────────────────────────────────
 
-const TAG_GROUP_LABELS: Record<TagGroup, string> = {
-  FOOD: "음식",
-  SPOT: "스팟",
-  EXPERIENCE: "체험",
-  ITEM: "아이템",
-  BEAUTY: "뷰티",
-};
-
-const TAG_GROUPS_ORDER: TagGroup[] = [
-  "FOOD",
-  "SPOT",
-  "EXPERIENCE",
-  "ITEM",
-  "BEAUTY",
-];
 
 // ─── 유틸 ──────────────────────────────────────────────────────────────────────
 
@@ -273,15 +258,15 @@ export function PostForm({
   }, [allTopics, topicSearch]);
   const tagsByGroup = useMemo(
     () =>
-      allTags.reduce<Partial<Record<TagGroup, TagForForm[]>>>((acc, tag) => {
+      allTags.reduce<Record<string, TagForForm[]>>((acc, tag) => {
         if (!acc[tag.group]) acc[tag.group] = [];
-        acc[tag.group]!.push(tag);
+        acc[tag.group].push(tag);
         return acc;
       }, {}),
     [allTags],
   );
   const groupsWithTags = useMemo(
-    () => TAG_GROUPS_ORDER.filter((g) => (tagsByGroup[g]?.length ?? 0) > 0),
+    () => Object.keys(tagsByGroup).filter((g) => (tagsByGroup[g]?.length ?? 0) > 0),
     [tagsByGroup],
   );
 
@@ -1007,7 +992,7 @@ export function PostForm({
                         >
                           <div className="mb-2 flex items-center justify-between">
                             <p className="text-xs font-semibold text-muted-foreground">
-                              {TAG_GROUP_LABELS[group]}
+                              {group}
                             </p>
                             {(() => {
                               const count =

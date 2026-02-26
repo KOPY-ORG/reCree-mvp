@@ -84,7 +84,7 @@ export default async function PostsPage({
             K-콘텐츠 포스트 관리
           </p>
         </div>
-        <Button asChild>
+        <Button asChild className="rounded-xl">
           <Link href="/admin/posts/new">
             <Plus className="h-4 w-4 mr-1.5" />
             새 포스트

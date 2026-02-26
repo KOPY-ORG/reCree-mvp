@@ -41,14 +41,6 @@ enum ReCreeshotStatus {
 }
 
 
-enum TagGroup {
-  FOOD
-  SPOT
-  EXPERIENCE
-  ITEM
-  BEAUTY
-}
-
 enum SaveTarget {
   POST
   RECREESHOT
@@ -109,7 +101,7 @@ model Tag {
   name      String   @unique
   nameKo    String
   slug      String   @unique
-  group     TagGroup
+  group     String
   colorHex     String?   // null = 그룹 색 상속
   colorHex2    String?   // 그라데이션 끝 색 (null = 단색)
   textColorHex String?   // null = 그룹 색 상속
@@ -125,13 +117,14 @@ model Tag {
 }
 
 model TagGroupConfig {
-  group        TagGroup @id
+  group        String   @id
   nameEn       String   @default("")
   colorHex     String   @default("#C6FD09")
   colorHex2    String?
   gradientDir  String   @default("to bottom")
   gradientStop Int      @default(150)
   textColorHex String   @default("#000000")
+  sortOrder    Int      @default(0)
   updatedAt    DateTime @updatedAt
 }
 

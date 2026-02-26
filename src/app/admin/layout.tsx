@@ -59,7 +59,7 @@ export default async function AdminLayout({
       {/* 데스크탑: 사이드바 + 콘텐츠 */}
       <div className="hidden lg:flex h-screen overflow-hidden">
         <AdminSidebar userEmail={user.email} userInitial={userInitial} />
-        <main className="flex-1 overflow-y-auto bg-muted/30">
+        <main className="flex-1 overflow-y-auto bg-zinc-100">
           {children}
         </main>
       </div>

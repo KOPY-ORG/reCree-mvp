@@ -35,10 +35,10 @@ export function ImportPreviewTable({
   const someSelected = selectableRows.some((r) => selectedIds.has(r.rowId));
 
   return (
-    <div className="border rounded-lg overflow-hidden">
+    <div className="mt-6 rounded-xl overflow-hidden shadow-sm bg-white">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-muted/50 border-b">
+          <thead className="bg-zinc-50 border-b border-zinc-100">
             <tr>
               <th className="px-4 py-3 w-10">
                 <Checkbox
@@ -50,19 +50,19 @@ export function ImportPreviewTable({
                   }
                 />
               </th>
-              <th className="text-left px-4 py-3 font-medium text-muted-foreground">
+              <th className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">
                 장소
               </th>
-              <th className="text-left px-4 py-3 font-medium text-muted-foreground">
+              <th className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">
                 제목
               </th>
-              <th className="text-left px-4 py-3 font-medium text-muted-foreground">
+              <th className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">
                 출처
               </th>
-              <th className="text-left px-4 py-3 font-medium text-muted-foreground">
+              <th className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">
                 카테고리
               </th>
-              <th className="text-left px-4 py-3 font-medium text-muted-foreground">
+              <th className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">
                 상태
               </th>
             </tr>
@@ -71,10 +71,10 @@ export function ImportPreviewTable({
             {rows.map((row) => (
               <tr
                 key={row.rowId}
-                className={`border-b last:border-b-0 transition-colors ${
+                className={`border-b border-zinc-100 last:border-b-0 transition-colors ${
                   row.isDuplicate
                     ? "opacity-40"
-                    : "hover:bg-muted/30 cursor-pointer"
+                    : "hover:bg-zinc-50 cursor-pointer"
                 }`}
                 onClick={() => {
                   if (!row.isDuplicate) onToggle(row.rowId);
@@ -95,7 +95,7 @@ export function ImportPreviewTable({
 
                 {/* 장소 */}
                 <td className="px-4 py-3 min-w-[140px]">
-                  <div className="font-medium">{row.placeName || "—"}</div>
+                  <div className="font-medium leading-tight">{row.placeName || "—"}</div>
                   {row.googleMapsLink && (
                     <a
                       href={row.googleMapsLink}
@@ -111,16 +111,16 @@ export function ImportPreviewTable({
                 </td>
 
                 {/* 제목 */}
-                <td className="px-4 py-3 min-w-[180px]">
+                <td className="px-4 py-3 min-w-[200px]">
                   {row.title ? (
-                    <span>{row.title}</span>
+                    <div className="font-medium leading-tight">{row.title}</div>
                   ) : (
                     <span className="text-muted-foreground/50 text-xs">
                       [AI 생성 예정]
                     </span>
                   )}
                   {row.subTitle && (
-                    <div className="text-xs text-muted-foreground mt-0.5 truncate max-w-[220px]">
+                    <div className="text-xs text-muted-foreground mt-0.5 truncate max-w-[240px]">
                       {row.subTitle}
                     </div>
                   )}
@@ -130,7 +130,7 @@ export function ImportPreviewTable({
                 <td className="px-4 py-3 min-w-[120px]">
                   <div className="flex items-center gap-1">
                     {row.sourceType && (
-                      <span className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                      <span className="text-xs bg-zinc-100 text-zinc-600 px-1.5 py-0.5 rounded font-medium">
                         {SOURCE_TYPE_LABELS[row.sourceType] ?? row.sourceType}
                       </span>
                     )}
@@ -154,10 +154,12 @@ export function ImportPreviewTable({
                 </td>
 
                 {/* 카테고리 */}
-                <td className="px-4 py-3">
-                  <div className="text-xs text-muted-foreground">
-                    {row.category || "—"}
-                  </div>
+                <td className="px-4 py-3 min-w-[120px]">
+                  {row.category ? (
+                    <div className="text-xs text-muted-foreground">{row.category}</div>
+                  ) : (
+                    <span className="text-muted-foreground/40 text-xs">—</span>
+                  )}
                   {row.artistWork && (
                     <div className="text-xs text-muted-foreground/70 mt-0.5 truncate max-w-[120px]">
                       {row.artistWork}
@@ -168,7 +170,7 @@ export function ImportPreviewTable({
                 {/* 상태 */}
                 <td className="px-4 py-3">
                   {row.isDuplicate ? (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-zinc-100 text-zinc-500">
                       중복
                     </span>
                   ) : (

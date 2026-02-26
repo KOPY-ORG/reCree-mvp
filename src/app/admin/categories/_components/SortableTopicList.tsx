@@ -176,7 +176,7 @@ function SortableLevel3Item({ item, onEdit, hideInactive }: { item: TopicNode; o
         {...listeners}
         {...attributes}
       />
-      <div className="flex items-center gap-2 pl-1 pr-2 py-1.5 text-sm flex-1 min-w-0">
+      <div className="flex items-center gap-2.5 pl-1 pr-3 py-2.5 text-sm flex-1 min-w-0">
         <span className="w-3 shrink-0" />
         <ActiveDot isActive={item.isActive} />
         <span className="text-sm truncate min-w-0">{item.nameKo}</span>
@@ -254,7 +254,7 @@ function SortableLevel2Item({ item, onEdit, onAdd, hideInactive, forceOpen }: { 
           {...listeners}
           {...attributes}
         />
-        <div className="flex items-center gap-2 pl-1 pr-2 py-1.5 text-sm flex-1 min-w-0">
+        <div className="flex items-center gap-2.5 pl-1 pr-3 py-2.5 text-sm flex-1 min-w-0">
           <span className="w-3 shrink-0" />
           {rowContent}
           {onAdd && <AddButton onClick={() => onAdd(item)} />}
@@ -282,7 +282,7 @@ function SortableLevel2Item({ item, onEdit, onAdd, hideInactive, forceOpen }: { 
       {/* details 아코디언: 핸들과 분리되어 클릭 이벤트 충돌 없음 */}
       <details className="group/l2 flex-1 min-w-0" open={forceOpen || undefined}>
         <summary
-          className={`list-none flex items-center gap-2 pl-1 pr-2 py-1.5 cursor-pointer text-sm transition-colors ${
+          className={`list-none flex items-center gap-2.5 pl-1 pr-3 py-2.5 cursor-pointer text-sm transition-colors ${
             highlighted ? "" : "hover:bg-muted/50"
           }`}
         >
@@ -343,7 +343,7 @@ function SortableLevel1Item({ item, onEdit, onAdd, hideInactive, forceOpen }: { 
       />
       <details className="group/l1 flex-1 min-w-0" open={forceOpen || undefined}>
         <summary
-          className={`list-none flex items-center gap-2 pl-1 pr-2 py-2.5 cursor-pointer transition-colors ${
+          className={`list-none flex items-center gap-2.5 pl-1 pr-3 py-2.5 cursor-pointer transition-colors ${
             highlighted ? "" : "hover:bg-muted/50"
           }`}
         >
@@ -417,6 +417,8 @@ export function SortableTopicList({
 
     const oldIndex = orderedItems.findIndex((i) => i.id === active.id);
     const newIndex = orderedItems.findIndex((i) => i.id === over.id);
+    // 중첩 DnD 컨텍스트 버블링 방어: 이 목록에 없는 id면 무시
+    if (oldIndex === -1 || newIndex === -1) return;
     const next = arrayMove(orderedItems, oldIndex, newIndex);
 
     setOrderedItems(next);
