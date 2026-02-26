@@ -76,14 +76,22 @@ export function PostsTable({ posts, isFiltered }: Props) {
 
   const handlePublishToggle = (post: PostRow) => {
     startTransition(async () => {
-      const fn = post.status === "PUBLISHED" ? unpublishPost : publishPost;
-      const result = await fn(post.id);
-      if (result.error) {
-        toast.error(result.error);
+      if (post.status === "PUBLISHED") {
+        const result = await unpublishPost(post.id);
+        if (result.error) {
+          toast.error(result.error);
+        } else {
+          toast.success("발행이 취소되었습니다.");
+        }
       } else {
-        toast.success(
-          post.status === "PUBLISHED" ? "발행이 취소되었습니다." : "발행되었습니다.",
-        );
+        const result = await publishPost(post.id);
+        if (result.error) {
+          toast.error(result.error);
+        } else if (result.missing && result.missing.length > 0) {
+          toast.error(`발행 불가: ${result.missing.join(", ")} 필요`);
+        } else {
+          toast.success("발행되었습니다.");
+        }
       }
     });
   };

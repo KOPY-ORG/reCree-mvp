@@ -427,6 +427,20 @@ export function PostForm({
       return;
     }
 
+    // 발행 시 추가 필수 항목 클라이언트 체크
+    if (finalStatus === "PUBLISHED") {
+      const missing: string[] = [];
+      if (!titleKo.trim()) missing.push("한국어 제목");
+      if (!titleEn.trim()) missing.push("영어 제목");
+      if (selectedTopicIds.size === 0) missing.push("토픽 1개 이상");
+      if (!thumbnailUrl.trim()) missing.push("썸네일 이미지");
+      if (!contextKo.trim()) missing.push("Spot Insight 소개글");
+      if (missing.length > 0) {
+        toast.error(`발행 불가: ${missing.join(", ")} 필요`);
+        return;
+      }
+    }
+
     const spotInsight: SpotInsightData | null = selectedPlaceId
       ? {
           placeId: selectedPlaceId,

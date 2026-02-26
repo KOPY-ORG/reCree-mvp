@@ -208,8 +208,29 @@ export async function deletePost(id: string): Promise<{ error?: string }> {
 
 // ─── 발행 / 발행취소 ────────────────────────────────────────────────────────────
 
-export async function publishPost(id: string): Promise<{ error?: string }> {
+export async function publishPost(
+  id: string,
+): Promise<{ error?: string; missing?: string[] }> {
   try {
+    const post = await prisma.post.findUnique({
+      where: { id },
+      include: {
+        postTopics: true,
+        postPlaces: true,
+      },
+    });
+
+    if (!post) return { error: "포스트를 찾을 수 없습니다." };
+
+    const missing: string[] = [];
+    if (!post.titleKo?.trim()) missing.push("한국어 제목");
+    if (!post.titleEn?.trim()) missing.push("영어 제목");
+    if (post.postTopics.length === 0) missing.push("토픽 1개 이상");
+    if (!post.thumbnailUrl) missing.push("썸네일 이미지");
+    if (!post.postPlaces[0]?.context) missing.push("Spot Insight 소개글");
+
+    if (missing.length > 0) return { missing };
+
     await prisma.post.update({
       where: { id },
       data: { status: "PUBLISHED", publishedAt: new Date() },
