@@ -74,6 +74,8 @@ export function PostsFilters({ currentSearch, currentStatus }: Props) {
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">전체 상태</SelectItem>
+          <SelectItem value="IMPORTED">가져옴</SelectItem>
+          <SelectItem value="AI_DRAFTED">AI 초안</SelectItem>
           <SelectItem value="DRAFT">임시저장</SelectItem>
           <SelectItem value="PUBLISHED">발행됨</SelectItem>
         </SelectContent>

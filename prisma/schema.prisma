@@ -16,8 +16,10 @@ enum UserRole {
 }
 
 enum PostStatus {
-  DRAFT
-  PUBLISHED
+  IMPORTED    // 시트에서 가져온 직후
+  AI_DRAFTED  // Gemini 초안 생성 완료
+  DRAFT       // 관리자 편집 중
+  PUBLISHED   // 사용자에게 노출
 }
 
 enum PlaceSource {
@@ -146,6 +148,10 @@ model Post {
   images         String[]
   status         PostStatus @default(DRAFT)
   source         String?
+  importNote     String?   // 시트 원본 데이터 (JSON 문자열)
+  sourceUrl      String?   // 출처 URL
+  sourceType     String?   // INSTAGRAM|YOUTUBE|TIKTOK|X|REDDIT|BLOG|NEWS|OTHER
+  sourceNote     String?   // 출처 메모
   viewCount      Int        @default(0)
   saveCount      Int        @default(0)
   authorId       String?    @db.Uuid
@@ -176,6 +182,7 @@ model Place {
   kakaoMapsUrl   String?
   phone          String?
   operatingHours Json?
+  rating         Float?    // Google Maps 평점
   imageUrl       String?
   source         PlaceSource @default(ADMIN)
   isVerified     Boolean     @default(false)
