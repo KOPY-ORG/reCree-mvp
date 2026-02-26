@@ -7,6 +7,7 @@ import {
   FileText,
   MapPin,
   Tag,
+  Download,
   ClipboardCheck,
   Home,
   Camera,
@@ -20,6 +21,7 @@ const ACTIVE_MENUS = [
   { label: "포스트 관리", icon: FileText, href: "/admin/posts" },
   { label: "장소 관리", icon: MapPin, href: "/admin/places" },
   { label: "분류 관리", icon: Tag, href: "/admin/categories" },
+  { label: "시트 가져오기", icon: Download, href: "/admin/import" },
 ] as const;
 
 const INACTIVE_MENUS = [
