@@ -402,25 +402,30 @@ export function PostForm({
   };
 
   // ── 제출 ───────────────────────────────────────────────────────────────────
+  const isImportedState = status === "IMPORTED" || status === "AI_DRAFTED";
+
   const handleSubmit = (targetStatus?: PostStatus) => {
-    if (!titleKo.trim()) {
-      toast.error("한국어 제목을 입력해주세요.");
-      return;
-    }
-    if (!titleEn.trim()) {
-      toast.error("영어 제목을 입력해주세요.");
-      return;
-    }
-    if (!slug.trim()) {
-      toast.error("슬러그를 입력해주세요.");
-      return;
+    const finalStatus = targetStatus ?? status;
+
+    // IMPORTED / AI_DRAFTED 상태가 아닐 때만 필수 검증
+    if (!isImportedState) {
+      if (!titleKo.trim()) {
+        toast.error("한국어 제목을 입력해주세요.");
+        return;
+      }
+      if (!titleEn.trim()) {
+        toast.error("영어 제목을 입력해주세요.");
+        return;
+      }
+      if (!slug.trim()) {
+        toast.error("슬러그를 입력해주세요.");
+        return;
+      }
     }
     if (slugStatus === "error") {
       toast.error("슬러그가 이미 사용 중입니다.");
       return;
     }
-
-    const finalStatus = targetStatus ?? status;
 
     const spotInsight: SpotInsightData | null = selectedPlaceId
       ? {
@@ -490,9 +495,34 @@ export function PostForm({
             </h1>
           </div>
           <div className="flex items-center gap-2">
+            {/* IMPORTED / AI_DRAFTED 상태 배지 */}
+            {status === "IMPORTED" && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                가져옴
+              </span>
+            )}
+            {status === "AI_DRAFTED" && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+                AI 초안 완료
+              </span>
+            )}
+
             <Button variant="outline" size="sm" asChild>
               <Link href="/admin/posts">취소</Link>
             </Button>
+
+            {/* AI_DRAFTED: DRAFT로 변환 버튼 */}
+            {isEdit && status === "AI_DRAFTED" && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isPending}
+                onClick={() => handleSubmit("DRAFT")}
+              >
+                편집 시작 (DRAFT로)
+              </Button>
+            )}
+
             {isEdit && status === "PUBLISHED" && (
               <Button
                 variant="outline"
@@ -503,27 +533,41 @@ export function PostForm({
                 임시저장으로 변경
               </Button>
             )}
+
             <Button
               size="sm"
               disabled={isPending || slugStatus === "error"}
-              onClick={() =>
-                handleSubmit(
-                  status === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
-                )
-              }
+              onClick={() => {
+                if (status === "PUBLISHED") handleSubmit("PUBLISHED");
+                else if (isImportedState) handleSubmit(status);
+                else handleSubmit("DRAFT");
+              }}
             >
               {isPending && (
                 <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
               )}
               저장
             </Button>
-            {status !== "PUBLISHED" && (
+
+            {/* IMPORTED / AI_DRAFTED에서는 발행 버튼 비활성 */}
+            {status !== "PUBLISHED" && !isImportedState && (
               <Button
                 size="sm"
                 variant="default"
                 className="bg-brand text-black hover:bg-brand/90"
                 disabled={isPending || slugStatus === "error"}
                 onClick={() => handleSubmit("PUBLISHED")}
+              >
+                발행
+              </Button>
+            )}
+            {isImportedState && (
+              <Button
+                size="sm"
+                variant="default"
+                className="bg-brand text-black hover:bg-brand/90 opacity-50 cursor-not-allowed"
+                disabled
+                title="편집을 완료한 후 발행할 수 있습니다."
               >
                 발행
               </Button>
