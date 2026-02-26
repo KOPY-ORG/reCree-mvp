@@ -227,7 +227,6 @@ export async function publishPost(
     if (!post.titleEn?.trim()) missing.push("영어 제목");
     if (post.postTopics.length === 0) missing.push("토픽 1개 이상");
     if (!post.thumbnailUrl) missing.push("썸네일 이미지");
-    if (!post.postPlaces[0]?.context) missing.push("Spot Insight 소개글");
 
     if (missing.length > 0) return { missing };
 

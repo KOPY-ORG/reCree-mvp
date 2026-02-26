@@ -434,7 +434,6 @@ export function PostForm({
       if (!titleEn.trim()) missing.push("영어 제목");
       if (selectedTopicIds.size === 0) missing.push("토픽 1개 이상");
       if (!thumbnailUrl.trim()) missing.push("썸네일 이미지");
-      if (!contextKo.trim()) missing.push("Spot Insight 소개글");
       if (missing.length > 0) {
         toast.error(`발행 불가: ${missing.join(", ")} 필요`);
         return;
