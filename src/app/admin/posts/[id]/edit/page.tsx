@@ -9,12 +9,12 @@ interface Props {
 export default async function EditPostPage({ params }: Props) {
   const { id } = await params;
 
-  const [post, allTags, allTopics] = await Promise.all([
+  const [post, allTagsRaw, tagGroupConfigs, allTopics] = await Promise.all([
     prisma.post.findUnique({
       where: { id },
       include: {
-        postTopics: { select: { topicId: true } },
-        postTags: { select: { tagId: true } },
+        postTopics: { select: { topicId: true, isVisible: true, displayOrder: true } },
+        postTags: { select: { tagId: true, isVisible: true, displayOrder: true } },
         postPlaces: {
           select: {
             placeId: true,
@@ -53,17 +53,42 @@ export default async function EditPostPage({ params }: Props) {
     }),
     prisma.tag.findMany({
       where: { isActive: true },
-      select: { id: true, nameKo: true, group: true, colorHex: true },
+      select: {
+        id: true,
+        name: true,
+        nameKo: true,
+        group: true,
+        colorHex: true,
+        colorHex2: true,
+        textColorHex: true,
+      },
       orderBy: [{ group: "asc" }, { sortOrder: "asc" }],
+    }),
+    prisma.tagGroupConfig.findMany({
+      select: {
+        group: true,
+        nameEn: true,
+        colorHex: true,
+        colorHex2: true,
+        gradientDir: true,
+        gradientStop: true,
+        textColorHex: true,
+        sortOrder: true,
+      },
+      orderBy: { sortOrder: "asc" },
     }),
     prisma.topic.findMany({
       where: { isActive: true },
       select: {
         id: true,
         nameKo: true,
+        nameEn: true,
         level: true,
         parentId: true,
         colorHex: true,
+        colorHex2: true,
+        gradientDir: true,
+        gradientStop: true,
         textColorHex: true,
       },
       orderBy: [{ level: "asc" }, { sortOrder: "asc" }],
@@ -71,6 +96,21 @@ export default async function EditPostPage({ params }: Props) {
   ]);
 
   if (!post) notFound();
+
+  const configMap = new Map(tagGroupConfigs.map((c) => [c.group, c]));
+  const allTags = allTagsRaw.map((tag) => ({
+    ...tag,
+    effectiveColorHex: tag.colorHex ?? configMap.get(tag.group)?.colorHex ?? "#C6FD09",
+    effectiveColorHex2: tag.colorHex2 ?? configMap.get(tag.group)?.colorHex2 ?? null,
+    effectiveGradientDir: configMap.get(tag.group)?.gradientDir ?? "to bottom",
+    effectiveGradientStop: configMap.get(tag.group)?.gradientStop ?? 150,
+    effectiveTextColorHex: tag.textColorHex ?? configMap.get(tag.group)?.textColorHex ?? "#000000",
+  }));
+
+  const tagGroups = tagGroupConfigs.map((c) => ({
+    group: c.group,
+    nameEn: c.nameEn,
+  }));
 
   const firstPlace = post.postPlaces[0];
 
@@ -134,6 +174,7 @@ export default async function EditPostPage({ params }: Props) {
       initialData={initialData}
       allTags={allTags}
       allTopics={allTopics}
+      tagGroups={tagGroups}
     />
   );
 }

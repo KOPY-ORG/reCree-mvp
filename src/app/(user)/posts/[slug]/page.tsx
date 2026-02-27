@@ -44,7 +44,6 @@ export default async function PostDetailPage({ params }: Props) {
           vibe: true,
           mustTry: true,
           tip: true,
-          reference: true,
           insightEn: true,
           place: {
             select: {

@@ -41,8 +41,8 @@ export type PostFormData = {
   collectedAt: string;
   // 복수 출처
   sources: PostSourceInput[];
-  topicIds: string[];
-  tagIds: string[];
+  topics: { topicId: string; isVisible: boolean; displayOrder: number }[];
+  tags: { tagId: string; isVisible: boolean; displayOrder: number }[];
   placeId: string | null;
   spotInsight: SpotInsightData | null;
 };
@@ -137,10 +137,18 @@ export async function createPost(
         collectedAt: data.collectedAt || null,
         authorId: user?.id ?? null,
         postTopics: {
-          create: data.topicIds.map((topicId) => ({ topicId })),
+          create: data.topics.map((t) => ({
+            topicId: t.topicId,
+            isVisible: t.isVisible,
+            displayOrder: t.displayOrder,
+          })),
         },
         postTags: {
-          create: data.tagIds.map((tagId) => ({ tagId })),
+          create: data.tags.map((t) => ({
+            tagId: t.tagId,
+            isVisible: t.isVisible,
+            displayOrder: t.displayOrder,
+          })),
         },
         ...(data.sources.length > 0 && {
           postSources: {
@@ -215,10 +223,18 @@ export async function updatePost(
           collectedBy: data.collectedBy || null,
           collectedAt: data.collectedAt || null,
           postTopics: {
-            create: data.topicIds.map((topicId) => ({ topicId })),
+            create: data.topics.map((t) => ({
+              topicId: t.topicId,
+              isVisible: t.isVisible,
+              displayOrder: t.displayOrder,
+            })),
           },
           postTags: {
-            create: data.tagIds.map((tagId) => ({ tagId })),
+            create: data.tags.map((t) => ({
+              tagId: t.tagId,
+              isVisible: t.isVisible,
+              displayOrder: t.displayOrder,
+            })),
           },
           ...(data.sources.length > 0 && {
             postSources: {

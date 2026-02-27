@@ -233,9 +233,11 @@ model ReCreeshot {
 // ─── M:N 조인 테이블 ──────────────────────────────────────────────────────────
 
 model PostTopic {
-  postId    String   @db.Uuid
-  topicId   String   @db.Uuid
-  createdAt DateTime @default(now())
+  postId       String   @db.Uuid
+  topicId      String   @db.Uuid
+  isVisible    Boolean  @default(false)
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
 
   post  Post  @relation(fields: [postId], references: [id], onDelete: Cascade)
   topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
@@ -244,9 +246,11 @@ model PostTopic {
 }
 
 model PostTag {
-  postId    String   @db.Uuid
-  tagId     String   @db.Uuid
-  createdAt DateTime @default(now())
+  postId       String   @db.Uuid
+  tagId        String   @db.Uuid
+  isVisible    Boolean  @default(false)
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
 
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
   tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)

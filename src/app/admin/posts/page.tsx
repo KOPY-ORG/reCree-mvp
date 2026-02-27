@@ -33,7 +33,7 @@ export default async function PostsPage({
     ...(status && { status: status as PostStatus }),
   };
 
-  const [posts, totalCount] = await Promise.all([
+  const [posts, totalCount, tagGroupConfigs] = await Promise.all([
     prisma.post.findMany({
       where,
       select: {
@@ -46,13 +46,38 @@ export default async function PostsPage({
         createdAt: true,
         updatedAt: true,
         postTopics: {
+          where: { isVisible: true },
+          orderBy: { displayOrder: "asc" },
           select: {
-            topic: { select: { id: true, nameKo: true } },
+            displayOrder: true,
+            topic: {
+              select: {
+                id: true,
+                nameEn: true,
+                colorHex: true,
+                colorHex2: true,
+                gradientDir: true,
+                gradientStop: true,
+                textColorHex: true,
+              },
+            },
           },
         },
         postTags: {
+          where: { isVisible: true },
+          orderBy: { displayOrder: "asc" },
           select: {
-            tag: { select: { id: true, nameKo: true, colorHex: true } },
+            displayOrder: true,
+            tag: {
+              select: {
+                id: true,
+                name: true,
+                colorHex: true,
+                colorHex2: true,
+                textColorHex: true,
+                group: true,
+              },
+            },
           },
         },
         postPlaces: {
@@ -66,7 +91,35 @@ export default async function PostsPage({
       take: PAGE_SIZE,
     }),
     prisma.post.count({ where }),
+    prisma.tagGroupConfig.findMany({
+      select: {
+        group: true,
+        colorHex: true,
+        colorHex2: true,
+        gradientDir: true,
+        gradientStop: true,
+        textColorHex: true,
+      },
+    }),
   ]);
+
+  const configMap = new Map(tagGroupConfigs.map((c) => [c.group, c]));
+
+  // 태그 effective 색상 resolve
+  const postsWithResolvedColors = posts.map((post) => ({
+    ...post,
+    postTags: post.postTags.map(({ displayOrder, tag }) => ({
+      displayOrder,
+      tag: {
+        ...tag,
+        effectiveColorHex: tag.colorHex ?? configMap.get(tag.group)?.colorHex ?? "#C6FD09",
+        effectiveColorHex2: tag.colorHex2 ?? configMap.get(tag.group)?.colorHex2 ?? null,
+        effectiveGradientDir: configMap.get(tag.group)?.gradientDir ?? "to bottom",
+        effectiveGradientStop: configMap.get(tag.group)?.gradientStop ?? 150,
+        effectiveTextColorHex: tag.textColorHex ?? configMap.get(tag.group)?.textColorHex ?? "#000000",
+      },
+    })),
+  }));
 
   const isFiltered = !!(search || status);
 
@@ -94,7 +147,7 @@ export default async function PostsPage({
 
       <PostsFilters currentSearch={search} currentStatus={status} />
 
-      <PostsTable posts={posts} isFiltered={isFiltered} />
+      <PostsTable posts={postsWithResolvedColors} isFiltered={isFiltered} />
       <PlacesPagination
         totalCount={totalCount}
         currentPage={page}

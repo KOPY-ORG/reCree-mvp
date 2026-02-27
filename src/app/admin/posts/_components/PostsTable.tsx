@@ -32,8 +32,34 @@ export type PostRow = {
   publishedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
-  postTopics: { topic: { id: string; nameKo: string } }[];
-  postTags: { tag: { id: string; nameKo: string; colorHex: string | null } }[];
+  postTopics: {
+    displayOrder: number;
+    topic: {
+      id: string;
+      nameEn: string;
+      colorHex: string | null;
+      colorHex2: string | null;
+      gradientDir: string;
+      gradientStop: number;
+      textColorHex: string | null;
+    };
+  }[];
+  postTags: {
+    displayOrder: number;
+    tag: {
+      id: string;
+      name: string;
+      colorHex: string | null;
+      colorHex2: string | null;
+      textColorHex: string | null;
+      group: string;
+      effectiveColorHex: string;
+      effectiveColorHex2: string | null;
+      effectiveGradientDir: string;
+      effectiveGradientStop: number;
+      effectiveTextColorHex: string;
+    };
+  }[];
   postPlaces: { place: { id: string; nameKo: string } }[];
 };
 
@@ -217,7 +243,7 @@ export function PostsTable({ posts, isFiltered }: Props) {
                   장소
                 </th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                  토픽
+                  라벨
                 </th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">
                   생성일
@@ -290,26 +316,51 @@ export function PostsTable({ posts, isFiltered }: Props) {
                     )}
                   </td>
 
-                  {/* 토픽 */}
-                  <td className="px-4 py-3 min-w-[100px]">
-                    <div className="flex flex-wrap gap-1">
-                      {post.postTopics.slice(0, 2).map(({ topic }) => (
-                        <span
-                          key={topic.id}
-                          className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded"
-                        >
-                          {topic.nameKo}
-                        </span>
-                      ))}
-                      {post.postTopics.length > 2 && (
-                        <span className="text-xs text-muted-foreground">
-                          +{post.postTopics.length - 2}
-                        </span>
-                      )}
-                      {post.postTopics.length === 0 && (
-                        <span className="text-xs text-muted-foreground/40">—</span>
-                      )}
-                    </div>
+                  {/* 라벨 (visible 토픽+태그 통합, displayOrder 순) */}
+                  <td className="px-4 py-3 min-w-[120px]">
+                    {(() => {
+                      const topicLabels = post.postTopics.map(({ displayOrder, topic }) => ({
+                        id: `topic-${topic.id}`,
+                        displayOrder,
+                        label: topic.nameEn,
+                        style: topic.colorHex2
+                          ? { background: `linear-gradient(${topic.gradientDir}, ${topic.colorHex} 0%, ${topic.colorHex2} ${topic.gradientStop}%)`, color: topic.textColorHex ?? "#000" }
+                          : topic.colorHex
+                            ? { backgroundColor: topic.colorHex, color: topic.textColorHex ?? "#000" }
+                            : { backgroundColor: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" },
+                      }));
+                      const tagLabels = post.postTags.map(({ displayOrder, tag }) => ({
+                        id: `tag-${tag.id}`,
+                        displayOrder,
+                        label: tag.name,
+                        style: tag.effectiveColorHex2
+                          ? { background: `linear-gradient(${tag.effectiveGradientDir}, ${tag.effectiveColorHex} 0%, ${tag.effectiveColorHex2} ${tag.effectiveGradientStop}%)`, color: tag.effectiveTextColorHex }
+                          : { backgroundColor: tag.effectiveColorHex, color: tag.effectiveTextColorHex },
+                      }));
+                      const allLabels = [...topicLabels, ...tagLabels].sort((a, b) => a.displayOrder - b.displayOrder);
+                      const MAX = 3;
+                      return (
+                        <div className="flex flex-wrap gap-1">
+                          {allLabels.slice(0, MAX).map((item) => (
+                            <span
+                              key={item.id}
+                              className="inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium"
+                              style={item.style}
+                            >
+                              {item.label}
+                            </span>
+                          ))}
+                          {allLabels.length > MAX && (
+                            <span className="text-xs text-muted-foreground">
+                              +{allLabels.length - MAX}
+                            </span>
+                          )}
+                          {allLabels.length === 0 && (
+                            <span className="text-xs text-muted-foreground/40">—</span>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </td>
 
                   {/* 생성일 */}

@@ -18,6 +18,8 @@ import {
   Plus,
   Trash2,
   Eye,
+  EyeOff,
+  GripVertical,
   MapPin,
   Phone,
   ExternalLink,
@@ -48,6 +50,22 @@ import {
 } from "../_actions/post-actions";
 import { PlacePickerSheet } from "./PlacePickerSheet";
 import { PlaceDetailSheet } from "./PlaceDetailSheet";
+import { LabelSelectDialog } from "./LabelSelectDialog";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 // 마크다운 에디터: SSR 불가 → 동적 임포트
 const MDEditor = dynamic(() => import("@uiw/react-md-editor"), { ssr: false });
@@ -61,18 +79,35 @@ const MapPreview = dynamic(
 
 export type TagForForm = {
   id: string;
+  name: string;
   nameKo: string;
   group: string;
   colorHex: string | null;
+  colorHex2: string | null;
+  textColorHex: string | null;
+  effectiveColorHex: string;
+  effectiveColorHex2: string | null;
+  effectiveGradientDir: string;
+  effectiveGradientStop: number;
+  effectiveTextColorHex: string;
 };
 
 export type TopicForForm = {
   id: string;
   nameKo: string;
+  nameEn: string;
   level: number;
   parentId: string | null;
   colorHex: string | null;
+  colorHex2: string | null;
+  gradientDir: string;
+  gradientStop: number;
   textColorHex: string | null;
+};
+
+export type TagGroupItem = {
+  group: string;
+  nameEn: string;
 };
 
 export type PlaceForForm = {
@@ -101,8 +136,8 @@ export type PostInitialData = {
   memo: string | null;
   collectedBy: string | null;
   collectedAt: string | null;
-  postTopics: { topicId: string }[];
-  postTags: { tagId: string }[];
+  postTopics: { topicId: string; isVisible: boolean; displayOrder: number }[];
+  postTags: { tagId: string; isVisible: boolean; displayOrder: number }[];
   postSources: PostSourceInput[];
   legacySourceUrl: string | null;
   legacySourceType: string | null;
@@ -131,6 +166,7 @@ interface PostFormProps {
   initialData?: PostInitialData;
   allTags: TagForForm[];
   allTopics: TopicForForm[];
+  tagGroups: TagGroupItem[];
 }
 
 // ─── 상수 ──────────────────────────────────────────────────────────────────────
@@ -156,6 +192,39 @@ const EMPTY_SOURCE: PostSourceInput = {
 
 // ─── 유틸 ──────────────────────────────────────────────────────────────────────
 
+type TopicStateItem = { topicId: string; isVisible: boolean; displayOrder: number };
+type TagStateItem = { tagId: string; isVisible: boolean; displayOrder: number };
+
+// visible 항목들의 displayOrder를 재산정 (topic+tag 통합 순서 유지)
+function recalcDisplayOrders(topics: TopicStateItem[], tags: TagStateItem[]): TopicStateItem[] {
+  // 현재 visible인 전체 항목을 displayOrder로 정렬 후 재산정
+  const allVisible = [
+    ...topics.filter((t) => t.isVisible).map((t) => ({ id: `t-${t.topicId}`, order: t.displayOrder })),
+    ...tags.filter((t) => t.isVisible).map((t) => ({ id: `g-${t.tagId}`, order: t.displayOrder })),
+  ].sort((a, b) => a.order - b.order);
+
+  const newOrderMap = new Map(allVisible.map((item, idx) => [item.id, idx]));
+  return topics.map((t) =>
+    t.isVisible
+      ? { ...t, displayOrder: newOrderMap.get(`t-${t.topicId}`) ?? 0 }
+      : { ...t, displayOrder: 0 },
+  );
+}
+
+function recalcDisplayOrdersTags(topics: TopicStateItem[], tags: TagStateItem[]): TagStateItem[] {
+  const allVisible = [
+    ...topics.filter((t) => t.isVisible).map((t) => ({ id: `t-${t.topicId}`, order: t.displayOrder })),
+    ...tags.filter((t) => t.isVisible).map((t) => ({ id: `g-${t.tagId}`, order: t.displayOrder })),
+  ].sort((a, b) => a.order - b.order);
+
+  const newOrderMap = new Map(allVisible.map((item, idx) => [item.id, idx]));
+  return tags.map((t) =>
+    t.isVisible
+      ? { ...t, displayOrder: newOrderMap.get(`g-${t.tagId}`) ?? 0 }
+      : { ...t, displayOrder: 0 },
+  );
+}
+
 function generateSlug(title: string): string {
   return title
     .toLowerCase()
@@ -165,55 +234,69 @@ function generateSlug(title: string): string {
     .replace(/-+/g, "-");
 }
 
-function getDescendants(
-  topicId: string,
-  allTopics: TopicForForm[],
-): TopicForForm[] {
-  const children = allTopics.filter((t) => t.parentId === topicId);
-  if (children.length === 0) return [];
-  return [
-    ...children,
-    ...children.flatMap((c) => getDescendants(c.id, allTopics)),
-  ];
+// ─── 색상 헬퍼 ────────────────────────────────────────────────────────────────
+
+function getTopicStyle(topic: TopicForForm): React.CSSProperties {
+  if (topic.colorHex2) {
+    return {
+      background: `linear-gradient(${topic.gradientDir}, ${topic.colorHex} 0%, ${topic.colorHex2} ${topic.gradientStop}%)`,
+      color: topic.textColorHex ?? "#000",
+    };
+  }
+  if (topic.colorHex) {
+    return { backgroundColor: topic.colorHex, color: topic.textColorHex ?? "#000" };
+  }
+  return { backgroundColor: "#e2e8f0", color: "#374151" };
 }
 
-// ─── TopicChip ─────────────────────────────────────────────────────────────────
+function getTagStyle(tag: TagForForm): React.CSSProperties {
+  if (tag.effectiveColorHex2) {
+    return {
+      background: `linear-gradient(${tag.effectiveGradientDir}, ${tag.effectiveColorHex} 0%, ${tag.effectiveColorHex2} ${tag.effectiveGradientStop}%)`,
+      color: tag.effectiveTextColorHex,
+    };
+  }
+  return { backgroundColor: tag.effectiveColorHex, color: tag.effectiveTextColorHex };
+}
 
-function TopicChip({
-  topic,
-  selected,
-  onToggle,
-  showX = false,
-}: {
-  topic: TopicForForm;
-  selected: boolean;
-  onToggle: (id: string) => void;
-  showX?: boolean;
-}) {
-  const style: React.CSSProperties =
-    selected && topic.colorHex
-      ? { backgroundColor: topic.colorHex, color: topic.textColorHex ?? "#fff" }
-      : selected
-        ? {
-            backgroundColor: "hsl(var(--foreground))",
-            color: "hsl(var(--background))",
-          }
-        : {};
+// ─── SortableLabel (DnD용 항목) ───────────────────────────────────────────────
+
+type LabelItem = {
+  id: string;
+  type: "topic" | "tag";
+  label: string;
+  style: React.CSSProperties;
+};
+
+function SortableLabel({ item }: { item: LabelItem }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: item.id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
 
   return (
-    <button
-      type="button"
-      onClick={() => onToggle(topic.id)}
-      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium transition-colors ${
-        selected
-          ? "border-transparent"
-          : "border-border bg-background text-muted-foreground hover:border-foreground/30 hover:text-foreground"
-      }`}
+    <div
+      ref={setNodeRef}
       style={style}
+      className="flex items-center gap-2 rounded-md border bg-background px-2 py-1"
     >
-      {topic.nameKo}
-      {showX && <X className="h-3 w-3 opacity-70" />}
-    </button>
+      <span
+        {...attributes}
+        {...listeners}
+        className="cursor-grab text-muted-foreground hover:text-foreground shrink-0"
+      >
+        <GripVertical className="h-3.5 w-3.5" />
+      </span>
+      <span
+        className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium border-transparent"
+        style={item.style}
+      >
+        {item.label}
+      </span>
+    </div>
   );
 }
 
@@ -225,6 +308,7 @@ export function PostForm({
   initialData,
   allTags,
   allTopics,
+  tagGroups,
 }: PostFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -285,12 +369,16 @@ export function PostForm({
   const [collectedAt, setCollectedAt] = useState(initialData?.collectedAt ?? "");
   const [sources, setSources] = useState<PostSourceInput[]>(initSources);
 
-  const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(
-    new Set(initialData?.postTags.map((pt) => pt.tagId) ?? []),
+  type PostTopicState = { topicId: string; isVisible: boolean; displayOrder: number };
+  type PostTagState = { tagId: string; isVisible: boolean; displayOrder: number };
+
+  const [postTopics, setPostTopics] = useState<PostTopicState[]>(
+    initialData?.postTopics ?? [],
   );
-  const [selectedTopicIds, setSelectedTopicIds] = useState<Set<string>>(
-    new Set(initialData?.postTopics.map((pt) => pt.topicId) ?? []),
+  const [postTags, setPostTags] = useState<PostTagState[]>(
+    initialData?.postTags ?? [],
   );
+  const [labelDialogOpen, setLabelDialogOpen] = useState(false);
 
   // ── 장소 상태 ───────────────────────────────────────────────────────────────
   const [selectedPlace, setSelectedPlace] = useState<PlaceForForm | null>(
@@ -319,41 +407,87 @@ export function PostForm({
   const [thumbnailUploading, setThumbnailUploading] = useState(false);
   const [placePickerOpen, setPlacePickerOpen] = useState(false);
   const [placeDetailOpen, setPlaceDetailOpen] = useState(false);
-  const [topicSearch, setTopicSearch] = useState("");
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
-    null,
-  );
 
   // ── 파생값 ─────────────────────────────────────────────────────────────────
-  const rootTopics = useMemo(
-    () => allTopics.filter((t) => t.level === 0),
+  const topicMap = useMemo(
+    () => new Map(allTopics.map((t) => [t.id, t])),
     [allTopics],
   );
-  const selectedTopics = useMemo(
-    () => allTopics.filter((t) => selectedTopicIds.has(t.id)),
-    [allTopics, selectedTopicIds],
-  );
-  const level1Sections = useMemo(() => {
-    if (!selectedCategoryId) return [];
-    return allTopics.filter((t) => t.parentId === selectedCategoryId);
-  }, [allTopics, selectedCategoryId]);
-  const topicSearchResults = useMemo(() => {
-    if (!topicSearch.trim()) return [];
-    return allTopics.filter((t) => t.nameKo.includes(topicSearch) && t.level >= 2);
-  }, [allTopics, topicSearch]);
-  const tagsByGroup = useMemo(
-    () =>
-      allTags.reduce<Record<string, TagForForm[]>>((acc, tag) => {
-        if (!acc[tag.group]) acc[tag.group] = [];
-        acc[tag.group].push(tag);
-        return acc;
-      }, {}),
+  const tagMap = useMemo(
+    () => new Map(allTags.map((t) => [t.id, t])),
     [allTags],
   );
-  const groupsWithTags = useMemo(
-    () => Object.keys(tagsByGroup).filter((g) => (tagsByGroup[g]?.length ?? 0) > 0),
-    [tagsByGroup],
+
+  // 토픽 effective color 계산 (부모 색상 상속)
+  const topicEffectiveStyleMap = useMemo(() => {
+    const DEFAULT_COLOR = "#C6FD09";
+    const DEFAULT_TEXT = "#000000";
+    type EffInfo = { hex: string; hex2: string | null; dir: string; stop: number; textHex: string };
+    const effectiveMap = new Map<string, EffInfo>();
+    const styleMap = new Map<string, React.CSSProperties>();
+    for (const t of allTopics) {
+      const parent = t.parentId ? effectiveMap.get(t.parentId) : undefined;
+      const inherits = t.colorHex === null;
+      const hex = t.colorHex ?? parent?.hex ?? DEFAULT_COLOR;
+      const hex2 = inherits ? (parent?.hex2 ?? null) : t.colorHex2;
+      const dir = inherits ? (parent?.dir ?? "to bottom") : t.gradientDir;
+      const stop = inherits ? (parent?.stop ?? 150) : t.gradientStop;
+      const textHex = t.textColorHex ?? parent?.textHex ?? DEFAULT_TEXT;
+      effectiveMap.set(t.id, { hex, hex2, dir, stop, textHex });
+      styleMap.set(
+        t.id,
+        hex2
+          ? { background: `linear-gradient(${dir}, ${hex} 0%, ${hex2} ${stop}%)`, color: textHex }
+          : { backgroundColor: hex, color: textHex },
+      );
+    }
+    return styleMap;
+  }, [allTopics]);
+
+  const selectedTopicIdSet = useMemo(
+    () => new Set(postTopics.map((pt) => pt.topicId)),
+    [postTopics],
   );
+  const selectedTagIdSet = useMemo(
+    () => new Set(postTags.map((pt) => pt.tagId)),
+    [postTags],
+  );
+
+  // DnD sensors
+  const sensors = useSensors(useSensor(PointerSensor));
+
+  // visible 라벨 (topic + tag 통합, displayOrder 정렬)
+  const visibleItems = useMemo(() => {
+    const topicItems = postTopics
+      .filter((pt) => pt.isVisible)
+      .map((pt) => {
+        const t = topicMap.get(pt.topicId);
+        return {
+          id: `topic-${pt.topicId}`,
+          type: "topic" as const,
+          topicId: pt.topicId,
+          tagId: undefined as string | undefined,
+          displayOrder: pt.displayOrder,
+          label: t?.nameEn ?? pt.topicId,
+          style: topicEffectiveStyleMap.get(pt.topicId) ?? {},
+        };
+      });
+    const tagItems = postTags
+      .filter((pt) => pt.isVisible)
+      .map((pt) => {
+        const t = tagMap.get(pt.tagId);
+        return {
+          id: `tag-${pt.tagId}`,
+          type: "tag" as const,
+          topicId: undefined as string | undefined,
+          tagId: pt.tagId,
+          displayOrder: pt.displayOrder,
+          label: t?.name ?? pt.tagId,
+          style: t ? getTagStyle(t) : {},
+        };
+      });
+    return [...topicItems, ...tagItems].sort((a, b) => a.displayOrder - b.displayOrder);
+  }, [postTopics, postTags, topicMap, tagMap]);
 
   // ── Slug 자동 생성 + 중복 체크 ─────────────────────────────────────────────
   useEffect(() => {
@@ -418,21 +552,89 @@ export function PostForm({
   };
 
   // ── 핸들러 ─────────────────────────────────────────────────────────────────
-  const toggleTag = (tagId: string) => {
-    setSelectedTagIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(tagId)) next.delete(tagId);
-      else next.add(tagId);
-      return next;
+
+  // 라벨 다이얼로그 confirm
+  const handleLabelConfirm = (topicIds: Set<string>, tagIds: Set<string>) => {
+    setPostTopics((prev) => {
+      const existingMap = new Map(prev.map((pt) => [pt.topicId, pt]));
+      const result: typeof prev = [];
+      topicIds.forEach((topicId) => {
+        if (existingMap.has(topicId)) {
+          result.push(existingMap.get(topicId)!);
+        } else {
+          result.push({ topicId, isVisible: false, displayOrder: 0 });
+        }
+      });
+      return result;
+    });
+    setPostTags((prev) => {
+      const existingMap = new Map(prev.map((pt) => [pt.tagId, pt]));
+      const result: typeof prev = [];
+      tagIds.forEach((tagId) => {
+        if (existingMap.has(tagId)) {
+          result.push(existingMap.get(tagId)!);
+        } else {
+          result.push({ tagId, isVisible: false, displayOrder: 0 });
+        }
+      });
+      return result;
     });
   };
 
-  const toggleTopic = (topicId: string) => {
-    setSelectedTopicIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(topicId)) next.delete(topicId);
-      else next.add(topicId);
-      return next;
+  // 토픽 제거 (X 버튼)
+  const removeTopic = (topicId: string) => {
+    setPostTopics((prev) => prev.filter((pt) => pt.topicId !== topicId));
+  };
+
+  // 태그 제거 (X 버튼)
+  const removeTag = (tagId: string) => {
+    setPostTags((prev) => prev.filter((pt) => pt.tagId !== tagId));
+  };
+
+  // visible 토글
+  const toggleTopicVisible = (topicId: string) => {
+    setPostTopics((prev) => {
+      const updated = prev.map((pt) =>
+        pt.topicId === topicId ? { ...pt, isVisible: !pt.isVisible } : pt,
+      );
+      return recalcDisplayOrders(updated, postTags);
+    });
+  };
+
+  const toggleTagVisible = (tagId: string) => {
+    setPostTags((prev) => {
+      const updated = prev.map((pt) =>
+        pt.tagId === tagId ? { ...pt, isVisible: !pt.isVisible } : pt,
+      );
+      return recalcDisplayOrdersTags(postTopics, updated);
+    });
+  };
+
+  // DnD 종료 시 순서 변경
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = visibleItems.findIndex((item) => item.id === active.id);
+    const newIndex = visibleItems.findIndex((item) => item.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = arrayMove(visibleItems, oldIndex, newIndex);
+    // displayOrder 재산정
+    reordered.forEach((item, idx) => {
+      if (item.type === "topic" && item.topicId) {
+        setPostTopics((prev) =>
+          prev.map((pt) =>
+            pt.topicId === item.topicId ? { ...pt, displayOrder: idx } : pt,
+          ),
+        );
+      } else if (item.type === "tag" && item.tagId) {
+        setPostTags((prev) =>
+          prev.map((pt) =>
+            pt.tagId === item.tagId ? { ...pt, displayOrder: idx } : pt,
+          ),
+        );
+      }
     });
   };
 
@@ -484,7 +686,7 @@ export function PostForm({
       const missing: string[] = [];
       if (!titleKo.trim()) missing.push("한국어 제목");
       if (!titleEn.trim()) missing.push("영어 제목");
-      if (selectedTopicIds.size === 0) missing.push("토픽 1개 이상");
+      if (postTopics.length === 0) missing.push("토픽 1개 이상");
       if (!thumbnailUrl.trim()) missing.push("썸네일 이미지");
       if (missing.length > 0) {
         toast.error(`발행 불가: ${missing.join(", ")} 필요`);
@@ -513,8 +715,8 @@ export function PostForm({
       collectedBy: collectedBy.trim(),
       collectedAt: collectedAt.trim(),
       sources: sources.filter((s) => s.sourceUrl || s.sourceNote),
-      topicIds: Array.from(selectedTopicIds),
-      tagIds: Array.from(selectedTagIds),
+      topics: postTopics,
+      tags: postTags,
       placeId: selectedPlace?.id ?? null,
       spotInsight,
     };
@@ -658,9 +860,9 @@ export function PostForm({
             <div className="space-y-6 min-w-0">
 
               {/* ── 섹션 1: 제목 + 썸네일 ──────────────────────────────────── */}
-              <Card>
+              <Card className="gap-2">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  <CardTitle className="text-base font-semibold text-foreground">
                     제목
                   </CardTitle>
                 </CardHeader>
@@ -808,9 +1010,9 @@ export function PostForm({
               </Card>
 
               {/* ── 섹션 2: Spot Insight (항상 표시) ──────────────────────── */}
-              <Card>
+              <Card className="gap-2">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  <CardTitle className="text-base font-semibold text-foreground">
                     Spot Insight
                   </CardTitle>
                 </CardHeader>
@@ -936,9 +1138,9 @@ export function PostForm({
               </Card>
 
               {/* ── 섹션 3: Story (본문) ────────────────────────────────────── */}
-              <Card>
+              <Card className="gap-2">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  <CardTitle className="text-base font-semibold text-foreground">
                     Story
                   </CardTitle>
                 </CardHeader>
@@ -967,9 +1169,9 @@ export function PostForm({
               </Card>
 
               {/* ── 섹션 4: 출처 ───────────────────────────────────────────── */}
-              <Card>
+              <Card className="gap-2">
                 <CardHeader className="pb-2 flex-row items-center justify-between">
-                  <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  <CardTitle className="text-base font-semibold text-foreground">
                     출처
                   </CardTitle>
                   <Button
@@ -1099,9 +1301,9 @@ export function PostForm({
               </Card>
 
               {/* ── 섹션 5: 수집 정보 ──────────────────────────────────────── */}
-              <Card>
+              <Card className="gap-2">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  <CardTitle className="text-base font-semibold text-foreground">
                     수집 정보
                   </CardTitle>
                 </CardHeader>
@@ -1144,9 +1346,9 @@ export function PostForm({
             <div className="space-y-4 sticky top-[3.6rem]">
 
               {/* ── 장소 카드 ──────────────────────────────────────────────── */}
-              <Card>
+              <Card className="gap-2">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  <CardTitle className="text-base font-semibold text-foreground">
                     장소
                   </CardTitle>
                 </CardHeader>
@@ -1239,203 +1441,221 @@ export function PostForm({
                 </CardContent>
               </Card>
 
-              {/* ── 태그 카드 ──────────────────────────────────────────────── */}
-              <Card>
+              {/* ── 토픽 & 태그 카드 ────────────────────────────────────────── */}
+              <Card className="gap-2">
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                      태그
+                    <CardTitle className="text-base font-semibold text-foreground">
+                      토픽 & 태그
                     </CardTitle>
-                    {selectedTagIds.size > 0 && (
+                    {(postTopics.length > 0 || postTags.length > 0) && (
                       <span className="text-xs text-muted-foreground">
-                        {selectedTagIds.size}개 선택
+                        {postTopics.length + postTags.length}개 선택
                       </span>
                     )}
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  {groupsWithTags.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      등록된 태그가 없습니다.
-                    </p>
-                  ) : (
-                    <div className="space-y-3">
-                      {groupsWithTags.map((group) => (
-                        <div key={group}>
-                          <p className="text-xs font-semibold text-muted-foreground mb-1.5">
-                            {group}
-                          </p>
-                          <div className="flex flex-wrap gap-1">
-                            {tagsByGroup[group]!.map((tag) => {
-                              const checked = selectedTagIds.has(tag.id);
-                              return (
-                                <button
-                                  key={tag.id}
-                                  type="button"
-                                  onClick={() => toggleTag(tag.id)}
-                                  className={`rounded-full border px-2 py-0.5 text-xs font-medium transition-all ${
-                                    checked
-                                      ? "border-transparent"
-                                      : "border-border bg-background text-muted-foreground hover:border-foreground/30"
-                                  }`}
-                                  style={
-                                    checked && tag.colorHex
-                                      ? {
-                                          backgroundColor: tag.colorHex,
-                                          color: "#fff",
-                                          borderColor: tag.colorHex,
-                                        }
-                                      : checked
-                                        ? {
-                                            backgroundColor: "hsl(var(--foreground))",
-                                            color: "hsl(var(--background))",
-                                          }
-                                        : {}
-                                  }
-                                >
-                                  {tag.nameKo}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ))}
+                  {(postTopics.length > 0 || postTags.length > 0) && (
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {postTopics.map((pt) => {
+                        const t = topicMap.get(pt.topicId);
+                        if (!t) return null;
+                        return (
+                          <span
+                            key={pt.topicId}
+                            className="inline-flex items-center gap-1 rounded-full border-transparent px-2 py-0.5 text-xs font-medium"
+                            style={topicEffectiveStyleMap.get(t.id) ?? {}}
+                          >
+                            {t.nameEn}
+                            <button
+                              type="button"
+                              onClick={() => removeTopic(pt.topicId)}
+                              className="opacity-60 hover:opacity-100"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </span>
+                        );
+                      })}
+                      {postTags.map((pt) => {
+                        const t = tagMap.get(pt.tagId);
+                        if (!t) return null;
+                        return (
+                          <span
+                            key={pt.tagId}
+                            className="inline-flex items-center gap-1 rounded-full border-transparent px-2 py-0.5 text-xs font-medium"
+                            style={getTagStyle(t)}
+                          >
+                            {t.name}
+                            <button
+                              type="button"
+                              onClick={() => removeTag(pt.tagId)}
+                              className="opacity-60 hover:opacity-100"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </span>
+                        );
+                      })}
                     </div>
                   )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full h-8 text-xs"
+                    onClick={() => setLabelDialogOpen(true)}
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    토픽 / 태그 추가
+                  </Button>
                 </CardContent>
               </Card>
 
-              {/* ── 토픽 카드 ──────────────────────────────────────────────── */}
-              <Card>
+              {/* ── 라벨 표시 설정 카드 ────────────────────────────────────── */}
+              <Card className="gap-2">
                 <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                      토픽
-                    </CardTitle>
-                    {selectedTopicIds.size > 0 && (
-                      <span className="text-xs text-muted-foreground">
-                        {selectedTopicIds.size}개 선택
-                      </span>
-                    )}
-                  </div>
+                  <CardTitle className="text-base font-semibold text-foreground">
+                    라벨 표시 설정
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {allTopics.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      등록된 토픽이 없습니다.
+                  {(postTopics.length === 0 && postTags.length === 0) ? (
+                    <p className="text-xs text-muted-foreground">
+                      토픽/태그를 추가하면 여기서 표시 여부와 순서를 설정할 수 있습니다.
                     </p>
                   ) : (
-                    <div className="space-y-3">
-                      {selectedTopics.length > 0 && (
-                        <>
-                          <div className="flex flex-wrap gap-1">
-                            {selectedTopics.map((t) => (
-                              <TopicChip
-                                key={t.id}
-                                topic={t}
-                                selected
-                                onToggle={toggleTopic}
-                                showX
-                              />
-                            ))}
-                          </div>
-                          <Separator />
-                        </>
-                      )}
-
-                      <Input
-                        placeholder="토픽 검색..."
-                        value={topicSearch}
-                        onChange={(e) => {
-                          setTopicSearch(e.target.value);
-                          if (e.target.value) setSelectedCategoryId(null);
-                        }}
-                        className="h-8 text-sm"
-                      />
-
-                      {topicSearch ? (
-                        topicSearchResults.length === 0 ? (
-                          <p className="text-sm text-muted-foreground">
-                            검색 결과가 없습니다.
-                          </p>
-                        ) : (
-                          <div className="flex flex-wrap gap-1">
-                            {topicSearchResults.map((t) => (
-                              <TopicChip
-                                key={t.id}
-                                topic={t}
-                                selected={selectedTopicIds.has(t.id)}
-                                onToggle={toggleTopic}
-                              />
-                            ))}
-                          </div>
-                        )
-                      ) : (
-                        <>
-                          {rootTopics.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {rootTopics.map((cat) => (
-                                <button
-                                  key={cat.id}
-                                  type="button"
-                                  onClick={() =>
-                                    setSelectedCategoryId((prev) =>
-                                      prev === cat.id ? null : cat.id,
-                                    )
-                                  }
-                                  className={`rounded-md border px-2 py-0.5 text-xs font-medium transition-all ${
-                                    selectedCategoryId === cat.id
-                                      ? "border-transparent bg-foreground text-background"
-                                      : "border-border bg-background text-muted-foreground hover:border-foreground/30 hover:text-foreground"
-                                  }`}
-                                >
-                                  {cat.nameKo}
-                                </button>
-                              ))}
+                    <>
+                      {/* 전체 라벨 목록 (eye 토글) */}
+                      <div className="space-y-1">
+                        {postTopics.map((pt) => {
+                          const t = topicMap.get(pt.topicId);
+                          if (!t) return null;
+                          return (
+                            <div
+                              key={pt.topicId}
+                              className="flex items-center gap-2 text-xs"
+                            >
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPostTopics((prev) => {
+                                    const updated = prev.map((p) =>
+                                      p.topicId === pt.topicId
+                                        ? { ...p, isVisible: !p.isVisible }
+                                        : p,
+                                    );
+                                    const visibleTopics = updated.filter((p) => p.isVisible);
+                                    const visibleTags = postTags.filter((p) => p.isVisible);
+                                    const combined = [
+                                      ...visibleTopics.map((p) => ({ id: `t-${p.topicId}`, order: p.displayOrder })),
+                                      ...visibleTags.map((p) => ({ id: `g-${p.tagId}`, order: p.displayOrder })),
+                                    ].sort((a, b) => a.order - b.order);
+                                    const orderMap = new Map(combined.map((item, idx) => [item.id, idx]));
+                                    return updated.map((p) =>
+                                      p.isVisible
+                                        ? { ...p, displayOrder: orderMap.get(`t-${p.topicId}`) ?? 0 }
+                                        : { ...p, displayOrder: 0 },
+                                    );
+                                  });
+                                }}
+                                className={`shrink-0 transition-colors ${pt.isVisible ? "text-foreground" : "text-muted-foreground/40"}`}
+                              >
+                                {pt.isVisible ? (
+                                  <Eye className="h-3.5 w-3.5" />
+                                ) : (
+                                  <EyeOff className="h-3.5 w-3.5" />
+                                )}
+                              </button>
+                              <span
+                                className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+                                style={topicEffectiveStyleMap.get(t.id) ?? {}}
+                              >
+                                {t.nameEn}
+                              </span>
                             </div>
-                          )}
-                          {selectedCategoryId ? (
-                            level1Sections.length === 0 ? (
-                              <p className="text-sm text-muted-foreground">
-                                하위 토픽이 없습니다.
-                              </p>
-                            ) : (
-                              <div className="space-y-2">
-                                {level1Sections.map((l1) => {
-                                  const descendants = getDescendants(
-                                    l1.id,
-                                    allTopics,
-                                  );
-                                  return (
-                                    <div key={l1.id} className="space-y-1">
-                                      <span className="text-xs font-medium text-muted-foreground">
-                                        {l1.nameKo}
-                                      </span>
-                                      {descendants.length > 0 && (
-                                        <div className="flex flex-wrap gap-1 pl-3">
-                                          {descendants.map((t) => (
-                                            <TopicChip
-                                              key={t.id}
-                                              topic={t}
-                                              selected={selectedTopicIds.has(t.id)}
-                                              onToggle={toggleTopic}
-                                            />
-                                          ))}
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )
-                          ) : (
-                            <p className="text-xs text-muted-foreground">
-                              카테고리를 선택하거나 검색해서 토픽을 추가하세요.
-                            </p>
-                          )}
+                          );
+                        })}
+                        {postTags.map((pt) => {
+                          const t = tagMap.get(pt.tagId);
+                          if (!t) return null;
+                          return (
+                            <div
+                              key={pt.tagId}
+                              className="flex items-center gap-2 text-xs"
+                            >
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPostTags((prev) => {
+                                    const updated = prev.map((p) =>
+                                      p.tagId === pt.tagId
+                                        ? { ...p, isVisible: !p.isVisible }
+                                        : p,
+                                    );
+                                    const visibleTopics = postTopics.filter((p) => p.isVisible);
+                                    const visibleTags = updated.filter((p) => p.isVisible);
+                                    const combined = [
+                                      ...visibleTopics.map((p) => ({ id: `t-${p.topicId}`, order: p.displayOrder })),
+                                      ...visibleTags.map((p) => ({ id: `g-${p.tagId}`, order: p.displayOrder })),
+                                    ].sort((a, b) => a.order - b.order);
+                                    const orderMap = new Map(combined.map((item, idx) => [item.id, idx]));
+                                    return updated.map((p) =>
+                                      p.isVisible
+                                        ? { ...p, displayOrder: orderMap.get(`g-${p.tagId}`) ?? 0 }
+                                        : { ...p, displayOrder: 0 },
+                                    );
+                                  });
+                                }}
+                                className={`shrink-0 transition-colors ${pt.isVisible ? "text-foreground" : "text-muted-foreground/40"}`}
+                              >
+                                {pt.isVisible ? (
+                                  <Eye className="h-3.5 w-3.5" />
+                                ) : (
+                                  <EyeOff className="h-3.5 w-3.5" />
+                                )}
+                              </button>
+                              <span
+                                className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+                                style={getTagStyle(t)}
+                              >
+                                {t.name}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Visible 라벨 DnD 순서 변경 */}
+                      {visibleItems.length > 0 && (
+                        <>
+                          <Separator />
+                          <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground font-medium">노출 순서 (드래그)</p>
+                            <DndContext
+                              sensors={sensors}
+                              collisionDetection={closestCenter}
+                              onDragEnd={handleDragEnd}
+                            >
+                              <SortableContext
+                                items={visibleItems.map((item) => item.id)}
+                                strategy={verticalListSortingStrategy}
+                              >
+                                <div className="space-y-1">
+                                  {visibleItems.map((item) => (
+                                    <SortableLabel
+                                      key={item.id}
+                                      item={item}
+                                    />
+                                  ))}
+                                </div>
+                              </SortableContext>
+                            </DndContext>
+                          </div>
                         </>
                       )}
-                    </div>
+                    </>
                   )}
                 </CardContent>
               </Card>
@@ -1457,6 +1677,18 @@ export function PostForm({
         placeId={selectedPlace?.id ?? null}
         open={placeDetailOpen}
         onOpenChange={setPlaceDetailOpen}
+      />
+
+      {/* ── Dialog 컴포넌트 ──────────────────────────────────────────────────── */}
+      <LabelSelectDialog
+        open={labelDialogOpen}
+        onOpenChange={setLabelDialogOpen}
+        allTopics={allTopics}
+        allTags={allTags}
+        tagGroups={tagGroups}
+        selectedTopicIds={selectedTopicIdSet}
+        selectedTagIds={selectedTagIdSet}
+        onConfirm={handleLabelConfirm}
       />
     </div>
   );

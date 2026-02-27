@@ -60,9 +60,6 @@ export function ImportPreviewTable({
                 출처
               </th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">
-                카테고리
-              </th>
-              <th className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">
                 상태
               </th>
             </tr>
@@ -149,20 +146,6 @@ export function ImportPreviewTable({
                   {row.sourceNote && (
                     <div className="text-xs text-muted-foreground mt-0.5 truncate max-w-[140px]">
                       {row.sourceNote}
-                    </div>
-                  )}
-                </td>
-
-                {/* 카테고리 */}
-                <td className="px-4 py-3 min-w-[120px]">
-                  {row.category ? (
-                    <div className="text-xs text-muted-foreground">{row.category}</div>
-                  ) : (
-                    <span className="text-muted-foreground/40 text-xs">—</span>
-                  )}
-                  {row.artistWork && (
-                    <div className="text-xs text-muted-foreground/70 mt-0.5 truncate max-w-[120px]">
-                      {row.artistWork}
                     </div>
                   )}
                 </td>

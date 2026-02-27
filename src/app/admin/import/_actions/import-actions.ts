@@ -15,8 +15,6 @@ export type SheetRow = {
   sourceUrl: string;
   sourceType: string;
   sourceNote: string;
-  category: string;
-  genre: string;
   artistWork: string;
   context: string;
   vibe: string;
@@ -24,8 +22,6 @@ export type SheetRow = {
   tip: string;
   memo: string;
   story: string;
-  tags: string;
-  tagGroup: string;
   referenceUrl: string;
   sourcePostDate: string;
   collectedBy: string;
@@ -144,8 +140,6 @@ export async function fetchSheetPreview(): Promise<{
       sourceUrl: (r["source_url"] ?? "").trim(),
       sourceType: (r["source_type"] ?? "").trim(),
       sourceNote: (r["source_note"] ?? "").trim(),
-      category: (r["category"] ?? "").trim(),
-      genre: (r["genre"] ?? "").trim(),
       artistWork: (r["artist_work"] ?? "").trim(),
       context: (r["context"] ?? "").trim(),
       vibe: (r["vibe"] ?? "").trim(),
@@ -153,8 +147,6 @@ export async function fetchSheetPreview(): Promise<{
       tip: (r["tip"] ?? "").trim(),
       memo: (r["memo"] ?? "").trim(),
       story: (r["story"] ?? "").trim(),
-      tags: (r["tags"] ?? "").trim(),
-      tagGroup: (r["tag_group"] ?? "").trim(),
       referenceUrl: (r["reference_url"] ?? "").trim(),
       sourcePostDate: (r["source_post_date"] ?? "").trim(),
       collectedBy: (r["collected_by"] ?? "").trim(),
@@ -271,15 +263,6 @@ export async function importSheetRows(rowIds: string[]): Promise<{
     return rowIds.includes(googleMapsLink);
   });
 
-  // 루프 전 일괄 조회 (매칭용)
-  const allTopicsForMatch = await prisma.topic.findMany({
-    where: { level: { in: [0, 1] } },
-    select: { id: true, nameKo: true, level: true },
-  });
-  const allTagsForMatch = await prisma.tag.findMany({
-    select: { id: true, nameKo: true, name: true },
-  });
-
   // source_type 매핑 테이블
   const srcTypeMap: Record<string, string> = {
     instagram: "INSTAGRAM",
@@ -322,39 +305,16 @@ export async function importSheetRows(rowIds: string[]): Promise<{
         ? vibeRaw.split(/[,，、]/).map((v) => v.trim()).filter(Boolean)
         : [];
 
-      // category → level 0 Topic 매칭
-      const categoryValue = (r["category"] ?? "").trim();
-      const matchedL0 = allTopicsForMatch.find(
-        (t) => t.level === 0 && t.nameKo === categoryValue
-      );
-
-      // genre → level 1 Topic 매칭
-      const genreValue = (r["genre"] ?? "").trim();
-      const matchedL1 = allTopicsForMatch.find(
-        (t) => t.level === 1 && t.nameKo === genreValue
-      );
-
-      const topicIdsToCreate = [matchedL0?.id, matchedL1?.id].filter(Boolean) as string[];
-
-      // tags → Tag 매칭 (쉼표 구분)
-      const tagNames = (r["tags"] ?? "")
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-      const matchedTagIds = allTagsForMatch
-        .filter((tag) => tagNames.includes(tag.nameKo) || tagNames.includes(tag.name))
-        .map((tag) => tag.id);
-
       // source_type 매핑
       const srcTypeRaw = (r["source_type"] ?? "").trim().toLowerCase();
       const mappedSrcType = srcTypeMap[srcTypeRaw] ?? (srcTypeRaw ? "OTHER" : null);
 
       // importNote: 원본 보존 목적
       const importNote = JSON.stringify({
-        category: categoryValue,
-        genre: genreValue,
+        category: (r["category"] ?? "").trim(),
+        genre: (r["genre"] ?? "").trim(),
         artist_work: (r["artist_work"] ?? "").trim(),
-        sub_detail: (r["sub_detail"] ?? "").trim(),
+        tags: (r["tags"] ?? "").trim(),
         tag_group: (r["tag_group"] ?? "").trim(),
         collected_by: (r["collected_by"] ?? "").trim(),
         collected_at: (r["collected_at"] ?? "").trim(),
@@ -406,12 +366,6 @@ export async function importSheetRows(rowIds: string[]): Promise<{
             collectedBy,
             collectedAt,
             importNote,
-            ...(topicIdsToCreate.length > 0 && {
-              postTopics: { create: topicIdsToCreate.map((topicId) => ({ topicId })) },
-            }),
-            ...(matchedTagIds.length > 0 && {
-              postTags: { create: matchedTagIds.map((tagId) => ({ tagId })) },
-            }),
             ...(srcUrl && {
               postSources: {
                 create: [{
