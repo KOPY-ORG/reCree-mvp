@@ -7,10 +7,13 @@ import { MarkdownContent } from "./_components/MarkdownContent";
 
 interface Props {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ preview?: string }>;
 }
 
-export default async function PostDetailPage({ params }: Props) {
+export default async function PostDetailPage({ params, searchParams }: Props) {
   const { slug } = await params;
+  const { preview } = await searchParams;
+  const isPreview = preview === "1";
 
   const post = await prisma.post.findUnique({
     where: { slug },
@@ -59,7 +62,7 @@ export default async function PostDetailPage({ params }: Props) {
     },
   });
 
-  if (!post || post.status !== "PUBLISHED") notFound();
+  if (!post || (!isPreview && post.status !== "PUBLISHED")) notFound();
 
   const spotInsight = post.postPlaces[0] ?? null;
   const insightEn = spotInsight?.insightEn as {
@@ -70,6 +73,11 @@ export default async function PostDetailPage({ params }: Props) {
 
   return (
     <article className="pb-8">
+      {isPreview && (
+        <div className="bg-amber-100 text-amber-800 text-xs text-center py-2 font-medium">
+          미리보기 모드 — 실제 발행 전 상태입니다
+        </div>
+      )}
       {/* 뒤로가기 */}
       <div className="sticky top-0 z-10 flex items-center h-12 px-3 bg-background/80 backdrop-blur-sm border-b">
         <Link

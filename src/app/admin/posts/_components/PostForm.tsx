@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   ArrowLeft,
+  ChevronDown,
   Loader2,
   X,
   Upload,
@@ -23,6 +24,7 @@ import {
   MapPin,
   Phone,
   ExternalLink,
+  Languages,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -42,12 +44,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
 import {
   checkPostSlug,
   type PostFormData,
   type PostSourceInput,
   type SpotInsightData,
 } from "../_actions/post-actions";
+import { translateFields } from "../_actions/draft-actions";
 import { PlacePickerSheet } from "./PlacePickerSheet";
 import { PlaceDetailSheet } from "./PlaceDetailSheet";
 import { LabelSelectDialog } from "./LabelSelectDialog";
@@ -69,6 +73,21 @@ import { CSS } from "@dnd-kit/utilities";
 
 // 마크다운 에디터: SSR 불가 → 동적 임포트
 const MDEditor = dynamic(() => import("@uiw/react-md-editor"), { ssr: false });
+
+// commands는 순수 객체 → 정적 import 가능 (SSR 문제 없음)
+import {
+  bold,
+  italic,
+  strikethrough,
+  link,
+  quote,
+  code,
+  codeBlock,
+  unorderedListCommand,
+  orderedListCommand,
+  divider,
+  type ICommand,
+} from "@uiw/react-md-editor/commands";
 // MapPreview: SSR 불가 → 동적 임포트
 const MapPreview = dynamic(
   () => import("@/components/maps/MapPreview").then((m) => m.MapPreview),
@@ -300,6 +319,16 @@ function SortableLabel({ item }: { item: LabelItem }) {
   );
 }
 
+// ─── Story 에디터 툴바 설정 ─────────────────────────────────────────────────────
+const STORY_COMMANDS: ICommand[] = [
+  bold, italic, strikethrough,
+  divider,
+  link, quote, code, codeBlock,
+  divider,
+  unorderedListCommand, orderedListCommand,
+];
+const STORY_EXTRA_COMMANDS: ICommand[] = [];
+
 // ─── PostForm 컴포넌트 ──────────────────────────────────────────────────────────
 
 export function PostForm({
@@ -407,6 +436,12 @@ export function PostForm({
   const [thumbnailUploading, setThumbnailUploading] = useState(false);
   const [placePickerOpen, setPlacePickerOpen] = useState(false);
   const [placeDetailOpen, setPlaceDetailOpen] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [enSectionOpen, setEnSectionOpen] = useState<{
+    basic: boolean;
+    insight: boolean;
+    body: boolean;
+  }>({ basic: false, insight: false, body: false });
 
   // ── 파생값 ─────────────────────────────────────────────────────────────────
   const topicMap = useMemo(
@@ -648,6 +683,30 @@ export function PostForm({
     setVibe((prev) => prev.filter((_, idx) => idx !== i));
   };
 
+  // ── 번역 핸들러 ─────────────────────────────────────────────────────────────
+
+  async function handleTranslateAll() {
+    setIsTranslating(true);
+    const { data, error } = await translateFields({
+      titleKo, subtitleKo,
+      contextKo, mustTryKo, tipKo,
+      bodyKo,
+    });
+    if (error) {
+      toast.error(error);
+    } else if (data) {
+      if (data.titleKo) setTitleEn(data.titleKo);
+      if (data.subtitleKo) setSubtitleEn(data.subtitleKo);
+      if (data.contextKo) setContextEn(data.contextKo);
+      if (data.mustTryKo) setMustTryEn(data.mustTryKo);
+      if (data.tipKo) setTipEn(data.tipKo);
+      if (data.bodyKo) setBodyEn(data.bodyKo);
+      setEnSectionOpen({ basic: true, insight: true, body: true });
+      toast.success("전체 번역 완료. 영어 내용을 검토해주세요.");
+    }
+    setIsTranslating(false);
+  }
+
   // ── 출처 핸들러 ─────────────────────────────────────────────────────────────
   const addSource = () => setSources((prev) => [...prev, { ...EMPTY_SOURCE }]);
   const removeSource = (i: number) =>
@@ -770,10 +829,10 @@ export function PostForm({
               </span>
             )}
 
-            {isEdit && postId && (
+            {isEdit && slug ? (
               <Button variant="outline" size="sm" asChild>
                 <a
-                  href={`/admin/posts/${postId}/preview`}
+                  href={`/posts/${slug}?preview=1`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1"
@@ -782,7 +841,12 @@ export function PostForm({
                   미리보기
                 </a>
               </Button>
-            )}
+            ) : !isEdit && slug ? (
+              <Button variant="outline" size="sm" disabled title="저장 후 미리보기 가능">
+                <Eye className="h-3.5 w-3.5 mr-1" />
+                미리보기
+              </Button>
+            ) : null}
 
             <Button variant="outline" size="sm" asChild>
               <Link href="/admin/posts">취소</Link>
@@ -863,7 +927,7 @@ export function PostForm({
               <Card className="gap-2">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base font-semibold text-foreground">
-                    제목
+                    기본 정보
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -915,50 +979,26 @@ export function PostForm({
 
                   <Separator />
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="titleKo">
-                        한국어 제목 <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        id="titleKo"
-                        value={titleKo}
-                        onChange={(e) => setTitleKo(e.target.value)}
-                        placeholder="예: BTS 정국이 자주 찾던 홍대 카페"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="titleEn">
-                        영어 제목 <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        id="titleEn"
-                        value={titleEn}
-                        onChange={(e) => setTitleEn(e.target.value)}
-                        placeholder="예: Jungkook's Favorite Café in Hongdae"
-                      />
-                    </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="titleKo">
+                      한국어 제목 <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="titleKo"
+                      value={titleKo}
+                      onChange={(e) => setTitleKo(e.target.value)}
+                      placeholder="예: BTS 정국이 자주 찾던 홍대 카페"
+                    />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="subtitleKo">한국어 부제목</Label>
-                      <Input
-                        id="subtitleKo"
-                        value={subtitleKo}
-                        onChange={(e) => setSubtitleKo(e.target.value)}
-                        placeholder="짧은 소개 문구"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="subtitleEn">영어 부제목</Label>
-                      <Input
-                        id="subtitleEn"
-                        value={subtitleEn}
-                        onChange={(e) => setSubtitleEn(e.target.value)}
-                        placeholder="Short description"
-                      />
-                    </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="subtitleKo">한국어 부제목</Label>
+                    <Input
+                      id="subtitleKo"
+                      value={subtitleKo}
+                      onChange={(e) => setSubtitleKo(e.target.value)}
+                      placeholder="짧은 소개 문구"
+                    />
                   </div>
 
                   {/* Slug */}
@@ -1006,6 +1046,45 @@ export function PostForm({
                       </button>
                     )}
                   </div>
+
+                  {/* EN 섹션 토글 */}
+                  <div className="pt-2 border-t">
+                    <button
+                      type="button"
+                      onClick={() => setEnSectionOpen((p) => ({ ...p, basic: !p.basic }))}
+                      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground w-full"
+                    >
+                      <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", enSectionOpen.basic && "rotate-180")} />
+                      영어 번역 검토
+                      {(titleEn || subtitleEn) && (
+                        <span className="ml-auto text-green-600 text-[10px]">번역됨</span>
+                      )}
+                    </button>
+                    {enSectionOpen.basic && (
+                      <div className="mt-3 space-y-3 pl-1">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="titleEn" className="text-xs text-muted-foreground">
+                            영어 제목 <span className="text-destructive">*</span>
+                          </Label>
+                          <Input
+                            id="titleEn"
+                            value={titleEn}
+                            onChange={(e) => setTitleEn(e.target.value)}
+                            placeholder="예: Jungkook's Favorite Café in Hongdae"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="subtitleEn" className="text-xs text-muted-foreground">영어 부제목</Label>
+                          <Input
+                            id="subtitleEn"
+                            value={subtitleEn}
+                            onChange={(e) => setSubtitleEn(e.target.value)}
+                            placeholder="Short description"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
 
@@ -1017,79 +1096,37 @@ export function PostForm({
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {!selectedPlace && (
-                    <p className="text-xs text-muted-foreground rounded-md bg-muted/50 px-3 py-2">
-                      오른쪽에서 장소를 연결하면 장소와 함께 저장됩니다. 장소 없이도 인사이트 내용을 미리 입력할 수 있습니다.
-                    </p>
-                  )}
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="contextKo">Context (한국어)</Label>
-                      <Textarea
-                        id="contextKo"
-                        value={contextKo}
-                        onChange={(e) => setContextKo(e.target.value)}
-                        rows={3}
-                        placeholder="이 장소에 대한 소개 (한국어)"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="contextEn">Context (English)</Label>
-                      <Textarea
-                        id="contextEn"
-                        value={contextEn}
-                        onChange={(e) => setContextEn(e.target.value)}
-                        rows={3}
-                        placeholder="Introduction about this place (English)"
-                      />
-                    </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="contextKo">Context (한국어)</Label>
+                    <Textarea
+                      id="contextKo"
+                      value={contextKo}
+                      onChange={(e) => setContextKo(e.target.value)}
+                      rows={3}
+                      placeholder="이 장소에 대한 소개 (한국어)"
+                    />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="mustTryKo">Must-try (한국어)</Label>
-                      <Textarea
-                        id="mustTryKo"
-                        value={mustTryKo}
-                        onChange={(e) => setMustTryKo(e.target.value)}
-                        rows={2}
-                        placeholder="꼭 먹어봐야 할 것, 경험해야 할 것"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="mustTryEn">Must-try (English)</Label>
-                      <Textarea
-                        id="mustTryEn"
-                        value={mustTryEn}
-                        onChange={(e) => setMustTryEn(e.target.value)}
-                        rows={2}
-                        placeholder="What you must try here"
-                      />
-                    </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="mustTryKo">Must-try (한국어)</Label>
+                    <Textarea
+                      id="mustTryKo"
+                      value={mustTryKo}
+                      onChange={(e) => setMustTryKo(e.target.value)}
+                      rows={2}
+                      placeholder="꼭 먹어봐야 할 것, 경험해야 할 것"
+                    />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="tipKo">Tip (한국어)</Label>
-                      <Textarea
-                        id="tipKo"
-                        value={tipKo}
-                        onChange={(e) => setTipKo(e.target.value)}
-                        rows={2}
-                        placeholder="방문 팁"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="tipEn">Tip (English)</Label>
-                      <Textarea
-                        id="tipEn"
-                        value={tipEn}
-                        onChange={(e) => setTipEn(e.target.value)}
-                        rows={2}
-                        placeholder="Visiting tips"
-                      />
-                    </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="tipKo">Tip (한국어)</Label>
+                    <Textarea
+                      id="tipKo"
+                      value={tipKo}
+                      onChange={(e) => setTipKo(e.target.value)}
+                      rows={2}
+                      placeholder="방문 팁"
+                    />
                   </div>
 
                   {/* Vibe */}
@@ -1133,7 +1170,54 @@ export function PostForm({
                     </div>
                   </div>
 
-
+                  {/* EN 섹션 토글 */}
+                  <div className="pt-2 border-t">
+                    <button
+                      type="button"
+                      onClick={() => setEnSectionOpen((p) => ({ ...p, insight: !p.insight }))}
+                      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground w-full"
+                    >
+                      <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", enSectionOpen.insight && "rotate-180")} />
+                      영어 번역 검토
+                      {(contextEn || mustTryEn || tipEn) && (
+                        <span className="ml-auto text-green-600 text-[10px]">번역됨</span>
+                      )}
+                    </button>
+                    {enSectionOpen.insight && (
+                      <div className="mt-3 space-y-3 pl-1">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="contextEn" className="text-xs text-muted-foreground">Context (English)</Label>
+                          <Textarea
+                            id="contextEn"
+                            value={contextEn}
+                            onChange={(e) => setContextEn(e.target.value)}
+                            rows={3}
+                            placeholder="Introduction about this place (English)"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="mustTryEn" className="text-xs text-muted-foreground">Must-try (English)</Label>
+                          <Textarea
+                            id="mustTryEn"
+                            value={mustTryEn}
+                            onChange={(e) => setMustTryEn(e.target.value)}
+                            rows={2}
+                            placeholder="What you must try here"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="tipEn" className="text-xs text-muted-foreground">Tip (English)</Label>
+                          <Textarea
+                            id="tipEn"
+                            value={tipEn}
+                            onChange={(e) => setTipEn(e.target.value)}
+                            rows={2}
+                            placeholder="Visiting tips"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
 
@@ -1144,26 +1228,50 @@ export function PostForm({
                     Story
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-4" data-color-mode="light">
-                    <div className="space-y-1.5">
-                      <Label>본문 (한국어)</Label>
-                      <MDEditor
-                        value={bodyKo}
-                        onChange={(v) => setBodyKo(v ?? "")}
-                        height={400}
-                        preview="edit"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>본문 (English)</Label>
-                      <MDEditor
-                        value={bodyEn}
-                        onChange={(v) => setBodyEn(v ?? "")}
-                        height={400}
-                        preview="edit"
-                      />
-                    </div>
+                <CardContent className="space-y-4" data-color-mode="light">
+                  {/* ── 한국어 에디터 */}
+                  <div className="space-y-1.5">
+                    <Label>본문 (한국어)</Label>
+                    <MDEditor
+                      value={bodyKo}
+                      onChange={(v) => setBodyKo(v ?? "")}
+                      height={320}
+                      preview="edit"
+                      commands={STORY_COMMANDS}
+                      extraCommands={STORY_EXTRA_COMMANDS}
+                      visibleDragbar={false}
+                    />
+                  </div>
+
+                  {/* EN 섹션 토글 */}
+                  <div className="pt-2 border-t">
+                    <button
+                      type="button"
+                      onClick={() => setEnSectionOpen((p) => ({ ...p, body: !p.body }))}
+                      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground w-full"
+                    >
+                      <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", enSectionOpen.body && "rotate-180")} />
+                      영어 번역 검토
+                      {bodyEn && (
+                        <span className="ml-auto text-green-600 text-[10px]">번역됨</span>
+                      )}
+                    </button>
+                    {enSectionOpen.body && (
+                      <div className="mt-3 pl-1">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground">본문 (English)</Label>
+                          <MDEditor
+                            value={bodyEn}
+                            onChange={(v) => setBodyEn(v ?? "")}
+                            height={320}
+                            preview="edit"
+                            commands={STORY_COMMANDS}
+                            extraCommands={STORY_EXTRA_COMMANDS}
+                            visibleDragbar={false}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -1344,6 +1452,34 @@ export function PostForm({
 
             {/* ─── 오른쪽 사이드바 (sticky) ──────────────────────────────── */}
             <div className="space-y-4 sticky top-[3.6rem]">
+
+              {/* ── 전체 번역 카드 ──────────────────────────────────────────── */}
+              <Card>
+                <CardContent className="pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-8 text-xs"
+                    onClick={handleTranslateAll}
+                    disabled={isTranslating || (!titleKo && !bodyKo)}
+                  >
+                    {isTranslating ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                        번역 중...
+                      </>
+                    ) : (
+                      <>
+                        <Languages className="w-3.5 h-3.5 mr-1.5" />
+                        전체 번역 (KO → EN)
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-[10px] text-muted-foreground text-center mt-1.5">
+                    모든 KO 필드를 한 번에 번역합니다
+                  </p>
+                </CardContent>
+              </Card>
 
               {/* ── 장소 카드 ──────────────────────────────────────────────── */}
               <Card className="gap-2">
