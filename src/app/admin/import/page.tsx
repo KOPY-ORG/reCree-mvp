@@ -8,16 +8,19 @@ export default function ImportPage() {
     !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold">시트 가져오기</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Google Sheets에서 수집된 장소 데이터를 포스트로 가져옵니다.
-        </p>
+    <div className="p-8">
+      {/* 헤더 */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">시트 가져오기</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Google Sheets에서 수집된 장소 데이터를 포스트로 가져옵니다.
+          </p>
+        </div>
       </div>
 
       {!isConfigured && (
-        <Alert variant="destructive" className="mb-6">
+        <Alert variant="destructive" className="mt-6">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>환경변수 설정 필요</AlertTitle>
           <AlertDescription className="space-y-1 text-xs">

@@ -41,14 +41,6 @@ enum ReCreeshotStatus {
 }
 
 
-enum TagGroup {
-  FOOD
-  SPOT
-  EXPERIENCE
-  ITEM
-  BEAUTY
-}
-
 enum SaveTarget {
   POST
   RECREESHOT
@@ -99,7 +91,6 @@ model Topic {
   children Topic[] @relation("TopicHierarchy")
 
   postTopics        PostTopic[]
-  placeTopics       PlaceTopic[]
   reCreeshotTopics  ReCreeshotTopic[]
   curatedSections   CuratedSection[]  @relation("FilterTopic")
 }
@@ -109,7 +100,7 @@ model Tag {
   name      String   @unique
   nameKo    String
   slug      String   @unique
-  group     TagGroup
+  group     String
   colorHex     String?   // null = 그룹 색 상속
   colorHex2    String?   // 그라데이션 끝 색 (null = 단색)
   textColorHex String?   // null = 그룹 색 상속
@@ -119,19 +110,19 @@ model Tag {
   updatedAt    DateTime @updatedAt
 
   postTags        PostTag[]
-  placeTags       PlaceTag[]
   reCreeshotTags  ReCreeshotTag[]
   curatedSections CuratedSection[] @relation("FilterTag")
 }
 
 model TagGroupConfig {
-  group        TagGroup @id
+  group        String   @id
   nameEn       String   @default("")
   colorHex     String   @default("#C6FD09")
   colorHex2    String?
   gradientDir  String   @default("to bottom")
   gradientStop Int      @default(150)
   textColorHex String   @default("#000000")
+  sortOrder    Int      @default(0)
   updatedAt    DateTime @updatedAt
 }
 
@@ -149,9 +140,12 @@ model Post {
   status         PostStatus @default(DRAFT)
   source         String?
   importNote     String?   // 시트 원본 데이터 (JSON 문자열)
-  sourceUrl      String?   // 출처 URL
-  sourceType     String?   // INSTAGRAM|YOUTUBE|TIKTOK|X|REDDIT|BLOG|NEWS|OTHER
-  sourceNote     String?   // 출처 메모
+  sourceUrl      String?   // 출처 URL (레거시, PostSource 테이블로 이전)
+  sourceType     String?   // INSTAGRAM|YOUTUBE|TIKTOK|X|REDDIT|BLOG|NEWS|OTHER (레거시)
+  sourceNote     String?   // 출처 메모 (레거시)
+  memo           String?   // 관리자 내부 메모
+  collectedBy    String?   // 수집자 이름
+  collectedAt    String?   // 수집 날짜 (예: "2024-01-15")
   viewCount      Int        @default(0)
   saveCount      Int        @default(0)
   authorId       String?    @db.Uuid
@@ -164,7 +158,22 @@ model Post {
   postTopics  PostTopic[]
   postTags    PostTag[]
   postPlaces  PostPlace[]
+  postSources PostSource[]
   homeBanners HomeBanner[]
+}
+
+model PostSource {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  postId         String   @db.Uuid
+  sourceType     String?  // INSTAGRAM|YOUTUBE|TIKTOK|X|REDDIT|BLOG|NEWS|OTHER
+  sourceUrl      String?
+  sourceNote     String?
+  sourcePostDate String?  // 출처 게시 날짜 (예: "2024-01-15")
+  referenceUrl   String?
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 }
 
 model Place {
@@ -193,8 +202,6 @@ model Place {
   updatedAt      DateTime    @updatedAt
 
   postPlaces   PostPlace[]
-  placeTags    PlaceTag[]
-  placeTopics  PlaceTopic[]
   reCreeshots  ReCreeshot[]
 }
 
@@ -226,9 +233,11 @@ model ReCreeshot {
 // ─── M:N 조인 테이블 ──────────────────────────────────────────────────────────
 
 model PostTopic {
-  postId    String   @db.Uuid
-  topicId   String   @db.Uuid
-  createdAt DateTime @default(now())
+  postId       String   @db.Uuid
+  topicId      String   @db.Uuid
+  isVisible    Boolean  @default(false)
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
 
   post  Post  @relation(fields: [postId], references: [id], onDelete: Cascade)
   topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
@@ -237,9 +246,11 @@ model PostTopic {
 }
 
 model PostTag {
-  postId    String   @db.Uuid
-  tagId     String   @db.Uuid
-  createdAt DateTime @default(now())
+  postId       String   @db.Uuid
+  tagId        String   @db.Uuid
+  isVisible    Boolean  @default(false)
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
 
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
   tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
@@ -254,7 +265,6 @@ model PostPlace {
   vibe        String[]
   mustTry     String?
   tip         String?
-  reference   String?
   insightEn   Json?
   createdAt   DateTime @default(now())
 
@@ -262,28 +272,6 @@ model PostPlace {
   place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
 
   @@id([postId, placeId])
-}
-
-model PlaceTopic {
-  placeId   String   @db.Uuid
-  topicId   String   @db.Uuid
-  createdAt DateTime @default(now())
-
-  place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
-  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
-
-  @@id([placeId, topicId])
-}
-
-model PlaceTag {
-  placeId   String   @db.Uuid
-  tagId     String   @db.Uuid
-  createdAt DateTime @default(now())
-
-  place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
-  tag   Tag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
-
-  @@id([placeId, tagId])
 }
 
 model ReCreeshotTopic {

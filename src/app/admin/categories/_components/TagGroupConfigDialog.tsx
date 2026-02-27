@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useTransition } from "react";
 import { toast } from "sonner";
-import { TagGroup } from "@prisma/client";
 import {
   Dialog,
   DialogContent,
@@ -13,25 +12,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { upsertTagGroupConfig } from "../actions";
+import { upsertTagGroupConfig, createTagGroup, type TagGroupConfigCreated, type TagGroupConfigData } from "../actions";
 import type { TagGroupConfigItem } from "./SortableTagList";
 import { ColorLabel } from "./SortableTagList";
-
-const GROUP_LABEL: Record<TagGroup, string> = {
-  FOOD: "음식",
-  SPOT: "장소",
-  EXPERIENCE: "경험",
-  ITEM: "아이템",
-  BEAUTY: "뷰티",
-};
-
-const GROUP_NAME_DEFAULT: Record<TagGroup, string> = {
-  FOOD: "Food",
-  SPOT: "Spot",
-  EXPERIENCE: "Experience",
-  ITEM: "Item",
-  BEAUTY: "Beauty",
-};
 
 function ColorPicker({
   label,
@@ -65,11 +48,14 @@ function ColorPicker({
 
 interface TagGroupConfigDialogProps {
   open: boolean;
+  mode: "create" | "edit";
   groupConfig: TagGroupConfigItem | null;
   onClose: () => void;
+  onCreated?: (created: TagGroupConfigCreated) => void;
+  onUpdated?: (updated: TagGroupConfigData) => void;
 }
 
-export function TagGroupConfigDialog({ open, groupConfig, onClose }: TagGroupConfigDialogProps) {
+export function TagGroupConfigDialog({ open, mode, groupConfig, onClose, onCreated, onUpdated }: TagGroupConfigDialogProps) {
   const [isPending, startTransition] = useTransition();
   const [nameEn, setNameEn] = useState("");
   const [isGradient, setIsGradient] = useState(false);
@@ -80,60 +66,96 @@ export function TagGroupConfigDialog({ open, groupConfig, onClose }: TagGroupCon
   const [textColorHex, setTextColorHex] = useState<"#000000" | "#FFFFFF">("#000000");
 
   useEffect(() => {
-    if (open && groupConfig) {
-      setNameEn(groupConfig.nameEn || GROUP_NAME_DEFAULT[groupConfig.group]);
-      setIsGradient(groupConfig.colorHex2 !== null);
-      setColorHex(groupConfig.colorHex);
-      setColorHex2(groupConfig.colorHex2 ?? "#ffffff");
-      setGradientDir((groupConfig.gradientDir as "to bottom" | "to right") ?? "to bottom");
-      setGradientStop(groupConfig.gradientStop ?? 150);
-      setTextColorHex(groupConfig.textColorHex === "#FFFFFF" ? "#FFFFFF" : "#000000");
+    if (open) {
+      if (mode === "edit" && groupConfig) {
+        setNameEn(groupConfig.nameEn || groupConfig.group);
+        setIsGradient(groupConfig.colorHex2 !== null);
+        setColorHex(groupConfig.colorHex);
+        setColorHex2(groupConfig.colorHex2 ?? "#ffffff");
+        setGradientDir((groupConfig.gradientDir as "to bottom" | "to right") ?? "to bottom");
+        setGradientStop(groupConfig.gradientStop ?? 150);
+        setTextColorHex(groupConfig.textColorHex === "#FFFFFF" ? "#FFFFFF" : "#000000");
+      } else {
+        setNameEn("");
+        setIsGradient(false);
+        setColorHex("#C6FD09");
+        setColorHex2("#ffffff");
+        setGradientDir("to bottom");
+        setGradientStop(150);
+        setTextColorHex("#000000");
+      }
     }
-  }, [open, groupConfig]);
+  }, [open, mode, groupConfig]);
 
   function handleSubmit() {
-    if (!groupConfig) return;
+    const formData = {
+      nameEn: nameEn.trim(),
+      colorHex,
+      colorHex2: isGradient ? colorHex2 : null,
+      gradientDir,
+      gradientStop,
+      textColorHex,
+    };
+
     startTransition(async () => {
-      const result = await upsertTagGroupConfig(groupConfig.group, {
-        nameEn: nameEn.trim() || GROUP_NAME_DEFAULT[groupConfig.group],
-        colorHex,
-        colorHex2: isGradient ? colorHex2 : null,
-        gradientDir,
-        gradientStop,
-        textColorHex,
-      });
-      if (result.error) {
-        toast.error(result.error);
+      if (mode === "create") {
+        if (!nameEn.trim()) {
+          toast.error("그룹 이름(영어)을 입력해주세요.");
+          return;
+        }
+        const result = await createTagGroup(formData);
+        if (result.error) {
+          toast.error(result.error);
+        } else {
+          if (result.created) onCreated?.(result.created);
+          toast.success("새 그룹이 생성되었습니다.");
+          onClose();
+        }
       } else {
-        toast.success("그룹 설정이 저장되었습니다.");
-        onClose();
+        if (!groupConfig) return;
+        const result = await upsertTagGroupConfig(groupConfig.group, formData);
+        if (result.error) {
+          toast.error(result.error);
+        } else {
+          if (result.updated) onUpdated?.(result.updated);
+          toast.success("그룹 설정이 저장되었습니다.");
+          onClose();
+        }
       }
     });
   }
 
-  if (!groupConfig) return null;
+  if (mode === "edit" && !groupConfig) return null;
 
-  const previewName = nameEn.trim() || GROUP_NAME_DEFAULT[groupConfig.group];
+  const previewName = nameEn.trim() || (mode === "edit" && groupConfig ? groupConfig.group : "NEW GROUP");
+  const derivedKey = nameEn.trim().toUpperCase().replace(/\W+/g, "_");
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>
-            {GROUP_LABEL[groupConfig.group]} ({groupConfig.group}) 그룹 설정
+            {mode === "create"
+              ? "새 Tag 그룹 추가"
+              : `${groupConfig!.group} 그룹 설정`}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
           {/* 영어 라벨 이름 */}
           <div className="space-y-1.5">
-            <Label htmlFor="groupNameEn">라벨 이름 (영어)</Label>
+            <Label htmlFor="groupNameEn">그룹 이름 (영어) *</Label>
             <Input
               id="groupNameEn"
               value={nameEn}
               onChange={(e) => setNameEn(e.target.value)}
-              placeholder={GROUP_NAME_DEFAULT[groupConfig.group]}
+              placeholder="예: Fashion"
             />
+            {mode === "create" && nameEn.trim() && (
+              <p className="text-xs text-muted-foreground">
+                그룹 키: <span className="font-mono font-semibold">{derivedKey}</span>
+              </p>
+            )}
           </div>
 
           {/* 단색 / 그라데이션 토글 */}
@@ -258,9 +280,7 @@ export function TagGroupConfigDialog({ open, groupConfig, onClose }: TagGroupCon
               gradientStop={gradientStop}
               textColorHex={textColorHex}
             />
-            <span className="text-sm text-muted-foreground">
-              {GROUP_LABEL[groupConfig.group]}
-            </span>
+            <span className="text-xs text-muted-foreground">미리보기</span>
           </div>
         </div>
 
@@ -269,7 +289,7 @@ export function TagGroupConfigDialog({ open, groupConfig, onClose }: TagGroupCon
             취소
           </Button>
           <Button type="button" onClick={handleSubmit} disabled={isPending}>
-            {isPending ? "저장 중…" : "저장"}
+            {isPending ? "저장 중…" : mode === "create" ? "생성" : "저장"}
           </Button>
         </DialogFooter>
       </DialogContent>

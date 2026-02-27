@@ -54,14 +54,14 @@ export function PostsFilters({ currentSearch, currentStatus }: Props) {
   };
 
   return (
-    <div className="mt-6 flex flex-wrap gap-3">
+    <div className="mt-6 flex flex-wrap gap-2">
       <div className="relative flex-1 min-w-[200px] max-w-xs">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
         <Input
           placeholder="제목으로 검색..."
           value={searchValue}
           onChange={(e) => setSearchValue(e.target.value)}
-          className="pl-9"
+          className="pl-9 rounded-lg bg-white shadow-sm border-0"
         />
       </div>
 
@@ -69,7 +69,7 @@ export function PostsFilters({ currentSearch, currentStatus }: Props) {
         value={currentStatus || "all"}
         onValueChange={handleStatusChange}
       >
-        <SelectTrigger className="w-32">
+        <SelectTrigger className="w-32 rounded-lg bg-white shadow-sm border-0">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

@@ -176,6 +176,47 @@ Return ONLY valid JSON with no other text:
   }
 }
 
+// ─── 필드 번역 (KO → EN) ────────────────────────────────────────────────────────
+
+export async function translateFields(
+  fields: Record<string, string>,
+): Promise<{ data?: Record<string, string>; error?: string }> {
+  try {
+    const model = getGemini();
+    const fieldList = Object.entries(fields)
+      .filter(([, v]) => v.trim())
+      .map(([k, v]) => `"${k}": ${JSON.stringify(v)}`)
+      .join("\n");
+
+    if (!fieldList) return { data: {} };
+
+    const prompt = `You are a professional Korean-to-English translator for K-culture content.
+Translate each field from Korean to natural English. Preserve markdown formatting if present.
+Return ONLY a valid JSON object with the same keys.
+
+Fields to translate:
+${fieldList}`;
+
+    const result = await model.generateContent(prompt);
+    const text = result.response
+      .text()
+      .trim()
+      .replace(/^```json\n?/, "")
+      .replace(/\n?```$/, "");
+
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return { error: "번역 응답을 파싱할 수 없습니다." };
+
+    const data = JSON.parse(jsonMatch[0]) as Record<string, string>;
+    return { data };
+  } catch (e) {
+    console.error("번역 오류:", e);
+    return {
+      error: e instanceof Error ? e.message : "번역 중 오류가 발생했습니다.",
+    };
+  }
+}
+
 // ─── 일괄 AI 초안 생성 ──────────────────────────────────────────────────────────
 
 export async function generateAIDraftsBulk(postIds: string[]): Promise<{

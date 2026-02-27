@@ -9,48 +9,28 @@ interface Props {
 export default async function EditPlacePage({ params }: Props) {
   const { id } = await params;
 
-  const [place, allTags, allTopics] = await Promise.all([
-    prisma.place.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        nameKo: true,
-        nameEn: true,
-        addressKo: true,
-        addressEn: true,
-        country: true,
-        city: true,
-        latitude: true,
-        longitude: true,
-        googlePlaceId: true,
-        googleMapsUrl: true,
-        naverMapsUrl: true,
-        kakaoMapsUrl: true,
-        phone: true,
-        operatingHours: true,
-        status: true,
-        isVerified: true,
-        placeTags: { select: { tagId: true } },
-        placeTopics: { select: { topicId: true } },
-      },
-    }),
-    prisma.tag.findMany({
-      where: { isActive: true },
-      select: { id: true, nameKo: true, group: true, colorHex: true },
-      orderBy: [{ group: "asc" }, { sortOrder: "asc" }, { nameKo: "asc" }],
-    }),
-    prisma.topic.findMany({
-      select: {
-        id: true,
-        nameKo: true,
-        level: true,
-        parentId: true,
-        colorHex: true,
-        textColorHex: true,
-      },
-      orderBy: [{ level: "asc" }, { sortOrder: "asc" }, { nameKo: "asc" }],
-    }),
-  ]);
+  const place = await prisma.place.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      nameKo: true,
+      nameEn: true,
+      addressKo: true,
+      addressEn: true,
+      country: true,
+      city: true,
+      latitude: true,
+      longitude: true,
+      googlePlaceId: true,
+      googleMapsUrl: true,
+      naverMapsUrl: true,
+      kakaoMapsUrl: true,
+      phone: true,
+      operatingHours: true,
+      status: true,
+      isVerified: true,
+    },
+  });
 
   if (!place) notFound();
 
@@ -62,8 +42,6 @@ export default async function EditPlacePage({ params }: Props) {
         ...place,
         operatingHours: (place.operatingHours as string[] | null) ?? null,
       }}
-      allTags={allTags}
-      allTopics={allTopics}
     />
   );
 }
