@@ -763,7 +763,7 @@ export function PlaceForm({
               </div>
 
               {/* ── 오른쪽: 태그 · 토픽 (sticky) ──────────────────────────── */}
-              <div className="sticky top-14 max-h-[calc(100vh-3.5rem)] overflow-y-auto space-y-5 pb-6">
+              <div className="sticky top-14 space-y-5 pb-6">
 
                 {/* 태그 */}
                 <Card>
