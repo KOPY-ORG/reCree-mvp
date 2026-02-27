@@ -59,16 +59,6 @@ export default async function PlacesPage({
         source: true,
         isVerified: true,
         createdAt: true,
-        placeTags: {
-          select: {
-            tag: { select: { id: true, nameKo: true, colorHex: true } },
-          },
-        },
-        placeTopics: {
-          select: {
-            topic: { select: { id: true, nameKo: true } },
-          },
-        },
         _count: {
           select: { postPlaces: true, reCreeshots: true },
         },

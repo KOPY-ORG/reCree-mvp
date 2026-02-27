@@ -109,11 +109,6 @@ export async function getPlaceDetail(id: string) {
       operatingHours: true,
       googleMapsUrl: true,
       status: true,
-      placeTags: {
-        include: {
-          tag: { select: { nameKo: true, colorHex: true, group: true } },
-        },
-      },
     },
   });
 }

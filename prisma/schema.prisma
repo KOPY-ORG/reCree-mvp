@@ -91,7 +91,6 @@ model Topic {
   children Topic[] @relation("TopicHierarchy")
 
   postTopics        PostTopic[]
-  placeTopics       PlaceTopic[]
   reCreeshotTopics  ReCreeshotTopic[]
   curatedSections   CuratedSection[]  @relation("FilterTopic")
 }
@@ -111,7 +110,6 @@ model Tag {
   updatedAt    DateTime @updatedAt
 
   postTags        PostTag[]
-  placeTags       PlaceTag[]
   reCreeshotTags  ReCreeshotTag[]
   curatedSections CuratedSection[] @relation("FilterTag")
 }
@@ -204,8 +202,6 @@ model Place {
   updatedAt      DateTime    @updatedAt
 
   postPlaces   PostPlace[]
-  placeTags    PlaceTag[]
-  placeTopics  PlaceTopic[]
   reCreeshots  ReCreeshot[]
 }
 
@@ -272,28 +268,6 @@ model PostPlace {
   place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
 
   @@id([postId, placeId])
-}
-
-model PlaceTopic {
-  placeId   String   @db.Uuid
-  topicId   String   @db.Uuid
-  createdAt DateTime @default(now())
-
-  place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
-  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
-
-  @@id([placeId, topicId])
-}
-
-model PlaceTag {
-  placeId   String   @db.Uuid
-  tagId     String   @db.Uuid
-  createdAt DateTime @default(now())
-
-  place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
-  tag   Tag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
-
-  @@id([placeId, tagId])
 }
 
 model ReCreeshotTopic {

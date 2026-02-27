@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useTransition, useState } from "react";
+import { useCallback, useTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -11,7 +11,6 @@ import {
   MapPin,
   RotateCcw,
   Search,
-  X,
 } from "lucide-react";
 import Link from "next/link";
 import type { PlaceStatus } from "@prisma/client";
@@ -44,22 +43,6 @@ import type { PlaceFormData } from "../actions";
 
 // ─── 타입 ──────────────────────────────────────────────────────────────────────
 
-export type TagForForm = {
-  id: string;
-  nameKo: string;
-  group: string;
-  colorHex: string | null;
-};
-
-export type TopicForForm = {
-  id: string;
-  nameKo: string;
-  level: number;
-  parentId: string | null;
-  colorHex: string | null;
-  textColorHex: string | null;
-};
-
 export type PlaceInitialData = {
   id: string;
   nameKo: string;
@@ -78,14 +61,10 @@ export type PlaceInitialData = {
   operatingHours: string[] | null;
   status: PlaceStatus;
   isVerified: boolean;
-  placeTags: { tagId: string }[];
-  placeTopics: { topicId: string }[];
 };
 
 interface PlaceFormProps {
   initialData?: PlaceInitialData;
-  allTags: TagForForm[];
-  allTopics: TopicForForm[];
   onSubmit: (data: PlaceFormData) => Promise<{ error?: string }>;
   submitLabel: string;
 }
@@ -112,68 +91,10 @@ const STATUS_LABELS: Record<PlaceStatus, string> = {
   CLOSED_PERMANENT: "폐업",
 };
 
-// ─── 유틸 ──────────────────────────────────────────────────────────────────────
-
-function getDescendants(
-  topicId: string,
-  allTopics: TopicForForm[],
-): TopicForForm[] {
-  const children = allTopics.filter((t) => t.parentId === topicId);
-  if (children.length === 0) return [];
-  return [
-    ...children,
-    ...children.flatMap((c) => getDescendants(c.id, allTopics)),
-  ];
-}
-
-// ─── 토픽 칩 ───────────────────────────────────────────────────────────────────
-
-interface TopicChipProps {
-  topic: TopicForForm;
-  selected: boolean;
-  onToggle: (id: string) => void;
-  showX?: boolean;
-}
-
-function TopicChip({
-  topic,
-  selected,
-  onToggle,
-  showX = false,
-}: TopicChipProps) {
-  const style: React.CSSProperties =
-    selected && topic.colorHex
-      ? { backgroundColor: topic.colorHex, color: topic.textColorHex ?? "#fff" }
-      : selected
-        ? {
-            backgroundColor: "hsl(var(--foreground))",
-            color: "hsl(var(--background))",
-          }
-        : {};
-
-  return (
-    <button
-      type="button"
-      onClick={() => onToggle(topic.id)}
-      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium transition-colors ${
-        selected
-          ? "border-transparent"
-          : "border-border bg-background text-muted-foreground hover:border-foreground/30 hover:text-foreground"
-      }`}
-      style={style}
-    >
-      {topic.nameKo}
-      {showX && <X className="h-3 w-3 opacity-70" />}
-    </button>
-  );
-}
-
 // ─── 컴포넌트 ──────────────────────────────────────────────────────────────────
 
 export function PlaceForm({
   initialData,
-  allTags,
-  allTopics,
   onSubmit,
   submitLabel,
 }: PlaceFormProps) {
@@ -221,59 +142,14 @@ export function PlaceForm({
   const [isVerified, setIsVerified] = useState(
     initialData?.isVerified ?? false,
   );
-  const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(
-    new Set(initialData?.placeTags.map((pt) => pt.tagId) ?? []),
-  );
-  const [selectedTopicIds, setSelectedTopicIds] = useState<Set<string>>(
-    new Set(initialData?.placeTopics.map((pt) => pt.topicId) ?? []),
-  );
 
   // ── UI 상태 ────────────────────────────────────────────────────────────────
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
   const [mapDialogOpen, setMapDialogOpen] = useState(false);
-  const [topicSearch, setTopicSearch] = useState("");
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
-    null,
-  );
 
   // ── 파생값 ─────────────────────────────────────────────────────────────────
   const hasLocation =
     !!addressKo || (latitude !== null && longitude !== null);
-
-  const rootTopics = useMemo(
-    () => allTopics.filter((t) => t.level === 0),
-    [allTopics],
-  );
-
-  const selectedTopics = useMemo(
-    () => allTopics.filter((t) => selectedTopicIds.has(t.id)),
-    [allTopics, selectedTopicIds],
-  );
-
-  const level1Sections = useMemo(() => {
-    if (!selectedCategoryId) return [];
-    return allTopics.filter((t) => t.parentId === selectedCategoryId);
-  }, [allTopics, selectedCategoryId]);
-
-  const searchResults = useMemo(() => {
-    if (!topicSearch.trim()) return [];
-    return allTopics.filter((t) => t.nameKo.includes(topicSearch));
-  }, [allTopics, topicSearch]);
-
-  const tagsByGroup = useMemo(
-    () =>
-      allTags.reduce<Record<string, TagForForm[]>>((acc, tag) => {
-        if (!acc[tag.group]) acc[tag.group] = [];
-        acc[tag.group].push(tag);
-        return acc;
-      }, {}),
-    [allTags],
-  );
-
-  const groupsWithTags = useMemo(
-    () => Object.keys(tagsByGroup).filter((g) => (tagsByGroup[g]?.length ?? 0) > 0),
-    [tagsByGroup],
-  );
 
   // ── 핸들러 ─────────────────────────────────────────────────────────────────
 
@@ -291,30 +167,6 @@ export function PlaceForm({
     if (place.status) setStatus(place.status);
     setGoogleSearchDone(true);
   }, []);
-
-  const toggleTag = (tagId: string) => {
-    setSelectedTagIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(tagId)) next.delete(tagId);
-      else next.add(tagId);
-      return next;
-    });
-  };
-
-  const toggleTopic = (topicId: string) => {
-    setSelectedTopicIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(topicId)) next.delete(topicId);
-      else next.add(topicId);
-      return next;
-    });
-  };
-
-  const toggleCategory = (categoryId: string) => {
-    setSelectedCategoryId((prev) =>
-      prev === categoryId ? null : categoryId,
-    );
-  };
 
   const handleSubmit = (e: { preventDefault(): void }) => {
     e.preventDefault();
@@ -351,8 +203,6 @@ export function PlaceForm({
         : null,
       status,
       isVerified,
-      tagIds: Array.from(selectedTagIds),
-      topicIds: Array.from(selectedTopicIds),
     };
 
     startTransition(async () => {
@@ -397,15 +247,11 @@ export function PlaceForm({
           </div>
         </div>
 
-        {/* ── 2컬럼 바디 ─────────────────────────────────────────────────────── */}
+        {/* ── 바디 ─────────────────────────────────────────────────────────── */}
         <div className="flex-1 px-6 py-6">
-          <div className="mx-auto max-w-[1400px]">
-            <div className="grid grid-cols-[1fr_400px] gap-6 items-start">
+          <div className="mx-auto max-w-3xl space-y-5">
 
-              {/* ── 왼쪽: 장소 정보 ─────────────────────────────────────────── */}
-              <div className="space-y-5">
-
-                {/* STEP 1: 장소 검색 */}
+              {/* STEP 1: 장소 검색 */}
                 <Card>
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
@@ -760,244 +606,7 @@ export function PlaceForm({
                     </div>
                   </CardContent>
                 </Card>
-              </div>
 
-              {/* ── 오른쪽: 태그 · 토픽 (sticky) ──────────────────────────── */}
-              <div className="sticky top-14 space-y-5 pb-6">
-
-                {/* 태그 */}
-                <Card>
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                        태그
-                      </CardTitle>
-                      {selectedTagIds.size > 0 && (
-                        <span className="text-xs text-muted-foreground">
-                          {selectedTagIds.size}개 선택
-                        </span>
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    {groupsWithTags.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">
-                        등록된 태그가 없습니다.
-                      </p>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-2.5">
-                        {groupsWithTags.map((group, i) => {
-                          const isLastOdd =
-                            groupsWithTags.length % 2 === 1 &&
-                            i === groupsWithTags.length - 1;
-                          return (
-                            <div
-                              key={group}
-                              className={`rounded-lg border p-3 ${isLastOdd ? "col-span-2" : ""}`}
-                            >
-                              {/* 그룹 헤더 */}
-                              <div className="mb-2 flex items-center justify-between">
-                                <p className="text-xs font-semibold text-muted-foreground">
-                                  {group}
-                                </p>
-                                {(() => {
-                                  const count = tagsByGroup[group]?.filter(
-                                    (t) => selectedTagIds.has(t.id),
-                                  ).length ?? 0;
-                                  return count > 0 ? (
-                                    <span className="text-xs text-muted-foreground">
-                                      {count}
-                                    </span>
-                                  ) : null;
-                                })()}
-                              </div>
-                              {/* 태그 칩 */}
-                              <div className="flex flex-wrap gap-1.5">
-                                {tagsByGroup[group]!.map((tag) => {
-                                  const checked = selectedTagIds.has(tag.id);
-                                  return (
-                                    <button
-                                      key={tag.id}
-                                      type="button"
-                                      onClick={() => toggleTag(tag.id)}
-                                      className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-all ${
-                                        checked
-                                          ? "border-transparent"
-                                          : "border-border bg-background text-muted-foreground hover:border-foreground/30"
-                                      }`}
-                                      style={
-                                        checked && tag.colorHex
-                                          ? {
-                                              backgroundColor: tag.colorHex,
-                                              color: "#fff",
-                                              borderColor: tag.colorHex,
-                                            }
-                                          : checked
-                                            ? {
-                                                backgroundColor:
-                                                  "hsl(var(--foreground))",
-                                                color: "hsl(var(--background))",
-                                              }
-                                            : {}
-                                      }
-                                    >
-                                      {tag.nameKo}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* 토픽 */}
-                <Card>
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                        토픽
-                      </CardTitle>
-                      {selectedTopicIds.size > 0 && (
-                        <span className="text-xs text-muted-foreground">
-                          {selectedTopicIds.size}개 선택
-                        </span>
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {allTopics.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">
-                        등록된 토픽이 없습니다.
-                      </p>
-                    ) : (
-                      <>
-                        {/* 선택된 토픽 */}
-                        {selectedTopics.length > 0 && (
-                          <>
-                            <div className="flex flex-wrap gap-1.5">
-                              {selectedTopics.map((t) => (
-                                <TopicChip
-                                  key={t.id}
-                                  topic={t}
-                                  selected
-                                  onToggle={toggleTopic}
-                                  showX
-                                />
-                              ))}
-                            </div>
-                            <Separator />
-                          </>
-                        )}
-
-                        {/* 검색 */}
-                        <Input
-                          placeholder="토픽 검색..."
-                          value={topicSearch}
-                          onChange={(e) => {
-                            setTopicSearch(e.target.value);
-                            if (e.target.value) setSelectedCategoryId(null);
-                          }}
-                          className="h-8 text-sm"
-                        />
-
-                        {/* 검색 결과 */}
-                        {topicSearch ? (
-                          <div>
-                            {searchResults.length === 0 ? (
-                              <p className="text-sm text-muted-foreground">
-                                검색 결과가 없습니다.
-                              </p>
-                            ) : (
-                              <div className="flex flex-wrap gap-1.5">
-                                {searchResults.map((t) => (
-                                  <TopicChip
-                                    key={t.id}
-                                    topic={t}
-                                    selected={selectedTopicIds.has(t.id)}
-                                    onToggle={toggleTopic}
-                                  />
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <>
-                            {/* 카테고리 필터 (level-0) */}
-                            {rootTopics.length > 0 && (
-                              <div className="flex flex-wrap gap-1.5">
-                                {rootTopics.map((cat) => (
-                                  <button
-                                    key={cat.id}
-                                    type="button"
-                                    onClick={() => toggleCategory(cat.id)}
-                                    className={`rounded-md border px-2.5 py-1 text-xs font-medium transition-all ${
-                                      selectedCategoryId === cat.id
-                                        ? "border-transparent bg-foreground text-background"
-                                        : "border-border bg-background text-muted-foreground hover:border-foreground/30 hover:text-foreground"
-                                    }`}
-                                  >
-                                    {cat.nameKo}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-
-                            {/* 카테고리 하위 토픽 */}
-                            {selectedCategoryId ? (
-                              level1Sections.length === 0 ? (
-                                <p className="text-sm text-muted-foreground">
-                                  하위 토픽이 없습니다.
-                                </p>
-                              ) : (
-                                <div className="space-y-3">
-                                  {level1Sections.map((l1) => {
-                                    const descendants = getDescendants(
-                                      l1.id,
-                                      allTopics,
-                                    );
-                                    return (
-                                      <div key={l1.id} className="space-y-1.5">
-                                        <TopicChip
-                                          topic={l1}
-                                          selected={selectedTopicIds.has(l1.id)}
-                                          onToggle={toggleTopic}
-                                        />
-                                        {descendants.length > 0 && (
-                                          <div className="flex flex-wrap gap-1.5 pl-3">
-                                            {descendants.map((t) => (
-                                              <TopicChip
-                                                key={t.id}
-                                                topic={t}
-                                                selected={selectedTopicIds.has(
-                                                  t.id,
-                                                )}
-                                                onToggle={toggleTopic}
-                                              />
-                                            ))}
-                                          </div>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              )
-                            ) : (
-                              <p className="text-sm text-muted-foreground">
-                                카테고리를 선택하거나 검색해서 토픽을 추가하세요.
-                              </p>
-                            )}
-                          </>
-                        )}
-                      </>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
           </div>
         </div>
       </form>

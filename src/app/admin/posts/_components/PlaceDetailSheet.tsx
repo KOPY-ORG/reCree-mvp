@@ -149,25 +149,6 @@ export function PlaceDetailSheet({
                 </div>
               )}
 
-              {/* 태그 목록 */}
-              {place.placeTags.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {place.placeTags.map(({ tag }) => (
-                    <span
-                      key={tag.nameKo}
-                      className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
-                      style={
-                        tag.colorHex
-                          ? { backgroundColor: tag.colorHex, color: "#fff" }
-                          : { backgroundColor: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }
-                      }
-                    >
-                      {tag.nameKo}
-                    </span>
-                  ))}
-                </div>
-              )}
-
               {/* 지도 미리보기 */}
               {place.latitude && place.longitude ? (
                 <MapPreview
