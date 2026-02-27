@@ -142,9 +142,12 @@ model Post {
   status         PostStatus @default(DRAFT)
   source         String?
   importNote     String?   // 시트 원본 데이터 (JSON 문자열)
-  sourceUrl      String?   // 출처 URL
-  sourceType     String?   // INSTAGRAM|YOUTUBE|TIKTOK|X|REDDIT|BLOG|NEWS|OTHER
-  sourceNote     String?   // 출처 메모
+  sourceUrl      String?   // 출처 URL (레거시, PostSource 테이블로 이전)
+  sourceType     String?   // INSTAGRAM|YOUTUBE|TIKTOK|X|REDDIT|BLOG|NEWS|OTHER (레거시)
+  sourceNote     String?   // 출처 메모 (레거시)
+  memo           String?   // 관리자 내부 메모
+  collectedBy    String?   // 수집자 이름
+  collectedAt    String?   // 수집 날짜 (예: "2024-01-15")
   viewCount      Int        @default(0)
   saveCount      Int        @default(0)
   authorId       String?    @db.Uuid
@@ -157,7 +160,22 @@ model Post {
   postTopics  PostTopic[]
   postTags    PostTag[]
   postPlaces  PostPlace[]
+  postSources PostSource[]
   homeBanners HomeBanner[]
+}
+
+model PostSource {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  postId         String   @db.Uuid
+  sourceType     String?  // INSTAGRAM|YOUTUBE|TIKTOK|X|REDDIT|BLOG|NEWS|OTHER
+  sourceUrl      String?
+  sourceNote     String?
+  sourcePostDate String?  // 출처 게시 날짜 (예: "2024-01-15")
+  referenceUrl   String?
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 }
 
 model Place {
@@ -247,7 +265,6 @@ model PostPlace {
   vibe        String[]
   mustTry     String?
   tip         String?
-  reference   String?
   insightEn   Json?
   createdAt   DateTime @default(now())
 

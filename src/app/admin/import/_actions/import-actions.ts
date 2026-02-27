@@ -16,11 +16,18 @@ export type SheetRow = {
   sourceType: string;
   sourceNote: string;
   category: string;
+  genre: string;
   artistWork: string;
   context: string;
   vibe: string;
   mustTry: string;
   tip: string;
+  memo: string;
+  story: string;
+  tags: string;
+  tagGroup: string;
+  referenceUrl: string;
+  sourcePostDate: string;
   collectedBy: string;
   collectedAt: string;
   status: string;
@@ -138,11 +145,18 @@ export async function fetchSheetPreview(): Promise<{
       sourceType: (r["source_type"] ?? "").trim(),
       sourceNote: (r["source_note"] ?? "").trim(),
       category: (r["category"] ?? "").trim(),
+      genre: (r["genre"] ?? "").trim(),
       artistWork: (r["artist_work"] ?? "").trim(),
       context: (r["context"] ?? "").trim(),
       vibe: (r["vibe"] ?? "").trim(),
       mustTry: (r["must_try"] ?? "").trim(),
       tip: (r["tip"] ?? "").trim(),
+      memo: (r["memo"] ?? "").trim(),
+      story: (r["story"] ?? "").trim(),
+      tags: (r["tags"] ?? "").trim(),
+      tagGroup: (r["tag_group"] ?? "").trim(),
+      referenceUrl: (r["reference_url"] ?? "").trim(),
+      sourcePostDate: (r["source_post_date"] ?? "").trim(),
       collectedBy: (r["collected_by"] ?? "").trim(),
       collectedAt: (r["collected_at"] ?? "").trim(),
       status: (r["status"] ?? "").trim(),
@@ -169,16 +183,23 @@ type PlacesApiResult = {
   rating: number | null;
 };
 
-async function searchPlaceByUrl(mapsUrl: string): Promise<PlacesApiResult | null> {
+async function searchPlaceInfo(
+  placeName: string,
+  mapsUrl: string,
+): Promise<PlacesApiResult | null> {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   if (!apiKey) return null;
 
-  // URL에서 장소명 추출 시도 (place/ 세그먼트)
-  let textQuery = mapsUrl;
-  const placeMatch = mapsUrl.match(/place\/([^/]+)/);
-  if (placeMatch) {
-    textQuery = decodeURIComponent(placeMatch[1].replace(/\+/g, " "));
+  // 1순위: 시트의 place_name (수동 입력, 신뢰도 높음)
+  // 2순위: URL에서 추출한 이름 (full URL일 때만 가능, 단축 URL은 매칭 안됨)
+  let textQuery = placeName;
+  if (!textQuery) {
+    const placeMatch = mapsUrl.match(/place\/([^/]+)/);
+    if (placeMatch) {
+      textQuery = decodeURIComponent(placeMatch[1].replace(/\+/g, " "));
+    }
   }
+  if (!textQuery) return null;
 
   const fetchDetails = async (lang: string) => {
     const res = await fetch(
@@ -195,7 +216,10 @@ async function searchPlaceByUrl(mapsUrl: string): Promise<PlacesApiResult | null
         body: JSON.stringify({ textQuery, languageCode: lang }),
       }
     );
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.error(`Places API 오류 (${lang}):`, res.status, await res.text());
+      return null;
+    }
     const data = await res.json();
     return data.places?.[0] ?? null;
   };
@@ -247,6 +271,26 @@ export async function importSheetRows(rowIds: string[]): Promise<{
     return rowIds.includes(googleMapsLink);
   });
 
+  // 루프 전 일괄 조회 (매칭용)
+  const allTopicsForMatch = await prisma.topic.findMany({
+    where: { level: { in: [0, 1] } },
+    select: { id: true, nameKo: true, level: true },
+  });
+  const allTagsForMatch = await prisma.tag.findMany({
+    select: { id: true, nameKo: true, name: true },
+  });
+
+  // source_type 매핑 테이블
+  const srcTypeMap: Record<string, string> = {
+    instagram: "INSTAGRAM",
+    youtube: "YOUTUBE",
+    tiktok: "TIKTOK",
+    x: "X",
+    article: "BLOG",
+    blog: "BLOG",
+    news: "NEWS",
+  };
+
   for (const r of filtered) {
     const googleMapsLink = (r["google_maps_link"] ?? "").trim();
     const placeName = (r["place_name"] ?? "").trim();
@@ -254,7 +298,7 @@ export async function importSheetRows(rowIds: string[]): Promise<{
 
     try {
       // Places API 호출
-      const placeInfo = await searchPlaceByUrl(googleMapsLink);
+      const placeInfo = await searchPlaceInfo(placeName, googleMapsLink);
 
       // slug 생성: 영문 장소명 + nanoid 스타일 랜덤 6자
       const baseName = placeInfo?.nameEn
@@ -278,13 +322,52 @@ export async function importSheetRows(rowIds: string[]): Promise<{
         ? vibeRaw.split(/[,，、]/).map((v) => v.trim()).filter(Boolean)
         : [];
 
-      // importNote: 전용 필드 없는 컬럼들
+      // category → level 0 Topic 매칭
+      const categoryValue = (r["category"] ?? "").trim();
+      const matchedL0 = allTopicsForMatch.find(
+        (t) => t.level === 0 && t.nameKo === categoryValue
+      );
+
+      // genre → level 1 Topic 매칭
+      const genreValue = (r["genre"] ?? "").trim();
+      const matchedL1 = allTopicsForMatch.find(
+        (t) => t.level === 1 && t.nameKo === genreValue
+      );
+
+      const topicIdsToCreate = [matchedL0?.id, matchedL1?.id].filter(Boolean) as string[];
+
+      // tags → Tag 매칭 (쉼표 구분)
+      const tagNames = (r["tags"] ?? "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const matchedTagIds = allTagsForMatch
+        .filter((tag) => tagNames.includes(tag.nameKo) || tagNames.includes(tag.name))
+        .map((tag) => tag.id);
+
+      // source_type 매핑
+      const srcTypeRaw = (r["source_type"] ?? "").trim().toLowerCase();
+      const mappedSrcType = srcTypeMap[srcTypeRaw] ?? (srcTypeRaw ? "OTHER" : null);
+
+      // importNote: 원본 보존 목적
       const importNote = JSON.stringify({
-        category: (r["category"] ?? "").trim(),
+        category: categoryValue,
+        genre: genreValue,
         artist_work: (r["artist_work"] ?? "").trim(),
+        sub_detail: (r["sub_detail"] ?? "").trim(),
+        tag_group: (r["tag_group"] ?? "").trim(),
         collected_by: (r["collected_by"] ?? "").trim(),
         collected_at: (r["collected_at"] ?? "").trim(),
       });
+
+      const collectedBy = (r["collected_by"] ?? "").trim() || null;
+      const collectedAt = (r["collected_at"] ?? "").trim() || null;
+      const srcUrl = (r["source_url"] ?? "").trim() || null;
+      const srcNote = (r["source_note"] ?? "").trim() || null;
+      const storyVal = (r["story"] ?? "").trim() || null;
+      const memoVal = (r["memo"] ?? "").trim() || null;
+      const referenceUrlVal = (r["reference_url"] ?? "").trim() || null;
+      const sourcePostDateVal = (r["source_post_date"] ?? "").trim() || null;
 
       await prisma.$transaction(async (tx) => {
         const place = await tx.place.create({
@@ -314,11 +397,33 @@ export async function importSheetRows(rowIds: string[]): Promise<{
             titleEn: "",
             slug,
             subtitleKo: (r["sub_title"] ?? "").trim() || null,
+            bodyKo: storyVal,
+            memo: memoVal,
             status: "IMPORTED",
-            sourceUrl: (r["source_url"] ?? "").trim() || googleMapsLink || null,
-            sourceType: (r["source_type"] ?? "").trim() || null,
-            sourceNote: (r["source_note"] ?? "").trim() || null,
+            sourceUrl: srcUrl || googleMapsLink || null,
+            sourceType: mappedSrcType,
+            sourceNote: srcNote,
+            collectedBy,
+            collectedAt,
             importNote,
+            ...(topicIdsToCreate.length > 0 && {
+              postTopics: { create: topicIdsToCreate.map((topicId) => ({ topicId })) },
+            }),
+            ...(matchedTagIds.length > 0 && {
+              postTags: { create: matchedTagIds.map((tagId) => ({ tagId })) },
+            }),
+            ...(srcUrl && {
+              postSources: {
+                create: [{
+                  sourceType: mappedSrcType,
+                  sourceUrl: srcUrl,
+                  sourceNote: srcNote,
+                  referenceUrl: referenceUrlVal,
+                  sourcePostDate: sourcePostDateVal,
+                  sortOrder: 0,
+                }],
+              },
+            }),
           },
         });
 
