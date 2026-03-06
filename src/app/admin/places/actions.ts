@@ -22,8 +22,6 @@ export type PlaceFormData = {
   operatingHours: string[] | null;
   status: PlaceStatus;
   isVerified: boolean;
-  tagIds: string[];
-  topicIds: string[];
 };
 
 export async function deletePlace(id: string): Promise<{ error?: string }> {
@@ -64,12 +62,6 @@ export async function createPlace(
         operatingHours: data.operatingHours?.length ? data.operatingHours : Prisma.DbNull,
         status: data.status,
         isVerified: data.isVerified,
-        placeTags: {
-          create: data.tagIds.map((tagId) => ({ tagId })),
-        },
-        placeTopics: {
-          create: data.topicIds.map((topicId) => ({ topicId })),
-        },
       },
     });
     revalidatePath("/admin/places");
@@ -84,36 +76,26 @@ export async function updatePlace(
   data: PlaceFormData,
 ): Promise<{ error?: string }> {
   try {
-    await prisma.$transaction(async (tx) => {
-      await tx.placeTag.deleteMany({ where: { placeId: id } });
-      await tx.placeTopic.deleteMany({ where: { placeId: id } });
-      await tx.place.update({
-        where: { id },
-        data: {
-          nameKo: data.nameKo,
-          nameEn: data.nameEn || null,
-          addressKo: data.addressKo || null,
-          addressEn: data.addressEn || null,
-          country: data.country,
-          city: data.city || null,
-          latitude: data.latitude,
-          longitude: data.longitude,
-          googlePlaceId: data.googlePlaceId || null,
-          googleMapsUrl: data.googleMapsUrl || null,
-          naverMapsUrl: data.naverMapsUrl || null,
-          kakaoMapsUrl: data.kakaoMapsUrl || null,
-          phone: data.phone || null,
-          operatingHours: data.operatingHours?.length ? data.operatingHours : Prisma.DbNull,
-          status: data.status,
-          isVerified: data.isVerified,
-          placeTags: {
-            create: data.tagIds.map((tagId) => ({ tagId })),
-          },
-          placeTopics: {
-            create: data.topicIds.map((topicId) => ({ topicId })),
-          },
-        },
-      });
+    await prisma.place.update({
+      where: { id },
+      data: {
+        nameKo: data.nameKo,
+        nameEn: data.nameEn || null,
+        addressKo: data.addressKo || null,
+        addressEn: data.addressEn || null,
+        country: data.country,
+        city: data.city || null,
+        latitude: data.latitude,
+        longitude: data.longitude,
+        googlePlaceId: data.googlePlaceId || null,
+        googleMapsUrl: data.googleMapsUrl || null,
+        naverMapsUrl: data.naverMapsUrl || null,
+        kakaoMapsUrl: data.kakaoMapsUrl || null,
+        phone: data.phone || null,
+        operatingHours: data.operatingHours?.length ? data.operatingHours : Prisma.DbNull,
+        status: data.status,
+        isVerified: data.isVerified,
+      },
     });
     revalidatePath("/admin/places");
     return {};

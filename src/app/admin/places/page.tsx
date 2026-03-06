@@ -59,16 +59,6 @@ export default async function PlacesPage({
         source: true,
         isVerified: true,
         createdAt: true,
-        placeTags: {
-          select: {
-            tag: { select: { id: true, nameKo: true, colorHex: true } },
-          },
-        },
-        placeTopics: {
-          select: {
-            topic: { select: { id: true, nameKo: true } },
-          },
-        },
         _count: {
           select: { postPlaces: true, reCreeshots: true },
         },
@@ -130,7 +120,7 @@ export default async function PlacesPage({
             K-콘텐츠 관련 장소 관리
           </p>
         </div>
-        <Button asChild>
+        <Button asChild className="rounded-xl">
           <Link href="/admin/places/new">
             <Plus className="h-4 w-4 mr-1.5" />
             새 장소

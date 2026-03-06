@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, Search } from "lucide-react";
 import { SortableTopicList, ColorLabel, type TopicNode } from "./SortableTopicList";
 import { TopicDialog } from "./TopicDialog";
 
@@ -68,7 +68,7 @@ function CategoryColumn({
   const totalCount = countDescendants(root);
 
   return (
-    <div className="border border-border rounded-xl overflow-hidden bg-background">
+    <div className="rounded-xl overflow-hidden bg-white shadow-sm">
       {/* 컬럼 헤더 */}
       <div className="px-3 py-3 border-b border-border flex items-center gap-2 bg-muted/30">
         <ColorLabel
@@ -160,36 +160,34 @@ export function CategoriesTabContent({ tree, allTopics }: CategoriesTabContentPr
 
   return (
     <div className="mt-6">
-      {/* 요약 + 툴바 */}
+      {/* 툴바 */}
       <div className="flex items-center gap-2 mb-4 flex-wrap">
-        <p className="text-sm text-muted-foreground">
-          {tree.map((r) => r.nameKo).join(" · ")} 아티스트, 작품 분류 관리
-          &nbsp;
-          <span className="font-medium text-foreground">전체 {totalCount}</span>
-        </p>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400 pointer-events-none" />
           <input
             type="search"
             placeholder="이름, slug 검색…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-7 px-2.5 rounded-lg border border-border text-sm bg-transparent w-48 focus:outline-none focus:ring-1 focus:ring-border"
+            className="h-8 pl-8 pr-3 rounded-lg border-0 shadow-sm text-sm bg-white w-48 focus:outline-none focus:ring-2 focus:ring-zinc-200"
           />
-          <button
-            type="button"
-            onClick={() => setHideInactive((v) => !v)}
-            className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
-              hideInactive
-                ? "bg-foreground text-background border-foreground"
-                : "border-border text-muted-foreground"
-            }`}
-          >
-            {hideInactive ? "비활성 숨김" : "비활성 포함"}
-          </button>
+        </div>
+        <button
+          type="button"
+          onClick={() => setHideInactive((v) => !v)}
+          className={`h-8 px-3 rounded-lg text-xs font-medium transition-all ${
+            hideInactive
+              ? "bg-zinc-900 text-white"
+              : "bg-white shadow-sm text-zinc-500 hover:text-zinc-800"
+          }`}
+        >
+          {hideInactive ? "비활성 숨김" : "비활성 포함"}
+        </button>
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-xs text-zinc-400 tabular-nums">전체 {totalCount}</span>
           <Button
             size="sm"
-            variant="outline"
-            className="gap-1.5"
+            className="gap-1.5 rounded-lg"
             onClick={() => openCreate()}
           >
             <Plus className="w-4 h-4" />

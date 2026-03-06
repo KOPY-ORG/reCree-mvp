@@ -17,7 +17,6 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Pencil } from "lucide-react";
-import { TagGroup } from "@prisma/client";
 import { reorderTags } from "../actions";
 
 // ─── 타입 ─────────────────────────────────────────────────────────────────────
@@ -27,7 +26,7 @@ export interface TagItem {
   name: string;
   nameKo: string;
   slug: string;
-  group: TagGroup;
+  group: string;
   colorHex: string | null;          // DB 값 (null = 그룹 색 상속)
   colorHex2: string | null;
   textColorHex: string | null;      // DB 값 (null = 그룹 색 상속)
@@ -41,13 +40,14 @@ export interface TagItem {
 }
 
 export interface TagGroupConfigItem {
-  group: TagGroup;
-  nameEn: string;       // 라벨에 표시될 영어 이름 (빈 문자열 = 그룹 enum 폴백)
+  group: string;
+  nameEn: string;       // 라벨에 표시될 영어 이름 (빈 문자열 = group key 폴백)
   colorHex: string;
   colorHex2: string | null;
   gradientDir: string;
   gradientStop: number;
   textColorHex: string;
+  sortOrder: number;
 }
 
 // ─── 공용 컴포넌트 ────────────────────────────────────────────────────────────
@@ -155,7 +155,7 @@ function SortableTagItem({
         {...listeners}
         {...attributes}
       />
-      <div className="flex items-center gap-2 pl-1 pr-2 py-1.5 text-sm flex-1 min-w-0">
+      <div className="flex items-center gap-2.5 pl-1 pr-3 py-2.5 text-sm flex-1 min-w-0">
         <ActiveDot isActive={item.isActive} />
         <span className="text-sm truncate min-w-0">{item.nameKo}</span>
         <ColorLabel

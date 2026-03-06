@@ -8,7 +8,6 @@ import type { PostStatus } from "@prisma/client";
 // ─── 타입 정의 ─────────────────────────────────────────────────────────────────
 
 export type SpotInsightData = {
-  placeId: string;
   contextKo: string;
   contextEn: string;
   vibe: string[];
@@ -16,7 +15,14 @@ export type SpotInsightData = {
   mustTryEn: string;
   tipKo: string;
   tipEn: string;
-  reference: string;
+};
+
+export type PostSourceInput = {
+  sourceType: string;  // INSTAGRAM|YOUTUBE|TIKTOK|X|REDDIT|BLOG|NEWS|OTHER|""
+  sourceUrl: string;
+  sourceNote: string;
+  sourcePostDate: string;
+  referenceUrl: string;
 };
 
 export type PostFormData = {
@@ -29,9 +35,15 @@ export type PostFormData = {
   bodyEn: string;
   thumbnailUrl: string;
   status: PostStatus;
-  source: string;
-  topicIds: string[];
-  tagIds: string[];
+  memo: string;
+  // 수집 정보
+  collectedBy: string;
+  collectedAt: string;
+  // 복수 출처
+  sources: PostSourceInput[];
+  topics: { topicId: string; isVisible: boolean; displayOrder: number }[];
+  tags: { tagId: string; isVisible: boolean; displayOrder: number }[];
+  placeId: string | null;
   spotInsight: SpotInsightData | null;
 };
 
@@ -67,9 +79,37 @@ export async function searchPlaces(keyword: string) {
       nameKo: true,
       nameEn: true,
       addressKo: true,
+      addressEn: true,
+      latitude: true,
+      longitude: true,
+      phone: true,
+      imageUrl: true,
     },
     orderBy: { createdAt: "desc" },
     take: 10,
+  });
+}
+
+// ─── 장소 상세 조회 ──────────────────────────────────────────────────────────────
+
+export async function getPlaceDetail(id: string) {
+  return prisma.place.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      nameKo: true,
+      nameEn: true,
+      addressKo: true,
+      addressEn: true,
+      latitude: true,
+      longitude: true,
+      phone: true,
+      imageUrl: true,
+      rating: true,
+      operatingHours: true,
+      googleMapsUrl: true,
+      status: true,
+    },
   });
 }
 
@@ -92,29 +132,53 @@ export async function createPost(
         bodyEn: data.bodyEn || null,
         thumbnailUrl: data.thumbnailUrl || null,
         status: data.status,
-        source: data.source || null,
+        memo: data.memo || null,
+        collectedBy: data.collectedBy || null,
+        collectedAt: data.collectedAt || null,
         authorId: user?.id ?? null,
         postTopics: {
-          create: data.topicIds.map((topicId) => ({ topicId })),
+          create: data.topics.map((t) => ({
+            topicId: t.topicId,
+            isVisible: t.isVisible,
+            displayOrder: t.displayOrder,
+          })),
         },
         postTags: {
-          create: data.tagIds.map((tagId) => ({ tagId })),
+          create: data.tags.map((t) => ({
+            tagId: t.tagId,
+            isVisible: t.isVisible,
+            displayOrder: t.displayOrder,
+          })),
         },
-        ...(data.spotInsight && {
+        ...(data.sources.length > 0 && {
+          postSources: {
+            create: data.sources.map((s, i) => ({
+              sourceType: s.sourceType || null,
+              sourceUrl: s.sourceUrl || null,
+              sourceNote: s.sourceNote || null,
+              sourcePostDate: s.sourcePostDate || null,
+              referenceUrl: s.referenceUrl || null,
+              sortOrder: i,
+            })),
+          },
+        }),
+        ...(data.placeId && {
           postPlaces: {
             create: [
               {
-                placeId: data.spotInsight.placeId,
-                context: data.spotInsight.contextKo || null,
-                vibe: data.spotInsight.vibe,
-                mustTry: data.spotInsight.mustTryKo || null,
-                tip: data.spotInsight.tipKo || null,
-                reference: data.spotInsight.reference || null,
-                insightEn: {
-                  context: data.spotInsight.contextEn,
-                  mustTry: data.spotInsight.mustTryEn,
-                  tip: data.spotInsight.tipEn,
-                },
+                placeId: data.placeId,
+                context: data.spotInsight?.contextKo || null,
+                vibe: data.spotInsight?.vibe ?? [],
+                mustTry: data.spotInsight?.mustTryKo || null,
+                tip: data.spotInsight?.tipKo || null,
+
+                insightEn: data.spotInsight
+                  ? {
+                      context: data.spotInsight.contextEn,
+                      mustTry: data.spotInsight.mustTryEn,
+                      tip: data.spotInsight.tipEn,
+                    }
+                  : undefined,
               },
             ],
           },
@@ -141,6 +205,7 @@ export async function updatePost(
       await tx.postTopic.deleteMany({ where: { postId: id } });
       await tx.postTag.deleteMany({ where: { postId: id } });
       await tx.postPlace.deleteMany({ where: { postId: id } });
+      await tx.postSource.deleteMany({ where: { postId: id } });
 
       await tx.post.update({
         where: { id },
@@ -154,28 +219,52 @@ export async function updatePost(
           bodyEn: data.bodyEn || null,
           thumbnailUrl: data.thumbnailUrl || null,
           status: data.status,
-          source: data.source || null,
+          memo: data.memo || null,
+          collectedBy: data.collectedBy || null,
+          collectedAt: data.collectedAt || null,
           postTopics: {
-            create: data.topicIds.map((topicId) => ({ topicId })),
+            create: data.topics.map((t) => ({
+              topicId: t.topicId,
+              isVisible: t.isVisible,
+              displayOrder: t.displayOrder,
+            })),
           },
           postTags: {
-            create: data.tagIds.map((tagId) => ({ tagId })),
+            create: data.tags.map((t) => ({
+              tagId: t.tagId,
+              isVisible: t.isVisible,
+              displayOrder: t.displayOrder,
+            })),
           },
-          ...(data.spotInsight && {
+          ...(data.sources.length > 0 && {
+            postSources: {
+              create: data.sources.map((s, i) => ({
+                sourceType: s.sourceType || null,
+                sourceUrl: s.sourceUrl || null,
+                sourceNote: s.sourceNote || null,
+                sourcePostDate: s.sourcePostDate || null,
+                referenceUrl: s.referenceUrl || null,
+                sortOrder: i,
+              })),
+            },
+          }),
+          ...(data.placeId && {
             postPlaces: {
               create: [
                 {
-                  placeId: data.spotInsight.placeId,
-                  context: data.spotInsight.contextKo || null,
-                  vibe: data.spotInsight.vibe,
-                  mustTry: data.spotInsight.mustTryKo || null,
-                  tip: data.spotInsight.tipKo || null,
-                  reference: data.spotInsight.reference || null,
-                  insightEn: {
-                    context: data.spotInsight.contextEn,
-                    mustTry: data.spotInsight.mustTryEn,
-                    tip: data.spotInsight.tipEn,
-                  },
+                  placeId: data.placeId,
+                  context: data.spotInsight?.contextKo || null,
+                  vibe: data.spotInsight?.vibe ?? [],
+                  mustTry: data.spotInsight?.mustTryKo || null,
+                  tip: data.spotInsight?.tipKo || null,
+  
+                  insightEn: data.spotInsight
+                    ? {
+                        context: data.spotInsight.contextEn,
+                        mustTry: data.spotInsight.mustTryEn,
+                        tip: data.spotInsight.tipEn,
+                      }
+                    : undefined,
                 },
               ],
             },

@@ -39,8 +39,6 @@ export type PlaceRow = {
   source: PlaceSource;
   isVerified: boolean;
   createdAt: Date;
-  placeTags: { tag: { id: string; nameKo: string; colorHex: string | null } }[];
-  placeTopics: { topic: { id: string; nameKo: string } }[];
   _count: { postPlaces: number; reCreeshots: number };
   saveCount: number;
 };
@@ -100,19 +98,13 @@ export function PlacesTable({ places, isFiltered }: Props) {
 
   return (
     <>
-      <div className="mt-6 border rounded-lg overflow-hidden">
+      <div className="mt-6 rounded-xl overflow-hidden shadow-sm bg-white">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-muted/50 border-b">
+            <thead className="bg-zinc-50 border-b border-zinc-100">
               <tr>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">
                   장소명
-                </th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                  태그
-                </th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                  토픽
                 </th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">
                   상태
@@ -142,7 +134,7 @@ export function PlacesTable({ places, isFiltered }: Props) {
               {places.length === 0 && (
                 <tr>
                   <td
-                    colSpan={11}
+                    colSpan={9}
                     className="px-4 py-16 text-center text-sm text-muted-foreground"
                   >
                     {isFiltered
@@ -154,7 +146,7 @@ export function PlacesTable({ places, isFiltered }: Props) {
               {places.map((place) => (
                 <tr
                   key={place.id}
-                  className="border-b last:border-b-0 transition-colors hover:bg-muted/30"
+                  className="border-b border-zinc-100 last:border-b-0 transition-colors hover:bg-zinc-50"
                 >
                   {/* 장소명 */}
                   <td className="px-4 py-3 min-w-[160px]">
@@ -164,58 +156,6 @@ export function PlacesTable({ places, isFiltered }: Props) {
                         {place.nameEn}
                       </div>
                     )}
-                  </td>
-
-                  {/* 태그 */}
-                  <td className="px-4 py-3 min-w-[120px]">
-                    <div className="flex flex-wrap gap-1">
-                      {place.placeTags.slice(0, 3).map(({ tag }) => (
-                        <span
-                          key={tag.id}
-                          className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium"
-                          style={
-                            tag.colorHex
-                              ? {
-                                  backgroundColor: tag.colorHex + "22",
-                                  color: tag.colorHex,
-                                }
-                              : undefined
-                          }
-                        >
-                          {tag.nameKo}
-                        </span>
-                      ))}
-                      {place.placeTags.length > 3 && (
-                        <span className="text-xs text-muted-foreground">
-                          +{place.placeTags.length - 3}
-                        </span>
-                      )}
-                      {place.placeTags.length === 0 && (
-                        <span className="text-xs text-muted-foreground/40">—</span>
-                      )}
-                    </div>
-                  </td>
-
-                  {/* 토픽 */}
-                  <td className="px-4 py-3 min-w-[100px]">
-                    <div className="flex flex-wrap gap-1">
-                      {place.placeTopics.slice(0, 2).map(({ topic }) => (
-                        <span
-                          key={topic.id}
-                          className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded"
-                        >
-                          {topic.nameKo}
-                        </span>
-                      ))}
-                      {place.placeTopics.length > 2 && (
-                        <span className="text-xs text-muted-foreground">
-                          +{place.placeTopics.length - 2}
-                        </span>
-                      )}
-                      {place.placeTopics.length === 0 && (
-                        <span className="text-xs text-muted-foreground/40">—</span>
-                      )}
-                    </div>
                   </td>
 
                   {/* 상태 */}

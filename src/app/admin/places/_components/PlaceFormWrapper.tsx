@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import { PlaceForm } from "./PlaceForm";
-import type { PlaceInitialData, TagForForm, TopicForForm } from "./PlaceForm";
+import type { PlaceInitialData } from "./PlaceForm";
 import { createPlace, updatePlace } from "../actions";
 import type { PlaceFormData } from "../actions";
 
@@ -10,8 +10,6 @@ import type { PlaceFormData } from "../actions";
 
 interface CreateProps {
   mode: "create";
-  allTags: TagForForm[];
-  allTopics: TopicForForm[];
 }
 
 // ─── 수정 모드 ──────────────────────────────────────────────────────────────────
@@ -20,8 +18,6 @@ interface EditProps {
   mode: "edit";
   placeId: string;
   initialData: PlaceInitialData;
-  allTags: TagForForm[];
-  allTopics: TopicForForm[];
 }
 
 type PlaceFormWrapperProps = CreateProps | EditProps;
@@ -43,8 +39,6 @@ export function PlaceFormWrapper(props: PlaceFormWrapperProps) {
   return (
     <PlaceForm
       initialData={props.mode === "edit" ? props.initialData : undefined}
-      allTags={props.allTags}
-      allTopics={props.allTopics}
       onSubmit={handleSubmit}
       submitLabel={props.mode === "create" ? "장소 등록" : "수정 완료"}
     />

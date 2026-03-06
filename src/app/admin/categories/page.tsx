@@ -4,9 +4,6 @@ import { type TopicNode } from "./_components/SortableTopicList";
 import { CategoriesTabContent } from "./_components/CategoriesTabContent";
 import { TagsTabContent } from "./_components/TagsTabContent";
 import type { TagItem, TagGroupConfigItem } from "./_components/SortableTagList";
-import { TagGroup } from "@prisma/client";
-
-const ALL_GROUPS: TagGroup[] = ["FOOD", "SPOT", "EXPERIENCE", "ITEM", "BEAUTY"];
 
 // ─── 색상 상속 상수 ────────────────────────────────────────────────────────────
 
@@ -113,7 +110,8 @@ export default async function CategoriesPage({
       },
     }),
     prisma.tagGroupConfig.findMany({
-      select: { group: true, nameEn: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true },
+      select: { group: true, nameEn: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true, sortOrder: true },
+      orderBy: { sortOrder: "asc" },
     }),
   ]);
 
@@ -122,21 +120,24 @@ export default async function CategoriesPage({
   resolveColors(tree);
 
   // Tag: 그룹 config 맵 + effective color 계산 후 group별 분리
-  const groupConfigMap = new Map(rawGroupConfigs.map((c) => [c.group as string, c]));
+  const groupConfigMap = new Map(rawGroupConfigs.map((c) => [c.group, c]));
 
-  // 존재하지 않는 그룹은 기본값으로 채움
-  const groupConfigs: TagGroupConfigItem[] = ALL_GROUPS.map((group) => ({
-    group,
-    nameEn: "",
-    colorHex: "#C6FD09",
-    colorHex2: null,
-    gradientDir: "to bottom",
-    gradientStop: 150,
-    textColorHex: "#000000",
-    ...(groupConfigMap.get(group) ?? {}),
+  // DB에 존재하는 그룹만 렌더링 (동적 목록, sortOrder 순)
+  const groupConfigs: TagGroupConfigItem[] = rawGroupConfigs.map((c) => ({
+    group: c.group,
+    nameEn: c.nameEn,
+    colorHex: c.colorHex,
+    colorHex2: c.colorHex2,
+    gradientDir: c.gradientDir,
+    gradientStop: c.gradientStop,
+    textColorHex: c.textColorHex,
+    sortOrder: c.sortOrder,
   }));
 
   const DEFAULT_GROUP_COLOR = { colorHex: "#C6FD09", colorHex2: null as string | null, gradientDir: "to bottom", gradientStop: 150, textColorHex: "#000000" };
+
+  const totalTopicCount = rawTopics.length;
+  const totalTagCount = rawTags.length;
 
   const tagsByGroup = rawTags.reduce<Record<string, TagItem[]>>((acc, tag) => {
     const gc = groupConfigMap.get(tag.group) ?? DEFAULT_GROUP_COLOR;
@@ -182,34 +183,36 @@ export default async function CategoriesPage({
   return (
     <div className="p-8">
       {/* 헤더 */}
-      <div>
-        <h1 className="text-2xl font-bold">분류 관리</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Topic과 Tag 분류 관리
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">분류 관리</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Topic과 Tag 분류 관리
+          </p>
+        </div>
       </div>
 
-      {/* 탭 (pill 스타일) */}
-      <div className="flex gap-2 mt-6">
+      {/* 탭 (underline 스타일) */}
+      <div className="flex mt-6 border-b border-zinc-200">
         <Link
           href="?tab=topic"
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
             tab === "topic"
-              ? "bg-foreground text-background border-foreground"
-              : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
+              ? "border-zinc-900 text-zinc-900"
+              : "border-transparent text-zinc-400 hover:text-zinc-700"
           }`}
         >
-          ♪ Topic
+          Topics ({totalTopicCount})
         </Link>
         <Link
           href="?tab=tag"
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
             tab === "tag"
-              ? "bg-foreground text-background border-foreground"
-              : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
+              ? "border-zinc-900 text-zinc-900"
+              : "border-transparent text-zinc-400 hover:text-zinc-700"
           }`}
         >
-          # Tag
+          Tags ({totalTagCount})
         </Link>
       </div>
 

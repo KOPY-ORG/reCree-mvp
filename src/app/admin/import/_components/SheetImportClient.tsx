@@ -74,7 +74,6 @@ export function SheetImportClient() {
 
       if (result.imported > 0) {
         toast.success(`${result.imported}개 항목을 가져왔습니다.`);
-        // 가져온 항목 제거 + 선택 초기화
         const importedSet = new Set(selectedIds);
         setRows((prev) => prev.filter((r) => !importedSet.has(r.rowId)));
         setSelectedIds(new Set());
@@ -86,59 +85,61 @@ export function SheetImportClient() {
   const duplicateCount = duplicates.length;
 
   return (
-    <div className="space-y-6">
-      {/* 안내 + 버튼 */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button
-            onClick={handleFetchPreview}
-            disabled={isPreviewing || isImporting}
-            variant="outline"
-          >
-            {isPreviewing ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="mr-2 h-4 w-4" />
-            )}
-            시트 불러오기
-          </Button>
-
-          {hasPreview && selectedIds.size > 0 && (
-            <Button
-              onClick={handleImport}
-              disabled={isImporting || isPreviewing}
-            >
-              {isImporting ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Download className="mr-2 h-4 w-4" />
-              )}
-              선택 {selectedIds.size}개 가져오기
-            </Button>
+    <div>
+      {/* 툴바 */}
+      <div className="mt-6 flex items-center gap-2 flex-wrap">
+        <Button
+          onClick={handleFetchPreview}
+          disabled={isPreviewing || isImporting}
+          variant="outline"
+          size="sm"
+          className="rounded-lg bg-white shadow-sm border-0 gap-1.5"
+        >
+          {isPreviewing ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <RefreshCw className="h-3.5 w-3.5" />
           )}
-        </div>
+          시트 불러오기
+        </Button>
 
         {hasPreview && (
-          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span>
-              신규 <strong className="text-foreground">{newCount}</strong>개
+              신규{" "}
+              <strong className="text-foreground tabular-nums">{newCount}</strong>
             </span>
             {duplicateCount > 0 && (
               <span>
                 중복{" "}
-                <strong className="text-muted-foreground">
-                  {duplicateCount}
-                </strong>
-                개
+                <strong className="tabular-nums">{duplicateCount}</strong>
               </span>
             )}
+          </div>
+        )}
+
+        {hasPreview && selectedIds.size > 0 && (
+          <div className="ml-auto">
+            <Button
+              onClick={handleImport}
+              disabled={isImporting || isPreviewing}
+              size="sm"
+              className="rounded-lg gap-1.5"
+            >
+              {isImporting ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Download className="h-3.5 w-3.5" />
+              )}
+              선택 {selectedIds.size}개 가져오기
+            </Button>
           </div>
         )}
       </div>
 
       {/* 유효성 오류 */}
       {errors.length > 0 && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="mt-4">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             <ul className="list-disc list-inside space-y-0.5 text-xs">
@@ -162,7 +163,7 @@ export function SheetImportClient() {
 
       {/* 빈 상태 */}
       {hasPreview && rows.length === 0 && errors.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-2">
+        <div className="mt-6 rounded-xl bg-white shadow-sm flex flex-col items-center justify-center py-20 text-muted-foreground gap-2">
           <Info className="h-8 w-8 opacity-40" />
           <p className="text-sm">가져올 수 있는 항목이 없습니다.</p>
           <p className="text-xs opacity-70">
@@ -173,7 +174,7 @@ export function SheetImportClient() {
 
       {/* 초기 상태 */}
       {!hasPreview && (
-        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-2">
+        <div className="mt-6 rounded-xl bg-white shadow-sm flex flex-col items-center justify-center py-20 text-muted-foreground gap-2">
           <Info className="h-8 w-8 opacity-40" />
           <p className="text-sm">
             "시트 불러오기" 버튼을 눌러 데이터를 가져오세요.
