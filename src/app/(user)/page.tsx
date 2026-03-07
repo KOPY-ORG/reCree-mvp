@@ -1,201 +1,19 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Search, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
 import { HomeBannerCarousel, type BannerItem } from "./_components/HomeBannerCarousel";
-
-// ─── 색상 상속 헬퍼 ──────────────────────────────────────────────────────────
-
-const DEFAULT_COLOR = "#C6FD09";
-const DEFAULT_TEXT = "#000000";
-
-type ColorNode = {
-  colorHex?: string | null;
-  colorHex2?: string | null;
-  gradientDir?: string;
-  gradientStop?: number;
-  textColorHex?: string | null;
-  parent?: ColorNode | null;
-};
-
-function resolveTopicColors(node: ColorNode): {
-  colorHex: string;
-  colorHex2: string | null;
-  gradientDir: string;
-  gradientStop: number;
-  textColorHex: string;
-} {
-  if (node.colorHex) {
-    return {
-      colorHex: node.colorHex,
-      colorHex2: node.colorHex2 ?? null,
-      gradientDir: node.gradientDir ?? "to bottom",
-      gradientStop: node.gradientStop ?? 150,
-      textColorHex: node.textColorHex ?? DEFAULT_TEXT,
-    };
-  }
-  if (node.parent) return resolveTopicColors(node.parent);
-  return {
-    colorHex: DEFAULT_COLOR,
-    colorHex2: null,
-    gradientDir: "to bottom",
-    gradientStop: 150,
-    textColorHex: DEFAULT_TEXT,
-  };
-}
-
-type TagGroupColorMap = Map<string, { colorHex: string; colorHex2: string | null; gradientDir: string; gradientStop: number; textColorHex: string }>;
-
-// ─── 타입 ─────────────────────────────────────────────────────────────────────
-
-async function getPostsWithLabels(
-  where: Prisma.PostWhereInput,
-  options?: { take?: number; orderBy?: Prisma.PostOrderByWithRelationInput }
-) {
-  return prisma.post.findMany({
-    where,
-    take: options?.take,
-    orderBy: options?.orderBy,
-    select: {
-      id: true,
-      slug: true,
-      titleEn: true,
-      thumbnailUrl: true,
-      postTopics: {
-        where: { isVisible: true },
-        orderBy: { displayOrder: "asc" },
-        select: {
-          topic: {
-            select: {
-              nameEn: true,
-              colorHex: true,
-              colorHex2: true,
-              gradientDir: true,
-              gradientStop: true,
-              textColorHex: true,
-              parent: {
-                select: {
-                  colorHex: true,
-                  colorHex2: true,
-                  gradientDir: true,
-                  gradientStop: true,
-                  textColorHex: true,
-                  parent: {
-                    select: {
-                      colorHex: true,
-                      colorHex2: true,
-                      gradientDir: true,
-                      gradientStop: true,
-                      textColorHex: true,
-                      parent: { select: { colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true } },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-      postTags: {
-        where: { isVisible: true },
-        orderBy: { displayOrder: "asc" },
-        select: {
-          tag: {
-            select: { name: true, group: true, colorHex: true, colorHex2: true, textColorHex: true },
-          },
-        },
-      },
-    },
-  });
-}
-
-type PostItem = Awaited<ReturnType<typeof getPostsWithLabels>>[number];
+import { getPostsWithLabels, type PostItem } from "@/lib/post-queries";
+import {
+  resolveTopicColors,
+  DEFAULT_COLOR,
+  DEFAULT_TEXT,
+  type TagGroupColorMap,
+} from "@/lib/post-labels";
+import { PostCard, PostBadges } from "./_components/PostCard";
+import { SearchBar } from "./_components/SearchBar";
 
 // ─── 서브 컴포넌트 ────────────────────────────────────────────────────────────
-
-type ResolvedLabel = {
-  text: string;
-  colorHex: string;
-  colorHex2: string | null;
-  gradientDir: string;
-  gradientStop: number;
-  textColorHex: string;
-};
-
-function labelBackground(label: ResolvedLabel): string {
-  return label.colorHex2
-    ? `linear-gradient(${label.gradientDir}, ${label.colorHex}, ${label.colorHex2} ${label.gradientStop}%)`
-    : label.colorHex;
-}
-
-function PostBadges({ post, tagGroupMap }: { post: PostItem; tagGroupMap: TagGroupColorMap }) {
-  const labels: ResolvedLabel[] = [];
-
-  for (const { topic } of post.postTopics) {
-    labels.push({ text: topic.nameEn, ...resolveTopicColors(topic) });
-  }
-  for (const { tag } of post.postTags) {
-    const gc = tagGroupMap.get(tag.group);
-    labels.push({
-      text: tag.name,
-      colorHex: tag.colorHex ?? gc?.colorHex ?? DEFAULT_COLOR,
-      colorHex2: tag.colorHex ? (tag.colorHex2 ?? null) : (gc?.colorHex2 ?? null),
-      gradientDir: gc?.gradientDir ?? "to bottom",
-      gradientStop: gc?.gradientStop ?? 150,
-      textColorHex: tag.textColorHex ?? gc?.textColorHex ?? DEFAULT_TEXT,
-    });
-  }
-
-  const visible = labels.slice(0, 2);
-  if (visible.length === 0) return null;
-
-  return (
-    <div className="flex flex-wrap gap-1">
-      {visible.map((label, i) => (
-        <span
-          key={i}
-          className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold leading-none"
-          style={{ background: labelBackground(label), color: label.textColorHex }}
-        >
-          {label.text}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function PostCard({ post, tagGroupMap }: { post: PostItem; tagGroupMap: TagGroupColorMap }) {
-  return (
-    <Link
-      href={`/posts/${post.slug}`}
-      className="snap-start shrink-0 w-[160px] md:w-[200px]"
-    >
-      <div className="relative aspect-[3/2] rounded-lg overflow-hidden bg-muted">
-        {post.thumbnailUrl ? (
-          <Image
-            src={post.thumbnailUrl}
-            alt={post.titleEn}
-            fill
-            className="object-cover"
-            sizes="200px"
-          />
-        ) : (
-          <div className="w-full h-full bg-muted" />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-        <div className="absolute top-2 left-2 right-2">
-          <PostBadges post={post} tagGroupMap={tagGroupMap} />
-        </div>
-        <div className="absolute bottom-2 left-2 right-2">
-          <p className="text-white text-xs font-semibold line-clamp-2 leading-snug drop-shadow">
-            {post.titleEn}
-          </p>
-        </div>
-      </div>
-    </Link>
-  );
-}
 
 function CuratedSectionRow({
   titleEn,
@@ -227,24 +45,9 @@ function CuratedSectionRow({
   );
 }
 
-function SearchBar() {
-  return (
-    <Link
-      href="/search"
-      className="flex items-center gap-2 h-11 w-full rounded-full border border-border bg-muted/30 px-4 mb-4 hover:border-brand transition-colors"
-    >
-      <Search className="size-4 text-muted-foreground shrink-0" />
-      <span className="text-sm text-muted-foreground">
-        Search K-artists, dramas, foods
-      </span>
-    </Link>
-  );
-}
-
 // ─── 메인 페이지 ──────────────────────────────────────────────────────────────
 
 export default async function HomePage() {
-  // 병렬 데이터 페칭
   const [homeBanners, sections, tagGroupConfigs] = await Promise.all([
     prisma.homeBanner.findMany({
       where: { isActive: true },
@@ -309,8 +112,6 @@ export default async function HomePage() {
     }),
   ]);
 
-  // 각 섹션별 데이터 조회 (병렬)
-  // POST 섹션: 포스트 목록, RECREESHOT 섹션: ReCreeshot 목록
   type SectionData =
     | { kind: "posts"; items: PostItem[] }
     | { kind: "reCreeshots"; items: { id: string; imageUrl: string; matchScore: number | null; showBadge: boolean }[] };
@@ -335,7 +136,6 @@ export default async function HomePage() {
         return { kind: "reCreeshots", items };
       }
 
-      // POST 섹션
       if (section.type === "MANUAL") {
         if (section.postIds.length === 0) return { kind: "posts", items: [] };
         const posts = await getPostsWithLabels({
@@ -350,6 +150,7 @@ export default async function HomePage() {
             .filter((p): p is PostItem => !!p),
         };
       }
+
       const items = await getPostsWithLabels(
         {
           status: "PUBLISHED",
@@ -376,9 +177,9 @@ export default async function HomePage() {
   const hasSections = sectionData.some((d) => d.items.length > 0);
   const showFallback = !hasBanners && !hasSections;
 
-  // 배너 props 변환 — effective color 계산 (토픽: 부모 상속, 태그: 그룹 상속)
-  const tagGroupMap = new Map(tagGroupConfigs.map((c) => [c.group, c]));
+  const tagGroupMap: TagGroupColorMap = new Map(tagGroupConfigs.map((c) => [c.group, c]));
 
+  // 배너 props 변환 — effective color 계산
   type LabelOverride = { type: "topic" | "tag"; id: string };
 
   const bannerItems: BannerItem[] = homeBanners.map((b) => {
@@ -405,7 +206,6 @@ export default async function HomePage() {
     let labels: BannerItem["labels"];
 
     if (overrides && overrides.length > 0) {
-      // override 순서대로 라벨 조회
       labels = overrides
         .map((o) => {
           if (o.type === "topic") {
@@ -418,7 +218,6 @@ export default async function HomePage() {
         })
         .filter((l): l is NonNullable<typeof l> => l !== null);
     } else {
-      // 기본: isVisible=true 상위 2개 (토픽 → 태그 순)
       const topicLabels = b.post.postTopics
         .filter((t) => t.isVisible)
         .map(buildTopicLabel);
@@ -492,13 +291,10 @@ export default async function HomePage() {
   // ─── 메인 렌더링 ─────────────────────────────────────────────────────────────
   return (
     <div className="px-4 py-4 max-w-2xl mx-auto">
-      {/* 1. 검색바 */}
       <SearchBar />
 
-      {/* 2. 히어로 배너 캐러셀 */}
       {hasBanners && <HomeBannerCarousel banners={bannerItems} />}
 
-      {/* 3. 큐레이션 섹션 (POST / RECREESHOT 분기) */}
       {sections.map((section, i) => {
         const data = sectionData[i];
         if (!data || data.items.length === 0) return null;

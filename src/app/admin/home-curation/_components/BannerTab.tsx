@@ -214,9 +214,7 @@ export function BannerTab({
 
   function handleAdd(ids: string[]) {
     startTransition(async () => {
-      for (const id of ids) {
-        await addBanner(id);
-      }
+      await Promise.all(ids.map(addBanner));
     });
   }
 

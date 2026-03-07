@@ -212,11 +212,14 @@ export function SectionDialog({
                     key={ct}
                     type="button"
                     onClick={() => {
-                      set("contentType", ct);
-                      // RECREESHOT은 MANUAL 불가 → AUTO_NEW로 전환
-                      if (ct === "RECREESHOT" && form.type === "MANUAL") {
-                        set("type", "AUTO_NEW");
-                      }
+                      setForm((prev) => ({
+                        ...prev,
+                        contentType: ct,
+                        postIds: [],
+                        ...(ct === "RECREESHOT" && prev.type === "MANUAL"
+                          ? { type: "AUTO_NEW" as const }
+                          : {}),
+                      }));
                     }}
                     className={`flex-1 py-2 rounded-md text-sm font-medium border transition-colors ${
                       form.contentType === ct

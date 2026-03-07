@@ -117,17 +117,25 @@ export function BannerLabelDialog({
 
   function handleReset() {
     startTransition(async () => {
-      await updateBannerLabels(bannerId, []);
-      toast.success("기본 라벨로 초기화했습니다.");
-      onClose();
+      try {
+        await updateBannerLabels(bannerId, []);
+        toast.success("기본 라벨로 초기화했습니다.");
+        onClose();
+      } catch {
+        toast.error("초기화에 실패했습니다.");
+      }
     });
   }
 
   function handleConfirm() {
     startTransition(async () => {
-      await updateBannerLabels(bannerId, selected);
-      toast.success("라벨 설정을 저장했습니다.");
-      onClose();
+      try {
+        await updateBannerLabels(bannerId, selected);
+        toast.success("라벨 설정을 저장했습니다.");
+        onClose();
+      } catch {
+        toast.error("저장에 실패했습니다.");
+      }
     });
   }
 

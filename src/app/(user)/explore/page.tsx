@@ -2,100 +2,17 @@ import Link from "next/link";
 import Image from "next/image";
 import { Bookmark, ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import { getPostsWithLabels, type PostItem } from "@/lib/post-queries";
+import {
+  resolveTopicColors,
+  labelBackground,
+  DEFAULT_COLOR,
+  DEFAULT_TEXT,
+  type TagGroupColorMap,
+  type ResolvedLabel,
+} from "@/lib/post-labels";
 
-// ─── 색상 헬퍼 (home page와 동일 패턴) ──────────────────────────────────────
-
-const DEFAULT_COLOR = "#C6FD09";
-const DEFAULT_TEXT = "#000000";
-
-type ColorNode = {
-  colorHex?: string | null;
-  colorHex2?: string | null;
-  gradientDir?: string;
-  gradientStop?: number;
-  textColorHex?: string | null;
-  parent?: ColorNode | null;
-};
-
-function resolveTopicColors(node: ColorNode) {
-  if (node.colorHex) {
-    return {
-      colorHex: node.colorHex,
-      colorHex2: node.colorHex2 ?? null,
-      gradientDir: node.gradientDir ?? "to bottom",
-      gradientStop: node.gradientStop ?? 150,
-      textColorHex: node.textColorHex ?? DEFAULT_TEXT,
-    };
-  }
-  if (node.parent) return resolveTopicColors(node.parent);
-  return { colorHex: DEFAULT_COLOR, colorHex2: null, gradientDir: "to bottom", gradientStop: 150, textColorHex: DEFAULT_TEXT };
-}
-
-type TagGroupColorMap = Map<string, { colorHex: string; colorHex2: string | null; gradientDir: string; gradientStop: number; textColorHex: string }>;
-
-type ResolvedLabel = {
-  text: string;
-  colorHex: string;
-  colorHex2: string | null;
-  gradientDir: string;
-  gradientStop: number;
-  textColorHex: string;
-};
-
-function labelBackground(label: ResolvedLabel): string {
-  return label.colorHex2
-    ? `linear-gradient(${label.gradientDir}, ${label.colorHex}, ${label.colorHex2} ${label.gradientStop}%)`
-    : label.colorHex;
-}
-
-// ─── 데이터 조회 ─────────────────────────────────────────────────────────────
-
-async function getExplorePosts() {
-  return prisma.post.findMany({
-    where: { status: "PUBLISHED" },
-    orderBy: { publishedAt: "desc" },
-    select: {
-      id: true,
-      slug: true,
-      titleEn: true,
-      subtitleEn: true,
-      thumbnailUrl: true,
-      postTopics: {
-        where: { isVisible: true },
-        orderBy: { displayOrder: "asc" },
-        select: {
-          topic: {
-            select: {
-              nameEn: true,
-              colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true,
-              parent: {
-                select: {
-                  colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true,
-                  parent: {
-                    select: {
-                      colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true,
-                      parent: { select: { colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true } },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-      postTags: {
-        where: { isVisible: true },
-        orderBy: { displayOrder: "asc" },
-        select: {
-          tag: { select: { name: true, group: true, colorHex: true, colorHex2: true, textColorHex: true } },
-        },
-      },
-    },
-  });
-}
-
-type ExplorePost = Awaited<ReturnType<typeof getExplorePosts>>[number];
+type ExplorePost = PostItem;
 
 // ─── 서브 컴포넌트 ────────────────────────────────────────────────────────────
 
@@ -141,7 +58,6 @@ function PostListItem({ post, tagGroupMap }: { post: ExplorePost; tagGroupMap: T
       href={`/posts/${post.slug}`}
       className="flex items-center gap-3 py-3 border-b border-border/50 last:border-0"
     >
-      {/* 썸네일 */}
       <div className="relative size-[88px] shrink-0 rounded-lg overflow-hidden bg-muted">
         {post.thumbnailUrl ? (
           <Image
@@ -156,7 +72,6 @@ function PostListItem({ post, tagGroupMap }: { post: ExplorePost; tagGroupMap: T
         )}
       </div>
 
-      {/* 텍스트 */}
       <div className="flex-1 min-w-0">
         <p className="font-semibold text-sm line-clamp-2 leading-snug">{post.titleEn}</p>
         {post.subtitleEn && (
@@ -165,7 +80,6 @@ function PostListItem({ post, tagGroupMap }: { post: ExplorePost; tagGroupMap: T
         <PostLabels post={post} tagGroupMap={tagGroupMap} />
       </div>
 
-      {/* 북마크 아이콘 */}
       <Bookmark className="size-4 shrink-0 text-muted-foreground/60" />
     </Link>
   );
@@ -234,7 +148,9 @@ export default async function ExplorePage({
 
   const tagGroupMap: TagGroupColorMap = new Map(tagGroupConfigs.map((c) => [c.group, c]));
 
-  const posts = tab === "posts" ? await getExplorePosts() : [];
+  const posts = tab === "posts"
+    ? await getPostsWithLabels({ status: "PUBLISHED" }, { orderBy: { publishedAt: "desc" } })
+    : [];
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -271,17 +187,14 @@ export default async function ExplorePage({
             </div>
           ) : (
             <>
-              {/* 처음 3개 포스트 */}
               {posts.slice(0, 3).map((post) => (
                 <PostListItem key={post.id} post={post} tagGroupMap={tagGroupMap} />
               ))}
 
-              {/* 리크리샷 인라인 섹션 */}
               {recreeshots.length > 0 && (
                 <RecreeshotInlineSection shots={recreeshots.slice(0, 6)} />
               )}
 
-              {/* 나머지 포스트 */}
               {posts.slice(3).map((post) => (
                 <PostListItem key={post.id} post={post} tagGroupMap={tagGroupMap} />
               ))}

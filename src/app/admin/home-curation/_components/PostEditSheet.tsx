@@ -20,16 +20,23 @@ export function PostEditSheet({
   onClose: () => void;
 }) {
   const [data, setData] = useState<PostEditData>(null);
+  const [error, setError] = useState(false);
   const [, startTransition] = useTransition();
 
   useEffect(() => {
     if (!postId) {
       setData(null);
+      setError(false);
       return;
     }
+    setError(false);
     startTransition(async () => {
-      const result = await getPostEditData(postId);
-      setData(result);
+      try {
+        const result = await getPostEditData(postId);
+        setData(result);
+      } catch {
+        setError(true);
+      }
     });
   }, [postId]);
 
@@ -39,9 +46,14 @@ export function PostEditSheet({
         <DialogHeader className="sr-only">
           <DialogTitle>포스트 편집</DialogTitle>
         </DialogHeader>
-        {postId && !data && (
+        {postId && !data && !error && (
           <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
             불러오는 중...
+          </div>
+        )}
+        {error && (
+          <div className="flex items-center justify-center h-full text-sm text-destructive">
+            포스트를 불러오지 못했습니다.
           </div>
         )}
         {data && (
