@@ -186,6 +186,8 @@ interface PostFormProps {
   allTags: TagForForm[];
   allTopics: TopicForForm[];
   tagGroups: TagGroupItem[];
+  onSuccess?: () => void;
+  isEmbedded?: boolean;
 }
 
 // ─── 상수 ──────────────────────────────────────────────────────────────────────
@@ -338,6 +340,8 @@ export function PostForm({
   allTags,
   allTopics,
   tagGroups,
+  onSuccess,
+  isEmbedded,
 }: PostFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -747,6 +751,10 @@ export function PostForm({
       if (!titleEn.trim()) missing.push("영어 제목");
       if (postTopics.length === 0) missing.push("토픽 1개 이상");
       if (!thumbnailUrl.trim()) missing.push("썸네일 이미지");
+      const visibleLabelCount =
+        postTopics.filter((t) => t.isVisible).length +
+        postTags.filter((t) => t.isVisible).length;
+      if (visibleLabelCount < 1) missing.push("라벨 1개 이상 표시 설정 필요");
       if (missing.length > 0) {
         toast.error(`발행 불가: ${missing.join(", ")} 필요`);
         return;
@@ -795,7 +803,11 @@ export function PostForm({
         toast.error(result.error);
       } else {
         toast.success(isEdit ? "포스트가 수정되었습니다." : "포스트가 저장되었습니다.");
-        router.push("/admin/posts");
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          router.push("/admin/posts");
+        }
       }
     });
   };
@@ -807,12 +819,22 @@ export function PostForm({
       <div className="sticky top-0 z-40 shrink-0 border-b bg-background">
         <div className="flex h-14 items-center justify-between px-6">
           <div className="flex items-center gap-3">
-            <Link
-              href="/admin/posts"
-              className="flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-muted"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
+            {isEmbedded ? (
+              <button
+                type="button"
+                onClick={onSuccess}
+                className="flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-muted"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </button>
+            ) : (
+              <Link
+                href="/admin/posts"
+                className="flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-muted"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Link>
+            )}
             <h1 className="text-base font-semibold">
               {isEdit ? "포스트 수정" : "포스트 작성"}
             </h1>
@@ -829,7 +851,7 @@ export function PostForm({
               </span>
             )}
 
-            {isEdit && slug ? (
+            {!isEmbedded && (isEdit && slug ? (
               <Button variant="outline" size="sm" asChild>
                 <a
                   href={`/posts/${slug}?preview=1`}
@@ -846,13 +868,19 @@ export function PostForm({
                 <Eye className="h-3.5 w-3.5 mr-1" />
                 미리보기
               </Button>
-            ) : null}
+            ) : null)}
 
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/admin/posts">취소</Link>
-            </Button>
+            {isEmbedded ? (
+              <Button variant="outline" size="sm" asChild>
+                <Link href={`/admin/posts/${postId}/edit`}>전체 편집 페이지</Link>
+              </Button>
+            ) : (
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/admin/posts">취소</Link>
+              </Button>
+            )}
 
-            {isEdit && status === "AI_DRAFTED" && (
+            {!isEmbedded && isEdit && status === "AI_DRAFTED" && (
               <Button
                 variant="outline"
                 size="sm"
@@ -863,7 +891,7 @@ export function PostForm({
               </Button>
             )}
 
-            {isEdit && status === "PUBLISHED" && (
+            {!isEmbedded && isEdit && status === "PUBLISHED" && (
               <Button
                 variant="outline"
                 size="sm"
@@ -889,7 +917,7 @@ export function PostForm({
               저장
             </Button>
 
-            {status !== "PUBLISHED" && !isImportedState && (
+            {!isEmbedded && status !== "PUBLISHED" && !isImportedState && (
               <Button
                 size="sm"
                 variant="default"
@@ -900,7 +928,7 @@ export function PostForm({
                 발행
               </Button>
             )}
-            {isImportedState && (
+            {!isEmbedded && isImportedState && (
               <Button
                 size="sm"
                 variant="default"

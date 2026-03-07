@@ -304,7 +304,8 @@ export async function publishPost(
     const post = await prisma.post.findUnique({
       where: { id },
       include: {
-        postTopics: true,
+        postTopics: { select: { isVisible: true } },
+        postTags: { select: { isVisible: true } },
         postPlaces: true,
       },
     });
@@ -316,6 +317,10 @@ export async function publishPost(
     if (!post.titleEn?.trim()) missing.push("영어 제목");
     if (post.postTopics.length === 0) missing.push("토픽 1개 이상");
     if (!post.thumbnailUrl) missing.push("썸네일 이미지");
+    const visibleCount =
+      post.postTopics.filter((t) => t.isVisible).length +
+      post.postTags.filter((t) => t.isVisible).length;
+    if (visibleCount < 1) missing.push("라벨 1개 이상 표시 설정 필요");
 
     if (missing.length > 0) return { missing };
 
@@ -343,4 +348,167 @@ export async function unpublishPost(id: string): Promise<{ error?: string }> {
     console.error(e);
     return { error: "발행 취소 중 오류가 발생했습니다." };
   }
+}
+
+// ─── 포스트 편집 데이터 조회 (Sheet용) ──────────────────────────────────────────
+
+export async function getPostEditData(id: string) {
+  const [post, allTagsRaw, tagGroupConfigs, allTopics] = await Promise.all([
+    prisma.post.findUnique({
+      where: { id },
+      include: {
+        postTopics: { select: { topicId: true, isVisible: true, displayOrder: true } },
+        postTags: { select: { tagId: true, isVisible: true, displayOrder: true } },
+        postPlaces: {
+          select: {
+            placeId: true,
+            context: true,
+            vibe: true,
+            mustTry: true,
+            tip: true,
+            insightEn: true,
+            place: {
+              select: {
+                nameKo: true,
+                nameEn: true,
+                addressKo: true,
+                addressEn: true,
+                latitude: true,
+                longitude: true,
+                phone: true,
+                imageUrl: true,
+              },
+            },
+          },
+        },
+        postSources: {
+          orderBy: { sortOrder: "asc" },
+          select: {
+            id: true,
+            sourceType: true,
+            sourceUrl: true,
+            sourceNote: true,
+            sourcePostDate: true,
+            referenceUrl: true,
+            sortOrder: true,
+          },
+        },
+      },
+    }),
+    prisma.tag.findMany({
+      where: { isActive: true },
+      select: {
+        id: true,
+        name: true,
+        nameKo: true,
+        group: true,
+        colorHex: true,
+        colorHex2: true,
+        textColorHex: true,
+      },
+      orderBy: [{ group: "asc" }, { sortOrder: "asc" }],
+    }),
+    prisma.tagGroupConfig.findMany({
+      select: {
+        group: true,
+        nameEn: true,
+        colorHex: true,
+        colorHex2: true,
+        gradientDir: true,
+        gradientStop: true,
+        textColorHex: true,
+        sortOrder: true,
+      },
+      orderBy: { sortOrder: "asc" },
+    }),
+    prisma.topic.findMany({
+      where: { isActive: true },
+      select: {
+        id: true,
+        nameKo: true,
+        nameEn: true,
+        level: true,
+        parentId: true,
+        colorHex: true,
+        colorHex2: true,
+        gradientDir: true,
+        gradientStop: true,
+        textColorHex: true,
+      },
+      orderBy: [{ level: "asc" }, { sortOrder: "asc" }],
+    }),
+  ]);
+
+  if (!post) return null;
+
+  const configMap = new Map(tagGroupConfigs.map((c) => [c.group, c]));
+  const allTags = allTagsRaw.map((tag) => ({
+    ...tag,
+    effectiveColorHex: tag.colorHex ?? configMap.get(tag.group)?.colorHex ?? "#C6FD09",
+    effectiveColorHex2: tag.colorHex2 ?? configMap.get(tag.group)?.colorHex2 ?? null,
+    effectiveGradientDir: configMap.get(tag.group)?.gradientDir ?? "to bottom",
+    effectiveGradientStop: configMap.get(tag.group)?.gradientStop ?? 150,
+    effectiveTextColorHex: tag.textColorHex ?? configMap.get(tag.group)?.textColorHex ?? "#000000",
+  }));
+
+  const tagGroups = tagGroupConfigs.map((c) => ({
+    group: c.group,
+    nameEn: c.nameEn,
+  }));
+
+  const firstPlace = post.postPlaces[0];
+
+  const initialData = {
+    id: post.id,
+    titleKo: post.titleKo,
+    titleEn: post.titleEn,
+    slug: post.slug,
+    subtitleKo: post.subtitleKo,
+    subtitleEn: post.subtitleEn,
+    bodyKo: post.bodyKo,
+    bodyEn: post.bodyEn,
+    thumbnailUrl: post.thumbnailUrl,
+    status: post.status,
+    memo: post.memo,
+    collectedBy: post.collectedBy,
+    collectedAt: post.collectedAt,
+    postTopics: post.postTopics,
+    postTags: post.postTags,
+    postSources: post.postSources.map((s) => ({
+      sourceType: s.sourceType ?? "",
+      sourceUrl: s.sourceUrl ?? "",
+      sourceNote: s.sourceNote ?? "",
+      sourcePostDate: s.sourcePostDate ?? "",
+      referenceUrl: s.referenceUrl ?? "",
+    })),
+    legacySourceUrl: post.sourceUrl,
+    legacySourceType: post.sourceType,
+    legacySourceNote: post.sourceNote,
+    postPlaces: firstPlace
+      ? [
+          {
+            placeId: firstPlace.placeId,
+            placeNameKo: firstPlace.place.nameKo,
+            placeNameEn: firstPlace.place.nameEn,
+            placeAddressKo: firstPlace.place.addressKo,
+            placeAddressEn: firstPlace.place.addressEn,
+            placeLatitude: firstPlace.place.latitude,
+            placeLongitude: firstPlace.place.longitude,
+            placePhone: firstPlace.place.phone,
+            placeImageUrl: firstPlace.place.imageUrl,
+            context: firstPlace.context,
+            vibe: firstPlace.vibe,
+            mustTry: firstPlace.mustTry,
+            tip: firstPlace.tip,
+            insightEn: firstPlace.insightEn as {
+              context?: string;
+              mustTry?: string;
+              tip?: string;
+            } | null,
+          },
+        ]
+      : [],
+  };
+
+  return { post, initialData, allTags, tagGroups, allTopics };
 }
