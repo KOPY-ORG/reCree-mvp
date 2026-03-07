@@ -104,6 +104,7 @@ function SortableBannerRow({
       <span
         {...listeners}
         {...attributes}
+        suppressHydrationWarning
         onMouseEnter={() => setHandleHovered(true)}
         onMouseLeave={() => setHandleHovered(false)}
         className="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-muted-foreground transition-colors"

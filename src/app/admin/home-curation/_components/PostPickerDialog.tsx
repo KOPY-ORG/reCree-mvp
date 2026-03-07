@@ -57,6 +57,7 @@ function SortableSelectedRow({
       <span
         {...listeners}
         {...attributes}
+        suppressHydrationWarning
         className="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-muted-foreground shrink-0"
       >
         <GripVertical className="size-4" />
