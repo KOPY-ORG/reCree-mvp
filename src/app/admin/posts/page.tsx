@@ -59,6 +59,17 @@ export default async function PostsPage({
                 gradientDir: true,
                 gradientStop: true,
                 textColorHex: true,
+                parent: {
+                  select: {
+                    colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true,
+                    parent: {
+                      select: {
+                        colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true,
+                        parent: { select: { colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true } },
+                      },
+                    },
+                  },
+                },
               },
             },
           },
@@ -105,15 +116,26 @@ export default async function PostsPage({
 
   const configMap = new Map(tagGroupConfigs.map((c) => [c.group, c]));
 
-  // 태그 effective 색상 resolve
+  type ColorNode = { colorHex?: string | null; colorHex2?: string | null; gradientDir?: string; gradientStop?: number; textColorHex?: string | null; parent?: ColorNode | null };
+  function resolveTopicColors(node: ColorNode): { colorHex: string; colorHex2: string | null; gradientDir: string; gradientStop: number; textColorHex: string } {
+    if (node.colorHex) return { colorHex: node.colorHex, colorHex2: node.colorHex2 ?? null, gradientDir: node.gradientDir ?? "to bottom", gradientStop: node.gradientStop ?? 150, textColorHex: node.textColorHex ?? "#000000" };
+    if (node.parent) return resolveTopicColors(node.parent);
+    return { colorHex: "#C6FD09", colorHex2: null, gradientDir: "to bottom", gradientStop: 150, textColorHex: "#000000" };
+  }
+
+  // 토픽/태그 effective 색상 resolve
   const postsWithResolvedColors = posts.map((post) => ({
     ...post,
+    postTopics: post.postTopics.map(({ displayOrder, topic }) => ({
+      displayOrder,
+      topic: { ...topic, ...resolveTopicColors(topic) },
+    })),
     postTags: post.postTags.map(({ displayOrder, tag }) => ({
       displayOrder,
       tag: {
         ...tag,
         effectiveColorHex: tag.colorHex ?? configMap.get(tag.group)?.colorHex ?? "#C6FD09",
-        effectiveColorHex2: tag.colorHex2 ?? configMap.get(tag.group)?.colorHex2 ?? null,
+        effectiveColorHex2: tag.colorHex ? (tag.colorHex2 ?? null) : (configMap.get(tag.group)?.colorHex2 ?? null),
         effectiveGradientDir: configMap.get(tag.group)?.gradientDir ?? "to bottom",
         effectiveGradientStop: configMap.get(tag.group)?.gradientStop ?? 150,
         effectiveTextColorHex: tag.textColorHex ?? configMap.get(tag.group)?.textColorHex ?? "#000000",

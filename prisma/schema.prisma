@@ -328,9 +328,7 @@ model HomeBanner {
 model CuratedSection {
   id            String      @id @default(uuid()) @db.Uuid
   titleEn       String
-  titleKo       String
   subtitleEn    String?
-  subtitleKo    String?
   contentType   ContentType @default(POST)
   type          SectionType @default(MANUAL)
   postIds       String[]    @db.Uuid

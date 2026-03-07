@@ -3,16 +3,12 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
-import type { ContentType, SectionType } from "@prisma/client";
+import type { SectionType } from "@prisma/client";
 
 // ─── 타입 ─────────────────────────────────────────────────────────────────────
 
 export type SectionFormData = {
   titleEn: string;
-  titleKo: string;
-  subtitleEn?: string;
-  subtitleKo?: string;
-  contentType: ContentType;
   type: SectionType;
   postIds: string[];
   filterTopicId?: string;
@@ -80,10 +76,6 @@ export async function createSection(data: SectionFormData) {
   await prisma.curatedSection.create({
     data: {
       titleEn: data.titleEn,
-      titleKo: data.titleKo,
-      subtitleEn: data.subtitleEn || null,
-      subtitleKo: data.subtitleKo || null,
-      contentType: data.contentType,
       type: data.type,
       postIds: data.postIds,
       filterTopicId: data.filterTopicId || null,
@@ -101,10 +93,6 @@ export async function updateSection(id: string, data: SectionFormData) {
     where: { id },
     data: {
       titleEn: data.titleEn,
-      titleKo: data.titleKo,
-      subtitleEn: data.subtitleEn || null,
-      subtitleKo: data.subtitleKo || null,
-      contentType: data.contentType,
       type: data.type,
       postIds: data.postIds,
       filterTopicId: data.filterTopicId || null,

@@ -5,6 +5,48 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { HomeBannerCarousel, type BannerItem } from "./_components/HomeBannerCarousel";
 
+// ─── 색상 상속 헬퍼 ──────────────────────────────────────────────────────────
+
+const DEFAULT_COLOR = "#C6FD09";
+const DEFAULT_TEXT = "#000000";
+
+type ColorNode = {
+  colorHex?: string | null;
+  colorHex2?: string | null;
+  gradientDir?: string;
+  gradientStop?: number;
+  textColorHex?: string | null;
+  parent?: ColorNode | null;
+};
+
+function resolveTopicColors(node: ColorNode): {
+  colorHex: string;
+  colorHex2: string | null;
+  gradientDir: string;
+  gradientStop: number;
+  textColorHex: string;
+} {
+  if (node.colorHex) {
+    return {
+      colorHex: node.colorHex,
+      colorHex2: node.colorHex2 ?? null,
+      gradientDir: node.gradientDir ?? "to bottom",
+      gradientStop: node.gradientStop ?? 150,
+      textColorHex: node.textColorHex ?? DEFAULT_TEXT,
+    };
+  }
+  if (node.parent) return resolveTopicColors(node.parent);
+  return {
+    colorHex: DEFAULT_COLOR,
+    colorHex2: null,
+    gradientDir: "to bottom",
+    gradientStop: 150,
+    textColorHex: DEFAULT_TEXT,
+  };
+}
+
+type TagGroupColorMap = Map<string, { colorHex: string; colorHex2: string | null; gradientDir: string; gradientStop: number; textColorHex: string }>;
+
 // ─── 타입 ─────────────────────────────────────────────────────────────────────
 
 async function getPostsWithLabels(
@@ -25,7 +67,33 @@ async function getPostsWithLabels(
         orderBy: { displayOrder: "asc" },
         select: {
           topic: {
-            select: { nameEn: true, colorHex: true, textColorHex: true },
+            select: {
+              nameEn: true,
+              colorHex: true,
+              colorHex2: true,
+              gradientDir: true,
+              gradientStop: true,
+              textColorHex: true,
+              parent: {
+                select: {
+                  colorHex: true,
+                  colorHex2: true,
+                  gradientDir: true,
+                  gradientStop: true,
+                  textColorHex: true,
+                  parent: {
+                    select: {
+                      colorHex: true,
+                      colorHex2: true,
+                      gradientDir: true,
+                      gradientStop: true,
+                      textColorHex: true,
+                      parent: { select: { colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true } },
+                    },
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -34,7 +102,7 @@ async function getPostsWithLabels(
         orderBy: { displayOrder: "asc" },
         select: {
           tag: {
-            select: { name: true, colorHex: true, textColorHex: true },
+            select: { name: true, group: true, colorHex: true, colorHex2: true, textColorHex: true },
           },
         },
       },
@@ -46,46 +114,64 @@ type PostItem = Awaited<ReturnType<typeof getPostsWithLabels>>[number];
 
 // ─── 서브 컴포넌트 ────────────────────────────────────────────────────────────
 
-function PostBadges({ post }: { post: PostItem }) {
-  const { postTopics, postTags } = post;
-  if (postTopics.length === 0 && postTags.length === 0) return null;
+type ResolvedLabel = {
+  text: string;
+  colorHex: string;
+  colorHex2: string | null;
+  gradientDir: string;
+  gradientStop: number;
+  textColorHex: string;
+};
+
+function labelBackground(label: ResolvedLabel): string {
+  return label.colorHex2
+    ? `linear-gradient(${label.gradientDir}, ${label.colorHex}, ${label.colorHex2} ${label.gradientStop}%)`
+    : label.colorHex;
+}
+
+function PostBadges({ post, tagGroupMap }: { post: PostItem; tagGroupMap: TagGroupColorMap }) {
+  const labels: ResolvedLabel[] = [];
+
+  for (const { topic } of post.postTopics) {
+    labels.push({ text: topic.nameEn, ...resolveTopicColors(topic) });
+  }
+  for (const { tag } of post.postTags) {
+    const gc = tagGroupMap.get(tag.group);
+    labels.push({
+      text: tag.name,
+      colorHex: tag.colorHex ?? gc?.colorHex ?? DEFAULT_COLOR,
+      colorHex2: tag.colorHex ? (tag.colorHex2 ?? null) : (gc?.colorHex2 ?? null),
+      gradientDir: gc?.gradientDir ?? "to bottom",
+      gradientStop: gc?.gradientStop ?? 150,
+      textColorHex: tag.textColorHex ?? gc?.textColorHex ?? DEFAULT_TEXT,
+    });
+  }
+
+  const visible = labels.slice(0, 2);
+  if (visible.length === 0) return null;
+
   return (
     <div className="flex flex-wrap gap-1">
-      {postTopics.map(({ topic }, i) => (
+      {visible.map((label, i) => (
         <span
           key={i}
           className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold leading-none"
-          style={{
-            backgroundColor: topic.colorHex ?? "#888",
-            color: topic.textColorHex ?? "#fff",
-          }}
+          style={{ background: labelBackground(label), color: label.textColorHex }}
         >
-          {topic.nameEn}
-        </span>
-      ))}
-      {postTags.map(({ tag }, i) => (
-        <span
-          key={i}
-          className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold leading-none"
-          style={{
-            backgroundColor: tag.colorHex ?? "#888",
-            color: tag.textColorHex ?? "#fff",
-          }}
-        >
-          {tag.name}
+          {label.text}
         </span>
       ))}
     </div>
   );
 }
 
-function PostCard({ post }: { post: PostItem }) {
+function PostCard({ post, tagGroupMap }: { post: PostItem; tagGroupMap: TagGroupColorMap }) {
   return (
     <Link
       href={`/posts/${post.slug}`}
       className="snap-start shrink-0 w-[160px] md:w-[200px]"
     >
-      <div className="relative aspect-[4/3] rounded-lg overflow-hidden bg-muted">
+      <div className="relative aspect-[3/2] rounded-lg overflow-hidden bg-muted">
         {post.thumbnailUrl ? (
           <Image
             src={post.thumbnailUrl}
@@ -97,12 +183,16 @@ function PostCard({ post }: { post: PostItem }) {
         ) : (
           <div className="w-full h-full bg-muted" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+        <div className="absolute top-2 left-2 right-2">
+          <PostBadges post={post} tagGroupMap={tagGroupMap} />
+        </div>
         <div className="absolute bottom-2 left-2 right-2">
-          <PostBadges post={post} />
+          <p className="text-white text-xs font-semibold line-clamp-2 leading-snug drop-shadow">
+            {post.titleEn}
+          </p>
         </div>
       </div>
-      <p className="text-sm font-medium line-clamp-2 mt-2">{post.titleEn}</p>
     </Link>
   );
 }
@@ -110,9 +200,11 @@ function PostCard({ post }: { post: PostItem }) {
 function CuratedSectionRow({
   titleEn,
   posts,
+  tagGroupMap,
 }: {
   titleEn: string;
   posts: PostItem[];
+  tagGroupMap: TagGroupColorMap;
 }) {
   if (posts.length === 0) return null;
   return (
@@ -128,7 +220,7 @@ function CuratedSectionRow({
       </div>
       <div className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-1">
         {posts.map((post) => (
-          <PostCard key={post.id} post={post} />
+          <PostCard key={post.id} post={post} tagGroupMap={tagGroupMap} />
         ))}
       </div>
     </section>
@@ -176,7 +268,15 @@ export default async function HomePage() {
                     nameEn: true,
                     colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true,
                     parent: {
-                      select: { colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true },
+                      select: {
+                        colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true,
+                        parent: {
+                          select: {
+                            colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true,
+                            parent: { select: { colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true } },
+                          },
+                        },
+                      },
                     },
                   },
                 },
@@ -278,8 +378,6 @@ export default async function HomePage() {
 
   // 배너 props 변환 — effective color 계산 (토픽: 부모 상속, 태그: 그룹 상속)
   const tagGroupMap = new Map(tagGroupConfigs.map((c) => [c.group, c]));
-  const DEFAULT_COLOR = "#C6FD09";
-  const DEFAULT_TEXT = "#000000";
 
   type LabelOverride = { type: "topic" | "tag"; id: string };
 
@@ -287,17 +385,8 @@ export default async function HomePage() {
     const overrides = b.labelOverrides as LabelOverride[] | null;
 
     function buildTopicLabel(pt: typeof b.post.postTopics[number]) {
-      const { topic } = pt;
-      const p = topic.parent;
-      const inherits = topic.colorHex === null;
-      return {
-        text: topic.nameEn,
-        colorHex: topic.colorHex ?? p?.colorHex ?? DEFAULT_COLOR,
-        colorHex2: inherits ? (p?.colorHex2 ?? null) : topic.colorHex2,
-        gradientDir: inherits ? (p?.gradientDir ?? "to bottom") : topic.gradientDir,
-        gradientStop: inherits ? (p?.gradientStop ?? 150) : topic.gradientStop,
-        textColorHex: topic.textColorHex ?? p?.textColorHex ?? DEFAULT_TEXT,
-      };
+      const c = resolveTopicColors(pt.topic);
+      return { text: pt.topic.nameEn, ...c };
     }
 
     function buildTagLabel(pt: typeof b.post.postTags[number]) {
@@ -371,7 +460,7 @@ export default async function HomePage() {
         <div className="grid grid-cols-2 gap-3">
           {fallbackPosts.map((post) => (
             <Link key={post.id} href={`/posts/${post.slug}`}>
-              <div className="relative aspect-[4/3] rounded-lg overflow-hidden bg-muted">
+              <div className="relative aspect-[3/2] rounded-lg overflow-hidden bg-muted">
                 {post.thumbnailUrl ? (
                   <Image
                     src={post.thumbnailUrl}
@@ -383,14 +472,16 @@ export default async function HomePage() {
                 ) : (
                   <div className="w-full h-full bg-muted" />
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                <div className="absolute top-2 left-2 right-2">
+                  <PostBadges post={post} tagGroupMap={tagGroupMap} />
+                </div>
                 <div className="absolute bottom-2 left-2 right-2">
-                  <PostBadges post={post} />
+                  <p className="text-white text-xs font-semibold line-clamp-2 leading-snug drop-shadow">
+                    {post.titleEn}
+                  </p>
                 </div>
               </div>
-              <p className="text-sm font-medium line-clamp-2 mt-2">
-                {post.titleEn}
-              </p>
             </Link>
           ))}
         </div>
@@ -453,6 +544,7 @@ export default async function HomePage() {
             key={section.id}
             titleEn={section.titleEn}
             posts={data.items}
+            tagGroupMap={tagGroupMap}
           />
         );
       })}

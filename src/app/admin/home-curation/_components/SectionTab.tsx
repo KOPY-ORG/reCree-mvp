@@ -16,7 +16,7 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Pencil, Trash2, Plus } from "lucide-react";
+import { GripVertical, Pencil, Trash2, Plus, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -26,7 +26,7 @@ import {
 } from "../_actions/home-curation-actions";
 import { SectionDialog } from "./SectionDialog";
 import type { PickablePost } from "./PostPickerDialog";
-import type { ContentType, SectionType } from "@prisma/client";
+import type { SectionType } from "@prisma/client";
 
 type TopicOption = { id: string; nameKo: string; nameEn: string };
 type TagOption = { id: string; nameKo: string; name: string };
@@ -34,10 +34,6 @@ type TagOption = { id: string; nameKo: string; name: string };
 export type SectionRow = {
   id: string;
   titleEn: string;
-  titleKo: string;
-  subtitleEn: string | null;
-  subtitleKo: string | null;
-  contentType: ContentType;
   type: SectionType;
   postIds: string[];
   filterTopicId: string | null;
@@ -46,21 +42,6 @@ export type SectionRow = {
   order: number;
   isActive: boolean;
 };
-
-function ContentTypeBadge({ type }: { type: ContentType }) {
-  if (type === "RECREESHOT") {
-    return (
-      <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-purple-100 text-purple-700 shrink-0">
-        ReCreeshot
-      </span>
-    );
-  }
-  return (
-    <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-blue-100 text-blue-700 shrink-0">
-      POST
-    </span>
-  );
-}
 
 function SortableSectionRow({
   section,
@@ -101,14 +82,21 @@ function SortableSectionRow({
         <GripVertical className="size-4" />
       </span>
 
-      <ContentTypeBadge type={section.contentType} />
-
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">{section.titleKo}</p>
-        <p className="text-xs text-muted-foreground truncate">{section.titleEn}</p>
+        <p className="text-sm font-bold truncate">{section.titleEn}</p>
+        {section.type === "MANUAL" ? (
+          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+            <FileText className="size-3" />
+            포스트 {section.postIds.length}개
+          </p>
+        ) : (
+          <p className="text-xs text-muted-foreground mt-0.5">
+            최대 {section.maxCount}개
+          </p>
+        )}
       </div>
 
-      <span className="text-xs text-muted-foreground shrink-0 hidden sm:block">
+      <span className="text-xs text-muted-foreground shrink-0 bg-muted px-1.5 py-0.5 rounded font-mono">
         {section.type}
       </span>
 

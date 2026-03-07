@@ -68,10 +68,6 @@ export default async function HomeCurationPage({
         select: {
           id: true,
           titleEn: true,
-          titleKo: true,
-          subtitleEn: true,
-          subtitleKo: true,
-          contentType: true,
           type: true,
           postIds: true,
           filterTopicId: true,
@@ -84,7 +80,27 @@ export default async function HomeCurationPage({
       prisma.post.findMany({
         where: { status: "PUBLISHED" },
         orderBy: { publishedAt: "desc" },
-        select: { id: true, titleEn: true, titleKo: true, thumbnailUrl: true },
+        select: {
+          id: true,
+          titleEn: true,
+          titleKo: true,
+          thumbnailUrl: true,
+          postTopics: {
+            where: { isVisible: true },
+            orderBy: { displayOrder: "asc" },
+            take: 3,
+            select: {
+              topic: {
+                select: {
+                  id: true,
+                  nameEn: true,
+                  colorHex: true,
+                  parent: { select: { colorHex: true } },
+                },
+              },
+            },
+          },
+        },
       }),
       prisma.topic.findMany({
         where: { isActive: true },
@@ -134,7 +150,17 @@ export default async function HomeCurationPage({
   }));
 
   const sectionRows: SectionRow[] = sections;
-  const pickablePosts: PickablePost[] = publishedPosts;
+  const pickablePosts: PickablePost[] = publishedPosts.map((p) => ({
+    id: p.id,
+    titleEn: p.titleEn,
+    titleKo: p.titleKo,
+    thumbnailUrl: p.thumbnailUrl,
+    topicLabels: p.postTopics.map(({ topic }) => ({
+      id: topic.id,
+      nameEn: topic.nameEn,
+      colorHex: topic.colorHex ?? topic.parent?.colorHex ?? null,
+    })),
+  }));
 
   return (
     <div className="p-8">
