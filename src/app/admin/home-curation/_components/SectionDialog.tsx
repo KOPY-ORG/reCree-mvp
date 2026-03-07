@@ -40,7 +40,7 @@ import {
   type SectionFormData,
 } from "../_actions/home-curation-actions";
 import { PostPickerDialog, type PickablePost } from "./PostPickerDialog";
-import type { SectionType } from "@prisma/client";
+import type { SectionType, ContentType } from "@prisma/client";
 
 type TopicOption = { id: string; nameKo: string; nameEn: string };
 type TagOption = { id: string; nameKo: string; name: string };
@@ -54,6 +54,7 @@ interface SectionDialogProps {
   editTarget?: {
     id: string;
     titleEn: string;
+    contentType: ContentType;
     type: SectionType;
     postIds: string[];
     filterTopicId: string | null;
@@ -65,6 +66,7 @@ interface SectionDialogProps {
 
 const INITIAL: SectionFormData = {
   titleEn: "",
+  contentType: "POST",
   type: "AUTO_NEW",
   postIds: [],
   filterTopicId: "",
@@ -141,6 +143,7 @@ export function SectionDialog({
         editTarget
           ? {
               titleEn: editTarget.titleEn,
+              contentType: editTarget.contentType,
               type: editTarget.type,
               postIds: editTarget.postIds,
               filterTopicId: editTarget.filterTopicId ?? "",
@@ -200,6 +203,33 @@ export function SectionDialog({
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+            {/* 콘텐츠 유형 선택 */}
+            <div className="space-y-1.5">
+              <Label>콘텐츠 유형</Label>
+              <div className="flex gap-2">
+                {(["POST", "RECREESHOT"] as ContentType[]).map((ct) => (
+                  <button
+                    key={ct}
+                    type="button"
+                    onClick={() => {
+                      set("contentType", ct);
+                      // RECREESHOT은 MANUAL 불가 → AUTO_NEW로 전환
+                      if (ct === "RECREESHOT" && form.type === "MANUAL") {
+                        set("type", "AUTO_NEW");
+                      }
+                    }}
+                    className={`flex-1 py-2 rounded-md text-sm font-medium border transition-colors ${
+                      form.contentType === ct
+                        ? "bg-zinc-900 text-white border-zinc-900"
+                        : "bg-white text-zinc-500 border-border hover:border-zinc-400"
+                    }`}
+                  >
+                    {ct === "POST" ? "포스트" : "recreeshot"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* 제목 + 타입 (한 줄) */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
@@ -221,7 +251,9 @@ export function SectionDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="MANUAL">MANUAL</SelectItem>
+                    {form.contentType === "POST" && (
+                      <SelectItem value="MANUAL">MANUAL</SelectItem>
+                    )}
                     <SelectItem value="AUTO_NEW">AUTO_NEW (최신순)</SelectItem>
                     <SelectItem value="AUTO_HOT">AUTO_HOT (인기순)</SelectItem>
                   </SelectContent>
@@ -230,7 +262,7 @@ export function SectionDialog({
             </div>
 
             {/* MANUAL: 인라인 포스트 목록 + 추가 버튼 */}
-            {form.type === "MANUAL" && (
+            {form.contentType === "POST" && form.type === "MANUAL" && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label>
@@ -285,7 +317,7 @@ export function SectionDialog({
             )}
 
             {/* AUTO: maxCount + 필터 */}
-            {form.type !== "MANUAL" && (
+            {(form.contentType === "RECREESHOT" || form.type !== "MANUAL") && (
               <>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">

@@ -17,10 +17,15 @@ function pickRandom<T>(arr: T[], n: number): T[] {
   return [...arr].sort(() => Math.random() - 0.5).slice(0, n);
 }
 
+const DUMMY_USER_ID = "00000000-0000-0000-0000-000000000001";
+
 async function main() {
   console.log("더미 데이터 시드 시작...");
 
   // 1. 기존 더미 데이터 정리 (의존성 순으로)
+  await prisma.reCreeshotTag.deleteMany();
+  await prisma.reCreeshotTopic.deleteMany();
+  await prisma.reCreeshot.deleteMany();
   await prisma.homeBanner.deleteMany();
   await prisma.curatedSection.deleteMany();
   await prisma.popularSearch.deleteMany();
@@ -30,9 +35,17 @@ async function main() {
   await prisma.postSource.deleteMany();
   await prisma.post.deleteMany();
   await prisma.place.deleteMany();
+  await prisma.user.deleteMany({ where: { email: "seed@recree.dev" } });
   console.log("  기존 데이터 삭제 완료 (Topic/Tag 유지)");
 
-  // 2. 기존 Topic, Tag 조회 (없으면 빈 배열)
+  // 2. Dummy User upsert (ReCreeshot.userId required)
+  await prisma.user.upsert({
+    where: { id: DUMMY_USER_ID },
+    create: { id: DUMMY_USER_ID, email: "seed@recree.dev" },
+    update: {},
+  });
+
+  // 3. 기존 Topic, Tag 조회 (없으면 빈 배열)
   const topics = await prisma.topic.findMany({
     select: { id: true },
     where: { isActive: true },
@@ -42,7 +55,7 @@ async function main() {
     where: { isActive: true },
   });
 
-  // 3. 더미 포스트 20개 생성
+  // 4. 더미 포스트 20개 생성
   const postIds: string[] = [];
   let postTopicCount = 0;
   let postTagCount = 0;
@@ -61,7 +74,7 @@ async function main() {
     });
     postIds.push(post.id);
 
-    // 4. 토픽 연결 (1~2개)
+    // 5. 토픽 연결 (1~2개)
     if (topics.length > 0) {
       const picked = pickRandom(topics, Math.floor(Math.random() * 2) + 1);
       await prisma.postTopic.createMany({
@@ -91,7 +104,19 @@ async function main() {
   }
   console.log("  Post 20개 생성 완료");
 
-  // 5. HomeBanner — 포스트 1~5 등록
+  // 6. recreeshot 10개 생성
+  await prisma.reCreeshot.createMany({
+    data: Array.from({ length: 10 }, (_, i) => ({
+      userId: DUMMY_USER_ID,
+      imageUrl: `https://picsum.photos/seed/recreeshot${i + 1}/300/400`,
+      matchScore: i % 2 === 0 ? 60 + i * 4 : null,
+      showBadge: i % 2 === 0,
+      status: "ACTIVE",
+    })),
+  });
+  console.log("  recreeshot 10개 생성 완료");
+
+  // 7. HomeBanner — 포스트 1~5 등록
   await prisma.homeBanner.createMany({
     data: postIds.slice(0, 5).map((postId, idx) => ({
       postId,
@@ -101,7 +126,7 @@ async function main() {
   });
   console.log("  HomeBanner 5개 생성 완료");
 
-  // 6. CuratedSection 2개
+  // 8. CuratedSection 3개 (POST 2개 + RECREESHOT 1개)
   await prisma.curatedSection.createMany({
     data: [
       {
@@ -118,11 +143,20 @@ async function main() {
         order: 1,
         isActive: true,
       },
+      {
+        titleEn: "Recreate & Flex Your K-Trip!",
+        contentType: "RECREESHOT",
+        type: "AUTO_NEW",
+        postIds: [],
+        maxCount: 10,
+        order: 2,
+        isActive: true,
+      },
     ],
   });
-  console.log("  CuratedSection 2개 생성 완료");
+  console.log("  CuratedSection 3개 생성 완료 (POST 2 + RECREESHOT 1)");
 
-  // 7. PopularSearch 6개
+  // 9. PopularSearch 6개
   const keywords = [
     "BTS Filming Spot",
     "Jungkook K-BBQ",
@@ -136,11 +170,12 @@ async function main() {
   });
   console.log("  PopularSearch 6개 생성 완료");
 
-  // 8. 결과 출력
+  // 10. 결과 출력
   console.log("\n더미 데이터 생성 완료");
   console.log(`  - Post: 20개`);
   console.log(`  - HomeBanner: 5개`);
-  console.log(`  - CuratedSection: 2개`);
+  console.log(`  - CuratedSection: 3개 (POST 2 + RECREESHOT 1)`);
+  console.log(`  - recreeshot: 10개`);
   console.log(`  - PopularSearch: 6개`);
   console.log(`  - PostTopic 연결: ${postTopicCount}개`);
   console.log(`  - PostTag 연결: ${postTagCount}개`);

@@ -16,7 +16,7 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Pencil, Trash2, Plus, FileText } from "lucide-react";
+import { GripVertical, Pencil, Trash2, Plus, FileText, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -26,7 +26,7 @@ import {
 } from "../_actions/home-curation-actions";
 import { SectionDialog } from "./SectionDialog";
 import type { PickablePost } from "./PostPickerDialog";
-import type { SectionType } from "@prisma/client";
+import type { SectionType, ContentType } from "@prisma/client";
 
 type TopicOption = { id: string; nameKo: string; nameEn: string };
 type TagOption = { id: string; nameKo: string; name: string };
@@ -34,6 +34,7 @@ type TagOption = { id: string; nameKo: string; name: string };
 export type SectionRow = {
   id: string;
   titleEn: string;
+  contentType: ContentType;
   type: SectionType;
   postIds: string[];
   filterTopicId: string | null;
@@ -83,8 +84,17 @@ function SortableSectionRow({
       </span>
 
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold truncate">{section.titleEn}</p>
-        {section.type === "MANUAL" ? (
+        <div className="flex items-center gap-1.5">
+          <p className="text-sm font-bold truncate">{section.titleEn}</p>
+          {section.contentType === "RECREESHOT" && (
+            <Camera className="size-3 text-muted-foreground shrink-0" />
+          )}
+        </div>
+        {section.contentType === "RECREESHOT" ? (
+          <p className="text-xs text-muted-foreground mt-0.5">
+            recreeshot · 최대 {section.maxCount}개
+          </p>
+        ) : section.type === "MANUAL" ? (
           <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
             <FileText className="size-3" />
             포스트 {section.postIds.length}개
@@ -233,7 +243,21 @@ export function SectionTab({
         posts={posts}
         topics={topics}
         tags={tags}
-        editTarget={editTarget ?? undefined}
+        editTarget={
+          editTarget
+            ? {
+                id: editTarget.id,
+                titleEn: editTarget.titleEn,
+                contentType: editTarget.contentType,
+                type: editTarget.type,
+                postIds: editTarget.postIds,
+                filterTopicId: editTarget.filterTopicId,
+                filterTagId: editTarget.filterTagId,
+                maxCount: editTarget.maxCount,
+                isActive: editTarget.isActive,
+              }
+            : undefined
+        }
       />
     </div>
   );

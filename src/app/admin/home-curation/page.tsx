@@ -68,6 +68,7 @@ export default async function HomeCurationPage({
         select: {
           id: true,
           titleEn: true,
+          contentType: true,
           type: true,
           postIds: true,
           filterTopicId: true,

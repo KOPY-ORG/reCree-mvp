@@ -32,11 +32,11 @@ const TOOLS_MENUS = [
 
 const CURATION_MENUS = [
   { label: "홈 큐레이션", icon: Home, href: "/admin/home-curation" },
+  { label: "recreeshot 관리", icon: Camera, href: "/admin/recreeshots" },
 ] as const;
 
 const COMING_SOON_MENUS = [
   { label: "검수", icon: ClipboardCheck, phase: "Phase 3" },
-  { label: "reCreeshot 관리", icon: Camera, phase: "Phase 2" },
   { label: "사용자 관리", icon: Users, phase: "Phase 3" },
 ] as const;
 

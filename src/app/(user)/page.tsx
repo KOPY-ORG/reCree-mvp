@@ -509,7 +509,7 @@ export default async function HomePage() {
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-bold text-lg">{section.titleEn}</h2>
                 <Link
-                  href="/explore"
+                  href="/explore?tab=hall"
                   className="text-sm text-muted-foreground flex items-center gap-0.5 hover:text-foreground transition-colors"
                 >
                   More <ChevronRight className="size-3.5" />
@@ -521,7 +521,7 @@ export default async function HomePage() {
                     <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-muted">
                       <Image
                         src={shot.imageUrl}
-                        alt="ReCreeshot"
+                        alt="recreeshot"
                         fill
                         className="object-cover"
                         sizes="120px"
