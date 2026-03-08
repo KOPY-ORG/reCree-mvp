@@ -30,10 +30,13 @@ const TOOLS_MENUS = [
   { label: "시트 가져오기", icon: Download, href: "/admin/import" },
 ] as const;
 
+const CURATION_MENUS = [
+  { label: "홈 큐레이션", icon: Home, href: "/admin/home-curation" },
+  { label: "recreeshot 관리", icon: Camera, href: "/admin/recreeshots" },
+] as const;
+
 const COMING_SOON_MENUS = [
   { label: "검수", icon: ClipboardCheck, phase: "Phase 3" },
-  { label: "홈 큐레이션", icon: Home, phase: "Phase 2" },
-  { label: "reCreeshot 관리", icon: Camera, phase: "Phase 2" },
   { label: "사용자 관리", icon: Users, phase: "Phase 3" },
 ] as const;
 
@@ -96,6 +99,25 @@ export function AdminSidebar({ userEmail, userInitial }: AdminSidebarProps) {
         <SectionLabel label="Taxonomy" />
         <div className="space-y-0.5">
           {TAXONOMY_MENUS.map(({ label, icon: Icon, href }) => (
+            <Link
+              key={href}
+              href={href}
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                isActive(href)
+                  ? "bg-brand text-brand-foreground"
+                  : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+              }`}
+            >
+              <Icon className="size-4 shrink-0" />
+              {label}
+            </Link>
+          ))}
+        </div>
+
+        {/* CURATION 섹션 */}
+        <SectionLabel label="Curation" />
+        <div className="space-y-0.5">
+          {CURATION_MENUS.map(({ label, icon: Icon, href }) => (
             <Link
               key={href}
               href={href}

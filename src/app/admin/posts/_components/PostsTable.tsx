@@ -37,11 +37,11 @@ export type PostRow = {
     topic: {
       id: string;
       nameEn: string;
-      colorHex: string | null;
+      colorHex: string;
       colorHex2: string | null;
       gradientDir: string;
       gradientStop: number;
-      textColorHex: string | null;
+      textColorHex: string;
     };
   }[];
   postTags: {
@@ -324,10 +324,8 @@ export function PostsTable({ posts, isFiltered }: Props) {
                         displayOrder,
                         label: topic.nameEn,
                         style: topic.colorHex2
-                          ? { background: `linear-gradient(${topic.gradientDir}, ${topic.colorHex} 0%, ${topic.colorHex2} ${topic.gradientStop}%)`, color: topic.textColorHex ?? "#000" }
-                          : topic.colorHex
-                            ? { backgroundColor: topic.colorHex, color: topic.textColorHex ?? "#000" }
-                            : { backgroundColor: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" },
+                          ? { background: `linear-gradient(${topic.gradientDir}, ${topic.colorHex} 0%, ${topic.colorHex2} ${topic.gradientStop}%)`, color: topic.textColorHex }
+                          : { backgroundColor: topic.colorHex, color: topic.textColorHex },
                       }));
                       const tagLabels = post.postTags.map(({ displayOrder, tag }) => ({
                         id: `tag-${tag.id}`,

@@ -52,6 +52,11 @@ enum SectionType {
   AUTO_HOT
 }
 
+enum ContentType {
+  POST
+  RECREESHOT
+}
+
 // ─── Models ───────────────────────────────────────────────────────────────────
 
 model User {
@@ -311,10 +316,11 @@ model Save {
 }
 
 model HomeBanner {
-  id       String  @id @default(uuid()) @db.Uuid
-  postId   String  @db.Uuid
-  order    Int     @default(0)
-  isActive Boolean @default(true)
+  id             String  @id @default(uuid()) @db.Uuid
+  postId         String  @db.Uuid
+  order          Int     @default(0)
+  isActive       Boolean @default(true)
+  labelOverrides Json?   // [{ type: "topic"|"tag", id: string }] 최대 3개. null = 기본(isVisible top-2)
 
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 }
@@ -322,7 +328,8 @@ model HomeBanner {
 model CuratedSection {
   id            String      @id @default(uuid()) @db.Uuid
   titleEn       String
-  titleKo       String
+  subtitleEn    String?
+  contentType   ContentType @default(POST)
   type          SectionType @default(MANUAL)
   postIds       String[]    @db.Uuid
   filterTopicId String?     @db.Uuid
