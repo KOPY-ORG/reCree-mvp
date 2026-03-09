@@ -29,8 +29,6 @@ export type PostFormData = {
   titleKo: string;
   titleEn: string;
   slug: string;
-  subtitleKo: string;
-  subtitleEn: string;
   bodyKo: string;
   bodyEn: string;
   thumbnailUrl: string;
@@ -43,8 +41,8 @@ export type PostFormData = {
   sources: PostSourceInput[];
   topics: { topicId: string; isVisible: boolean; displayOrder: number }[];
   tags: { tagId: string; isVisible: boolean; displayOrder: number }[];
-  placeId: string | null;
-  spotInsight: SpotInsightData | null;
+  // 복수 장소
+  places: { placeId: string; spotInsight: SpotInsightData | null }[];
 };
 
 // ─── 슬러그 중복 체크 ──────────────────────────────────────────────────────────
@@ -126,8 +124,6 @@ export async function createPost(
         titleKo: data.titleKo,
         titleEn: data.titleEn,
         slug: data.slug,
-        subtitleKo: data.subtitleKo || null,
-        subtitleEn: data.subtitleEn || null,
         bodyKo: data.bodyKo || null,
         bodyEn: data.bodyEn || null,
         thumbnailUrl: data.thumbnailUrl || null,
@@ -162,25 +158,22 @@ export async function createPost(
             })),
           },
         }),
-        ...(data.placeId && {
+        ...(data.places.length > 0 && {
           postPlaces: {
-            create: [
-              {
-                placeId: data.placeId,
-                context: data.spotInsight?.contextKo || null,
-                vibe: data.spotInsight?.vibe ?? [],
-                mustTry: data.spotInsight?.mustTryKo || null,
-                tip: data.spotInsight?.tipKo || null,
-
-                insightEn: data.spotInsight
-                  ? {
-                      context: data.spotInsight.contextEn,
-                      mustTry: data.spotInsight.mustTryEn,
-                      tip: data.spotInsight.tipEn,
-                    }
-                  : undefined,
-              },
-            ],
+            create: data.places.map((p) => ({
+              placeId: p.placeId,
+              context: p.spotInsight?.contextKo || null,
+              vibe: p.spotInsight?.vibe ?? [],
+              mustTry: p.spotInsight?.mustTryKo || null,
+              tip: p.spotInsight?.tipKo || null,
+              insightEn: p.spotInsight
+                ? {
+                    context: p.spotInsight.contextEn,
+                    mustTry: p.spotInsight.mustTryEn,
+                    tip: p.spotInsight.tipEn,
+                  }
+                : undefined,
+            })),
           },
         }),
       },
@@ -213,8 +206,6 @@ export async function updatePost(
           titleKo: data.titleKo,
           titleEn: data.titleEn,
           slug: data.slug,
-          subtitleKo: data.subtitleKo || null,
-          subtitleEn: data.subtitleEn || null,
           bodyKo: data.bodyKo || null,
           bodyEn: data.bodyEn || null,
           thumbnailUrl: data.thumbnailUrl || null,
@@ -248,25 +239,22 @@ export async function updatePost(
               })),
             },
           }),
-          ...(data.placeId && {
+          ...(data.places.length > 0 && {
             postPlaces: {
-              create: [
-                {
-                  placeId: data.placeId,
-                  context: data.spotInsight?.contextKo || null,
-                  vibe: data.spotInsight?.vibe ?? [],
-                  mustTry: data.spotInsight?.mustTryKo || null,
-                  tip: data.spotInsight?.tipKo || null,
-  
-                  insightEn: data.spotInsight
-                    ? {
-                        context: data.spotInsight.contextEn,
-                        mustTry: data.spotInsight.mustTryEn,
-                        tip: data.spotInsight.tipEn,
-                      }
-                    : undefined,
-                },
-              ],
+              create: data.places.map((p) => ({
+                placeId: p.placeId,
+                context: p.spotInsight?.contextKo || null,
+                vibe: p.spotInsight?.vibe ?? [],
+                mustTry: p.spotInsight?.mustTryKo || null,
+                tip: p.spotInsight?.tipKo || null,
+                insightEn: p.spotInsight
+                  ? {
+                      context: p.spotInsight.contextEn,
+                      mustTry: p.spotInsight.mustTryEn,
+                      tip: p.spotInsight.tipEn,
+                    }
+                  : undefined,
+              })),
             },
           }),
         },
@@ -463,8 +451,6 @@ export async function getPostEditData(id: string) {
     titleKo: post.titleKo,
     titleEn: post.titleEn,
     slug: post.slug,
-    subtitleKo: post.subtitleKo,
-    subtitleEn: post.subtitleEn,
     bodyKo: post.bodyKo,
     bodyEn: post.bodyEn,
     thumbnailUrl: post.thumbnailUrl,

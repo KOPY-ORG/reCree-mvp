@@ -81,9 +81,6 @@ export default async function PreviewPostPage({ params }: Props) {
           {post.titleEn && (
             <p className="text-lg text-muted-foreground">{post.titleEn}</p>
           )}
-          {post.subtitleKo && (
-            <p className="text-base text-muted-foreground">{post.subtitleKo}</p>
-          )}
         </div>
 
         {/* 태그 */}

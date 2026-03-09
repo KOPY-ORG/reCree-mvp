@@ -69,11 +69,9 @@ Based on the information below, write an engaging content draft that makes inter
 
 ## Field Guidelines
 
-### Titles & Subtitles
+### Titles
 - titleKo: Max 30 chars. Hook K-culture fans. Include artist/work name if relevant. (Korean)
 - titleEn: Max 60 chars. Natural English translation/adaptation of titleKo.
-- subtitleKo: Max 20 chars. One-line core appeal of the place. (Korean)
-- subtitleEn: Max 40 chars. Natural English translation of subtitleKo.
 
 ### Spot Insight (shown as a visual summary card alongside an image — keep it SHORT & scannable)
 - contextKo: Max 80 chars. Why this place is special for K-culture fans. (Korean)
@@ -92,8 +90,6 @@ Return ONLY valid JSON with no other text:
 {
   "titleKo": "...",
   "titleEn": "...",
-  "subtitleKo": "...",
-  "subtitleEn": "...",
   "contextKo": "...",
   "contextEn": "...",
   "vibes": ["..."],
@@ -119,8 +115,6 @@ Return ONLY valid JSON with no other text:
     const draft = JSON.parse(jsonMatch[0]) as {
       titleKo?: string;
       titleEn?: string;
-      subtitleKo?: string;
-      subtitleEn?: string;
       contextKo?: string;
       contextEn?: string;
       vibes?: string[];
@@ -138,8 +132,6 @@ Return ONLY valid JSON with no other text:
         data: {
           titleKo: draft.titleKo ?? post.titleKo,
           titleEn: draft.titleEn ?? post.titleEn,
-          subtitleKo: draft.subtitleKo ?? post.subtitleKo,
-          subtitleEn: draft.subtitleEn ?? post.subtitleEn,
           bodyKo: draft.storyKo ?? post.bodyKo,
           bodyEn: draft.storyEn ?? post.bodyEn,
         },
@@ -212,6 +204,17 @@ ${fieldList}`;
       error: e instanceof Error ? e.message : "번역 중 오류가 발생했습니다.",
     };
   }
+}
+
+// ─── 단일 필드 번역 ──────────────────────────────────────────────────────────────
+
+export async function translateField(
+  text: string,
+): Promise<{ data?: string; error?: string }> {
+  if (!text.trim()) return { data: "" };
+  const result = await translateFields({ value: text });
+  if (result.error) return { error: result.error };
+  return { data: result.data?.value ?? "" };
 }
 
 // ─── 일괄 AI 초안 생성 ──────────────────────────────────────────────────────────

@@ -119,8 +119,6 @@ export default async function EditPostPage({ params }: Props) {
     titleKo: post.titleKo,
     titleEn: post.titleEn,
     slug: post.slug,
-    subtitleKo: post.subtitleKo,
-    subtitleEn: post.subtitleEn,
     bodyKo: post.bodyKo,
     bodyEn: post.bodyEn,
     thumbnailUrl: post.thumbnailUrl,

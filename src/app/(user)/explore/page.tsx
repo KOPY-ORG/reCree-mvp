@@ -74,9 +74,6 @@ function PostListItem({ post, tagGroupMap }: { post: ExplorePost; tagGroupMap: T
 
       <div className="flex-1 min-w-0">
         <p className="font-semibold text-sm line-clamp-2 leading-snug">{post.titleEn}</p>
-        {post.subtitleEn && (
-          <p className="text-xs text-muted-foreground mt-0.5 truncate">{post.subtitleEn}</p>
-        )}
         <PostLabels post={post} tagGroupMap={tagGroupMap} />
       </div>
 

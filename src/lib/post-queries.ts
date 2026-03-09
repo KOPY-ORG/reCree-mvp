@@ -14,7 +14,6 @@ export async function getPostsWithLabels(
       id: true,
       slug: true,
       titleEn: true,
-      subtitleEn: true,
       thumbnailUrl: true,
       postTopics: {
         where: { isVisible: true },
