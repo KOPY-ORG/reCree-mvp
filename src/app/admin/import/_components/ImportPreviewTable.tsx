@@ -28,7 +28,7 @@ export function ImportPreviewTable({
   onToggle,
   onToggleAll,
 }: Props) {
-  const selectableRows = rows.filter((r) => !r.isDuplicate);
+  const selectableRows = rows.filter((r) => !r.isAlreadyImported);
   const allSelected =
     selectableRows.length > 0 &&
     selectableRows.every((r) => selectedIds.has(r.rowId));
@@ -57,6 +57,12 @@ export function ImportPreviewTable({
                 제목
               </th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">
+                아티스트
+              </th>
+              <th className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">
+                태그
+              </th>
+              <th className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">
                 출처
               </th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">
@@ -69,22 +75,18 @@ export function ImportPreviewTable({
               <tr
                 key={row.rowId}
                 className={`border-b border-zinc-100 last:border-b-0 transition-colors ${
-                  row.isDuplicate
+                  row.isAlreadyImported
                     ? "opacity-40"
                     : "hover:bg-zinc-50 cursor-pointer"
                 }`}
-                onClick={() => {
-                  if (!row.isDuplicate) onToggle(row.rowId);
-                }}
+                onClick={() => { if (!row.isAlreadyImported) onToggle(row.rowId); }}
               >
                 {/* 체크박스 */}
                 <td className="px-4 py-3">
                   <Checkbox
                     checked={selectedIds.has(row.rowId)}
-                    disabled={row.isDuplicate}
-                    onCheckedChange={() => {
-                      if (!row.isDuplicate) onToggle(row.rowId);
-                    }}
+                    disabled={row.isAlreadyImported}
+                    onCheckedChange={() => { if (!row.isAlreadyImported) onToggle(row.rowId); }}
                     onClick={(e) => e.stopPropagation()}
                     aria-label={`${row.placeName} 선택`}
                   />
@@ -116,10 +118,27 @@ export function ImportPreviewTable({
                       [AI 생성 예정]
                     </span>
                   )}
-                  {row.subTitle && (
-                    <div className="text-xs text-muted-foreground mt-0.5 truncate max-w-[240px]">
-                      {row.subTitle}
+                </td>
+
+                {/* 아티스트 */}
+                <td className="px-4 py-3 min-w-[120px]">
+                  {row.artistWork || row.subDetail ? (
+                    <div className="text-sm leading-tight">
+                      {[row.artistWork, row.subDetail].filter(Boolean).join(" · ")}
                     </div>
+                  ) : (
+                    <span className="text-muted-foreground/40 text-xs">—</span>
+                  )}
+                </td>
+
+                {/* 태그 */}
+                <td className="px-4 py-3 min-w-[120px]">
+                  {row.tags ? (
+                    <div className="text-xs text-muted-foreground truncate max-w-[160px]">
+                      {row.tags}
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground/40 text-xs">—</span>
                   )}
                 </td>
 
@@ -152,9 +171,13 @@ export function ImportPreviewTable({
 
                 {/* 상태 */}
                 <td className="px-4 py-3">
-                  {row.isDuplicate ? (
+                  {row.isAlreadyImported ? (
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-zinc-100 text-zinc-500">
-                      중복
+                      임포트됨
+                    </span>
+                  ) : row.isExistingPlace ? (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                      기존 장소
                     </span>
                   ) : (
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">

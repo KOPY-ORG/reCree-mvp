@@ -15,7 +15,6 @@ import {
 export function SheetImportClient() {
   const [rows, setRows] = useState<SheetRow[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
-  const [duplicates, setDuplicates] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [hasPreview, setHasPreview] = useState(false);
   const [isPreviewing, startPreview] = useTransition();
@@ -26,7 +25,6 @@ export function SheetImportClient() {
       const result = await fetchSheetPreview();
       setRows(result.rows);
       setErrors(result.errors);
-      setDuplicates(result.duplicates);
       setSelectedIds(new Set());
       setHasPreview(true);
 
@@ -50,10 +48,7 @@ export function SheetImportClient() {
 
   const handleToggleAll = (checked: boolean) => {
     if (checked) {
-      const selectableIds = rows
-        .filter((r) => !r.isDuplicate)
-        .map((r) => r.rowId);
-      setSelectedIds(new Set(selectableIds));
+      setSelectedIds(new Set(rows.filter((r) => !r.isAlreadyImported).map((r) => r.rowId)));
     } else {
       setSelectedIds(new Set());
     }
@@ -81,8 +76,9 @@ export function SheetImportClient() {
     });
   };
 
-  const newCount = rows.filter((r) => !r.isDuplicate).length;
-  const duplicateCount = duplicates.length;
+  const newCount = rows.filter((r) => !r.isExistingPlace && !r.isAlreadyImported).length;
+  const existingCount = rows.filter((r) => r.isExistingPlace && !r.isAlreadyImported).length;
+  const importedCount = rows.filter((r) => r.isAlreadyImported).length;
 
   return (
     <div>
@@ -109,10 +105,16 @@ export function SheetImportClient() {
               신규{" "}
               <strong className="text-foreground tabular-nums">{newCount}</strong>
             </span>
-            {duplicateCount > 0 && (
+            {existingCount > 0 && (
               <span>
-                중복{" "}
-                <strong className="tabular-nums">{duplicateCount}</strong>
+                기존 장소{" "}
+                <strong className="tabular-nums">{existingCount}</strong>
+              </span>
+            )}
+            {importedCount > 0 && (
+              <span>
+                임포트됨{" "}
+                <strong className="tabular-nums">{importedCount}</strong>
               </span>
             )}
           </div>
