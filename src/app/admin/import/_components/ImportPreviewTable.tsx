@@ -57,6 +57,12 @@ export function ImportPreviewTable({
                 제목
               </th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">
+                아티스트
+              </th>
+              <th className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">
+                태그
+              </th>
+              <th className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">
                 출처
               </th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">
@@ -116,10 +122,27 @@ export function ImportPreviewTable({
                       [AI 생성 예정]
                     </span>
                   )}
-                  {row.subTitle && (
-                    <div className="text-xs text-muted-foreground mt-0.5 truncate max-w-[240px]">
-                      {row.subTitle}
+                </td>
+
+                {/* 아티스트 */}
+                <td className="px-4 py-3 min-w-[120px]">
+                  {row.artistWork || row.subDetail ? (
+                    <div className="text-sm leading-tight">
+                      {[row.artistWork, row.subDetail].filter(Boolean).join(" · ")}
                     </div>
+                  ) : (
+                    <span className="text-muted-foreground/40 text-xs">—</span>
+                  )}
+                </td>
+
+                {/* 태그 */}
+                <td className="px-4 py-3 min-w-[120px]">
+                  {row.tags ? (
+                    <div className="text-xs text-muted-foreground truncate max-w-[160px]">
+                      {row.tags}
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground/40 text-xs">—</span>
                   )}
                 </td>
 

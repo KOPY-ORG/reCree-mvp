@@ -10,20 +10,28 @@ export type SheetRow = {
   rowId: string;          // 중복 체크용 식별자 (google_maps_link 기반)
   placeName: string;
   title: string;
-  subTitle: string;
   googleMapsLink: string;
-  sourceUrl: string;
-  sourceType: string;
-  sourceNote: string;
+  category: string;
+  genre: string;
   artistWork: string;
+  subDetail: string;
+  tagGroup: string;
+  tags: string;
   context: string;
   vibe: string;
   mustTry: string;
   tip: string;
   memo: string;
   story: string;
+  sourceUrl: string;
+  sourceType: string;
+  sourceNote: string;
   referenceUrl: string;
   sourcePostDate: string;
+  closeOrNot: string;
+  gettingThere: string;
+  bannerImages: string;           // 원본 문자열 (importNote 저장용)
+  recreeshotOriginalImage: string;
   collectedBy: string;
   collectedAt: string;
   status: string;
@@ -135,20 +143,28 @@ export async function fetchSheetPreview(): Promise<{
       rowId: googleMapsLink || `row-${idx}`,
       placeName,
       title: (r["title"] ?? "").trim(),
-      subTitle: (r["sub_title"] ?? "").trim(),
       googleMapsLink,
-      sourceUrl: (r["source_url"] ?? "").trim(),
-      sourceType: (r["source_type"] ?? "").trim(),
-      sourceNote: (r["source_note"] ?? "").trim(),
+      category: (r["category"] ?? "").trim(),
+      genre: (r["genre"] ?? "").trim(),
       artistWork: (r["artist_work"] ?? "").trim(),
+      subDetail: (r["sub_detail"] ?? "").trim(),
+      tagGroup: (r["tag_group"] ?? "").trim(),
+      tags: (r["tags"] ?? "").trim(),
       context: (r["context"] ?? "").trim(),
       vibe: (r["vibe"] ?? "").trim(),
       mustTry: (r["must_try"] ?? "").trim(),
       tip: (r["tip"] ?? "").trim(),
       memo: (r["memo"] ?? "").trim(),
       story: (r["story"] ?? "").trim(),
+      sourceUrl: (r["source_url"] ?? "").trim(),
+      sourceType: (r["source_type"] ?? "").trim(),
+      sourceNote: (r["source_note"] ?? "").trim(),
       referenceUrl: (r["reference_url"] ?? "").trim(),
       sourcePostDate: (r["source_post_date"] ?? "").trim(),
+      closeOrNot: (r["close_or_not"] ?? "").trim(),
+      gettingThere: (r["getting_there"] ?? "").trim(),
+      bannerImages: (r["banner_image"] ?? "").trim(),
+      recreeshotOriginalImage: (r["recreeshot_original_image"] ?? "").trim(),
       collectedBy: (r["collected_by"] ?? "").trim(),
       collectedAt: (r["collected_at"] ?? "").trim(),
       status: (r["status"] ?? "").trim(),
@@ -283,7 +299,7 @@ export async function importSheetRows(rowIds: string[]): Promise<{
       // Places API 호출
       const placeInfo = await searchPlaceInfo(placeName, googleMapsLink);
 
-      // slug 생성: 영문 장소명 + nanoid 스타일 랜덤 6자
+      // slug 생성: 영문 장소명 + 랜덤 6자
       const baseName = placeInfo?.nameEn
         ? placeInfo.nameEn
             .toLowerCase()
@@ -299,23 +315,43 @@ export async function importSheetRows(rowIds: string[]): Promise<{
       const randomSuffix = Math.random().toString(36).slice(2, 8);
       const slug = `${baseName}-${randomSuffix}`;
 
-      // vibe 배열 파싱
+      // vibe 배열 파싱 (쉼표, 중국식 쉼표, / 구분자 지원)
       const vibeRaw = (r["vibe"] ?? "").trim();
       const vibeArr = vibeRaw
-        ? vibeRaw.split(/[,，、]/).map((v) => v.trim()).filter(Boolean)
+        ? vibeRaw.split(/[,，/]/).map((v) => v.trim()).filter(Boolean)
         : [];
+
+      // placeTypes 파싱 (map_pin_icon)
+      const mapPinIconRaw = (r["map_pin_icon"] ?? "").trim();
+      const placeTypes = mapPinIconRaw
+        ? mapPinIconRaw.split(/[,，]/).map((t) => t.trim()).filter(Boolean)
+        : [];
+
+      // close_or_not → PlaceStatus
+      const closeOrNotRaw = (r["close_or_not"] ?? "").trim();
+      const placeStatus = closeOrNotRaw === "폐업" ? "CLOSED_PERMANENT" : "OPEN";
 
       // source_type 매핑
       const srcTypeRaw = (r["source_type"] ?? "").trim().toLowerCase();
       const mappedSrcType = srcTypeMap[srcTypeRaw] ?? (srcTypeRaw ? "OTHER" : null);
+
+      // banner_images 파싱 (쉼표 또는 줄바꿈 구분자)
+      const bannerImagesRaw = (r["banner_image"] ?? "").trim();
+      const bannerImages = bannerImagesRaw
+        ? bannerImagesRaw.split(/[,\n]/).map((u) => u.trim()).filter(Boolean)
+        : [];
 
       // importNote: 원본 보존 목적
       const importNote = JSON.stringify({
         category: (r["category"] ?? "").trim(),
         genre: (r["genre"] ?? "").trim(),
         artist_work: (r["artist_work"] ?? "").trim(),
-        tags: (r["tags"] ?? "").trim(),
+        sub_detail: (r["sub_detail"] ?? "").trim(),
         tag_group: (r["tag_group"] ?? "").trim(),
+        tags: (r["tags"] ?? "").trim(),
+        map_pin_icon: mapPinIconRaw,
+        banner_images: bannerImages,
+        original_image: (r["recreeshot_original_image"] ?? "").trim(),
         collected_by: (r["collected_by"] ?? "").trim(),
         collected_at: (r["collected_at"] ?? "").trim(),
       });
@@ -345,7 +381,9 @@ export async function importSheetRows(rowIds: string[]): Promise<{
               ? (placeInfo.operatingHours as object)
               : undefined,
             rating: placeInfo?.rating ?? null,
-            status: "OPEN",
+            gettingThere: (r["getting_there"] ?? "").trim() || null,
+            placeTypes,
+            status: placeStatus,
             source: "ADMIN",
             isVerified: false,
           },
@@ -356,10 +394,9 @@ export async function importSheetRows(rowIds: string[]): Promise<{
             titleKo: title || `[임시] ${place.nameKo}`,
             titleEn: "",
             slug,
-            subtitleKo: (r["sub_title"] ?? "").trim() || null,
             bodyKo: storyVal,
             memo: memoVal,
-            status: "IMPORTED",
+            status: "DRAFT",
             sourceUrl: srcUrl || googleMapsLink || null,
             sourceType: mappedSrcType,
             sourceNote: srcNote,

@@ -194,6 +194,8 @@ model Place {
   naverPlaceId   String?
   naverMapsUrl   String?
   kakaoMapsUrl   String?
+  gettingThere   String?    // 교통편 안내 텍스트
+  placeTypes     String[]   @default([])  // 장소 유형 (예: ["카페", "포토스팟"])
   phone          String?
   operatingHours Json?
   rating         Float?    // Google Maps 평점
