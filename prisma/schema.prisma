@@ -16,9 +16,7 @@ enum UserRole {
 }
 
 enum PostStatus {
-  IMPORTED    // 시트에서 가져온 직후
-  AI_DRAFTED  // Gemini 초안 생성 완료
-  DRAFT       // 관리자 편집 중
+  DRAFT       // 임시저장 (편집 중)
   PUBLISHED   // 사용자에게 노출
 }
 

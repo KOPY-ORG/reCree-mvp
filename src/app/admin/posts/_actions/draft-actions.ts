@@ -28,8 +28,6 @@ export async function generateAIDraft(
     });
 
     if (!post) return { error: "포스트를 찾을 수 없습니다." };
-    if (post.status !== "IMPORTED")
-      return { error: "IMPORTED 상태인 포스트만 AI 초안을 생성할 수 있습니다." };
 
     const postPlace = post.postPlaces[0];
     const place = postPlace?.place;
@@ -144,7 +142,6 @@ Return ONLY valid JSON with no other text:
           subtitleEn: draft.subtitleEn ?? post.subtitleEn,
           bodyKo: draft.storyKo ?? post.bodyKo,
           bodyEn: draft.storyEn ?? post.bodyEn,
-          status: "AI_DRAFTED",
         },
       });
 
