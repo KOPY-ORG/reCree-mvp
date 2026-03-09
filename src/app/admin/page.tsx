@@ -4,15 +4,11 @@ import { prisma } from "@/lib/prisma";
 import { PostStatus } from "@prisma/client";
 
 const STATUS_LABELS: Record<PostStatus, string> = {
-  IMPORTED: "가져옴",
-  AI_DRAFTED: "AI 초안",
   DRAFT: "임시저장",
   PUBLISHED: "발행됨",
 };
 
 const STATUS_COLORS: Record<PostStatus, string> = {
-  IMPORTED: "bg-blue-100 text-blue-700",
-  AI_DRAFTED: "bg-purple-100 text-purple-700",
   DRAFT: "bg-amber-100 text-amber-700",
   PUBLISHED: "bg-green-100 text-green-700",
 };

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Pencil, Loader2, MoreHorizontal, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -20,7 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { deletePost, publishPost, unpublishPost } from "../_actions/post-actions";
-import { generateAIDraft, generateAIDraftsBulk } from "../_actions/draft-actions";
+import { generateAIDraft } from "../_actions/draft-actions";
 import type { PostStatus } from "@prisma/client";
 
 export type PostRow = {
@@ -68,18 +67,14 @@ interface Props {
   isFiltered: boolean;
 }
 
-type DraftingState = "idle" | "single" | "bulk";
+type DraftingState = "idle" | "single";
 
 const STATUS_LABELS: Record<PostStatus, string> = {
-  IMPORTED: "가져옴",
-  AI_DRAFTED: "AI 초안",
   DRAFT: "임시저장",
   PUBLISHED: "발행됨",
 };
 
 const STATUS_COLORS: Record<PostStatus, string> = {
-  IMPORTED: "bg-blue-100 text-blue-700",
-  AI_DRAFTED: "bg-purple-100 text-purple-700",
   DRAFT: "bg-amber-100 text-amber-700",
   PUBLISHED: "bg-green-100 text-green-700",
 };
@@ -98,7 +93,6 @@ export function PostsTable({ posts, isFiltered }: Props) {
   } | null>(null);
   const [draftingId, setDraftingId] = useState<string | null>(null);
   const [draftingState, setDraftingState] = useState<DraftingState>("idle");
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const handlePublishToggle = (post: PostRow) => {
     startTransition(async () => {
@@ -122,28 +116,6 @@ export function PostsTable({ posts, isFiltered }: Props) {
     });
   };
 
-  const importedPosts = posts.filter((p) => p.status === "IMPORTED");
-  const allImportedSelected =
-    importedPosts.length > 0 &&
-    importedPosts.every((p) => selectedIds.has(p.id));
-
-  const toggleSelect = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const toggleSelectAllImported = (checked: boolean) => {
-    if (checked) {
-      setSelectedIds(new Set(importedPosts.map((p) => p.id)));
-    } else {
-      setSelectedIds(new Set());
-    }
-  };
-
   const handleGenerateDraft = (postId: string) => {
     setDraftingId(postId);
     setDraftingState("single");
@@ -159,20 +131,6 @@ export function PostsTable({ posts, isFiltered }: Props) {
     });
   };
 
-  const handleGenerateDraftsBulk = () => {
-    const ids = Array.from(selectedIds);
-    if (ids.length === 0) return;
-    setDraftingState("bulk");
-    startTransition(async () => {
-      const result = await generateAIDraftsBulk(ids);
-      setDraftingState("idle");
-      setSelectedIds(new Set());
-      if (result.success > 0) {
-        toast.success(`${result.success}개 AI 초안 생성 완료`);
-      }
-      result.errors.forEach((e) => toast.error(`${e.id}: ${e.error}`));
-    });
-  };
 
   const handleDeleteConfirm = () => {
     if (!deleteTarget) return;
@@ -189,50 +147,12 @@ export function PostsTable({ posts, isFiltered }: Props) {
 
   return (
     <>
-      {/* 일괄 AI 초안 생성 바 */}
-      {selectedIds.size > 0 && (
-        <div className="mt-4 flex items-center gap-3 rounded-xl bg-white shadow-sm px-4 py-2.5">
-          <span className="text-sm text-muted-foreground">
-            {selectedIds.size}개 선택됨
-          </span>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={draftingState === "bulk"}
-            onClick={handleGenerateDraftsBulk}
-          >
-            {draftingState === "bulk" ? (
-              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-            )}
-            선택 항목 AI 초안 생성
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="text-muted-foreground"
-            onClick={() => setSelectedIds(new Set())}
-          >
-            선택 해제
-          </Button>
-        </div>
-      )}
-
       <div className="mt-4 rounded-xl overflow-hidden shadow-sm bg-white">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-zinc-50 border-b border-zinc-100">
               <tr>
-                <th className="px-4 py-3 w-10">
-                  {importedPosts.length > 0 && (
-                    <Checkbox
-                      checked={allImportedSelected}
-                      onCheckedChange={(v) => toggleSelectAllImported(!!v)}
-                      aria-label="IMPORTED 전체 선택"
-                    />
-                  )}
-                </th>
+                <th className="px-4 py-3 w-10" />
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">
                   제목
                 </th>
@@ -272,16 +192,7 @@ export function PostsTable({ posts, isFiltered }: Props) {
                   key={post.id}
                   className="border-b border-zinc-100 last:border-b-0 transition-colors hover:bg-zinc-50"
                 >
-                  {/* 체크박스 (IMPORTED만) */}
-                  <td className="px-4 py-3">
-                    {post.status === "IMPORTED" && (
-                      <Checkbox
-                        checked={selectedIds.has(post.id)}
-                        onCheckedChange={() => toggleSelect(post.id)}
-                        aria-label={`${post.titleKo} 선택`}
-                      />
-                    )}
-                  </td>
+                  <td className="px-4 py-3" />
 
                   {/* 제목 */}
                   <td className="px-4 py-3 min-w-[200px]">
@@ -396,7 +307,7 @@ export function PostsTable({ posts, isFiltered }: Props) {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          {post.status === "IMPORTED" && (
+                          {post.status === "DRAFT" && (
                             <>
                               <DropdownMenuItem
                                 disabled={draftingState !== "idle"}

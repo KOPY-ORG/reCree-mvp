@@ -721,24 +721,20 @@ export function PostForm({
     );
 
   // ── 제출 ───────────────────────────────────────────────────────────────────
-  const isImportedState = status === "IMPORTED" || status === "AI_DRAFTED";
-
   const handleSubmit = (targetStatus?: PostStatus) => {
     const finalStatus = targetStatus ?? status;
 
-    if (!isImportedState) {
-      if (!titleKo.trim()) {
-        toast.error("한국어 제목을 입력해주세요.");
-        return;
-      }
-      if (!titleEn.trim()) {
-        toast.error("영어 제목을 입력해주세요.");
-        return;
-      }
-      if (!slug.trim()) {
-        toast.error("슬러그를 입력해주세요.");
-        return;
-      }
+    if (!titleKo.trim()) {
+      toast.error("한국어 제목을 입력해주세요.");
+      return;
+    }
+    if (!titleEn.trim()) {
+      toast.error("영어 제목을 입력해주세요.");
+      return;
+    }
+    if (!slug.trim()) {
+      toast.error("슬러그를 입력해주세요.");
+      return;
     }
     if (slugStatus === "error") {
       toast.error("슬러그가 이미 사용 중입니다.");
@@ -840,17 +836,6 @@ export function PostForm({
             </h1>
           </div>
           <div className="flex items-center gap-2">
-            {status === "IMPORTED" && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                가져옴
-              </span>
-            )}
-            {status === "AI_DRAFTED" && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
-                AI 초안 완료
-              </span>
-            )}
-
             {!isEmbedded && (isEdit && slug ? (
               <Button variant="outline" size="sm" asChild>
                 <a
@@ -880,17 +865,6 @@ export function PostForm({
               </Button>
             )}
 
-            {!isEmbedded && isEdit && status === "AI_DRAFTED" && (
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={isPending}
-                onClick={() => handleSubmit("DRAFT")}
-              >
-                편집 시작 (DRAFT로)
-              </Button>
-            )}
-
             {!isEmbedded && isEdit && status === "PUBLISHED" && (
               <Button
                 variant="outline"
@@ -907,7 +881,6 @@ export function PostForm({
               disabled={isPending || slugStatus === "error"}
               onClick={() => {
                 if (status === "PUBLISHED") handleSubmit("PUBLISHED");
-                else if (isImportedState) handleSubmit(status);
                 else handleSubmit("DRAFT");
               }}
             >
@@ -917,24 +890,13 @@ export function PostForm({
               저장
             </Button>
 
-            {!isEmbedded && status !== "PUBLISHED" && !isImportedState && (
+            {!isEmbedded && status !== "PUBLISHED" && (
               <Button
                 size="sm"
                 variant="default"
                 className="bg-brand text-black hover:bg-brand/90"
                 disabled={isPending || slugStatus === "error"}
                 onClick={() => handleSubmit("PUBLISHED")}
-              >
-                발행
-              </Button>
-            )}
-            {!isEmbedded && isImportedState && (
-              <Button
-                size="sm"
-                variant="default"
-                className="bg-brand text-black hover:bg-brand/90 opacity-50 cursor-not-allowed"
-                disabled
-                title="편집을 완료한 후 발행할 수 있습니다."
               >
                 발행
               </Button>
