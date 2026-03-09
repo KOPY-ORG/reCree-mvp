@@ -36,7 +36,9 @@ export type SheetRow = {
   collectedAt: string;
   status: string;
   reviewStatus: string;
-  isDuplicate: boolean;
+  isExistingPlace: boolean;       // DB에 동일 googleMapsUrl의 Place가 존재하는지
+  existingPlaceId: string | null; // 기존 Place ID (재사용용)
+  isAlreadyImported: boolean;     // 이 행의 sourceUrl로 이미 Post가 임포트됐는지
 };
 
 type RawRow = Record<string, string>;
@@ -76,21 +78,37 @@ async function fetchSheetCsv(): Promise<RawRow[]> {
   return result.data;
 }
 
-// ─── 중복 google_maps_link 조회 ────────────────────────────────────────────────
+// ─── 이미 임포트된 Post sourceUrl 집합 조회 ──────────────────────────────────────
 
-async function getExistingUrls(): Promise<Set<string>> {
-  const posts = await prisma.post.findMany({
-    where: { sourceUrl: { not: null } },
-    select: { sourceUrl: true },
-  });
-  const places = await prisma.place.findMany({
-    where: { googleMapsUrl: { not: null } },
-    select: { googleMapsUrl: true },
-  });
+async function getImportedSourceUrls(): Promise<Set<string>> {
+  const [posts, postSources] = await Promise.all([
+    prisma.post.findMany({
+      where: { sourceUrl: { not: null } },
+      select: { sourceUrl: true },
+    }),
+    prisma.postSource.findMany({
+      where: { sourceUrl: { not: null } },
+      select: { sourceUrl: true },
+    }),
+  ]);
   const urls = new Set<string>();
   posts.forEach((p) => { if (p.sourceUrl) urls.add(p.sourceUrl); });
-  places.forEach((p) => { if (p.googleMapsUrl) urls.add(p.googleMapsUrl); });
+  postSources.forEach((p) => { if (p.sourceUrl) urls.add(p.sourceUrl); });
   return urls;
+}
+
+// ─── 기존 Place googleMapsUrl → id 맵 조회 ────────────────────────────────────
+
+async function getExistingPlaces(): Promise<Map<string, string>> {
+  const places = await prisma.place.findMany({
+    where: { googleMapsUrl: { not: null } },
+    select: { id: true, googleMapsUrl: true },
+  });
+  return new Map(
+    places
+      .filter((p) => p.googleMapsUrl)
+      .map((p) => [p.googleMapsUrl!, p.id])
+  );
 }
 
 // ─── 시트 미리보기 ─────────────────────────────────────────────────────────────
@@ -98,10 +116,8 @@ async function getExistingUrls(): Promise<Set<string>> {
 export async function fetchSheetPreview(): Promise<{
   rows: SheetRow[];
   errors: string[];
-  duplicates: string[];
 }> {
   const errors: string[] = [];
-  const duplicates: string[] = [];
 
   let rawRows: RawRow[];
   try {
@@ -110,7 +126,6 @@ export async function fetchSheetPreview(): Promise<{
     return {
       rows: [],
       errors: [e instanceof Error ? e.message : "시트를 가져오는 데 실패했습니다."],
-      duplicates: [],
     };
   }
 
@@ -121,7 +136,10 @@ export async function fetchSheetPreview(): Promise<{
     return status === "완료" && review === "채택";
   });
 
-  const existingUrls = await getExistingUrls();
+  const [existingPlaces, importedSourceUrls] = await Promise.all([
+    getExistingPlaces(),
+    getImportedSourceUrls(),
+  ]);
 
   const rows: SheetRow[] = [];
 
@@ -134,13 +152,16 @@ export async function fetchSheetPreview(): Promise<{
       errors.push(`행 ${idx + 2}: place_name 누락`);
     }
 
-    const isDuplicate = !!googleMapsLink && existingUrls.has(googleMapsLink);
-    if (isDuplicate) {
-      duplicates.push(googleMapsLink);
-    }
+    const existingPlaceId = googleMapsLink
+      ? (existingPlaces.get(googleMapsLink) ?? null)
+      : null;
+    const isExistingPlace = existingPlaceId !== null;
+
+    const srcUrl = (r["source_url"] ?? "").trim();
+    const isAlreadyImported = !!srcUrl && importedSourceUrls.has(srcUrl);
 
     rows.push({
-      rowId: googleMapsLink || `row-${idx}`,
+      rowId: googleMapsLink ? `${googleMapsLink}::${idx}` : `row-${idx}`,
       placeName,
       title: (r["title"] ?? "").trim(),
       googleMapsLink,
@@ -169,11 +190,13 @@ export async function fetchSheetPreview(): Promise<{
       collectedAt: (r["collected_at"] ?? "").trim(),
       status: (r["status"] ?? "").trim(),
       reviewStatus: (r["review_status"] ?? "").trim(),
-      isDuplicate,
+      isExistingPlace,
+      existingPlaceId,
+      isAlreadyImported,
     });
   });
 
-  return { rows, errors, duplicates };
+  return { rows, errors };
 }
 
 // ─── Places API 호출 ───────────────────────────────────────────────────────────
@@ -274,9 +297,17 @@ export async function importSheetRows(rowIds: string[]): Promise<{
     };
   }
 
-  const filtered = rawRows.filter((r) => {
+  // fetchSheetPreview와 동일한 필터 적용 후 rowId(url::idx)로 매칭
+  const qualified = rawRows.filter((r) => {
+    const status = (r["status"] ?? "").trim();
+    const review = (r["review_status"] ?? "").trim();
+    return status === "완료" && review === "채택";
+  });
+
+  const filtered = qualified.filter((r, idx) => {
     const googleMapsLink = (r["google_maps_link"] ?? "").trim();
-    return rowIds.includes(googleMapsLink);
+    const rowId = googleMapsLink ? `${googleMapsLink}::${idx}` : `row-${idx}`;
+    return rowIds.includes(rowId);
   });
 
   // source_type 매핑 테이블
@@ -296,8 +327,15 @@ export async function importSheetRows(rowIds: string[]): Promise<{
     const title = (r["title"] ?? "").trim();
 
     try {
-      // Places API 호출
-      const placeInfo = await searchPlaceInfo(placeName, googleMapsLink);
+      // 기존 Place 선조회 (트랜잭션 밖에서 한 번만)
+      const existingPlaceRecord = googleMapsLink
+        ? await prisma.place.findFirst({ where: { googleMapsUrl: googleMapsLink } })
+        : null;
+
+      // 기존 Place가 있으면 Places API 호출 불필요
+      const placeInfo = existingPlaceRecord
+        ? null
+        : await searchPlaceInfo(placeName, googleMapsLink);
 
       // slug 생성: 영문 장소명 + 랜덤 6자
       const baseName = placeInfo?.nameEn
@@ -366,32 +404,40 @@ export async function importSheetRows(rowIds: string[]): Promise<{
       const sourcePostDateVal = (r["source_post_date"] ?? "").trim() || null;
 
       await prisma.$transaction(async (tx) => {
-        const place = await tx.place.create({
-          data: {
-            nameKo: placeInfo?.nameKo || placeName || "미상",
-            nameEn: placeInfo?.nameEn || null,
-            addressKo: placeInfo?.addressKo || null,
-            addressEn: placeInfo?.addressEn || null,
-            latitude: placeInfo?.lat || null,
-            longitude: placeInfo?.lng || null,
-            googlePlaceId: placeInfo?.googlePlaceId || null,
-            googleMapsUrl: googleMapsLink || null,
-            phone: placeInfo?.phone || null,
-            operatingHours: placeInfo?.operatingHours
-              ? (placeInfo.operatingHours as object)
-              : undefined,
-            rating: placeInfo?.rating ?? null,
-            gettingThere: (r["getting_there"] ?? "").trim() || null,
-            placeTypes,
-            status: placeStatus,
-            source: "ADMIN",
-            isVerified: false,
-          },
-        });
+        let placeId: string;
+
+        if (existingPlaceRecord) {
+          // 기존 Place 재사용
+          placeId = existingPlaceRecord.id;
+        } else {
+          const place = await tx.place.create({
+            data: {
+              nameKo: placeInfo?.nameKo || placeName || "미상",
+              nameEn: placeInfo?.nameEn || null,
+              addressKo: placeInfo?.addressKo || null,
+              addressEn: placeInfo?.addressEn || null,
+              latitude: placeInfo?.lat || null,
+              longitude: placeInfo?.lng || null,
+              googlePlaceId: placeInfo?.googlePlaceId || null,
+              googleMapsUrl: googleMapsLink || null,
+              phone: placeInfo?.phone || null,
+              operatingHours: placeInfo?.operatingHours
+                ? (placeInfo.operatingHours as object)
+                : undefined,
+              rating: placeInfo?.rating ?? null,
+              gettingThere: (r["getting_there"] ?? "").trim() || null,
+              placeTypes,
+              status: placeStatus,
+              source: "ADMIN",
+              isVerified: false,
+            },
+          });
+          placeId = place.id;
+        }
 
         const post = await tx.post.create({
           data: {
-            titleKo: title || `[임시] ${place.nameKo}`,
+            titleKo: title || `[임시] ${existingPlaceRecord?.nameKo ?? placeInfo?.nameKo ?? placeName}`,
             titleEn: "",
             slug,
             bodyKo: storyVal,
@@ -421,7 +467,7 @@ export async function importSheetRows(rowIds: string[]): Promise<{
         await tx.postPlace.create({
           data: {
             postId: post.id,
-            placeId: place.id,
+            placeId,
             context: (r["context"] ?? "").trim() || null,
             vibe: vibeArr,
             mustTry: (r["must_try"] ?? "").trim() || null,
