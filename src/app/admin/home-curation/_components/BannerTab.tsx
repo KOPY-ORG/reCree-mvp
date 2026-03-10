@@ -118,6 +118,7 @@ function SortableBannerRow({
           alt={banner.post.titleEn}
           width={56}
           height={42}
+          unoptimized
           className="rounded object-cover shrink-0"
         />
       ) : (

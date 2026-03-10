@@ -60,6 +60,7 @@ export function HomeBannerCarousel({ banners }: { banners: BannerItem[] }) {
             src={banner.thumbnailUrl}
             alt={banner.titleEn}
             fill
+            unoptimized
             className="object-cover"
             sizes="(max-width: 672px) 100vw, 672px"
             priority

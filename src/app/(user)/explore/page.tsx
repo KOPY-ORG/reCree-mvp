@@ -64,6 +64,7 @@ function PostListItem({ post, tagGroupMap }: { post: ExplorePost; tagGroupMap: T
             src={post.thumbnailUrl}
             alt={post.titleEn}
             fill
+            unoptimized
             className="object-cover"
             sizes="88px"
           />

@@ -98,6 +98,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
             className="object-cover"
             sizes="430px"
             priority
+            unoptimized
           />
         </div>
       )}

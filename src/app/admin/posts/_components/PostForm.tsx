@@ -861,7 +861,7 @@ export function PostForm({
                 <CardContent>
                   {thumbnailUrl ? (
                     <div className="relative aspect-[3/2] rounded-lg overflow-hidden border">
-                      <Image src={thumbnailUrl} alt="썸네일" fill className="object-cover" />
+                      <Image src={thumbnailUrl} alt="썸네일" fill className="object-cover" unoptimized />
                     </div>
                   ) : (
                     <div className="flex items-center justify-center aspect-[3/2] rounded-lg border bg-muted/50 text-xs text-muted-foreground">
