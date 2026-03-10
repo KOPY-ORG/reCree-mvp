@@ -69,7 +69,6 @@ async function main() {
         status: "PUBLISHED",
         publishedAt: new Date(Date.now() - i * 60 * 60 * 1000),
         bodyEn: `This is dummy post ${i} for layout testing.`,
-        thumbnailUrl: null,
       },
     });
     postIds.push(post.id);

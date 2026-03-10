@@ -18,7 +18,7 @@ try {
   // .env.local이 없으면 무시
 }
 
-import { PrismaClient, TagGroup } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 const adapter = new PrismaPg({
@@ -476,23 +476,23 @@ async function main() {
   await prisma.tag.createMany({
     data: [
       // FOOD (9개)
-      { name: "Bunsik",              nameKo: "분식",       slug: "bunsik",              group: TagGroup.FOOD,       sortOrder: 0 },
-      { name: "Traditional",         nameKo: "전통음식",   slug: "traditional",         group: TagGroup.FOOD,       sortOrder: 1 },
-      { name: "Chicken",             nameKo: "치킨",       slug: "chicken",             group: TagGroup.FOOD,       sortOrder: 2 },
-      { name: "BBQ",                 nameKo: "바베큐",     slug: "bbq",                 group: TagGroup.FOOD,       sortOrder: 3 },
-      { name: "Convenience Store",   nameKo: "편의점",     slug: "convenience-store",   group: TagGroup.FOOD,       sortOrder: 4 },
-      { name: "Drinks",              nameKo: "음료",       slug: "drinks",              group: TagGroup.FOOD,       sortOrder: 5 },
-      { name: "Cafe",                nameKo: "카페",       slug: "cafe",                group: TagGroup.FOOD,       sortOrder: 6 },
-      { name: "Street Food & Snacks",nameKo: "길거리 음식",slug: "street-food-snacks",  group: TagGroup.FOOD,       sortOrder: 7 },
-      { name: "Dessert & Sweets",    nameKo: "디저트",     slug: "dessert-sweets",      group: TagGroup.FOOD,       sortOrder: 8 },
+      { name: "Bunsik",              nameKo: "분식",       slug: "bunsik",              group: "FOOD",       sortOrder: 0 },
+      { name: "Traditional",         nameKo: "전통음식",   slug: "traditional",         group: "FOOD",       sortOrder: 1 },
+      { name: "Chicken",             nameKo: "치킨",       slug: "chicken",             group: "FOOD",       sortOrder: 2 },
+      { name: "BBQ",                 nameKo: "바베큐",     slug: "bbq",                 group: "FOOD",       sortOrder: 3 },
+      { name: "Convenience Store",   nameKo: "편의점",     slug: "convenience-store",   group: "FOOD",       sortOrder: 4 },
+      { name: "Drinks",              nameKo: "음료",       slug: "drinks",              group: "FOOD",       sortOrder: 5 },
+      { name: "Cafe",                nameKo: "카페",       slug: "cafe",                group: "FOOD",       sortOrder: 6 },
+      { name: "Street Food & Snacks",nameKo: "길거리 음식",slug: "street-food-snacks",  group: "FOOD",       sortOrder: 7 },
+      { name: "Dessert & Sweets",    nameKo: "디저트",     slug: "dessert-sweets",      group: "FOOD",       sortOrder: 8 },
       // SPOT (3개)
-      { name: "Nature",              nameKo: "자연",       slug: "nature",              group: TagGroup.SPOT,       sortOrder: 0 },
-      { name: "Filming Spot",        nameKo: "촬영지",     slug: "filming-spot",        group: TagGroup.SPOT,       sortOrder: 1 },
-      { name: "Attraction",          nameKo: "명소",       slug: "attraction",          group: TagGroup.SPOT,       sortOrder: 2 },
+      { name: "Nature",              nameKo: "자연",       slug: "nature",              group: "SPOT",       sortOrder: 0 },
+      { name: "Filming Spot",        nameKo: "촬영지",     slug: "filming-spot",        group: "SPOT",       sortOrder: 1 },
+      { name: "Attraction",          nameKo: "명소",       slug: "attraction",          group: "SPOT",       sortOrder: 2 },
       // EXPERIENCE (3개)
-      { name: "Dance",               nameKo: "댄스",       slug: "dance",               group: TagGroup.EXPERIENCE, sortOrder: 0 },
-      { name: "Cooking",             nameKo: "요리",       slug: "cooking",             group: TagGroup.EXPERIENCE, sortOrder: 1 },
-      { name: "Beauty",              nameKo: "뷰티",       slug: "beauty",              group: TagGroup.EXPERIENCE, sortOrder: 2 },
+      { name: "Dance",               nameKo: "댄스",       slug: "dance",               group: "EXPERIENCE", sortOrder: 0 },
+      { name: "Cooking",             nameKo: "요리",       slug: "cooking",             group: "EXPERIENCE", sortOrder: 1 },
+      { name: "Beauty",              nameKo: "뷰티",       slug: "beauty",              group: "EXPERIENCE", sortOrder: 2 },
     ],
   });
 
