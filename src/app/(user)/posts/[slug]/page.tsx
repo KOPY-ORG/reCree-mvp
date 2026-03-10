@@ -98,6 +98,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
             className="object-cover"
             sizes="430px"
             priority
+            unoptimized
           />
         </div>
       )}
@@ -149,9 +150,6 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
         )}
 
         <h1 className="text-xl font-bold leading-tight">{post.titleEn}</h1>
-        {post.subtitleEn && (
-          <p className="text-sm text-muted-foreground">{post.subtitleEn}</p>
-        )}
       </div>
 
       {/* Spot Insight */}

@@ -52,6 +52,7 @@ export default async function PreviewPostPage({ params }: Props) {
               src={post.thumbnailUrl}
               alt={post.titleKo}
               fill
+              unoptimized
               className="object-cover"
             />
           </div>
@@ -80,9 +81,6 @@ export default async function PreviewPostPage({ params }: Props) {
           <h1 className="text-2xl font-bold leading-snug">{post.titleKo}</h1>
           {post.titleEn && (
             <p className="text-lg text-muted-foreground">{post.titleEn}</p>
-          )}
-          {post.subtitleKo && (
-            <p className="text-base text-muted-foreground">{post.subtitleKo}</p>
           )}
         </div>
 

@@ -1,0 +1,2 @@
+ALTER TABLE "Post" DROP COLUMN IF EXISTS "subtitleKo";
+ALTER TABLE "Post" DROP COLUMN IF EXISTS "subtitleEn";

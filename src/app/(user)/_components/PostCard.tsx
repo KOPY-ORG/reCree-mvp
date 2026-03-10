@@ -76,6 +76,7 @@ export function PostCard({
             src={post.thumbnailUrl}
             alt={post.titleEn}
             fill
+            unoptimized
             className="object-cover"
             sizes="200px"
           />

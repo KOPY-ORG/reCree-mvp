@@ -265,6 +265,7 @@ export default async function HomePage() {
                     src={post.thumbnailUrl}
                     alt={post.titleEn}
                     fill
+                    unoptimized
                     className="object-cover"
                     sizes="(max-width: 672px) 50vw, 336px"
                   />

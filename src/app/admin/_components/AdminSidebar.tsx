@@ -62,16 +62,13 @@ export function AdminSidebar({ userEmail, userInitial }: AdminSidebarProps) {
   return (
     <aside className="w-60 h-screen flex flex-col bg-zinc-950 shrink-0">
       {/* 로고 */}
-      <div className="px-5 py-5 border-b border-zinc-800">
+      <div className="px-5 py-5">
         <div className="flex items-center gap-2.5">
           <div className="size-6 rounded bg-brand shrink-0" />
           <p className="font-bold text-sm tracking-tight text-white">
             reCree Admin
           </p>
         </div>
-        <p className="text-[11px] text-zinc-600 mt-1 ml-[34px]">
-          Content Management
-        </p>
       </div>
 
       {/* 네비게이션 */}

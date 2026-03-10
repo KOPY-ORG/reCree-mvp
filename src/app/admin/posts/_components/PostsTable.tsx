@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Loader2, MoreHorizontal, Sparkles } from "lucide-react";
+import { Pencil, Loader2, MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,7 +19,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { deletePost, publishPost, unpublishPost } from "../_actions/post-actions";
-import { generateAIDraft } from "../_actions/draft-actions";
 import type { PostStatus } from "@prisma/client";
 
 export type PostRow = {
@@ -67,8 +66,6 @@ interface Props {
   isFiltered: boolean;
 }
 
-type DraftingState = "idle" | "single";
-
 const STATUS_LABELS: Record<PostStatus, string> = {
   DRAFT: "임시저장",
   PUBLISHED: "발행됨",
@@ -91,8 +88,6 @@ export function PostsTable({ posts, isFiltered }: Props) {
     id: string;
     title: string;
   } | null>(null);
-  const [draftingId, setDraftingId] = useState<string | null>(null);
-  const [draftingState, setDraftingState] = useState<DraftingState>("idle");
 
   const handlePublishToggle = (post: PostRow) => {
     startTransition(async () => {
@@ -115,22 +110,6 @@ export function PostsTable({ posts, isFiltered }: Props) {
       }
     });
   };
-
-  const handleGenerateDraft = (postId: string) => {
-    setDraftingId(postId);
-    setDraftingState("single");
-    startTransition(async () => {
-      const result = await generateAIDraft(postId);
-      setDraftingId(null);
-      setDraftingState("idle");
-      if (result.error) {
-        toast.error(result.error);
-      } else {
-        toast.success("AI 초안이 생성되었습니다.");
-      }
-    });
-  };
-
 
   const handleDeleteConfirm = () => {
     if (!deleteTarget) return;
@@ -307,22 +286,6 @@ export function PostsTable({ posts, isFiltered }: Props) {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          {post.status === "DRAFT" && (
-                            <>
-                              <DropdownMenuItem
-                                disabled={draftingState !== "idle"}
-                                onClick={() => handleGenerateDraft(post.id)}
-                              >
-                                {draftingState === "single" && draftingId === post.id ? (
-                                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                                ) : (
-                                  <Sparkles className="mr-2 h-3.5 w-3.5" />
-                                )}
-                                AI 초안 생성
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                            </>
-                          )}
                           <DropdownMenuItem
                             onClick={() => handlePublishToggle(post)}
                           >
