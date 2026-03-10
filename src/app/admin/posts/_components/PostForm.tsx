@@ -17,6 +17,7 @@ import {
   MapPin,
   Phone,
   Plus,
+  Sparkles,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -37,7 +38,7 @@ import {
   type PostSourceInput,
   type SpotInsightData,
 } from "../_actions/post-actions";
-import { translateFields } from "../_actions/draft-actions";
+import { translateFields, fetchAIDraft } from "../_actions/draft-actions";
 import { PlacePickerSheet } from "./PlacePickerSheet";
 import { PlaceDetailSheet } from "./PlaceDetailSheet";
 import { ContentTab } from "./ContentTab";
@@ -46,6 +47,7 @@ import { InsightTab } from "./InsightTab";
 import { SourceTab } from "./SourceTab";
 import { ThumbnailTab } from "./ThumbnailTab";
 import { LabelVisibilityCard } from "./LabelVisibilityCard";
+import { AIDraftReviewDialog, type AIDraftData } from "./AIDraftReviewSheet";
 
 // ─── 타입 ──────────────────────────────────────────────────────────────────────
 
@@ -275,6 +277,9 @@ export function PostForm({
   const [detailPlaceId, setDetailPlaceId] = useState<string | null>(null);
   const [isTranslating, setIsTranslating] = useState(false);
   const [isTranslatingTitle, setIsTranslatingTitle] = useState(false);
+  const [isGeneratingDraft, setIsGeneratingDraft] = useState(false);
+  const [draftResult, setDraftResult] = useState<AIDraftData | null>(null);
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
 
   // ── 파생값 ─────────────────────────────────────────────────────────────────
   const topicEffectiveStyleMap = useMemo(() => {
@@ -425,6 +430,46 @@ export function PostForm({
       toast.success("전체 번역 완료. 영어 내용을 검토해주세요.");
     }
     setIsTranslating(false);
+  }
+
+  // ── AI 초안 채우기 ──────────────────────────────────────────────────────────
+  async function handleFillAIDraft() {
+    if (!postId) return;
+    setIsGeneratingDraft(true);
+    const { data, error } = await fetchAIDraft(postId);
+    setIsGeneratingDraft(false);
+    if (error) {
+      toast.error(error);
+      return;
+    }
+    if (!data) return;
+    setDraftResult(data);
+    setReviewDialogOpen(true);
+  }
+
+  function handleApplyDraft(selected: Partial<AIDraftData>) {
+    if (selected.titleKo !== undefined) setTitleKo(selected.titleKo);
+    if (selected.storyKo !== undefined) setBodyKo(selected.storyKo);
+    if (placeEntries.length > 0 && (
+      selected.contextKo !== undefined ||
+      selected.vibes !== undefined || selected.mustTryKo !== undefined ||
+      selected.tipKo !== undefined
+    )) {
+      setPlaceEntries((prev) =>
+        prev.map((e, idx) =>
+          idx !== 0
+            ? e
+            : {
+                ...e,
+                ...(selected.contextKo !== undefined && { contextKo: selected.contextKo }),
+                ...(selected.vibes !== undefined && { vibe: selected.vibes }),
+                ...(selected.mustTryKo !== undefined && { mustTryKo: selected.mustTryKo }),
+                ...(selected.tipKo !== undefined && { tipKo: selected.tipKo }),
+              },
+        ),
+      );
+    }
+    toast.success("AI 초안이 적용되었습니다. 내용을 검토 후 저장하세요.");
   }
 
   // ── 제출 ───────────────────────────────────────────────────────────────────
@@ -871,6 +916,41 @@ export function PostForm({
                 </CardContent>
               </Card>
 
+              {/* AI 초안 — edit 모드 전용 */}
+              {isEdit && (
+                <Card className="gap-3 py-4">
+                  <CardHeader>
+                    <CardTitle className="text-sm font-semibold">AI 초안</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full h-8 text-xs"
+                      disabled={isGeneratingDraft || placeEntries.length === 0}
+                      onClick={handleFillAIDraft}
+                    >
+                      {isGeneratingDraft ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                          생성 중...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                          AI 초안 채우기
+                        </>
+                      )}
+                    </Button>
+                    {placeEntries.length === 0 && (
+                      <p className="text-[11px] text-muted-foreground mt-1.5 text-center">
+                        장소를 먼저 연결하세요
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
               {/* 번역 상태 */}
               <Card className="gap-3 py-4">
                 <CardHeader>
@@ -936,6 +1016,20 @@ export function PostForm({
         placeId={detailPlaceId}
         open={!!detailPlaceId}
         onOpenChange={(open) => { if (!open) setDetailPlaceId(null); }}
+      />
+      <AIDraftReviewDialog
+        open={reviewDialogOpen}
+        onOpenChange={setReviewDialogOpen}
+        draft={draftResult}
+        current={{
+          titleKo,
+          bodyKo,
+          contextKo: placeEntries[0]?.contextKo ?? "",
+          vibes: placeEntries[0]?.vibe ?? [],
+          mustTryKo: placeEntries[0]?.mustTryKo ?? "",
+          tipKo: placeEntries[0]?.tipKo ?? "",
+        }}
+        onApply={handleApplyDraft}
       />
     </div>
   );
