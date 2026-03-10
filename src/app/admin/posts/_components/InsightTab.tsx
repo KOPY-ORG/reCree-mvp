@@ -157,7 +157,7 @@ export function InsightTab({
         </div>
         <div className="flex flex-wrap gap-1.5">
           {activeEntry.vibe.map((v, i) => (
-            <Badge key={i} className="gap-1 pr-1 bg-[#C6FD09]/20 text-[#5a7a00] border border-[#C6FD09]/40 hover:bg-[#C6FD09]/20">
+            <Badge key={i} className="gap-1 pr-1 bg-[#C6FD09]/20 text-[#3d5200] border border-[#C6FD09]/60 hover:bg-[#C6FD09]/20 font-semibold">
               {v}
               <button
                 type="button"

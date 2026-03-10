@@ -98,7 +98,7 @@ export function PlacesTable({ places, isFiltered }: Props) {
 
   return (
     <>
-      <div className="mt-6 rounded-xl overflow-hidden shadow-sm bg-white">
+      <div className="mt-4 rounded-xl overflow-hidden shadow-sm bg-white">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-zinc-50 border-b border-zinc-100">

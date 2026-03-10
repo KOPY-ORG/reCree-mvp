@@ -9,6 +9,7 @@ interface Props {
   currentPage: number;
   pageSize: number;
   filterQuery: string;
+  label?: string;
 }
 
 export function PlacesPagination({
@@ -16,6 +17,7 @@ export function PlacesPagination({
   currentPage,
   pageSize,
   filterQuery,
+  label = "장소",
 }: Props) {
   const pathname = usePathname();
   const router = useRouter();
@@ -24,7 +26,7 @@ export function PlacesPagination({
   if (totalPages <= 1) {
     return (
       <p className="mt-4 text-sm text-muted-foreground">
-        총 {totalCount.toLocaleString()}개 장소
+        총 {totalCount.toLocaleString()}개 {label}
       </p>
     );
   }
@@ -66,7 +68,7 @@ export function PlacesPagination({
   return (
     <div className="mt-4 flex items-center justify-between">
       <p className="text-sm text-muted-foreground">
-        총 {totalCount.toLocaleString()}개 장소 중 {from}–{to}
+        총 {totalCount.toLocaleString()}개 {label} · {from}–{to}
       </p>
       <div className="flex items-center gap-1">
         <Button

@@ -20,6 +20,7 @@ export type PlaceFormData = {
   kakaoMapsUrl: string | null;
   phone: string;
   operatingHours: string[] | null;
+  gettingThere: string | null;
   status: PlaceStatus;
   isVerified: boolean;
 };
@@ -60,6 +61,7 @@ export async function createPlace(
         kakaoMapsUrl: data.kakaoMapsUrl || null,
         phone: data.phone || null,
         operatingHours: data.operatingHours?.length ? data.operatingHours : Prisma.DbNull,
+        gettingThere: data.gettingThere || null,
         status: data.status,
         isVerified: data.isVerified,
       },
@@ -93,6 +95,7 @@ export async function updatePlace(
         kakaoMapsUrl: data.kakaoMapsUrl || null,
         phone: data.phone || null,
         operatingHours: data.operatingHours?.length ? data.operatingHours : Prisma.DbNull,
+        gettingThere: data.gettingThere || null,
         status: data.status,
         isVerified: data.isVerified,
       },

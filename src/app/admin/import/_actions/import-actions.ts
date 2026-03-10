@@ -4,6 +4,25 @@ import Papa from "papaparse";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
+function detectPlatform(url: string): string | null {
+  try {
+    const hostname = new URL(url).hostname.replace("www.", "");
+    if (hostname.includes("youtube.com") || hostname.includes("youtu.be")) return "YOUTUBE";
+    if (hostname.includes("twitter.com") || hostname.includes("x.com")) return "X";
+    if (hostname.includes("instagram.com")) return "INSTAGRAM";
+    if (hostname.includes("pinterest.com") || hostname.includes("pin.it")) return "PINTEREST";
+    if (
+      hostname.includes("naver.com") ||
+      hostname.includes("tistory.com") ||
+      hostname.includes("velog.io") ||
+      hostname.includes("brunch.co.kr")
+    ) return "BLOG";
+    return "OTHER";
+  } catch {
+    return null;
+  }
+}
+
 // ─── 타입 ──────────────────────────────────────────────────────────────────────
 
 export type SheetRow = {
@@ -439,17 +458,28 @@ export async function importSheetRows(rowIds: string[]): Promise<{
             collectedBy,
             collectedAt,
             importNote,
-            ...(srcUrl && {
+            ...((srcUrl || referenceUrlVal) && {
               postSources: {
-                create: [{
-                  url: srcUrl,
-                  sourceType: (mappedSrcType === "REFERENCE" ? "REFERENCE" : "PRIMARY") as "PRIMARY" | "REFERENCE",
-                  platform: null,
-                  isOriginalLink: false,
-                  sourceNote: srcNote,
-                  sourcePostDate: sourcePostDateVal,
-                  sortOrder: 0,
-                }],
+                create: [
+                  ...(srcUrl ? [{
+                    url: srcUrl,
+                    sourceType: (mappedSrcType === "REFERENCE" ? "REFERENCE" : "PRIMARY") as "PRIMARY" | "REFERENCE",
+                    platform: detectPlatform(srcUrl),
+                    isOriginalLink: false,
+                    sourceNote: srcNote,
+                    sourcePostDate: sourcePostDateVal,
+                    sortOrder: 0,
+                  }] : []),
+                  ...(referenceUrlVal ? [{
+                    url: referenceUrlVal,
+                    sourceType: "REFERENCE" as "REFERENCE",
+                    platform: detectPlatform(referenceUrlVal),
+                    isOriginalLink: false,
+                    sourceNote: null,
+                    sourcePostDate: null,
+                    sortOrder: srcUrl ? 1 : 0,
+                  }] : []),
+                ],
               },
             }),
           },

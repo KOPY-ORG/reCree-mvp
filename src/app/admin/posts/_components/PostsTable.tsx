@@ -131,7 +131,6 @@ export function PostsTable({ posts, isFiltered }: Props) {
           <table className="w-full text-sm">
             <thead className="bg-zinc-50 border-b border-zinc-100">
               <tr>
-                <th className="px-4 py-3 w-10" />
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">
                   제목
                 </th>
@@ -157,7 +156,7 @@ export function PostsTable({ posts, isFiltered }: Props) {
               {posts.length === 0 && (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={7}
                     className="px-4 py-16 text-center text-sm text-muted-foreground"
                   >
                     {isFiltered
@@ -171,8 +170,6 @@ export function PostsTable({ posts, isFiltered }: Props) {
                   key={post.id}
                   className="border-b border-zinc-100 last:border-b-0 transition-colors hover:bg-zinc-50"
                 >
-                  <td className="px-4 py-3" />
-
                   {/* 제목 */}
                   <td className="px-4 py-3 min-w-[200px]">
                     <div className="font-medium leading-tight">{post.titleKo}</div>

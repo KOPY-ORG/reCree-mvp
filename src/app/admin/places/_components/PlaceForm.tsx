@@ -26,8 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -59,6 +58,7 @@ export type PlaceInitialData = {
   kakaoMapsUrl: string | null;
   phone: string | null;
   operatingHours: string[] | null;
+  gettingThere: string | null;
   status: PlaceStatus;
   isVerified: boolean;
 };
@@ -136,6 +136,9 @@ export function PlaceForm({
   const [operatingHours, setOperatingHours] = useState<string[]>(
     initialData?.operatingHours ?? [],
   );
+  const [gettingThere, setGettingThere] = useState(
+    initialData?.gettingThere ?? "",
+  );
   const [status, setStatus] = useState<PlaceStatus>(
     initialData?.status ?? "OPEN",
   );
@@ -201,6 +204,7 @@ export function PlaceForm({
       operatingHours: operatingHours.filter((l) => l.trim()).length
         ? operatingHours.filter((l) => l.trim())
         : null,
+      gettingThere: gettingThere.trim() || null,
       status,
       isVerified,
     };
@@ -249,40 +253,32 @@ export function PlaceForm({
 
         {/* ── 바디 ─────────────────────────────────────────────────────────── */}
         <div className="flex-1 px-6 py-6">
-          <div className="mx-auto max-w-3xl space-y-5">
+          <div className="mx-auto max-w-[1400px]">
+            <div className="grid grid-cols-[1fr_320px] gap-6 items-start">
 
-              {/* STEP 1: 장소 검색 */}
-                <Card>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                        장소 검색
-                      </CardTitle>
-                      {hasLocation && (
-                        <div className="flex items-center gap-1">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 gap-1.5 text-xs"
-                            onClick={() => setSearchDialogOpen(true)}
-                          >
-                            <RotateCcw className="h-3 w-3" />
-                            재검색
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 gap-1.5 text-xs"
-                            onClick={() => setMapDialogOpen(true)}
-                          >
-                            <Map className="h-3 w-3" />
-                            지도 보기
-                          </Button>
-                        </div>
-                      )}
-                    </div>
+              {/* ── 왼쪽: 메인 ────────────────────────────────────────────── */}
+              <div className="min-w-0 space-y-3">
+
+                {/* STEP 1: 장소 검색 */}
+                <Card className="gap-3 py-4 border-0">
+                  <CardHeader>
+                    <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                      장소 검색
+                    </CardTitle>
+                    {hasLocation && (
+                      <CardAction>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 gap-1.5 text-xs"
+                          onClick={() => setSearchDialogOpen(true)}
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                          재검색
+                        </Button>
+                      </CardAction>
+                    )}
                   </CardHeader>
                   <CardContent>
                     {!hasLocation ? (
@@ -326,13 +322,13 @@ export function PlaceForm({
                 </Card>
 
                 {/* STEP 2: 기본 정보 */}
-                <Card>
-                  <CardHeader className="pb-2">
+                <Card className="gap-3 py-4 border-0">
+                  <CardHeader>
                     <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                       기본 정보
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-5">
+                  <CardContent className="space-y-4">
                     {/* 장소명 한/영 */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1.5">
@@ -359,90 +355,63 @@ export function PlaceForm({
                       </div>
                     </div>
 
-                    <Separator />
-
                     {/* 주소 */}
-                    <div className="space-y-3">
-                      <Label className="text-sm font-medium">주소</Label>
-                      <div className="space-y-2.5">
+                    <div className="space-y-2.5">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="addressKo" className="text-xs text-muted-foreground">
+                          한국어 주소
+                        </Label>
+                        <Input
+                          id="addressKo"
+                          value={addressKo}
+                          onChange={(e) => setAddressKo(e.target.value)}
+                          placeholder="위치 검색 시 자동 입력"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="addressEn" className="text-xs text-muted-foreground">
+                          영문 주소
+                        </Label>
+                        <Input
+                          id="addressEn"
+                          value={addressEn}
+                          onChange={(e) => setAddressEn(e.target.value)}
+                          placeholder="위치 검색 시 자동 입력"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1.5">
-                          <Label
-                            htmlFor="addressKo"
-                            className="text-xs text-muted-foreground"
-                          >
-                            한국어 주소
+                          <Label htmlFor="latitude" className="text-xs text-muted-foreground">
+                            위도 (Latitude)
                           </Label>
                           <Input
-                            id="addressKo"
-                            value={addressKo}
-                            onChange={(e) => setAddressKo(e.target.value)}
-                            placeholder="위치 검색 시 자동 입력"
+                            id="latitude"
+                            type="number"
+                            step="any"
+                            value={latitude ?? ""}
+                            onChange={(e) =>
+                              setLatitude(e.target.value ? Number(e.target.value) : null)
+                            }
+                            placeholder="37.5665"
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <Label
-                            htmlFor="addressEn"
-                            className="text-xs text-muted-foreground"
-                          >
-                            영문 주소
+                          <Label htmlFor="longitude" className="text-xs text-muted-foreground">
+                            경도 (Longitude)
                           </Label>
                           <Input
-                            id="addressEn"
-                            value={addressEn}
-                            onChange={(e) => setAddressEn(e.target.value)}
-                            placeholder="위치 검색 시 자동 입력"
+                            id="longitude"
+                            type="number"
+                            step="any"
+                            value={longitude ?? ""}
+                            onChange={(e) =>
+                              setLongitude(e.target.value ? Number(e.target.value) : null)
+                            }
+                            placeholder="126.9780"
                           />
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-1.5">
-                            <Label
-                              htmlFor="latitude"
-                              className="text-xs text-muted-foreground"
-                            >
-                              위도 (Latitude)
-                            </Label>
-                            <Input
-                              id="latitude"
-                              type="number"
-                              step="any"
-                              value={latitude ?? ""}
-                              onChange={(e) =>
-                                setLatitude(
-                                  e.target.value
-                                    ? Number(e.target.value)
-                                    : null,
-                                )
-                              }
-                              placeholder="37.5665"
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label
-                              htmlFor="longitude"
-                              className="text-xs text-muted-foreground"
-                            >
-                              경도 (Longitude)
-                            </Label>
-                            <Input
-                              id="longitude"
-                              type="number"
-                              step="any"
-                              value={longitude ?? ""}
-                              onChange={(e) =>
-                                setLongitude(
-                                  e.target.value
-                                    ? Number(e.target.value)
-                                    : null,
-                                )
-                              }
-                              placeholder="126.9780"
-                            />
-                          </div>
                         </div>
                       </div>
                     </div>
-
-                    <Separator />
 
                     {/* 나라 / 도시 */}
                     <div className="grid grid-cols-2 gap-4">
@@ -489,99 +458,17 @@ export function PlaceForm({
                         </p>
                       )}
                     </div>
-
-                    {/* 지도 링크 */}
-                    <div className="space-y-2">
-                      <Label>지도 링크</Label>
-                      <div className="space-y-2">
-                        <div className="flex gap-1.5">
-                          <Input
-                            value={googleMapsUrl}
-                            onChange={(e) => setGoogleMapsUrl(e.target.value)}
-                            placeholder="Google Maps URL"
-                          />
-                          {googleMapsUrl && (
-                            <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer">
-                              <Button type="button" variant="ghost" size="icon" className="h-10 w-10 shrink-0">
-                                <ExternalLink className="h-4 w-4" />
-                              </Button>
-                            </a>
-                          )}
-                        </div>
-                        <div className="flex gap-1.5">
-                          <Input
-                            value={naverMapsUrl}
-                            onChange={(e) => setNaverMapsUrl(e.target.value)}
-                            placeholder="네이버 지도 URL"
-                          />
-                          {naverMapsUrl && (
-                            <a href={naverMapsUrl} target="_blank" rel="noopener noreferrer">
-                              <Button type="button" variant="ghost" size="icon" className="h-10 w-10 shrink-0">
-                                <ExternalLink className="h-4 w-4" />
-                              </Button>
-                            </a>
-                          )}
-                        </div>
-                        <div className="flex gap-1.5">
-                          <Input
-                            value={kakaoMapsUrl}
-                            onChange={(e) => setKakaoMapsUrl(e.target.value)}
-                            placeholder="카카오 지도 URL"
-                          />
-                          {kakaoMapsUrl && (
-                            <a href={kakaoMapsUrl} target="_blank" rel="noopener noreferrer">
-                              <Button type="button" variant="ghost" size="icon" className="h-10 w-10 shrink-0">
-                                <ExternalLink className="h-4 w-4" />
-                              </Button>
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    </div>
                   </CardContent>
                 </Card>
 
                 {/* STEP 3: 운영 정보 */}
-                <Card>
-                  <CardHeader className="pb-2">
+                <Card className="gap-3 py-4 border-0">
+                  <CardHeader>
                     <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                       운영 정보
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="flex items-center gap-8">
-                      <div className="w-48 space-y-1.5">
-                        <Label htmlFor="status">영업 상태</Label>
-                        <Select
-                          value={status}
-                          onValueChange={(v) => setStatus(v as PlaceStatus)}
-                        >
-                          <SelectTrigger id="status">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {(Object.keys(STATUS_LABELS) as PlaceStatus[]).map(
-                              (s) => (
-                                <SelectItem key={s} value={s}>
-                                  {STATUS_LABELS[s]}
-                                </SelectItem>
-                              ),
-                            )}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex items-center gap-3 pt-6">
-                        <Switch
-                          id="isVerified"
-                          checked={isVerified}
-                          onCheckedChange={setIsVerified}
-                        />
-                        <Label htmlFor="isVerified" className="cursor-pointer">
-                          검증된 장소
-                        </Label>
-                      </div>
-                    </div>
-
                     <div className="space-y-1.5">
                       <Label>영업시간</Label>
                       <Textarea
@@ -604,9 +491,152 @@ export function PlaceForm({
                         </p>
                       )}
                     </div>
+
+                    {/* 교통편 안내 */}
+                    <div className="space-y-1.5">
+                      <Label htmlFor="gettingThere">교통편 안내</Label>
+                      <Textarea
+                        id="gettingThere"
+                        value={gettingThere}
+                        onChange={(e) => setGettingThere(e.target.value)}
+                        rows={3}
+                        className="text-sm resize-none"
+                        placeholder="예: 지하철 2호선 홍대입구역 9번 출구에서 도보 5분"
+                      />
+                    </div>
                   </CardContent>
                 </Card>
 
+              </div>
+
+              {/* ── 오른쪽: 사이드바 ──────────────────────────────────────── */}
+              <div className="w-[320px] sticky top-14 space-y-3">
+
+                {/* 상태 카드 */}
+                <Card className="gap-3 py-4 border-0">
+                  <CardHeader>
+                    <CardTitle className="text-sm font-semibold">상태</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="status" className="text-xs">영업 상태</Label>
+                      <Select
+                        value={status}
+                        onValueChange={(v) => setStatus(v as PlaceStatus)}
+                      >
+                        <SelectTrigger id="status">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(Object.keys(STATUS_LABELS) as PlaceStatus[]).map(
+                            (s) => (
+                              <SelectItem key={s} value={s}>
+                                {STATUS_LABELS[s]}
+                              </SelectItem>
+                            ),
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="isVerified" className="text-sm cursor-pointer">
+                        검증된 장소
+                      </Label>
+                      <Switch
+                        id="isVerified"
+                        checked={isVerified}
+                        onCheckedChange={setIsVerified}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* 지도 미리보기 카드 */}
+                {latitude !== null && longitude !== null && (
+                  <Card className="gap-3 py-4 border-0">
+                    <CardHeader>
+                      <CardTitle className="text-sm font-semibold">지도</CardTitle>
+                      <CardAction>
+                        <button
+                          type="button"
+                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                          onClick={() => setMapDialogOpen(true)}
+                        >
+                          <Map className="h-3 w-3" />
+                          크게 보기
+                        </button>
+                      </CardAction>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="overflow-hidden rounded-lg border">
+                        <MapPreview
+                          key={`map-preview-${latitude}-${longitude}`}
+                          lat={latitude}
+                          lng={longitude}
+                          zoom={15}
+                          height={200}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* 지도 링크 카드 */}
+                <Card className="gap-3 py-4 border-0">
+                  <CardHeader>
+                    <CardTitle className="text-sm font-semibold">지도 링크</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="flex gap-1.5">
+                      <Input
+                        value={googleMapsUrl}
+                        onChange={(e) => setGoogleMapsUrl(e.target.value)}
+                        placeholder="Google Maps URL"
+                        className="text-xs"
+                      />
+                      {googleMapsUrl && (
+                        <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer">
+                          <Button type="button" variant="ghost" size="icon" className="h-10 w-10 shrink-0">
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </a>
+                      )}
+                    </div>
+                    <div className="flex gap-1.5">
+                      <Input
+                        value={naverMapsUrl}
+                        onChange={(e) => setNaverMapsUrl(e.target.value)}
+                        placeholder="네이버 지도 URL"
+                        className="text-xs"
+                      />
+                      {naverMapsUrl && (
+                        <a href={naverMapsUrl} target="_blank" rel="noopener noreferrer">
+                          <Button type="button" variant="ghost" size="icon" className="h-10 w-10 shrink-0">
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </a>
+                      )}
+                    </div>
+                    <div className="flex gap-1.5">
+                      <Input
+                        value={kakaoMapsUrl}
+                        onChange={(e) => setKakaoMapsUrl(e.target.value)}
+                        placeholder="카카오 지도 URL"
+                        className="text-xs"
+                      />
+                      {kakaoMapsUrl && (
+                        <a href={kakaoMapsUrl} target="_blank" rel="noopener noreferrer">
+                          <Button type="button" variant="ghost" size="icon" className="h-10 w-10 shrink-0">
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </a>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+              </div>
+            </div>
           </div>
         </div>
       </form>

@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   ArrowLeft,
+  Check,
   Loader2,
   Eye,
   Languages,
@@ -30,6 +31,9 @@ const MapPreview = dynamic(
 import type { PostStatus } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   checkPostSlug,
   type PostFormData,
@@ -604,7 +608,7 @@ export function PostForm({
 
               {/* 카드 1: 제목 + 슬러그 + 장소 — sticky */}
               <div className="sticky top-14 z-30">
-                <Card className="gap-3 py-4">
+                <Card className="gap-3 py-4 border-0">
                   <CardContent className="space-y-3">
                     {/* 제목 */}
                     <div className="grid grid-cols-2 gap-3">
@@ -675,7 +679,7 @@ export function PostForm({
                           }`}
                         />
                         {slugStatus === "checking" && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />}
-                        {slugStatus === "ok" && <span className="text-xs text-green-600 shrink-0">✓</span>}
+                        {slugStatus === "ok" && <Check className="h-4 w-4 text-green-600 shrink-0" />}
                         {slugStatus === "error" && <span className="text-xs text-destructive shrink-0">중복</span>}
                       </div>
                       {slugManual && (
@@ -690,7 +694,7 @@ export function PostForm({
               </div>
 
               {/* 카드 2: 탭 바 + 탭 콘텐츠 */}
-              <Card className="overflow-hidden py-0 gap-0">
+              <Card className="overflow-hidden py-0 gap-0 border-0">
                 {/* 탭 네비게이션 */}
                 <div className="flex gap-1 px-4 py-2 border-b">
                   {TABS.map((tab) => (
@@ -818,9 +822,6 @@ export function PostForm({
                       addSource={addSource}
                       removeSource={removeSource}
                       updateSource={updateSource}
-                      memo={memo} setMemo={setMemo}
-                      collectedBy={collectedBy} setCollectedBy={setCollectedBy}
-                      collectedAt={collectedAt} setCollectedAt={setCollectedAt}
                     />
                   )}
                   {activeTab === "images" && (
@@ -839,17 +840,22 @@ export function PostForm({
             <div className="space-y-3 sticky top-14">
 
               {/* 상태 */}
-              <div className="flex items-center justify-between py-1">
-                <span className="text-xs text-muted-foreground">상태</span>
-                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                  status === "PUBLISHED" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
-                }`}>
-                  {status === "PUBLISHED" ? "발행됨" : "임시저장"}
-                </span>
-              </div>
+              <Card className="gap-3 py-4 border-0">
+                <CardContent className="flex items-center justify-between">
+                  <span className="text-sm font-semibold">상태</span>
+                  <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full ${
+                    status === "PUBLISHED" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${
+                      status === "PUBLISHED" ? "bg-green-500" : "bg-yellow-400"
+                    }`} />
+                    {status === "PUBLISHED" ? "발행됨" : "임시저장"}
+                  </span>
+                </CardContent>
+              </Card>
 
               {/* 썸네일 */}
-              <Card className="gap-3 py-4">
+              <Card className="gap-3 py-4 border-0">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-sm font-semibold">썸네일</CardTitle>
@@ -880,7 +886,7 @@ export function PostForm({
 
               {/* AI 초안 — edit 모드 전용 */}
               {isEdit && (
-                <Card className="gap-3 py-4">
+                <Card className="gap-3 py-4 border-0">
                   <CardHeader>
                     <CardTitle className="text-sm font-semibold">AI 초안</CardTitle>
                   </CardHeader>
@@ -914,7 +920,7 @@ export function PostForm({
               )}
 
               {/* 번역 상태 */}
-              <Card className="gap-3 py-4">
+              <Card className="gap-3 py-4 border-0">
                 <CardHeader>
                   <CardTitle className="text-sm font-semibold">번역 상태</CardTitle>
                 </CardHeader>
@@ -963,6 +969,48 @@ export function PostForm({
                 allTags={allTags}
                 topicEffectiveStyleMap={topicEffectiveStyleMap}
               />
+
+              {/* 수집 정보 */}
+              <Card className="gap-3 py-4 border-0">
+                <CardHeader>
+                  <CardTitle className="text-sm font-semibold">수집 정보</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label htmlFor="collectedBy" className="text-xs">수집자</Label>
+                      <Input
+                        id="collectedBy"
+                        value={collectedBy}
+                        onChange={(e) => setCollectedBy(e.target.value)}
+                        placeholder="예: 홍길동"
+                        className="h-7 text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="collectedAt" className="text-xs">수집 날짜</Label>
+                      <Input
+                        id="collectedAt"
+                        type="date"
+                        value={collectedAt}
+                        onChange={(e) => setCollectedAt(e.target.value)}
+                        className="h-7 text-xs"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="memo" className="text-xs">메모 (내부용)</Label>
+                    <Textarea
+                      id="memo"
+                      value={memo}
+                      onChange={(e) => setMemo(e.target.value)}
+                      rows={2}
+                      placeholder="관리자 내부 메모"
+                      className="text-xs"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>

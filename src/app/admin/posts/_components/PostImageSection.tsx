@@ -136,8 +136,11 @@ export function PostImageSection({ postId, images, onChange, sources }: Props) {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  // YouTube 출처에서 자동 추출
-  const ytUrl = sources.find((s) => s.platform.toUpperCase() === "YOUTUBE" && s.url)?.url;
+  // YouTube 출처에서 자동 추출 (isOriginalLink: true 우선, 없으면 첫 번째 YouTube)
+  const ytUrl = (
+    sources.find((s) => s.isOriginalLink && s.platform?.toUpperCase() === "YOUTUBE" && s.url) ??
+    sources.find((s) => s.platform?.toUpperCase() === "YOUTUBE" && s.url)
+  )?.url;
   const ytVideoId = ytUrl ? extractYouTubeVideoId(ytUrl) : null;
   const ytThumbUrl = ytVideoId
     ? `https://img.youtube.com/vi/${ytVideoId}/maxresdefault.jpg`
