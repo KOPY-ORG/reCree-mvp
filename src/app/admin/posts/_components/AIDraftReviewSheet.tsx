@@ -47,7 +47,6 @@ type StepDef = {
     multiline?: boolean;
     vertical?: boolean;
     getCurrentValue: (current: CurrentFormSnapshot) => string;
-    getAIValue: (draft: AIDraftData) => string;
   }[];
 };
 
@@ -60,7 +59,6 @@ const STEPS: StepDef[] = [
         label: "제목",
         vertical: true,
         getCurrentValue: (c) => c.titleKo,
-        getAIValue: (d) => d.titleKo,
       },
     ],
   },
@@ -72,25 +70,21 @@ const STEPS: StepDef[] = [
         label: "Context",
         multiline: true,
         getCurrentValue: (c) => c.contextKo,
-        getAIValue: (d) => d.contextKo,
       },
       {
         key: "vibes",
         label: "Vibes",
         getCurrentValue: (c) => c.vibes.join(", "),
-        getAIValue: (d) => d.vibes.join(", "),
       },
       {
         key: "mustTryKo",
         label: "Must Try",
         getCurrentValue: (c) => c.mustTryKo,
-        getAIValue: (d) => d.mustTryKo,
       },
       {
         key: "tipKo",
         label: "Tip",
         getCurrentValue: (c) => c.tipKo,
-        getAIValue: (d) => d.tipKo,
       },
     ],
   },
@@ -102,7 +96,6 @@ const STEPS: StepDef[] = [
         label: "본문",
         multiline: true,
         getCurrentValue: (c) => c.bodyKo,
-        getAIValue: (d) => d.storyKo,
       },
     ],
   },

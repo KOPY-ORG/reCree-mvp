@@ -36,6 +36,7 @@ function getTagStyle(tag: TagForForm): React.CSSProperties {
 type LabelItem = {
   id: string;
   type: "topic" | "tag";
+  displayOrder: number;
   topicId?: string;
   tagId?: string;
   label: string;
