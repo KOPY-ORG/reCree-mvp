@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -147,9 +147,13 @@ export function AIDraftReviewDialog({
     mustTryKo: true,
     tipKo: true,
   });
-  const [editedValues, setEditedValues] = useState<Record<FieldKey, string>>(() =>
-    draft ? initEditedValues(draft) : { titleKo: "", storyKo: "", contextKo: "", vibes: "", mustTryKo: "", tipKo: "" }
-  );
+  const [editedValues, setEditedValues] = useState<Record<FieldKey, string>>({
+    titleKo: "", storyKo: "", contextKo: "", vibes: "", mustTryKo: "", tipKo: "",
+  });
+
+  useEffect(() => {
+    if (open && draft) setEditedValues(initEditedValues(draft));
+  }, [open, draft]);
 
   if (!draft) return null;
 
@@ -199,7 +203,6 @@ export function AIDraftReviewDialog({
       open={open}
       onOpenChange={(o) => {
         if (!o) setStep(0);
-        if (o) setEditedValues(initEditedValues(draft));
         onOpenChange(o);
       }}
     >
