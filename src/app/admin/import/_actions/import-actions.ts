@@ -81,19 +81,12 @@ async function fetchSheetCsv(): Promise<RawRow[]> {
 // ─── 이미 임포트된 Post sourceUrl 집합 조회 ──────────────────────────────────────
 
 async function getImportedSourceUrls(): Promise<Set<string>> {
-  const [posts, postSources] = await Promise.all([
-    prisma.post.findMany({
-      where: { sourceUrl: { not: null } },
-      select: { sourceUrl: true },
-    }),
-    prisma.postSource.findMany({
-      where: { sourceUrl: { not: null } },
-      select: { sourceUrl: true },
-    }),
-  ]);
+  const postSources = await prisma.postSource.findMany({
+    where: { url: { not: "" } },
+    select: { url: true },
+  });
   const urls = new Set<string>();
-  posts.forEach((p) => { if (p.sourceUrl) urls.add(p.sourceUrl); });
-  postSources.forEach((p) => { if (p.sourceUrl) urls.add(p.sourceUrl); });
+  postSources.forEach((p) => { if (p.url) urls.add(p.url); });
   return urls;
 }
 
@@ -443,19 +436,17 @@ export async function importSheetRows(rowIds: string[]): Promise<{
             bodyKo: storyVal,
             memo: memoVal,
             status: "DRAFT",
-            sourceUrl: srcUrl || googleMapsLink || null,
-            sourceType: mappedSrcType,
-            sourceNote: srcNote,
             collectedBy,
             collectedAt,
             importNote,
             ...(srcUrl && {
               postSources: {
                 create: [{
-                  sourceType: mappedSrcType,
-                  sourceUrl: srcUrl,
+                  url: srcUrl,
+                  sourceType: (mappedSrcType === "REFERENCE" ? "REFERENCE" : "PRIMARY") as "PRIMARY" | "REFERENCE",
+                  platform: null,
+                  isOriginalLink: false,
                   sourceNote: srcNote,
-                  referenceUrl: referenceUrlVal,
                   sourcePostDate: sourcePostDateVal,
                   sortOrder: 0,
                 }],

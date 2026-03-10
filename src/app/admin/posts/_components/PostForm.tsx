@@ -21,7 +21,6 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
 import dynamic from "next/dynamic";
 
 const MapPreview = dynamic(
@@ -31,10 +30,10 @@ const MapPreview = dynamic(
 import type { PostStatus } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { createClient } from "@/lib/supabase/client";
 import {
   checkPostSlug,
   type PostFormData,
+  type PostImageInput,
   type PostSourceInput,
   type SpotInsightData,
 } from "../_actions/post-actions";
@@ -45,7 +44,7 @@ import { ContentTab } from "./ContentTab";
 import { TaxonomyTab } from "./TaxonomyTab";
 import { InsightTab } from "./InsightTab";
 import { SourceTab } from "./SourceTab";
-import { ThumbnailTab } from "./ThumbnailTab";
+import { PostImageSection } from "./PostImageSection";
 import { LabelVisibilityCard } from "./LabelVisibilityCard";
 import { AIDraftReviewDialog, type AIDraftData } from "./AIDraftReviewSheet";
 
@@ -114,17 +113,14 @@ export type PostInitialData = {
   slug: string;
   bodyKo: string | null;
   bodyEn: string | null;
-  thumbnailUrl: string | null;
   status: PostStatus;
   memo: string | null;
   collectedBy: string | null;
   collectedAt: string | null;
   postTopics: { topicId: string; isVisible: boolean; displayOrder: number }[];
   postTags: { tagId: string; isVisible: boolean; displayOrder: number }[];
+  postImages: PostImageInput[];
   postSources: PostSourceInput[];
-  legacySourceUrl: string | null;
-  legacySourceType: string | null;
-  legacySourceNote: string | null;
   postPlaces: {
     placeId: string;
     placeNameKo?: string;
@@ -162,17 +158,18 @@ const TABS = [
   { id: "taxonomy", label: "분류/태그" },
   { id: "content", label: "본문" },
   { id: "source", label: "출처" },
-  { id: "thumbnail", label: "썸네일" },
+  { id: "images", label: "이미지" },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
 
 const EMPTY_SOURCE: PostSourceInput = {
-  sourceType: "",
-  sourceUrl: "",
+  url: "",
+  sourceType: "PRIMARY",
+  platform: "",
   sourceNote: "",
   sourcePostDate: "",
-  referenceUrl: "",
+  isOriginalLink: false,
 };
 
 // ─── 유틸 ──────────────────────────────────────────────────────────────────────
@@ -228,23 +225,7 @@ export function PostForm({
   }));
 
   // ── 초기 출처 ───────────────────────────────────────────────────────────────
-  const initSources: PostSourceInput[] = (() => {
-    if (initialData?.postSources && initialData.postSources.length > 0) {
-      return initialData.postSources;
-    }
-    if (initialData?.legacySourceUrl) {
-      return [
-        {
-          sourceType: initialData.legacySourceType ?? "",
-          sourceUrl: initialData.legacySourceUrl,
-          sourceNote: initialData.legacySourceNote ?? "",
-          sourcePostDate: "",
-          referenceUrl: "",
-        },
-      ];
-    }
-    return [];
-  })();
+  const initSources: PostSourceInput[] = initialData?.postSources ?? [];
 
   // ── 폼 상태 ─────────────────────────────────────────────────────────────────
   const [titleKo, setTitleKo] = useState(initialData?.titleKo ?? "");
@@ -252,7 +233,7 @@ export function PostForm({
   const [slug, setSlug] = useState(initialData?.slug ?? "");
   const [bodyKo, setBodyKo] = useState(initialData?.bodyKo ?? "");
   const [bodyEn, setBodyEn] = useState(initialData?.bodyEn ?? "");
-  const [thumbnailUrl, setThumbnailUrl] = useState(initialData?.thumbnailUrl ?? "");
+  const [images, setImages] = useState<PostImageInput[]>(initialData?.postImages ?? []);
   const [status, setStatus] = useState<PostStatus>(initialData?.status ?? "DRAFT");
   const [memo, setMemo] = useState(initialData?.memo ?? "");
   const [collectedBy, setCollectedBy] = useState(initialData?.collectedBy ?? "");
@@ -272,7 +253,6 @@ export function PostForm({
   // ── UI 상태 ─────────────────────────────────────────────────────────────────
   const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "ok" | "error">("idle");
   const [slugManual, setSlugManual] = useState(false);
-  const [thumbnailUploading, setThumbnailUploading] = useState(false);
   const [placePickerOpen, setPlacePickerOpen] = useState(false);
   const [detailPlaceId, setDetailPlaceId] = useState<string | null>(null);
   const [isTranslating, setIsTranslating] = useState(false);
@@ -331,37 +311,17 @@ export function PostForm({
     };
   }, [slug, isEdit, postId]);
 
-  // ── 썸네일 업로드 ──────────────────────────────────────────────────────────
-  const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setThumbnailUploading(true);
-    try {
-      const supabase = createClient();
-      const ext = file.name.split(".").pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error } = await supabase.storage
-        .from("post-images")
-        .upload(fileName, file, { upsert: false });
-      if (error) {
-        toast.error(`이미지 업로드 실패: ${error.message}`);
-        return;
-      }
-      const { data } = supabase.storage.from("post-images").getPublicUrl(fileName);
-      setThumbnailUrl(data.publicUrl);
-      toast.success("썸네일이 업로드되었습니다.");
-    } catch {
-      toast.error("이미지 업로드 중 오류가 발생했습니다.");
-    } finally {
-      setThumbnailUploading(false);
-    }
-  };
-
   // ── 출처 핸들러 ─────────────────────────────────────────────────────────────
   const addSource = () => setSources((prev) => [...prev, { ...EMPTY_SOURCE }]);
   const removeSource = (i: number) => setSources((prev) => prev.filter((_, idx) => idx !== i));
-  const updateSource = (i: number, field: keyof PostSourceInput, value: string) =>
-    setSources((prev) => prev.map((s, idx) => (idx === i ? { ...s, [field]: value } : s)));
+  const updateSource = (i: number, patch: Partial<PostSourceInput>) =>
+    setSources((prev) => {
+      // isOriginalLink를 true로 바꾸면 다른 출처는 false로
+      if (patch.isOriginalLink === true) {
+        return prev.map((s, idx) => ({ ...s, isOriginalLink: idx === i }));
+      }
+      return prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s));
+    });
 
   // ── 장소 핸들러 ─────────────────────────────────────────────────────────────
   const addPlace = (place: PlaceForForm) => {
@@ -484,7 +444,7 @@ export function PostForm({
     if (finalStatus === "PUBLISHED") {
       const missing: string[] = [];
       if (postTopics.length === 0) missing.push("토픽 1개 이상");
-      if (!thumbnailUrl.trim()) missing.push("썸네일 이미지");
+      if (!images.some((img) => img.isThumbnail)) missing.push("썸네일 이미지");
       const visibleCount =
         postTopics.filter((t) => t.isVisible).length + postTags.filter((t) => t.isVisible).length;
       if (visibleCount < 1) missing.push("라벨 1개 이상 표시 설정 필요");
@@ -497,12 +457,12 @@ export function PostForm({
       slug: slug.trim(),
       bodyKo: bodyKo.trim(),
       bodyEn: bodyEn.trim(),
-      thumbnailUrl: thumbnailUrl.trim(),
       status: finalStatus,
       memo: memo.trim(),
       collectedBy: collectedBy.trim(),
       collectedAt: collectedAt.trim(),
-      sources: sources.filter((s) => s.sourceUrl || s.sourceNote),
+      images,
+      sources: sources.filter((s) => s.url || s.sourceNote),
       topics: postTopics,
       tags: postTags,
       places: placeEntries.map((e) => {
@@ -863,13 +823,12 @@ export function PostForm({
                       collectedAt={collectedAt} setCollectedAt={setCollectedAt}
                     />
                   )}
-                  {activeTab === "thumbnail" && (
-                    <ThumbnailTab
+                  {activeTab === "images" && (
+                    <PostImageSection
+                      postId={postId}
+                      images={images}
+                      onChange={setImages}
                       sources={sources}
-                      thumbnailUrl={thumbnailUrl}
-                      setThumbnailUrl={setThumbnailUrl}
-                      thumbnailUploading={thumbnailUploading}
-                      handleThumbnailUpload={handleThumbnailUpload}
                     />
                   )}
                 </div>
@@ -897,22 +856,25 @@ export function PostForm({
                     <button
                       type="button"
                       className="text-xs text-muted-foreground hover:text-foreground underline"
-                      onClick={() => setActiveTab("thumbnail")}
+                      onClick={() => setActiveTab("images")}
                     >
                       변경 →
                     </button>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {thumbnailUrl ? (
-                    <div className="relative aspect-[3/2] rounded-lg overflow-hidden border">
-                      <Image src={thumbnailUrl} alt="썸네일" fill className="object-cover" unoptimized />
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-center aspect-[3/2] rounded-lg border bg-muted/50 text-xs text-muted-foreground">
-                      썸네일 미설정
-                    </div>
-                  )}
+                  {(() => {
+                    const thumb = images.find((img) => img.isThumbnail);
+                    return thumb ? (
+                      <div className="relative aspect-[3/2] rounded-lg overflow-hidden border">
+                        <img src={thumb.url} alt="썸네일" className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center aspect-[3/2] rounded-lg border bg-muted/50 text-xs text-muted-foreground">
+                        썸네일 미설정
+                      </div>
+                    );
+                  })()}
                 </CardContent>
               </Card>
 

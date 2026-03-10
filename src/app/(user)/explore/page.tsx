@@ -59,9 +59,9 @@ function PostListItem({ post, tagGroupMap }: { post: ExplorePost; tagGroupMap: T
       className="flex items-center gap-3 py-3 border-b border-border/50 last:border-0"
     >
       <div className="relative size-[88px] shrink-0 rounded-lg overflow-hidden bg-muted">
-        {post.thumbnailUrl ? (
+        {post.postImages[0]?.url ? (
           <Image
-            src={post.thumbnailUrl}
+            src={post.postImages[0].url}
             alt={post.titleEn}
             fill
             unoptimized

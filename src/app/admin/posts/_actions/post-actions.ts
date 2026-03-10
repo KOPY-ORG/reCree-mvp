@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
-import type { PostStatus } from "@prisma/client";
+import type { PostStatus, SourceType } from "@prisma/client";
 
 // ─── 타입 정의 ─────────────────────────────────────────────────────────────────
 
@@ -17,12 +17,22 @@ export type SpotInsightData = {
   tipEn: string;
 };
 
+export type PostImageInput = {
+  id?: string;
+  imageType: "BANNER" | "ORIGINAL";
+  imageSource: "UPLOAD" | "URL" | "AUTO";
+  url: string;
+  isThumbnail: boolean;
+  sortOrder: number;
+};
+
 export type PostSourceInput = {
-  sourceType: string;  // INSTAGRAM|YOUTUBE|TIKTOK|X|REDDIT|BLOG|NEWS|OTHER|""
-  sourceUrl: string;
+  url: string;
+  sourceType: "PRIMARY" | "REFERENCE";
+  platform: string;       // YOUTUBE | X | INSTAGRAM | PINTEREST | BLOG | ARTICLE | OTHER
   sourceNote: string;
   sourcePostDate: string;
-  referenceUrl: string;
+  isOriginalLink: boolean;
 };
 
 export type PostFormData = {
@@ -31,12 +41,13 @@ export type PostFormData = {
   slug: string;
   bodyKo: string;
   bodyEn: string;
-  thumbnailUrl: string;
   status: PostStatus;
   memo: string;
   // 수집 정보
   collectedBy: string;
   collectedAt: string;
+  // 이미지
+  images: PostImageInput[];
   // 복수 출처
   sources: PostSourceInput[];
   topics: { topicId: string; isVisible: boolean; displayOrder: number }[];
@@ -126,7 +137,6 @@ export async function createPost(
         slug: data.slug,
         bodyKo: data.bodyKo || null,
         bodyEn: data.bodyEn || null,
-        thumbnailUrl: data.thumbnailUrl || null,
         status: data.status,
         memo: data.memo || null,
         collectedBy: data.collectedBy || null,
@@ -146,14 +156,26 @@ export async function createPost(
             displayOrder: t.displayOrder,
           })),
         },
+        ...(data.images.length > 0 && {
+          postImages: {
+            create: data.images.map((img) => ({
+              imageType: img.imageType,
+              imageSource: img.imageSource,
+              url: img.url,
+              isThumbnail: img.isThumbnail,
+              sortOrder: img.sortOrder,
+            })),
+          },
+        }),
         ...(data.sources.length > 0 && {
           postSources: {
             create: data.sources.map((s, i) => ({
-              sourceType: s.sourceType || null,
-              sourceUrl: s.sourceUrl || null,
+              url: s.url,
+              sourceType: s.sourceType as SourceType,
+              platform: s.platform || null,
               sourceNote: s.sourceNote || null,
               sourcePostDate: s.sourcePostDate || null,
-              referenceUrl: s.referenceUrl || null,
+              isOriginalLink: s.isOriginalLink,
               sortOrder: i,
             })),
           },
@@ -199,6 +221,7 @@ export async function updatePost(
       await tx.postTag.deleteMany({ where: { postId: id } });
       await tx.postPlace.deleteMany({ where: { postId: id } });
       await tx.postSource.deleteMany({ where: { postId: id } });
+      await tx.postImage.deleteMany({ where: { postId: id } });
 
       await tx.post.update({
         where: { id },
@@ -208,7 +231,6 @@ export async function updatePost(
           slug: data.slug,
           bodyKo: data.bodyKo || null,
           bodyEn: data.bodyEn || null,
-          thumbnailUrl: data.thumbnailUrl || null,
           status: data.status,
           memo: data.memo || null,
           collectedBy: data.collectedBy || null,
@@ -227,14 +249,26 @@ export async function updatePost(
               displayOrder: t.displayOrder,
             })),
           },
+          ...(data.images.length > 0 && {
+            postImages: {
+              create: data.images.map((img) => ({
+                imageType: img.imageType,
+                imageSource: img.imageSource,
+                url: img.url,
+                isThumbnail: img.isThumbnail,
+                sortOrder: img.sortOrder,
+              })),
+            },
+          }),
           ...(data.sources.length > 0 && {
             postSources: {
               create: data.sources.map((s, i) => ({
-                sourceType: s.sourceType || null,
-                sourceUrl: s.sourceUrl || null,
+                url: s.url,
+                sourceType: s.sourceType as SourceType,
+                platform: s.platform || null,
                 sourceNote: s.sourceNote || null,
                 sourcePostDate: s.sourcePostDate || null,
-                referenceUrl: s.referenceUrl || null,
+                isOriginalLink: s.isOriginalLink,
                 sortOrder: i,
               })),
             },
@@ -295,6 +329,7 @@ export async function publishPost(
         postTopics: { select: { isVisible: true } },
         postTags: { select: { isVisible: true } },
         postPlaces: true,
+        postImages: { select: { isThumbnail: true } },
       },
     });
 
@@ -304,7 +339,7 @@ export async function publishPost(
     if (!post.titleKo?.trim()) missing.push("한국어 제목");
     if (!post.titleEn?.trim()) missing.push("영어 제목");
     if (post.postTopics.length === 0) missing.push("토픽 1개 이상");
-    if (!post.thumbnailUrl) missing.push("썸네일 이미지");
+    if (!post.postImages.some((img) => img.isThumbnail)) missing.push("썸네일 이미지");
     const visibleCount =
       post.postTopics.filter((t) => t.isVisible).length +
       post.postTags.filter((t) => t.isVisible).length;
@@ -369,15 +404,27 @@ export async function getPostEditData(id: string) {
             },
           },
         },
+        postImages: {
+          orderBy: { sortOrder: "asc" },
+          select: {
+            id: true,
+            imageType: true,
+            imageSource: true,
+            url: true,
+            isThumbnail: true,
+            sortOrder: true,
+          },
+        },
         postSources: {
           orderBy: { sortOrder: "asc" },
           select: {
             id: true,
+            url: true,
             sourceType: true,
-            sourceUrl: true,
+            platform: true,
             sourceNote: true,
             sourcePostDate: true,
-            referenceUrl: true,
+            isOriginalLink: true,
             sortOrder: true,
           },
         },
@@ -453,23 +500,28 @@ export async function getPostEditData(id: string) {
     slug: post.slug,
     bodyKo: post.bodyKo,
     bodyEn: post.bodyEn,
-    thumbnailUrl: post.thumbnailUrl,
     status: post.status,
     memo: post.memo,
     collectedBy: post.collectedBy,
     collectedAt: post.collectedAt,
     postTopics: post.postTopics,
     postTags: post.postTags,
+    postImages: post.postImages.map((img) => ({
+      id: img.id,
+      imageType: img.imageType as "BANNER" | "ORIGINAL",
+      imageSource: img.imageSource as "UPLOAD" | "URL" | "AUTO",
+      url: img.url,
+      isThumbnail: img.isThumbnail,
+      sortOrder: img.sortOrder,
+    })),
     postSources: post.postSources.map((s) => ({
-      sourceType: s.sourceType ?? "",
-      sourceUrl: s.sourceUrl ?? "",
+      url: s.url,
+      sourceType: s.sourceType as "PRIMARY" | "REFERENCE",
+      platform: s.platform ?? "",
       sourceNote: s.sourceNote ?? "",
       sourcePostDate: s.sourcePostDate ?? "",
-      referenceUrl: s.referenceUrl ?? "",
+      isOriginalLink: s.isOriginalLink,
     })),
-    legacySourceUrl: post.sourceUrl,
-    legacySourceType: post.sourceType,
-    legacySourceNote: post.sourceNote,
     postPlaces: firstPlace
       ? [
           {

@@ -64,7 +64,7 @@ Based on the information below, write an engaging content draft that makes inter
 - Vibe notes: ${Array.isArray(postPlace?.vibe) ? postPlace.vibe.join(", ") : ""}
 - Must-try notes: ${postPlace?.mustTry ?? ""}
 - Tip notes: ${postPlace?.tip ?? ""}
-- Source note: ${post.sourceNote ?? ""}
+- Memo: ${post.memo ?? ""}
 - Existing title (reference): ${post.titleKo ?? ""}
 
 ## Field Guidelines
@@ -231,7 +231,7 @@ Based on the information below, write an engaging content draft that makes inter
 - Vibe notes: ${Array.isArray(postPlace?.vibe) ? postPlace.vibe.join(", ") : ""}
 - Must-try notes: ${postPlace?.mustTry ?? ""}
 - Tip notes: ${postPlace?.tip ?? ""}
-- Source note: ${post.sourceNote ?? ""}
+- Memo: ${post.memo ?? ""}
 - Existing title (reference): ${post.titleKo ?? ""}
 
 ## Field Guidelines

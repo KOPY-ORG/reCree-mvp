@@ -59,7 +59,11 @@ export default async function HomePage() {
           select: {
             slug: true,
             titleEn: true,
-            thumbnailUrl: true,
+            postImages: {
+              where: { isThumbnail: true },
+              select: { url: true },
+              take: 1,
+            },
             postTopics: {
               orderBy: { displayOrder: "asc" },
               select: {
@@ -230,7 +234,7 @@ export default async function HomePage() {
     return {
       slug: b.post.slug,
       titleEn: b.post.titleEn,
-      thumbnailUrl: b.post.thumbnailUrl,
+      thumbnailUrl: b.post.postImages[0]?.url ?? null,
       labels,
     };
   });
@@ -260,9 +264,9 @@ export default async function HomePage() {
           {fallbackPosts.map((post) => (
             <Link key={post.id} href={`/posts/${post.slug}`}>
               <div className="relative aspect-[3/2] rounded-lg overflow-hidden bg-muted">
-                {post.thumbnailUrl ? (
+                {post.postImages[0]?.url ? (
                   <Image
-                    src={post.thumbnailUrl}
+                    src={post.postImages[0].url}
                     alt={post.titleEn}
                     fill
                     unoptimized
