@@ -1,10 +1,13 @@
 import { notFound } from "next/navigation";
 import { MapPin } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { resolveTopicColors, labelBackground, DEFAULT_COLOR, DEFAULT_TEXT, type ResolvedLabel } from "@/lib/post-labels";
 import { MarkdownContent } from "./_components/MarkdownContent";
 import { PostDetailHeader } from "./_components/PostDetailHeader";
 import { BannerCarousel } from "./_components/BannerCarousel";
 import { OriginalSourceCards } from "./_components/OriginalSourceCards";
+import { PostMetaBar } from "./_components/PostMetaBar";
+import { getCurrentUser } from "@/lib/auth";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -16,7 +19,8 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
   const { preview } = await searchParams;
   const isPreview = preview === "1";
 
-  const post = await prisma.post.findUnique({
+  const [post, tagGroupConfigs] = await Promise.all([
+    prisma.post.findUnique({
     where: { slug },
     include: {
       postTopics: {
@@ -28,7 +32,21 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
               id: true,
               nameEn: true,
               colorHex: true,
+              colorHex2: true,
+              gradientDir: true,
+              gradientStop: true,
               textColorHex: true,
+              parent: {
+                select: {
+                  colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true,
+                  parent: {
+                    select: {
+                      colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true,
+                      parent: { select: { colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true } },
+                    },
+                  },
+                },
+              },
             },
           },
         },
@@ -41,7 +59,9 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
             select: {
               id: true,
               name: true,
+              group: true,
               colorHex: true,
+              colorHex2: true,
               textColorHex: true,
             },
           },
@@ -72,13 +92,45 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
         },
       },
     },
-  });
+  }),
+    prisma.tagGroupConfig.findMany({
+      select: { group: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true },
+    }),
+  ]);
 
   if (!post || (!isPreview && post.status !== "PUBLISHED")) notFound();
 
   const bannerImages = post.postImages.filter((img) => img.imageType === "BANNER");
   const originalImages = post.postImages.filter((img) => img.imageType === "ORIGINAL");
   const originalLinkUrl = post.postSources.find((s) => s.isOriginalLink)?.url ?? undefined;
+
+  // 색상 resolve
+  const configMap = new Map(tagGroupConfigs.map((c) => [c.group, c]));
+
+  const resolvedTopics: (ResolvedLabel & { nameEn: string })[] = post.postTopics.map(({ topic }) => ({
+    nameEn: topic.nameEn,
+    text: topic.nameEn,
+    ...resolveTopicColors(topic),
+  }));
+
+  const resolvedTags: ResolvedLabel[] = post.postTags.map(({ tag }) => {
+    const gc = configMap.get(tag.group);
+    return {
+      text: tag.name,
+      colorHex: tag.colorHex ?? gc?.colorHex ?? DEFAULT_COLOR,
+      colorHex2: tag.colorHex ? (tag.colorHex2 ?? null) : (gc?.colorHex2 ?? null),
+      gradientDir: gc?.gradientDir ?? "to bottom",
+      gradientStop: gc?.gradientStop ?? 150,
+      textColorHex: tag.textColorHex ?? gc?.textColorHex ?? DEFAULT_TEXT,
+    };
+  });
+
+  const currentUser = await getCurrentUser();
+  const isSaved = currentUser
+    ? !!(await prisma.save.findUnique({
+        where: { userId_targetType_targetId: { userId: currentUser.id, targetType: "POST", targetId: post.id } },
+      }))
+    : false;
   const spotInsight = post.postPlaces[0] ?? null;
   const insightEn = spotInsight?.insightEn as {
     context?: string;
@@ -108,40 +160,17 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
         </div>
       )}
 
-      {/* 제목 섹션 */}
-      <div className="px-4 pt-4 space-y-2">
-        {/* 토픽/태그 뱃지 */}
-        {(post.postTopics.length > 0 || post.postTags.length > 0) && (
-          <div className="flex flex-wrap gap-1.5">
-            {post.postTopics.map(({ topic }) => (
-              <span
-                key={topic.id}
-                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-                style={
-                  topic.colorHex
-                    ? { backgroundColor: topic.colorHex, color: topic.textColorHex ?? "#FCFCFC" }
-                    : { backgroundColor: "var(--color-muted)", color: "var(--color-muted-foreground)" }
-                }
-              >
-                {topic.nameEn}
-              </span>
-            ))}
-            {post.postTags.map(({ tag }) => (
-              <span
-                key={tag.id}
-                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-                style={
-                  tag.colorHex
-                    ? { backgroundColor: tag.colorHex + "22", color: tag.colorHex }
-                    : { backgroundColor: "var(--color-muted)", color: "var(--color-muted-foreground)" }
-                }
-              >
-                {tag.name}
-              </span>
-            ))}
-          </div>
-        )}
+      {/* 배지 + 공유/스크랩 */}
+      <PostMetaBar
+        topics={resolvedTopics}
+        tags={resolvedTags}
+        isSaved={isSaved}
+        postId={post.id}
+        titleEn={post.titleEn}
+      />
 
+      {/* 제목 */}
+      <div className="px-4 pb-2">
         <h1 className="text-xl font-bold leading-tight">{post.titleEn}</h1>
       </div>
 
