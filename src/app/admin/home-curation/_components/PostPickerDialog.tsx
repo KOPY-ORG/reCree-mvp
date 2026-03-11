@@ -244,8 +244,8 @@ export function PostPickerDialog({
                             key={t.id}
                             className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold leading-none"
                             style={{
-                              backgroundColor: t.colorHex ?? "#888",
-                              color: "#fff",
+                              backgroundColor: t.colorHex ?? "#BABABA",
+                              color: "#FCFCFC",
                             }}
                           >
                             {t.nameEn}

@@ -121,7 +121,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
                   topic.colorHex
                     ? {
                         backgroundColor: topic.colorHex,
-                        color: topic.textColorHex ?? "#fff",
+                        color: topic.textColorHex ?? "#FCFCFC",
                       }
                     : {
                         backgroundColor: "hsl(var(--muted))",

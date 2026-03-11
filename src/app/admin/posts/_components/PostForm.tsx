@@ -267,7 +267,7 @@ export function PostForm({
 
   // ── 파생값 ─────────────────────────────────────────────────────────────────
   const topicEffectiveStyleMap = useMemo(() => {
-    const DEFAULT_COLOR = "#C6FD09";
+    const DEFAULT_COLOR = "#C8FF09";
     const DEFAULT_TEXT = "#000000";
     type EffInfo = { hex: string; hex2: string | null; dir: string; stop: number; textHex: string };
     const effectiveMap = new Map<string, EffInfo>();

@@ -7,7 +7,7 @@ import type { TagItem, TagGroupConfigItem } from "./_components/SortableTagList"
 
 // ─── 색상 상속 상수 ────────────────────────────────────────────────────────────
 
-const DEFAULT_COLOR = "#C6FD09";
+const DEFAULT_COLOR = "#C8FF09";
 const DEFAULT_TEXT = "#000000";
 
 // ─── 트리 유틸 ────────────────────────────────────────────────────────────────
@@ -134,7 +134,7 @@ export default async function CategoriesPage({
     sortOrder: c.sortOrder,
   }));
 
-  const DEFAULT_GROUP_COLOR = { colorHex: "#C6FD09", colorHex2: null as string | null, gradientDir: "to bottom", gradientStop: 150, textColorHex: "#000000" };
+  const DEFAULT_GROUP_COLOR = { colorHex: "#C8FF09", colorHex2: null as string | null, gradientDir: "to bottom", gradientStop: 150, textColorHex: "#000000" };
 
   const totalTopicCount = rawTopics.length;
   const totalTagCount = rawTags.length;

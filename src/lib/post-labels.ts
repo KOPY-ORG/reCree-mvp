@@ -1,6 +1,6 @@
 // 포스트 라벨 색상 헬퍼 — 홈·탐색 등 여러 페이지에서 공유
 
-export const DEFAULT_COLOR = "#C6FD09";
+export const DEFAULT_COLOR = "#C8FF09";
 export const DEFAULT_TEXT = "#000000";
 
 export type ColorNode = {

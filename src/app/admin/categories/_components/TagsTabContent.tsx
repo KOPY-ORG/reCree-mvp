@@ -33,7 +33,7 @@ import {
 // ─── 유틸: effective color 계산 ───────────────────────────────────────────────
 
 const DEFAULT_GROUP_COLOR: Pick<TagGroupConfigItem, "colorHex" | "colorHex2" | "gradientDir" | "gradientStop" | "textColorHex"> = {
-  colorHex: "#C6FD09",
+  colorHex: "#C8FF09",
   colorHex2: null,
   gradientDir: "to bottom",
   gradientStop: 150,

@@ -334,7 +334,7 @@ export function TopicDialog({ open, topic, defaultParentId, allTopics, parentEff
   const [parentId, setParentId] = useState<string | null>(null);
   const [inheritColor, setInheritColor] = useState(true);  // true = 부모 색 상속
   const [isGradient, setIsGradient] = useState(false);     // true = 그라데이션
-  const [colorHex, setColorHex] = useState("#C6FD09");
+  const [colorHex, setColorHex] = useState("#C8FF09");
   const [colorHex2, setColorHex2] = useState("#ffffff");   // 그라데이션 끝 색
   const [gradientDir, setGradientDir] = useState<"to bottom" | "to right">("to bottom");
   const [gradientStop, setGradientStop] = useState(150);
@@ -366,7 +366,7 @@ export function TopicDialog({ open, topic, defaultParentId, allTopics, parentEff
         setParentId(topic.parentId);
         setInheritColor(topic.colorHex === null);
         setIsGradient(topic.colorHex2 !== null);
-        setColorHex(topic.colorHex ?? parentEffectiveColor?.hex ?? "#C6FD09");
+        setColorHex(topic.colorHex ?? parentEffectiveColor?.hex ?? "#C8FF09");
         setColorHex2(topic.colorHex2 ?? parentEffectiveColor?.hex2 ?? "#ffffff");
         setGradientDir((topic.gradientDir as "to bottom" | "to right") ?? "to bottom");
         setGradientStop(topic.gradientStop ?? 150);
@@ -384,7 +384,7 @@ export function TopicDialog({ open, topic, defaultParentId, allTopics, parentEff
         setParentId(defaultParentId ?? null);
         setInheritColor(true);
         setIsGradient(parentEffectiveColor?.hex2 != null);
-        setColorHex(parentEffectiveColor?.hex ?? "#C6FD09");
+        setColorHex(parentEffectiveColor?.hex ?? "#C8FF09");
         setColorHex2(parentEffectiveColor?.hex2 ?? "#ffffff");
         setGradientDir((parentEffectiveColor?.gradientDir as "to bottom" | "to right") ?? "to bottom");
         setGradientStop(parentEffectiveColor?.gradientStop ?? 150);
@@ -438,7 +438,7 @@ export function TopicDialog({ open, topic, defaultParentId, allTopics, parentEff
   );
 
   // 미리보기용 현재 effective 색
-  const previewHex = inheritColor ? (parentEffectiveColor?.hex ?? "#C6FD09") : colorHex;
+  const previewHex = inheritColor ? (parentEffectiveColor?.hex ?? "#C8FF09") : colorHex;
   const previewHex2 = inheritColor
     ? (parentEffectiveColor?.hex2 ?? null)
     : (isGradient ? colorHex2 : null);
@@ -602,7 +602,7 @@ export function TopicDialog({ open, topic, defaultParentId, allTopics, parentEff
                 <span className="text-xs text-muted-foreground">
                   {parentEffectiveColor
                     ? `부모로부터 상속 (${parentEffectiveColor.hex}${parentEffectiveColor.hex2 ? ` → ${parentEffectiveColor.hex2}` : ""})`
-                    : "기본값 (#C6FD09)"}
+                    : "기본값 (#C8FF09)"}
                 </span>
               </div>
             ) : (
