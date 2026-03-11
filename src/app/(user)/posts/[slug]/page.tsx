@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import { MapPin } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { MarkdownContent } from "./_components/MarkdownContent";
 import { PostDetailHeader } from "./_components/PostDetailHeader";
+import { BannerCarousel } from "./_components/BannerCarousel";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -19,7 +19,9 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
     where: { slug },
     include: {
       postTopics: {
-        select: {
+        where: { isVisible: true },
+        orderBy: { displayOrder: "asc" },
+        include: {
           topic: {
             select: {
               id: true,
@@ -31,20 +33,24 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
         },
       },
       postTags: {
-        select: {
+        where: { isVisible: true },
+        orderBy: { displayOrder: "asc" },
+        include: {
           tag: {
             select: {
               id: true,
               name: true,
               colorHex: true,
+              textColorHex: true,
             },
           },
         },
       },
       postImages: {
-        where: { isThumbnail: true },
-        select: { url: true },
-        take: 1,
+        orderBy: { sortOrder: "asc" },
+      },
+      postSources: {
+        orderBy: { sortOrder: "asc" },
       },
       postPlaces: {
         select: {
@@ -69,6 +75,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
 
   if (!post || (!isPreview && post.status !== "PUBLISHED")) notFound();
 
+  const bannerImages = post.postImages.filter((img) => img.imageType === "BANNER");
   const spotInsight = post.postPlaces[0] ?? null;
   const insightEn = spotInsight?.insightEn as {
     context?: string;
@@ -85,20 +92,10 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
         </div>
       )}
 
-      {/* 썸네일 — 헤더(h-12) 높이만큼 위로 올려 풀블리드 */}
-      {post.postImages[0]?.url && (
-        <div className="relative w-full aspect-[3/2] bg-muted -mt-12">
-          <Image
-            src={post.postImages[0].url}
-            alt={post.titleEn}
-            fill
-            className="object-cover"
-            sizes="430px"
-            priority
-            unoptimized
-          />
-          {/* 상단 그라디언트 — 아이콘 가시성 */}
-          <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/40 to-transparent pointer-events-none" />
+      {/* 배너 캐러셀 — 헤더(h-12) 높이만큼 위로 올려 풀블리드 */}
+      {bannerImages.length > 0 && (
+        <div className="-mt-12">
+          <BannerCarousel images={bannerImages} />
         </div>
       )}
 
@@ -113,14 +110,8 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
                 className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
                 style={
                   topic.colorHex
-                    ? {
-                        backgroundColor: topic.colorHex,
-                        color: topic.textColorHex ?? "#FCFCFC",
-                      }
-                    : {
-                        backgroundColor: "hsl(var(--muted))",
-                        color: "hsl(var(--muted-foreground))",
-                      }
+                    ? { backgroundColor: topic.colorHex, color: topic.textColorHex ?? "#FCFCFC" }
+                    : { backgroundColor: "var(--color-muted)", color: "var(--color-muted-foreground)" }
                 }
               >
                 {topic.nameEn}
@@ -132,14 +123,8 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
                 className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
                 style={
                   tag.colorHex
-                    ? {
-                        backgroundColor: tag.colorHex + "22",
-                        color: tag.colorHex,
-                      }
-                    : {
-                        backgroundColor: "hsl(var(--muted))",
-                        color: "hsl(var(--muted-foreground))",
-                      }
+                    ? { backgroundColor: tag.colorHex + "22", color: tag.colorHex }
+                    : { backgroundColor: "var(--color-muted)", color: "var(--color-muted-foreground)" }
                 }
               >
                 {tag.name}
@@ -180,48 +165,35 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
           </div>
 
           <div className="px-4 py-3 space-y-3 text-sm">
-            {/* Context */}
             {insightEn?.context && (
-              <p className="text-foreground/80 leading-relaxed">
-                {insightEn.context}
-              </p>
+              <p className="text-foreground/80 leading-relaxed">{insightEn.context}</p>
             )}
 
-            {/* Vibe */}
             {spotInsight.vibe.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {spotInsight.vibe.map((v, i) => (
-                  <span
-                    key={i}
-                    className="px-2 py-0.5 rounded-full bg-brand/20 text-xs font-medium"
-                  >
+                  <span key={i} className="px-2 py-0.5 rounded-full bg-brand-sub2 text-xs">
                     {v}
                   </span>
                 ))}
               </div>
             )}
 
-            {/* Must-try */}
             {insightEn?.mustTry && (
               <div>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
                   Must Try
                 </p>
-                <p className="text-foreground/80 leading-relaxed">
-                  {insightEn.mustTry}
-                </p>
+                <p className="text-foreground/80 leading-relaxed">{insightEn.mustTry}</p>
               </div>
             )}
 
-            {/* Tip */}
             {insightEn?.tip && (
               <div>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
                   Tip
                 </p>
-                <p className="text-foreground/80 leading-relaxed">
-                  {insightEn.tip}
-                </p>
+                <p className="text-foreground/80 leading-relaxed">{insightEn.tip}</p>
               </div>
             )}
           </div>
