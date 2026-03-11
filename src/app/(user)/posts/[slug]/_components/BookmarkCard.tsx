@@ -64,7 +64,7 @@ export function BookmarkCard({ url, platform }: Props) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex flex-row rounded-xl border border-gray-200 overflow-hidden"
+      className="flex flex-row rounded-xl border border-gray-200 overflow-hidden min-h-20"
     >
       {/* 좌측 썸네일 */}
       {og?.thumbnailUrl && !imgError ? (

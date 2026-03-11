@@ -109,7 +109,9 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
 
   const bannerImages = post.postImages.filter((img) => img.imageType === "BANNER");
   const originalImages = post.postImages.filter((img) => img.imageType === "ORIGINAL");
-  const originalLinkUrl = post.postSources.find((s) => s.isOriginalLink)?.url ?? undefined;
+  const originalLinkUrls = post.postSources
+    .filter((s) => s.isOriginalLink)
+    .map((s) => s.url);
 
   // 색상 resolve
   const configMap = new Map(tagGroupConfigs.map((c) => [c.group, c]));
@@ -160,8 +162,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
           <BannerCarousel images={bannerImages}>
             <OriginalSourceCards
               images={originalImages}
-              originalLinkUrl={originalLinkUrl}
-              navigateOnClick={!!originalLinkUrl}
+              originalLinkUrls={originalLinkUrls}
             />
           </BannerCarousel>
         </div>

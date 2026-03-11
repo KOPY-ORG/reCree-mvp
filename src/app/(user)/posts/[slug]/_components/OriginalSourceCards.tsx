@@ -7,12 +7,14 @@ import { Play, Camera, Link2 } from "lucide-react";
 interface OriginalImage {
   id: string;
   url: string;
+  linkUrl?: string | null;
+  slotIndex?: number | null;
+  isSlotCard?: boolean;
 }
 
 interface Props {
   images: OriginalImage[];
-  originalLinkUrl?: string;
-  navigateOnClick: boolean;
+  originalLinkUrls?: string[];  // fallback (isOriginalLink 순서대로, 슬롯별 매핑)
 }
 
 function getShortDomain(url: string): string {
@@ -67,7 +69,7 @@ function SourceCard({ image, onClick }: { image: OriginalImage; onClick?: () => 
 
   return (
     <div
-      className="relative w-24 aspect-[3/2] rounded-xl shadow-md overflow-hidden shrink-0 cursor-pointer ring-1 ring-white/60"
+      className="relative w-18 aspect-[3/2] rounded-lg shadow-md overflow-hidden shrink-0 cursor-pointer ring-1 ring-white/60"
       onClick={onClick}
     >
       {error ? (
@@ -87,19 +89,27 @@ function SourceCard({ image, onClick }: { image: OriginalImage; onClick?: () => 
   );
 }
 
-export function OriginalSourceCards({ images, originalLinkUrl, navigateOnClick }: Props) {
+export function OriginalSourceCards({ images, originalLinkUrls }: Props) {
   if (images.length === 0) return null;
 
-  const displayed = images.slice(0, 2);
-  const handleClick = navigateOnClick && originalLinkUrl
-    ? () => window.open(originalLinkUrl, "_blank")
-    : undefined;
+  // slotIndex가 있는 경우: 슬롯 카드만 표시
+  const hasSlotData = images.some((img) => img.slotIndex != null);
+  const displayed = hasSlotData
+    ? [
+        images.find((img) => img.slotIndex === 0 && img.isSlotCard),
+        images.find((img) => img.slotIndex === 1 && img.isSlotCard),
+      ].filter((img): img is OriginalImage => img != null)
+    : images;
 
   return (
     <div className="absolute bottom-3 left-3 flex gap-2 z-10">
-      {displayed.map((img) => (
-        <SourceCard key={img.id} image={img} onClick={handleClick} />
-      ))}
+      {displayed.map((img, i) => {
+        const clickUrl = img.linkUrl ?? originalLinkUrls?.[i] ?? null;
+        const handleClick = clickUrl
+          ? () => window.open(clickUrl, "_blank")
+          : undefined;
+        return <SourceCard key={img.id} image={img} onClick={handleClick} />;
+      })}
     </div>
   );
 }

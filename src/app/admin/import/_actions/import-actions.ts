@@ -415,6 +415,14 @@ export async function importSheetRows(rowIds: string[]): Promise<{
       const referenceUrlVal = (r["reference_url"] ?? "").trim() || null;
       const sourcePostDateVal = (r["source_post_date"] ?? "").trim() || null;
 
+      // 콤마로 구분된 URL 분리
+      const srcUrls = srcUrl
+        ? srcUrl.split(",").map((u) => u.trim()).filter(Boolean)
+        : [];
+      const refUrls = referenceUrlVal
+        ? referenceUrlVal.split(",").map((u) => u.trim()).filter(Boolean)
+        : [];
+
       await prisma.$transaction(async (tx) => {
         let placeId: string;
 
@@ -458,27 +466,27 @@ export async function importSheetRows(rowIds: string[]): Promise<{
             collectedBy,
             collectedAt,
             importNote,
-            ...((srcUrl || referenceUrlVal) && {
+            ...((srcUrls.length > 0 || refUrls.length > 0) && {
               postSources: {
                 create: [
-                  ...(srcUrl ? [{
-                    url: srcUrl,
+                  ...srcUrls.map((url, i) => ({
+                    url,
                     sourceType: (mappedSrcType === "REFERENCE" ? "REFERENCE" : "PRIMARY") as "PRIMARY" | "REFERENCE",
-                    platform: detectPlatform(srcUrl),
+                    platform: detectPlatform(url),
                     isOriginalLink: false,
-                    sourceNote: srcNote,
-                    sourcePostDate: sourcePostDateVal,
-                    sortOrder: 0,
-                  }] : []),
-                  ...(referenceUrlVal ? [{
-                    url: referenceUrlVal,
+                    sourceNote: i === 0 ? srcNote : null,
+                    sourcePostDate: i === 0 ? sourcePostDateVal : null,
+                    sortOrder: i,
+                  })),
+                  ...refUrls.map((url, i) => ({
+                    url,
                     sourceType: "REFERENCE" as "REFERENCE",
-                    platform: detectPlatform(referenceUrlVal),
+                    platform: detectPlatform(url),
                     isOriginalLink: false,
                     sourceNote: null,
                     sourcePostDate: null,
-                    sortOrder: srcUrl ? 1 : 0,
-                  }] : []),
+                    sortOrder: srcUrls.length + i,
+                  })),
                 ],
               },
             }),

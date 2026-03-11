@@ -319,13 +319,7 @@ export function PostForm({
   const addSource = () => setSources((prev) => [...prev, { ...EMPTY_SOURCE }]);
   const removeSource = (i: number) => setSources((prev) => prev.filter((_, idx) => idx !== i));
   const updateSource = (i: number, patch: Partial<PostSourceInput>) =>
-    setSources((prev) => {
-      // isOriginalLink를 true로 바꾸면 다른 출처는 false로
-      if (patch.isOriginalLink === true) {
-        return prev.map((s, idx) => ({ ...s, isOriginalLink: idx === i }));
-      }
-      return prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s));
-    });
+    setSources((prev) => prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
 
   // ── 장소 핸들러 ─────────────────────────────────────────────────────────────
   const addPlace = (place: PlaceForForm) => {

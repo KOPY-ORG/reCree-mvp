@@ -22,8 +22,11 @@ export type PostImageInput = {
   imageType: "BANNER" | "ORIGINAL";
   imageSource: "UPLOAD" | "URL" | "AUTO";
   url: string;
+  linkUrl?: string | null;
   isThumbnail: boolean;
   sortOrder: number;
+  slotIndex?: number | null;
+  isSlotCard?: boolean;
 };
 
 export type PostSourceInput = {
@@ -162,8 +165,11 @@ export async function createPost(
               imageType: img.imageType,
               imageSource: img.imageSource,
               url: img.url,
+              linkUrl: img.linkUrl ?? null,
               isThumbnail: img.isThumbnail,
               sortOrder: img.sortOrder,
+              slotIndex: img.slotIndex ?? null,
+              isSlotCard: img.isSlotCard ?? false,
             })),
           },
         }),
@@ -255,8 +261,11 @@ export async function updatePost(
                 imageType: img.imageType,
                 imageSource: img.imageSource,
                 url: img.url,
+                linkUrl: img.linkUrl ?? null,
                 isThumbnail: img.isThumbnail,
                 sortOrder: img.sortOrder,
+                slotIndex: img.slotIndex ?? null,
+                isSlotCard: img.isSlotCard ?? false,
               })),
             },
           }),
@@ -411,8 +420,11 @@ export async function getPostEditData(id: string) {
             imageType: true,
             imageSource: true,
             url: true,
+            linkUrl: true,
             isThumbnail: true,
             sortOrder: true,
+            slotIndex: true,
+            isSlotCard: true,
           },
         },
         postSources: {
@@ -511,8 +523,11 @@ export async function getPostEditData(id: string) {
       imageType: img.imageType as "BANNER" | "ORIGINAL",
       imageSource: img.imageSource as "UPLOAD" | "URL" | "AUTO",
       url: img.url,
+      linkUrl: img.linkUrl ?? null,
       isThumbnail: img.isThumbnail,
       sortOrder: img.sortOrder,
+      slotIndex: img.slotIndex ?? null,
+      isSlotCard: img.isSlotCard,
     })),
     postSources: post.postSources.map((s) => ({
       url: s.url,
