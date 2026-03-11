@@ -12,6 +12,8 @@ import { toast } from "sonner";
 import {
   ArrowLeft,
   Check,
+  Clock,
+  ExternalLink,
   Loader2,
   Eye,
   Languages,
@@ -19,6 +21,8 @@ import {
   Phone,
   Plus,
   Sparkles,
+  Star,
+  Train,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -97,6 +101,12 @@ export type PlaceForForm = {
   longitude: number | null;
   phone: string | null;
   imageUrl: string | null;
+  rating: number | null;
+  status: string;
+  operatingHours: unknown;
+  googleMapsUrl: string | null;
+  naverMapsUrl: string | null;
+  gettingThere: string | null;
 };
 
 export type PlaceEntry = {
@@ -135,6 +145,12 @@ export type PostInitialData = {
     placeLongitude?: number | null;
     placePhone?: string | null;
     placeImageUrl?: string | null;
+    placeRating?: number | null;
+    placeStatus?: string;
+    placeOperatingHours?: unknown;
+    placeGoogleMapsUrl?: string | null;
+    placeNaverMapsUrl?: string | null;
+    placeGettingThere?: string | null;
     context: string | null;
     vibe: string[];
     mustTry: string | null;
@@ -218,6 +234,12 @@ export function PostForm({
       longitude: pp.placeLongitude ?? null,
       phone: pp.placePhone ?? null,
       imageUrl: pp.placeImageUrl ?? null,
+      rating: pp.placeRating ?? null,
+      status: pp.placeStatus ?? "OPEN",
+      operatingHours: pp.placeOperatingHours ?? null,
+      googleMapsUrl: pp.placeGoogleMapsUrl ?? null,
+      naverMapsUrl: pp.placeNaverMapsUrl ?? null,
+      gettingThere: pp.placeGettingThere ?? null,
     },
     contextKo: pp.context ?? "",
     contextEn: (pp.insightEn as { context?: string } | null)?.context ?? "",
@@ -711,67 +733,112 @@ export function PostForm({
                 <div className="px-6 py-4">
                   {activeTab === "place" && (() => {
                     const entry = placeEntries[0] ?? null;
-                    return entry ? (
+                    const place = entry?.place ?? null;
+                    const STATUS_LABEL: Record<string, string> = { OPEN: "영업 중", CLOSED_TEMP: "임시 휴업", CLOSED_PERMANENT: "폐업" };
+                    // 사용자 페이지와 동일하게 naverMapsUrl은 nameKo로 동적 생성
+                    const naverMapsFallback = place?.nameKo
+                      ? `https://map.naver.com/v5/search/${encodeURIComponent(place.nameKo)}`
+                      : null;
+                    return entry && place ? (
                       <div className="space-y-3">
-                        {/* 장소 정보 */}
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="space-y-1.5">
-                            <div className="flex items-baseline gap-2">
-                              <p className="font-semibold text-base">{entry.place.nameKo}</p>
-                              {entry.place.nameEn && (
-                                <p className="text-sm text-muted-foreground">· {entry.place.nameEn}</p>
-                              )}
+                        {/* 이름 + 버튼 */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="space-y-0.5 min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <MapPin className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                              <p className="font-semibold text-sm">{place.nameKo}</p>
+                              {place.nameEn && <p className="text-xs text-muted-foreground">{place.nameEn}</p>}
                             </div>
-                            {entry.place.addressKo && (
-                              <div className="flex items-start gap-1.5 text-sm text-muted-foreground">
-                                <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                                <span>{entry.place.addressKo}</span>
-                              </div>
-                            )}
-                            {entry.place.phone && (
-                              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                                <Phone className="h-3.5 w-3.5 shrink-0" />
-                                <span>{entry.place.phone}</span>
-                              </div>
+                            {place.addressKo && (
+                              <p className="text-xs text-muted-foreground pl-5">{place.addressKo}</p>
                             )}
                           </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setPlacePickerOpen(true)}
-                            >
-                              변경
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="text-muted-foreground hover:text-destructive"
-                              onClick={removePlace}
-                            >
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={() => setPlacePickerOpen(true)}>변경</Button>
+                            <Button type="button" variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive" onClick={removePlace}>
                               <X className="h-4 w-4" />
                             </Button>
                           </div>
                         </div>
 
-                        {/* 지도 미리보기 */}
-                        {entry.place.latitude && entry.place.longitude ? (
+                        {/* 지도 */}
+                        {place.latitude && place.longitude ? (
                           <div className="overflow-hidden rounded-lg border">
-                            <MapPreview
-                              lat={entry.place.latitude}
-                              lng={entry.place.longitude}
-                              zoom={15}
-                              height={260}
-                            />
+                            <MapPreview lat={place.latitude} lng={place.longitude} zoom={15} height={220} />
                           </div>
                         ) : (
-                          <div className="flex items-center justify-center h-40 rounded-lg border bg-muted/50 text-sm text-muted-foreground">
-                            지도 정보 없음
-                          </div>
+                          <div className="flex items-center justify-center h-36 rounded-lg border bg-muted/50 text-sm text-muted-foreground">지도 정보 없음</div>
                         )}
 
+                        {/* 지도 링크 버튼 */}
+                        <div className="grid grid-cols-2 gap-2">
+                          {place.googleMapsUrl ? (
+                            <a href={place.googleMapsUrl} target="_blank" rel="noopener noreferrer"
+                              className="flex items-center justify-center gap-1.5 h-9 rounded-md border text-xs font-medium hover:bg-muted/50 transition-colors">
+                              <ExternalLink className="h-3.5 w-3.5" />Google Maps
+                            </a>
+                          ) : <div />}
+                          {(place.naverMapsUrl ?? naverMapsFallback) && (
+                            <a href={(place.naverMapsUrl ?? naverMapsFallback)!} target="_blank" rel="noopener noreferrer"
+                              className="flex items-center justify-center gap-1.5 h-9 rounded-md border text-xs font-medium hover:bg-muted/50 transition-colors">
+                              <ExternalLink className="h-3.5 w-3.5" />Naver Maps
+                            </a>
+                          )}
+                        </div>
+
+                        {/* 상세 정보 */}
+                        <div className="rounded-lg border bg-muted/20 p-3 space-y-2.5 text-xs">
+                          {/* 상태 + 평점 */}
+                          <div className="flex items-center gap-3">
+                            {place.status && (
+                              <span className={place.status === "OPEN" ? "text-green-600 font-medium" : "text-muted-foreground"}>
+                                {STATUS_LABEL[place.status] ?? place.status}
+                              </span>
+                            )}
+                            {place.rating != null && (
+                              <div className="flex items-center gap-0.5 text-muted-foreground">
+                                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                                <span>{place.rating.toFixed(1)}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* 영업시간 */}
+                          {Array.isArray(place.operatingHours) && (place.operatingHours as string[]).length > 0 && (
+                            <div className="flex gap-1.5">
+                              <Clock className="h-3 w-3 shrink-0 mt-0.5 text-muted-foreground" />
+                              <ul className="space-y-0.5">
+                                {(place.operatingHours as string[]).map((line, i) => (
+                                  <li key={i} className="text-muted-foreground">{line}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* 전화번호 */}
+                          {place.phone && (
+                            <div className="flex items-center gap-1.5 text-muted-foreground">
+                              <Phone className="h-3 w-3 shrink-0" />
+                              <span>{place.phone}</span>
+                            </div>
+                          )}
+
+                          {/* Getting there */}
+                          {place.gettingThere && (
+                            <div className="flex gap-1.5">
+                              <Train className="h-3 w-3 shrink-0 mt-0.5 text-muted-foreground" />
+                              <p className="text-muted-foreground">{place.gettingThere}</p>
+                            </div>
+                          )}
+
+                          {/* 편집 링크 */}
+                          <div className="pt-0.5 border-t border-border">
+                            <a href={`/admin/places/${place.id}/edit`} target="_blank" rel="noopener noreferrer"
+                              className="flex items-center gap-1 text-muted-foreground hover:text-foreground hover:underline">
+                              <ExternalLink className="h-3 w-3" />장소 편집
+                            </a>
+                          </div>
+                        </div>
                       </div>
                     ) : (
                       <button
@@ -1015,11 +1082,6 @@ export function PostForm({
         open={placePickerOpen}
         onOpenChange={setPlacePickerOpen}
         onSelect={addPlace}
-      />
-      <PlaceDetailSheet
-        placeId={detailPlaceId}
-        open={!!detailPlaceId}
-        onOpenChange={(open) => { if (!open) setDetailPlaceId(null); }}
       />
       <AIDraftReviewDialog
         open={reviewDialogOpen}
