@@ -9,6 +9,17 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-noto-sans-kr), var(--font-inter);
   --color-gray-900: var(--palette-gray-900);
+
+  /* ── Typography Scale ───────────────── */
+  /* base: 16px (html 100%) */
+  --text-2xs:    0.6875rem;  /* 11px — 최소 보조 텍스트 */
+  --text-xs:     0.75rem;    /* 12px — 캡션, 메타데이터 */
+  --text-sm:     0.875rem;   /* 14px — 배지, 레이블, 보조 본문 ← 최소 기준 */
+  --text-base:   1rem;       /* 16px — 기본 본문 */
+  --text-lg:     1.125rem;   /* 18px — 섹션 타이틀 */
+  --text-xl:     1.25rem;    /* 20px — 페이지 타이틀 */
+  --text-2xl:    1.5rem;     /* 24px — 디스플레이 */
+
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
   --color-brand-sub: var(--brand-sub);

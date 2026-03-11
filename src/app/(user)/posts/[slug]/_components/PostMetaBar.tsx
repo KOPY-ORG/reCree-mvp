@@ -76,7 +76,7 @@ export function PostMetaBar({ topics, tags, isSaved: initialSaved, postId }: Pro
         {displayedTopics.map((topic) => (
           <span
             key={topic.nameEn}
-            className="px-3 py-1 rounded-full text-sm font-semibold whitespace-nowrap shrink-0"
+            className="px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0"
             style={{ background: labelBackground(topic), color: topic.textColorHex }}
           >
             {topic.nameEn}
@@ -85,7 +85,7 @@ export function PostMetaBar({ topics, tags, isSaved: initialSaved, postId }: Pro
         {displayedTags.map((tag) => (
           <span
             key={tag.text}
-            className="px-3 py-1 rounded-full text-sm font-semibold whitespace-nowrap shrink-0"
+            className="px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0"
             style={{ background: labelBackground(tag), color: tag.textColorHex }}
           >
             {tag.text}
@@ -96,11 +96,11 @@ export function PostMetaBar({ topics, tags, isSaved: initialSaved, postId }: Pro
       {/* 액션 버튼 */}
       <div className="flex items-center gap-3 shrink-0">
         <button type="button" onClick={handleShare} className="text-muted-foreground hover:text-foreground transition-colors">
-          <Share2 className="h-7 w-7" strokeWidth={1.5} />
+          <Share2 className="h-5 w-5" strokeWidth={1.5} />
         </button>
         <button type="button" onClick={handleSave} className="transition-colors">
           <Bookmark
-            className={`h-7 w-7 ${saved ? "" : "text-muted-foreground hover:text-foreground"}`}
+            className={`h-5 w-5 ${saved ? "" : "text-muted-foreground hover:text-foreground"}`}
             strokeWidth={1.5}
             style={saved ? { fill: "#C8FF09", stroke: "#C8FF09" } : undefined}
           />

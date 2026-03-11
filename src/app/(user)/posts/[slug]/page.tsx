@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { Sparkles, Waves, Flame, MapPin, Lightbulb } from "lucide-react";
+import { LocationCard } from "./_components/LocationCard";
 import { prisma } from "@/lib/prisma";
 import { resolveTopicColors, labelBackground, DEFAULT_COLOR, DEFAULT_TEXT, type ResolvedLabel } from "@/lib/post-labels";
 import { MarkdownContent } from "./_components/MarkdownContent";
@@ -86,6 +87,8 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
               nameEn: true,
               nameKo: true,
               addressEn: true,
+              latitude: true,
+              longitude: true,
               googleMapsUrl: true,
             },
           },
@@ -171,7 +174,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
 
       {/* 제목 */}
       <div className="px-4 pb-2 space-y-1.5">
-        <h1 className="text-2xl font-bold leading-tight">
+        <h1 className="text-lg font-bold leading-tight">
           {spotInsight?.place.nameEn ?? spotInsight?.place.nameKo ?? post.titleEn}
         </h1>
         {spotInsight && (
@@ -183,19 +186,8 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
       {spotInsight && (
         <div className="mx-4 mt-2 rounded-2xl border border-secondary bg-white overflow-hidden">
           {/* 헤더 */}
-          <div className="flex items-center justify-between px-4 pt-4 pb-3">
+          <div className="px-4 pt-4 pb-3">
             <p className="text-sm font-bold">Spot Insight</p>
-            {spotInsight.place.googleMapsUrl && (
-              <a
-                href={spotInsight.place.googleMapsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <MapPin className="h-3 w-3" />
-                Map
-              </a>
-            )}
           </div>
 
           <div className="px-4 pb-4 space-y-4">
@@ -250,6 +242,18 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
             )}
           </div>
         </div>
+      )}
+
+      {/* Location 카드 */}
+      {spotInsight && (
+        <LocationCard
+          nameEn={spotInsight.place.nameEn}
+          nameKo={spotInsight.place.nameKo}
+          addressEn={spotInsight.place.addressEn}
+          latitude={spotInsight.place.latitude ? Number(spotInsight.place.latitude) : null}
+          longitude={spotInsight.place.longitude ? Number(spotInsight.place.longitude) : null}
+          googleMapsUrl={spotInsight.place.googleMapsUrl}
+        />
       )}
 
       {/* 본문 */}
