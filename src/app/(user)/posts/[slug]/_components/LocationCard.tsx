@@ -26,7 +26,7 @@ export function LocationCard({ nameEn, nameKo, addressEn, latitude, longitude, g
     <div className="mx-4 mt-3 rounded-2xl border border-secondary bg-white overflow-hidden">
       {/* 장소 정보 헤더 */}
       <div className="px-4 pt-4 pb-3 flex items-start gap-2.5">
-        <MapPin className="h-5 w-5 shrink-0 mt-0.5 text-brand" strokeWidth={2} />
+        <MapPin className="h-5 w-5 shrink-0 mt-0.5 text-brand drop-shadow-[0_1px_1px_rgba(0,0,0,0.08)]" strokeWidth={2} />
         <div>
           <p className="text-sm font-bold text-foreground">{displayName}</p>
           {addressEn && (

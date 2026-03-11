@@ -134,3 +134,62 @@
 
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ── Post Body Markdown ── */
+.post-body .wmde-markdown {
+  font-family: var(--font-sans) !important;
+  font-size: 0.9375rem !important; /* 15px */
+  line-height: 1.8 !important;
+  color: var(--palette-gray-900) !important;
+  background: transparent !important;
+}
+.post-body .wmde-markdown p {
+  margin-bottom: 1.1rem !important;
+}
+.post-body .wmde-markdown p:last-child {
+  margin-bottom: 0 !important;
+}
+.post-body .wmde-markdown h1,
+.post-body .wmde-markdown h2,
+.post-body .wmde-markdown h3 {
+  font-family: var(--font-sans) !important;
+  font-weight: 700 !important;
+  color: var(--foreground) !important;
+  margin-top: 1.75rem !important;
+  margin-bottom: 0.5rem !important;
+  line-height: 1.4 !important;
+}
+.post-body .wmde-markdown h2 { font-size: 1.0625rem !important; } /* 17px */
+.post-body .wmde-markdown h3 { font-size: 0.9375rem !important; } /* 15px */
+.post-body .wmde-markdown strong {
+  font-weight: 700 !important;
+  color: var(--foreground) !important;
+}
+.post-body .wmde-markdown ul,
+.post-body .wmde-markdown ol {
+  padding-left: 1.25rem !important;
+  margin-bottom: 1rem !important;
+}
+.post-body .wmde-markdown li {
+  margin-bottom: 0.35rem !important;
+  line-height: 1.7 !important;
+}
+.post-body .wmde-markdown blockquote {
+  border-left: 3px solid var(--palette-brand) !important;
+  padding: 0.5rem 0.875rem !important;
+  margin: 1.25rem 0 !important;
+  background: var(--palette-gray-100) !important;
+  border-radius: 0 0.5rem 0.5rem 0 !important;
+  color: var(--palette-gray-900) !important;
+}
+.post-body .wmde-markdown hr {
+  border-color: var(--palette-gray-100) !important;
+  margin: 1.5rem 0 !important;
+}
+.post-body .wmde-markdown code {
+  font-size: 0.8125rem !important;
+  background: var(--palette-gray-100) !important;
+  border-radius: 0.25rem !important;
+  padding: 0.1em 0.35em !important;
+  color: var(--palette-gray-900) !important;
+}

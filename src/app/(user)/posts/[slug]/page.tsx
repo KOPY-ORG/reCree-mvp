@@ -174,7 +174,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
 
       {/* 제목 */}
       <div className="px-4 pb-2 space-y-1.5">
-        <h1 className="text-lg font-bold leading-tight">
+        <h1 className="text-xl font-bold leading-tight">
           {spotInsight?.place.nameEn ?? spotInsight?.place.nameKo ?? post.titleEn}
         </h1>
         {spotInsight && (
@@ -184,19 +184,19 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
 
       {/* Spot Insight */}
       {spotInsight && (
-        <div className="mx-4 mt-2 rounded-2xl border border-secondary bg-white overflow-hidden">
+        <div className="mx-4 mt-3 rounded-2xl border border-secondary bg-white overflow-hidden">
           {/* 헤더 */}
           <div className="px-4 pt-4 pb-3">
             <p className="text-sm font-bold">Spot Insight</p>
           </div>
 
-          <div className="px-4 pb-4 space-y-4">
+          <div className="px-4 pb-4 space-y-5">
             {/* Context */}
             {insightEn?.context && (
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <div className="flex items-center gap-1.5">
-                  <Sparkles className="h-4 w-4 shrink-0 text-brand" />
-                  <p className="text-sm font-semibold text-gray-900">Context</p>
+                  <Sparkles className="h-4 w-4 shrink-0 text-brand drop-shadow-[0_1px_1px_rgba(0,0,0,0.08)]" />
+                  <p className="text-sm font-bold text-foreground">Context</p>
                 </div>
                 <p className="text-sm text-gray-900 leading-relaxed pl-5">{insightEn.context}</p>
               </div>
@@ -204,10 +204,10 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
 
             {/* Vibe */}
             {spotInsight.vibe.length > 0 && (
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <div className="flex items-center gap-1.5">
-                  <Waves className="h-4 w-4 shrink-0" style={{ color: "#FFC60C" }} />
-                  <p className="text-sm font-semibold text-gray-900">Vibe</p>
+                  <Waves className="h-4 w-4 shrink-0 drop-shadow-[0_1px_1px_rgba(0,0,0,0.08)]" style={{ color: "#FFC60C" }} />
+                  <p className="text-sm font-bold text-foreground">Vibe</p>
                 </div>
                 <div className="flex flex-wrap gap-1.5 pl-5">
                   {spotInsight.vibe.map((v, i) => (
@@ -221,10 +221,10 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
 
             {/* Must-try */}
             {insightEn?.mustTry && (
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <div className="flex items-center gap-1.5">
-                  <Flame className="h-4 w-4 shrink-0" style={{ color: "#F46022" }} />
-                  <p className="text-sm font-semibold text-gray-900">Must-try</p>
+                  <Flame className="h-4 w-4 shrink-0 drop-shadow-[0_1px_1px_rgba(0,0,0,0.08)]" style={{ color: "#F46022" }} />
+                  <p className="text-sm font-bold text-foreground">Must-try</p>
                 </div>
                 <p className="text-sm text-gray-900 leading-relaxed pl-5">{insightEn.mustTry}</p>
               </div>
@@ -232,10 +232,10 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
 
             {/* Tip */}
             {insightEn?.tip && (
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <div className="flex items-center gap-1.5">
-                  <Lightbulb className="h-4 w-4 shrink-0" style={{ color: "#36D8FC" }} />
-                  <p className="text-sm font-semibold text-gray-900">Tip</p>
+                  <Lightbulb className="h-4 w-4 shrink-0 drop-shadow-[0_1px_1px_rgba(0,0,0,0.08)]" style={{ color: "#36D8FC" }} />
+                  <p className="text-sm font-bold text-foreground">Tip</p>
                 </div>
                 <p className="text-sm text-gray-900 leading-relaxed pl-5">{insightEn.tip}</p>
               </div>
@@ -258,8 +258,14 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
 
       {/* 본문 */}
       {post.bodyEn && (
-        <div className="px-4 mt-6">
-          <MarkdownContent source={post.bodyEn} />
+        <div className="mx-4 mt-3 rounded-2xl border border-secondary bg-white overflow-hidden">
+          <div className="px-4 pt-4 pb-3">
+            <p className="text-sm font-bold">Story</p>
+            <p className="text-xs text-muted-foreground mt-0.5">The full story behind this spot</p>
+          </div>
+          <div className="px-4 pb-4">
+            <MarkdownContent source={post.bodyEn} />
+          </div>
         </div>
       )}
 
