@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { MarkdownContent } from "./_components/MarkdownContent";
 import { PostDetailHeader } from "./_components/PostDetailHeader";
 import { BannerCarousel } from "./_components/BannerCarousel";
+import { OriginalSourceCards } from "./_components/OriginalSourceCards";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -76,6 +77,8 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
   if (!post || (!isPreview && post.status !== "PUBLISHED")) notFound();
 
   const bannerImages = post.postImages.filter((img) => img.imageType === "BANNER");
+  const originalImages = post.postImages.filter((img) => img.imageType === "ORIGINAL");
+  const originalLinkUrl = post.postSources.find((s) => s.isOriginalLink)?.url ?? undefined;
   const spotInsight = post.postPlaces[0] ?? null;
   const insightEn = spotInsight?.insightEn as {
     context?: string;
@@ -95,7 +98,13 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
       {/* 배너 캐러셀 — 헤더(h-12) 높이만큼 위로 올려 풀블리드 */}
       {bannerImages.length > 0 && (
         <div className="-mt-12">
-          <BannerCarousel images={bannerImages} />
+          <BannerCarousel images={bannerImages}>
+            <OriginalSourceCards
+              images={originalImages}
+              originalLinkUrl={originalLinkUrl}
+              navigateOnClick={!!originalLinkUrl}
+            />
+          </BannerCarousel>
         </div>
       )}
 
