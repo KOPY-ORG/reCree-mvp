@@ -1,6 +1,7 @@
 "use client";
 
-import { MapPin, ExternalLink } from "lucide-react";
+import { useState } from "react";
+import { MapPin, ExternalLink, ChevronDown, ChevronUp, Clock, Phone, Train } from "lucide-react";
 
 interface Props {
   nameEn: string | null;
@@ -9,9 +10,12 @@ interface Props {
   latitude: number | null;
   longitude: number | null;
   googleMapsUrl: string | null;
+  phone: string | null;
+  operatingHours: string[] | null;
+  gettingThere: string | null;
 }
 
-export function LocationCard({ nameEn, nameKo, addressEn, latitude, longitude, googleMapsUrl }: Props) {
+export function LocationCard({ nameEn, nameKo, addressEn, latitude, longitude, googleMapsUrl, phone, operatingHours, gettingThere }: Props) {
   const displayName = nameEn ?? nameKo;
 
   const embedUrl = latitude && longitude
@@ -21,6 +25,9 @@ export function LocationCard({ nameEn, nameKo, addressEn, latitude, longitude, g
   const naverMapsUrl = nameKo
     ? `https://map.naver.com/v5/search/${encodeURIComponent(nameKo)}`
     : null;
+
+  const hasExtra = !!(phone || operatingHours?.length || gettingThere);
+  const [open, setOpen] = useState(false);
 
   return (
     <div className="mx-4 mt-3 rounded-2xl border border-secondary bg-white overflow-hidden">
@@ -72,6 +79,45 @@ export function LocationCard({ nameEn, nameKo, addressEn, latitude, longitude, g
               <ExternalLink className="h-4 w-4" strokeWidth={1.5} />
               Naver Maps
             </a>
+          )}
+        </div>
+      )}
+
+      {/* More info 토글 버튼 */}
+      {hasExtra && (
+        <button
+          onClick={() => setOpen((prev) => !prev)}
+          className="w-full flex items-center justify-center gap-1 py-2.5 border-t border-secondary text-xs text-muted-foreground"
+        >
+          More info
+          {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+        </button>
+      )}
+
+      {/* 펼쳐진 상세 정보 */}
+      {open && (
+        <div className="px-4 pb-4 space-y-4">
+          {operatingHours && operatingHours.length > 0 && (
+            <div className="flex gap-2">
+              <Clock className="h-4 w-4 shrink-0 mt-0.5 text-muted-foreground" strokeWidth={1.5} />
+              <ul className="space-y-1.5">
+                {operatingHours.map((line, i) => (
+                  <li key={i} className="text-xs text-gray-900">{line}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {phone && (
+            <div className="flex items-center gap-2">
+              <Phone className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+              <a href={`tel:${phone}`} className="text-xs text-gray-900 hover:underline">{phone}</a>
+            </div>
+          )}
+          {gettingThere && (
+            <div className="flex gap-2">
+              <Train className="h-4 w-4 shrink-0 mt-0.5 text-muted-foreground" strokeWidth={1.5} />
+              <p className="text-xs text-gray-900">{gettingThere}</p>
+            </div>
           )}
         </div>
       )}

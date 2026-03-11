@@ -90,6 +90,9 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
               latitude: true,
               longitude: true,
               googleMapsUrl: true,
+              phone: true,
+              operatingHours: true,
+              gettingThere: true,
             },
           },
         },
@@ -253,6 +256,9 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
           latitude={spotInsight.place.latitude ? Number(spotInsight.place.latitude) : null}
           longitude={spotInsight.place.longitude ? Number(spotInsight.place.longitude) : null}
           googleMapsUrl={spotInsight.place.googleMapsUrl}
+          phone={spotInsight.place.phone ?? null}
+          operatingHours={(spotInsight.place.operatingHours as string[] | null) ?? null}
+          gettingThere={spotInsight.place.gettingThere ?? null}
         />
       )}
 
