@@ -41,6 +41,11 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
           },
         },
       },
+      postImages: {
+        where: { isThumbnail: true },
+        select: { url: true },
+        take: 1,
+      },
       postPlaces: {
         select: {
           context: true,
@@ -89,10 +94,10 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
       </div>
 
       {/* 썸네일 */}
-      {post.thumbnailUrl && (
+      {post.postImages[0]?.url && (
         <div className="relative w-full aspect-[16/9] bg-muted">
           <Image
-            src={post.thumbnailUrl}
+            src={post.postImages[0].url}
             alt={post.titleEn}
             fill
             className="object-cover"

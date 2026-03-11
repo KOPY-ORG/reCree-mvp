@@ -143,7 +143,7 @@ export function LabelVisibilityCard({
   if (totalCount === 0) return null;
 
   return (
-    <Card className="gap-3 py-4">
+    <Card className="gap-3 py-4 border-0">
       <CardHeader>
         <CardTitle className="text-sm font-semibold">라벨 표시 설정</CardTitle>
       </CardHeader>

@@ -50,7 +50,7 @@ export type BannerRow = {
   post: {
     slug: string;
     titleEn: string;
-    thumbnailUrl: string | null;
+    thumbnailUrl: string | null; // postImages[0]?.url ?? null로 매핑됨
   };
   postTopics: {
     topicId: string;

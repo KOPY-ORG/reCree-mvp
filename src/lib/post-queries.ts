@@ -14,7 +14,11 @@ export async function getPostsWithLabels(
       id: true,
       slug: true,
       titleEn: true,
-      thumbnailUrl: true,
+      postImages: {
+        where: { isThumbnail: true },
+        select: { url: true },
+        take: 1,
+      },
       postTopics: {
         where: { isVisible: true },
         orderBy: { displayOrder: "asc" },

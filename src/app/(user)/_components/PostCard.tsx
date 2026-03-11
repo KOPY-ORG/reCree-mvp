@@ -71,9 +71,9 @@ export function PostCard({
       className="snap-start shrink-0 w-[160px] md:w-[200px]"
     >
       <div className="relative aspect-[3/2] rounded-lg overflow-hidden bg-muted">
-        {post.thumbnailUrl ? (
+        {post.postImages[0]?.url ? (
           <Image
-            src={post.thumbnailUrl}
+            src={post.postImages[0].url}
             alt={post.titleEn}
             fill
             unoptimized

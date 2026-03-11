@@ -28,7 +28,11 @@ export default async function HomeCurationPage({
             select: {
               slug: true,
               titleEn: true,
-              thumbnailUrl: true,
+              postImages: {
+                where: { isThumbnail: true },
+                select: { url: true },
+                take: 1,
+              },
               postTopics: {
                 select: {
                   topicId: true,
@@ -85,7 +89,11 @@ export default async function HomeCurationPage({
           id: true,
           titleEn: true,
           titleKo: true,
-          thumbnailUrl: true,
+          postImages: {
+            where: { isThumbnail: true },
+            select: { url: true },
+            take: 1,
+          },
           postTopics: {
             where: { isVisible: true },
             orderBy: { displayOrder: "asc" },
@@ -127,7 +135,11 @@ export default async function HomeCurationPage({
     order: b.order,
     isActive: b.isActive,
     labelOverrides: b.labelOverrides as BannerRow["labelOverrides"],
-    post: b.post,
+    post: {
+      slug: b.post.slug,
+      titleEn: b.post.titleEn,
+      thumbnailUrl: b.post.postImages[0]?.url ?? null,
+    },
     postTopics: b.post.postTopics.map((pt) => {
       const p = pt.topic.parent;
       return {
@@ -155,7 +167,7 @@ export default async function HomeCurationPage({
     id: p.id,
     titleEn: p.titleEn,
     titleKo: p.titleKo,
-    thumbnailUrl: p.thumbnailUrl,
+    thumbnailUrl: p.postImages[0]?.url ?? null,
     topicLabels: p.postTopics.map(({ topic }) => ({
       id: topic.id,
       nameEn: topic.nameEn,

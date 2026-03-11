@@ -16,6 +16,11 @@ export default async function PreviewPostPage({ params }: Props) {
     include: {
       postTopics: { include: { topic: { select: { nameEn: true, nameKo: true, colorHex: true, textColorHex: true } } } },
       postTags: { include: { tag: { select: { nameKo: true, colorHex: true } } } },
+      postImages: {
+        where: { isThumbnail: true },
+        select: { url: true },
+        take: 1,
+      },
       postPlaces: {
         include: {
           place: {
@@ -46,10 +51,10 @@ export default async function PreviewPostPage({ params }: Props) {
 
       <div className="mx-auto max-w-2xl px-4 py-10 space-y-8">
         {/* 썸네일 */}
-        {post.thumbnailUrl && (
+        {post.postImages[0]?.url && (
           <div className="relative aspect-video w-full overflow-hidden rounded-xl">
             <Image
-              src={post.thumbnailUrl}
+              src={post.postImages[0].url}
               alt={post.titleKo}
               fill
               unoptimized

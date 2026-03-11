@@ -4,6 +4,25 @@ import Papa from "papaparse";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
+function detectPlatform(url: string): string | null {
+  try {
+    const hostname = new URL(url).hostname.replace("www.", "");
+    if (hostname.includes("youtube.com") || hostname.includes("youtu.be")) return "YOUTUBE";
+    if (hostname.includes("twitter.com") || hostname.includes("x.com")) return "X";
+    if (hostname.includes("instagram.com")) return "INSTAGRAM";
+    if (hostname.includes("pinterest.com") || hostname.includes("pin.it")) return "PINTEREST";
+    if (
+      hostname.includes("naver.com") ||
+      hostname.includes("tistory.com") ||
+      hostname.includes("velog.io") ||
+      hostname.includes("brunch.co.kr")
+    ) return "BLOG";
+    return "OTHER";
+  } catch {
+    return null;
+  }
+}
+
 // ─── 타입 ──────────────────────────────────────────────────────────────────────
 
 export type SheetRow = {
@@ -81,19 +100,12 @@ async function fetchSheetCsv(): Promise<RawRow[]> {
 // ─── 이미 임포트된 Post sourceUrl 집합 조회 ──────────────────────────────────────
 
 async function getImportedSourceUrls(): Promise<Set<string>> {
-  const [posts, postSources] = await Promise.all([
-    prisma.post.findMany({
-      where: { sourceUrl: { not: null } },
-      select: { sourceUrl: true },
-    }),
-    prisma.postSource.findMany({
-      where: { sourceUrl: { not: null } },
-      select: { sourceUrl: true },
-    }),
-  ]);
+  const postSources = await prisma.postSource.findMany({
+    where: { url: { not: "" } },
+    select: { url: true },
+  });
   const urls = new Set<string>();
-  posts.forEach((p) => { if (p.sourceUrl) urls.add(p.sourceUrl); });
-  postSources.forEach((p) => { if (p.sourceUrl) urls.add(p.sourceUrl); });
+  postSources.forEach((p) => { if (p.url) urls.add(p.url); });
   return urls;
 }
 
@@ -443,22 +455,31 @@ export async function importSheetRows(rowIds: string[]): Promise<{
             bodyKo: storyVal,
             memo: memoVal,
             status: "DRAFT",
-            sourceUrl: srcUrl || googleMapsLink || null,
-            sourceType: mappedSrcType,
-            sourceNote: srcNote,
             collectedBy,
             collectedAt,
             importNote,
-            ...(srcUrl && {
+            ...((srcUrl || referenceUrlVal) && {
               postSources: {
-                create: [{
-                  sourceType: mappedSrcType,
-                  sourceUrl: srcUrl,
-                  sourceNote: srcNote,
-                  referenceUrl: referenceUrlVal,
-                  sourcePostDate: sourcePostDateVal,
-                  sortOrder: 0,
-                }],
+                create: [
+                  ...(srcUrl ? [{
+                    url: srcUrl,
+                    sourceType: (mappedSrcType === "REFERENCE" ? "REFERENCE" : "PRIMARY") as "PRIMARY" | "REFERENCE",
+                    platform: detectPlatform(srcUrl),
+                    isOriginalLink: false,
+                    sourceNote: srcNote,
+                    sourcePostDate: sourcePostDateVal,
+                    sortOrder: 0,
+                  }] : []),
+                  ...(referenceUrlVal ? [{
+                    url: referenceUrlVal,
+                    sourceType: "REFERENCE" as "REFERENCE",
+                    platform: detectPlatform(referenceUrlVal),
+                    isOriginalLink: false,
+                    sourceNote: null,
+                    sourcePostDate: null,
+                    sortOrder: srcUrl ? 1 : 0,
+                  }] : []),
+                ],
               },
             }),
           },

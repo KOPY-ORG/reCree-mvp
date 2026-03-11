@@ -27,6 +27,7 @@ export default async function EditPlacePage({ params }: Props) {
       kakaoMapsUrl: true,
       phone: true,
       operatingHours: true,
+      gettingThere: true,
       status: true,
       isVerified: true,
     },
@@ -41,6 +42,7 @@ export default async function EditPlacePage({ params }: Props) {
       initialData={{
         ...place,
         operatingHours: (place.operatingHours as string[] | null) ?? null,
+        gettingThere: place.gettingThere ?? null,
       }}
     />
   );

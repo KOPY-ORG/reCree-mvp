@@ -38,6 +38,21 @@ enum ReCreeshotStatus {
   DELETED
 }
 
+enum ImageType {
+  BANNER    // 장소 사진 (캐러셀, 최대 5장)
+  ORIGINAL  // 연예인 원본 장면/사진 (배너 좌하단 오버레이, 1장)
+}
+
+enum ImageSource {
+  UPLOAD  // Supabase Storage 직접 업로드
+  URL     // 외부 이미지 URL 직접 입력
+  AUTO    // 출처 URL에서 자동 추출 (YouTube oembed 썸네일 등)
+}
+
+enum SourceType {
+  PRIMARY    // 공식 출처 (공식 유튜브, 공식 인스타, 기사 등)
+  REFERENCE  // 참고 출처 (팬 트위터, 팬 인스타, 블로그 등)
+}
 
 enum SaveTarget {
   POST
@@ -130,51 +145,65 @@ model TagGroupConfig {
 }
 
 model Post {
-  id             String     @id @default(uuid()) @db.Uuid
-  titleKo        String
-  titleEn        String
-  slug           String     @unique
-  bodyKo         String?
-  bodyEn         String?
-  thumbnailUrl   String?
-  images         String[]
-  status         PostStatus @default(DRAFT)
-  source         String?
-  importNote     String?   // 시트 원본 데이터 (JSON 문자열)
-  sourceUrl      String?   // 출처 URL (레거시, PostSource 테이블로 이전)
-  sourceType     String?   // INSTAGRAM|YOUTUBE|TIKTOK|X|REDDIT|BLOG|NEWS|OTHER (레거시)
-  sourceNote     String?   // 출처 메모 (레거시)
-  memo           String?   // 관리자 내부 메모
-  collectedBy    String?   // 수집자 이름
-  collectedAt    String?   // 수집 날짜 (예: "2024-01-15")
-  viewCount      Int        @default(0)
-  saveCount      Int        @default(0)
-  authorId       String?    @db.Uuid
-  translatedAt   DateTime?
-  publishedAt    DateTime?
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  id           String     @id @default(uuid()) @db.Uuid
+  titleKo      String
+  titleEn      String
+  slug         String     @unique
+  bodyKo       String?
+  bodyEn       String?
+  status       PostStatus @default(DRAFT)
+  source       String?
+  importNote   String?    // 시트 원본 데이터 (JSON 문자열)
+  memo         String?    // 관리자 내부 메모
+  collectedBy  String?    // 수집자 이름
+  collectedAt  String?    // 수집 날짜 (예: "2024-01-15")
+  viewCount    Int        @default(0)
+  saveCount    Int        @default(0)
+  authorId     String?    @db.Uuid
+  translatedAt DateTime?
+  publishedAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
   author      User?        @relation(fields: [authorId], references: [id])
   postTopics  PostTopic[]
   postTags    PostTag[]
   postPlaces  PostPlace[]
+  postImages  PostImage[]
   postSources PostSource[]
   homeBanners HomeBanner[]
 }
 
-model PostSource {
-  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  postId         String   @db.Uuid
-  sourceType     String?  // INSTAGRAM|YOUTUBE|TIKTOK|X|REDDIT|BLOG|NEWS|OTHER
-  sourceUrl      String?
-  sourceNote     String?
-  sourcePostDate String?  // 출처 게시 날짜 (예: "2024-01-15")
-  referenceUrl   String?
-  sortOrder      Int      @default(0)
-  createdAt      DateTime @default(now())
+model PostImage {
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  postId      String      @db.Uuid
+  imageType   ImageType
+  imageSource ImageSource @default(UPLOAD)
+  url         String
+  isThumbnail Boolean     @default(false)
+  sortOrder   Int         @default(0)
+  createdAt   DateTime    @default(now())
 
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+}
+
+model PostSource {
+  id             String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  postId         String     @db.Uuid
+  url            String
+  sourceType     SourceType @default(PRIMARY)
+  platform       String?    // YOUTUBE | X | INSTAGRAM | PINTEREST | BLOG | ARTICLE | OTHER
+  sourceNote     String?
+  sourcePostDate String?    // 출처 원본 게시 날짜 (예: "2024-01-15")
+  isOriginalLink Boolean    @default(false) // 원본이미지 클릭 시 이동 URL (포스트당 1개만 true)
+  sortOrder      Int        @default(0)
+  createdAt      DateTime   @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
 }
 
 model Place {

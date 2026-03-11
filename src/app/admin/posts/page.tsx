@@ -175,6 +175,7 @@ export default async function PostsPage({
         currentPage={page}
         pageSize={PAGE_SIZE}
         filterQuery={filterQuery}
+        label="포스트"
       />
     </div>
   );
