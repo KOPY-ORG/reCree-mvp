@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
-import Link from "next/link";
-import { ArrowLeft, MapPin } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { MarkdownContent } from "./_components/MarkdownContent";
+import { PostDetailHeader } from "./_components/PostDetailHeader";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -78,24 +78,16 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
 
   return (
     <article className="pb-8">
+      <PostDetailHeader />
       {isPreview && (
         <div className="bg-amber-100 text-amber-800 text-xs text-center py-2 font-medium">
           미리보기 모드 — 실제 발행 전 상태입니다
         </div>
       )}
-      {/* 뒤로가기 */}
-      <div className="sticky top-0 z-10 flex items-center h-12 px-3 bg-background/80 backdrop-blur-sm border-b">
-        <Link
-          href="/"
-          className="flex items-center justify-center h-8 w-8 rounded-full hover:bg-muted transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-      </div>
 
-      {/* 썸네일 */}
+      {/* 썸네일 — 헤더(h-12) 높이만큼 위로 올려 풀블리드 */}
       {post.postImages[0]?.url && (
-        <div className="relative w-full aspect-[16/9] bg-muted">
+        <div className="relative w-full aspect-[3/2] bg-muted -mt-12">
           <Image
             src={post.postImages[0].url}
             alt={post.titleEn}
@@ -105,6 +97,8 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
             priority
             unoptimized
           />
+          {/* 상단 그라디언트 — 아이콘 가시성 */}
+          <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/40 to-transparent pointer-events-none" />
         </div>
       )}
 
