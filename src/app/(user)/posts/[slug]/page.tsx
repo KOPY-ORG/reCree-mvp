@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { MapPin } from "lucide-react";
+import { Sparkles, Waves, Flame, MapPin, Lightbulb } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { resolveTopicColors, labelBackground, DEFAULT_COLOR, DEFAULT_TEXT, type ResolvedLabel } from "@/lib/post-labels";
 import { MarkdownContent } from "./_components/MarkdownContent";
@@ -181,62 +181,71 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
 
       {/* Spot Insight */}
       {spotInsight && (
-        <div className="mx-4 mt-5 rounded-xl border bg-muted/30 overflow-hidden">
-          {/* 장소 헤더 */}
-          <div className="flex items-center gap-2 px-4 py-3 border-b bg-muted/40">
-            <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
-            <div>
-              <p className="text-sm font-semibold">
-                {spotInsight.place.nameEn ?? spotInsight.place.nameKo}
-              </p>
-              {spotInsight.place.addressEn && (
-                <p className="text-xs text-muted-foreground">
-                  {spotInsight.place.addressEn}
-                </p>
-              )}
-            </div>
+        <div className="mx-4 mt-2 rounded-2xl border border-secondary bg-white overflow-hidden">
+          {/* 헤더 */}
+          <div className="flex items-center justify-between px-4 pt-4 pb-3">
+            <p className="text-sm font-bold">Spot Insight</p>
             {spotInsight.place.googleMapsUrl && (
               <a
                 href={spotInsight.place.googleMapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="ml-auto text-xs text-muted-foreground underline shrink-0"
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
+                <MapPin className="h-3 w-3" />
                 Map
               </a>
             )}
           </div>
 
-          <div className="px-4 py-3 space-y-3 text-sm">
+          <div className="px-4 pb-4 space-y-4">
+            {/* Context */}
             {insightEn?.context && (
-              <p className="text-foreground/80 leading-relaxed">{insightEn.context}</p>
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5">
+                  <Sparkles className="h-4 w-4 shrink-0 text-brand" />
+                  <p className="text-sm font-semibold text-gray-900">Context</p>
+                </div>
+                <p className="text-sm text-gray-900 leading-relaxed pl-5">{insightEn.context}</p>
+              </div>
             )}
 
+            {/* Vibe */}
             {spotInsight.vibe.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {spotInsight.vibe.map((v, i) => (
-                  <span key={i} className="px-2 py-0.5 rounded-full bg-brand-sub2 text-xs">
-                    {v}
-                  </span>
-                ))}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <Waves className="h-4 w-4 shrink-0" style={{ color: "#FFC60C" }} />
+                  <p className="text-sm font-semibold text-gray-900">Vibe</p>
+                </div>
+                <div className="flex flex-wrap gap-1.5 pl-5">
+                  {spotInsight.vibe.map((v, i) => (
+                    <span key={i} className="px-2.5 py-0.5 rounded-full bg-brand-sub2 text-xs font-medium">
+                      {v}
+                    </span>
+                  ))}
+                </div>
               </div>
             )}
 
+            {/* Must-try */}
             {insightEn?.mustTry && (
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-                  Must Try
-                </p>
-                <p className="text-foreground/80 leading-relaxed">{insightEn.mustTry}</p>
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5">
+                  <Flame className="h-4 w-4 shrink-0" style={{ color: "#F46022" }} />
+                  <p className="text-sm font-semibold text-gray-900">Must-try</p>
+                </div>
+                <p className="text-sm text-gray-900 leading-relaxed pl-5">{insightEn.mustTry}</p>
               </div>
             )}
 
+            {/* Tip */}
             {insightEn?.tip && (
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-                  Tip
-                </p>
-                <p className="text-foreground/80 leading-relaxed">{insightEn.tip}</p>
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5">
+                  <Lightbulb className="h-4 w-4 shrink-0" style={{ color: "#36D8FC" }} />
+                  <p className="text-sm font-semibold text-gray-900">Tip</p>
+                </div>
+                <p className="text-sm text-gray-900 leading-relaxed pl-5">{insightEn.tip}</p>
               </div>
             )}
           </div>

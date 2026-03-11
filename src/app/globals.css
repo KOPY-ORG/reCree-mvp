@@ -8,6 +8,7 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-noto-sans-kr), var(--font-inter);
+  --color-gray-900: var(--palette-gray-900);
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
   --color-brand-sub: var(--brand-sub);
@@ -58,6 +59,7 @@
   --palette-brand-sub:  #D0FF6C;
   --palette-brand-sub2: #E7FFB3;
   --palette-black:      #000000;
+  --palette-gray-900:   #3F3D3D;
   --palette-gray-700:   #737373;
   --palette-gray-400:   #BABABA;
   --palette-gray-100:   #F3F3F3;
@@ -109,7 +111,7 @@
 
 @layer base {
   html {
-    font-size: 87.5%; /* 14px — GitHub 수준 기본 크기 */
+    font-size: 100%; /* 16px base — text-sm = 14px */
   }
   * {
     @apply border-border outline-ring/50;
