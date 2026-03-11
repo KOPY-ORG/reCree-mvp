@@ -27,10 +27,10 @@ import { cn } from "@/lib/utils";
 import type { PostImageInput, PostSourceInput } from "../_actions/post-actions";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
-const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_SIZE = 5 * 1024 * 1024;
 const MAX_BANNER = 5;
 
-type SlotMode = "idle" | "url" | "youtube";
+type OriginalMode = "idle" | "url";
 
 function extractYouTubeVideoId(url: string): string | null {
   const match = url.match(
@@ -58,7 +58,7 @@ async function uploadImage(
   return { url: data.publicUrl };
 }
 
-// ─── 정렬 가능한 배너 아이템 ─────────────────────────────────────────────────────
+// ─── 배너 아이템 (드래그 정렬) ────────────────────────────────────────────────
 
 function SortableBannerItem({
   image,
@@ -75,11 +75,7 @@ function SortableBannerItem({
   return (
     <div
       ref={setNodeRef}
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
-        opacity: isDragging ? 0.5 : 1,
-      }}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }}
       className={cn(
         "relative group w-24 h-24 rounded-lg overflow-hidden border-2 cursor-pointer shrink-0",
         image.isThumbnail ? "border-brand" : "border-transparent hover:border-zinc-300",
@@ -87,7 +83,6 @@ function SortableBannerItem({
       onClick={onSetThumb}
     >
       <img src={image.url} alt="" className="w-full h-full object-cover" />
-
       <div
         {...attributes}
         {...listeners}
@@ -96,7 +91,6 @@ function SortableBannerItem({
       >
         <GripVertical className="h-3 w-3 text-white" />
       </div>
-
       <button
         type="button"
         className="absolute top-1 right-1 p-0.5 rounded bg-black/40 opacity-0 group-hover:opacity-100 text-white"
@@ -104,70 +98,11 @@ function SortableBannerItem({
       >
         <X className="h-3 w-3" />
       </button>
-
       {image.isThumbnail && (
         <div className="absolute bottom-0 inset-x-0 bg-brand/90 text-black text-[10px] text-center py-0.5 font-medium">
           썸네일
         </div>
       )}
-    </div>
-  );
-}
-
-// ─── 슬롯 이미지 카드 ─────────────────────────────────────────────────────────
-
-function SlotImageCard({
-  image,
-  onRemove,
-  onSetSlotCard,
-  onSetThumb,
-}: {
-  image: PostImageInput;
-  onRemove: () => void;
-  onSetSlotCard: () => void;
-  onSetThumb: () => void;
-}) {
-  return (
-    <div className="flex flex-col gap-1 shrink-0 w-32">
-      {/* 이미지 */}
-      <div className="relative group w-32 h-24 rounded-lg overflow-hidden border">
-        <img src={image.url} alt="" className="w-full h-full object-cover" />
-        <button
-          type="button"
-          className="absolute top-1 right-1 p-0.5 rounded bg-black/50 opacity-0 group-hover:opacity-100 text-white"
-          onClick={onRemove}
-        >
-          <X className="h-3 w-3" />
-        </button>
-      </div>
-
-      {/* 카드 / 썸네일 버튼 */}
-      <div className="flex gap-1">
-        <button
-          type="button"
-          onClick={onSetSlotCard}
-          className={cn(
-            "flex-1 text-[10px] py-0.5 rounded border font-medium transition-colors",
-            image.isSlotCard
-              ? "bg-sky-400 border-sky-400 text-white"
-              : "border-zinc-300 text-zinc-500 hover:border-sky-300 hover:text-sky-500",
-          )}
-        >
-          카드
-        </button>
-        <button
-          type="button"
-          onClick={onSetThumb}
-          className={cn(
-            "flex-1 text-[10px] py-0.5 rounded border font-medium transition-colors",
-            image.isThumbnail
-              ? "bg-brand border-brand text-black"
-              : "border-zinc-300 text-zinc-500 hover:border-brand hover:text-zinc-700",
-          )}
-        >
-          썸네일
-        </button>
-      </div>
     </div>
   );
 }
@@ -182,14 +117,13 @@ interface Props {
 }
 
 export function PostImageSection({ postId, images, onChange, sources }: Props) {
-  const bannerImages = images.filter((img) => img.imageType === "BANNER");
-  const slot0Images  = images.filter((img) => img.slotIndex === 0);
-  const slot1Images  = images.filter((img) => img.slotIndex === 1);
+  const bannerImages   = images.filter((img) => img.imageType === "BANNER");
+  const originalImage  = images.find((img) => img.imageType === "ORIGINAL") ?? null;
 
   const [bannerUploading, setBannerUploading] = useState(false);
-  const [slotMode, setSlotMode] = useState<[SlotMode, SlotMode]>(["idle", "idle"]);
-  const [urlInput, setUrlInput] = useState<[string, string]>(["", ""]);
-  const [linkUrlInput, setLinkUrlInput] = useState<[string, string]>(["", ""]);
+  const [originalMode, setOriginalMode] = useState<OriginalMode>("idle");
+  const [urlInput, setUrlInput] = useState("");
+  const [linkUrlInput, setLinkUrlInput] = useState("");
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -198,20 +132,16 @@ export function PostImageSection({ postId, images, onChange, sources }: Props) {
 
   const ytSources = sources
     .filter((s) => s.platform?.toUpperCase() === "YOUTUBE" && s.url)
-    .map((s, i) => ({
-      url: s.url,
-      videoId: extractYouTubeVideoId(s.url),
-      sortOrder: i,
-    }))
-    .filter((s): s is { url: string; videoId: string; sortOrder: number } => s.videoId !== null);
+    .map((s) => ({ url: s.url, videoId: extractYouTubeVideoId(s.url) }))
+    .filter((s): s is { url: string; videoId: string } => s.videoId !== null);
 
-  // ─ 이미지 교체 (배너 + 슬롯 전체 갱신) ────────────────────────────────────
+  // ─ 이미지 교체 헬퍼 ────────────────────────────────────────────────────────
 
   const replaceImages = useCallback(
-    (newBanners: PostImageInput[], allNonBanners: PostImageInput[], forceThumbUrl?: string) => {
+    (newBanners: PostImageInput[], newOriginal: PostImageInput | null, forceThumbUrl?: string) => {
       const result: PostImageInput[] = [
         ...newBanners.map((img, i) => ({ ...img, sortOrder: i })),
-        ...allNonBanners,
+        ...(newOriginal ? [{ ...newOriginal, sortOrder: 0 }] : []),
       ];
       if (forceThumbUrl) {
         onChange(result.map((img) => ({ ...img, isThumbnail: img.url === forceThumbUrl })));
@@ -228,71 +158,11 @@ export function PostImageSection({ postId, images, onChange, sources }: Props) {
     [onChange],
   );
 
-  // ─ 썸네일 지정 ─────────────────────────────────────────────────────────────
-
   function setThumbnail(url: string) {
     onChange(images.map((img) => ({ ...img, isThumbnail: img.url === url })));
   }
 
-  // ─ 슬롯 이미지 추가 ────────────────────────────────────────────────────────
-
-  function addSlotImage(slotIndex: number, newImg: Omit<PostImageInput, "slotIndex" | "isSlotCard" | "sortOrder">) {
-    const slotImages = slotIndex === 0 ? slot0Images : slot1Images;
-    const otherSlotImages = slotIndex === 0 ? slot1Images : slot0Images;
-
-    const isFirst = slotImages.length === 0;
-    const added: PostImageInput = {
-      ...newImg,
-      slotIndex,
-      isSlotCard: isFirst, // 첫 번째 이미지는 자동으로 슬롯 카드 지정
-      sortOrder: slotImages.length,
-    };
-
-    const newSlotImages = [...slotImages, added];
-    const allNonBanners = slotIndex === 0
-      ? [...newSlotImages, ...otherSlotImages]
-      : [...otherSlotImages, ...newSlotImages];
-
-    replaceImages(bannerImages, allNonBanners);
-  }
-
-  // ─ 슬롯 이미지 제거 ────────────────────────────────────────────────────────
-
-  function removeSlotImage(slotIndex: number, url: string) {
-    const slotImages = slotIndex === 0 ? slot0Images : slot1Images;
-    const otherSlotImages = slotIndex === 0 ? slot1Images : slot0Images;
-
-    const removedImg = slotImages.find((img) => img.url === url);
-    const filtered = slotImages.filter((img) => img.url !== url);
-
-    // 제거된 이미지가 슬롯 카드였다면 첫 번째 남은 이미지로 이전
-    let newSlotImages = filtered;
-    if (removedImg?.isSlotCard && filtered.length > 0) {
-      newSlotImages = filtered.map((img, i) => ({ ...img, isSlotCard: i === 0 }));
-    }
-
-    const allNonBanners = slotIndex === 0
-      ? [...newSlotImages, ...otherSlotImages]
-      : [...otherSlotImages, ...newSlotImages];
-
-    replaceImages(bannerImages, allNonBanners);
-  }
-
-  // ─ 슬롯 카드 지정 ──────────────────────────────────────────────────────────
-
-  function setSlotCard(slotIndex: number, url: string) {
-    const slotImages = slotIndex === 0 ? slot0Images : slot1Images;
-    const otherSlotImages = slotIndex === 0 ? slot1Images : slot0Images;
-
-    const newSlotImages = slotImages.map((img) => ({ ...img, isSlotCard: img.url === url }));
-    const allNonBanners = slotIndex === 0
-      ? [...newSlotImages, ...otherSlotImages]
-      : [...otherSlotImages, ...newSlotImages];
-
-    replaceImages(bannerImages, allNonBanners);
-  }
-
-  // ─ 배너 관련 ───────────────────────────────────────────────────────────────
+  // ─ 배너 핸들러 ─────────────────────────────────────────────────────────────
 
   async function handleBannerUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -308,23 +178,16 @@ export function PostImageSection({ postId, images, onChange, sources }: Props) {
       for (const file of files) {
         const result = await uploadImage(file, `banner/${postId ?? "new"}`);
         if ("error" in result) { toast.error(result.error); continue; }
-        newBanners.push({
-          imageType: "BANNER",
-          imageSource: "UPLOAD",
-          url: result.url,
-          isThumbnail: false,
-          sortOrder: newBanners.length,
-        });
+        newBanners.push({ imageType: "BANNER", imageSource: "UPLOAD", url: result.url, isThumbnail: false, sortOrder: newBanners.length });
       }
-      replaceImages(newBanners, [...slot0Images, ...slot1Images]);
+      replaceImages(newBanners, originalImage);
     } finally {
       setBannerUploading(false);
     }
   }
 
   function removeBanner(url: string) {
-    const newBanners = bannerImages.filter((img) => img.url !== url);
-    replaceImages(newBanners, [...slot0Images, ...slot1Images]);
+    replaceImages(bannerImages.filter((img) => img.url !== url), originalImage);
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -332,175 +195,21 @@ export function PostImageSection({ postId, images, onChange, sources }: Props) {
     if (!over || active.id === over.id) return;
     const oldIdx = bannerImages.findIndex((b) => b.url === active.id);
     const newIdx = bannerImages.findIndex((b) => b.url === over.id);
-    replaceImages(arrayMove(bannerImages, oldIdx, newIdx), [...slot0Images, ...slot1Images]);
+    replaceImages(arrayMove(bannerImages, oldIdx, newIdx), originalImage);
   }
 
-  function setMode(slotIndex: number, mode: SlotMode) {
-    setSlotMode((prev) => {
-      const next: [SlotMode, SlotMode] = [...prev] as [SlotMode, SlotMode];
-      next[slotIndex] = mode;
-      return next;
-    });
+  // ─ 소스 이미지 핸들러 ──────────────────────────────────────────────────────
+
+  function setOriginal(img: PostImageInput) {
+    replaceImages(bannerImages, img, img.url);
   }
 
-  // ─ 슬롯별 YouTube 자동추출 버튼 대상 (해당 슬롯 sortOrder에 매핑) ──────────
-
-  function getSlotYtSource(slotIndex: number) {
-    return ytSources[slotIndex] ?? null;
-  }
-
-  // ─ 슬롯 렌더 ───────────────────────────────────────────────────────────────
-
-  function renderSlot(slotIndex: number) {
-    const slotImages = slotIndex === 0 ? slot0Images : slot1Images;
-    const slotLabel = slotIndex === 0 ? "슬롯 1" : "슬롯 2";
-    const mode = slotMode[slotIndex];
-    const ytSource = getSlotYtSource(slotIndex);
-
-    return (
-      <div key={slotIndex} className="space-y-2 border rounded-lg p-3 bg-muted/20">
-        {/* 슬롯 헤더 */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-muted-foreground">{slotLabel}</span>
-          {ytSource && (
-            <span className="text-[10px] text-sky-500">출처 {slotIndex + 1} 연결됨</span>
-          )}
-        </div>
-
-        {/* 이미지 목록 (가로 스크롤) */}
-        {slotImages.length > 0 && (
-          <div className="flex gap-2 flex-wrap">
-            {slotImages.map((img) => (
-              <SlotImageCard
-                key={img.url}
-                image={img}
-                onRemove={() => removeSlotImage(slotIndex, img.url)}
-                onSetSlotCard={() => setSlotCard(slotIndex, img.url)}
-                onSetThumb={() => setThumbnail(img.url)}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* 추가 버튼 */}
-        {mode === "idle" ? (
-          <div className="flex flex-wrap gap-2">
-            {/* YouTube 자동추출 — 해당 슬롯에 연결된 YouTube 출처가 있을 때만 */}
-            {ytSource && !slotImages.some((img) => img.imageSource === "AUTO" && img.linkUrl === ytSource.url) && (
-              <button
-                type="button"
-                onClick={() => {
-                  addSlotImage(slotIndex, {
-                    imageType: "ORIGINAL",
-                    imageSource: "AUTO",
-                    url: `https://img.youtube.com/vi/${ytSource.videoId}/maxresdefault.jpg`,
-                    linkUrl: ytSource.url,
-                    isThumbnail: false,
-                  });
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border hover:bg-muted transition-colors text-sky-600 border-sky-200"
-              >
-                YouTube 자동추출
-              </button>
-            )}
-            <label className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border cursor-pointer hover:bg-muted transition-colors">
-              <Upload className="h-3.5 w-3.5" />
-              파일 업로드
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="sr-only"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  e.target.value = "";
-                  if (!file) return;
-                  const result = await uploadImage(file, `original/${postId ?? "new"}`);
-                  if ("error" in result) { toast.error(result.error); return; }
-                  addSlotImage(slotIndex, {
-                    imageType: "ORIGINAL",
-                    imageSource: "UPLOAD",
-                    url: result.url,
-                    linkUrl: null,
-                    isThumbnail: false,
-                  });
-                }}
-              />
-            </label>
-            <button
-              type="button"
-              onClick={() => setMode(slotIndex, "url")}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border hover:bg-muted transition-colors"
-            >
-              <LinkIcon className="h-3.5 w-3.5" />
-              URL 입력
-            </button>
-          </div>
-        ) : (
-          // URL 입력 폼
-          <div className="space-y-1.5">
-            <Input
-              value={urlInput[slotIndex]}
-              onChange={(e) =>
-                setUrlInput((prev) => {
-                  const next: [string, string] = [...prev] as [string, string];
-                  next[slotIndex] = e.target.value;
-                  return next;
-                })
-              }
-              placeholder="이미지 URL (https://...)"
-              className="h-8 text-sm"
-            />
-            <Input
-              value={linkUrlInput[slotIndex]}
-              onChange={(e) =>
-                setLinkUrlInput((prev) => {
-                  const next: [string, string] = [...prev] as [string, string];
-                  next[slotIndex] = e.target.value;
-                  return next;
-                })
-              }
-              placeholder="클릭 링크 URL (선택, https://...)"
-              className="h-8 text-sm"
-            />
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="h-8"
-                disabled={!urlInput[slotIndex].trim()}
-                onClick={() => {
-                  addSlotImage(slotIndex, {
-                    imageType: "ORIGINAL",
-                    imageSource: "URL",
-                    url: urlInput[slotIndex].trim(),
-                    linkUrl: linkUrlInput[slotIndex].trim() || null,
-                    isThumbnail: false,
-                  });
-                  setUrlInput((prev) => { const n = [...prev] as [string, string]; n[slotIndex] = ""; return n; });
-                  setLinkUrlInput((prev) => { const n = [...prev] as [string, string]; n[slotIndex] = ""; return n; });
-                  setMode(slotIndex, "idle");
-                }}
-              >
-                적용
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                className="h-8"
-                onClick={() => setMode(slotIndex, "idle")}
-              >
-                취소
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
-    );
+  function removeOriginal() {
+    replaceImages(bannerImages, null);
   }
 
   const thumbImage = images.find((img) => img.isThumbnail);
+  const thumbSource = thumbImage?.imageType === "BANNER" ? "배너" : thumbImage?.imageType === "ORIGINAL" ? "소스 이미지" : null;
 
   return (
     <div className="space-y-6">
@@ -514,15 +223,8 @@ export function PostImageSection({ postId, images, onChange, sources }: Props) {
 
         <div className="flex items-center gap-2 flex-wrap min-h-[96px]">
           {bannerImages.length > 0 ? (
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext
-                items={bannerImages.map((img) => img.url)}
-                strategy={horizontalListSortingStrategy}
-              >
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={bannerImages.map((img) => img.url)} strategy={horizontalListSortingStrategy}>
                 {bannerImages.map((img) => (
                   <SortableBannerItem
                     key={img.url}
@@ -540,56 +242,140 @@ export function PostImageSection({ postId, images, onChange, sources }: Props) {
           )}
 
           {bannerImages.length < MAX_BANNER && (
-            <label
-              className={cn(
-                "flex flex-col items-center justify-center w-24 h-24 rounded-lg border-2 border-dashed cursor-pointer shrink-0 transition-colors",
-                bannerUploading ? "opacity-50 cursor-not-allowed" : "hover:border-zinc-400",
-              )}
-            >
-              {bannerUploading ? (
-                <div className="h-5 w-5 rounded-full border-2 border-t-transparent border-zinc-400 animate-spin" />
-              ) : (
-                <>
-                  <Upload className="h-4 w-4 text-muted-foreground mb-1" />
-                  <span className="text-[10px] text-muted-foreground">추가</span>
-                </>
-              )}
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                multiple
-                className="sr-only"
-                disabled={bannerUploading}
-                onChange={handleBannerUpload}
-              />
+            <label className={cn(
+              "flex flex-col items-center justify-center w-24 h-24 rounded-lg border-2 border-dashed cursor-pointer shrink-0 transition-colors",
+              bannerUploading ? "opacity-50 cursor-not-allowed" : "hover:border-zinc-400",
+            )}>
+              {bannerUploading
+                ? <div className="h-5 w-5 rounded-full border-2 border-t-transparent border-zinc-400 animate-spin" />
+                : <><Upload className="h-4 w-4 text-muted-foreground mb-1" /><span className="text-[10px] text-muted-foreground">추가</span></>
+              }
+              <input type="file" accept="image/jpeg,image/png,image/webp" multiple className="sr-only" disabled={bannerUploading} onChange={handleBannerUpload} />
             </label>
           )}
         </div>
         <p className="text-[11px] text-muted-foreground">드래그로 순서 변경 · 이미지 클릭 시 썸네일 지정</p>
       </div>
 
-      {/* ─ 원본/출처 이미지 (슬롯별) ─────────────────────────────────────────── */}
+      {/* ─ 소스 이미지 (1장) ─────────────────────────────────────────────────── */}
       <div className="space-y-2">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold">원본/출처 이미지</span>
-          <span className="text-xs text-muted-foreground">
-            (슬롯별 여러 장 가능)
-          </span>
+          <span className="text-sm font-semibold">소스 이미지</span>
+          <span className="text-xs text-muted-foreground">(사용자 페이지 미니 카드 · 1장)</span>
         </div>
-        <p className="text-[11px] text-muted-foreground">
-          카드 = 사용자 페이지 미니 소스 카드 · 썸네일 = 포스트 목록 대표 이미지
-        </p>
 
-        <div className="space-y-2">
-          {renderSlot(0)}
-          {renderSlot(1)}
+        <div className="border rounded-lg p-3 bg-muted/20 space-y-3">
+          {originalImage ? (
+            // 이미지 있는 경우
+            <div className="flex flex-col gap-1 w-32">
+              <div className="relative group w-32 h-24 rounded-lg overflow-hidden border">
+                <img src={originalImage.url} alt="" className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  className="absolute top-1 right-1 p-0.5 rounded bg-black/50 opacity-0 group-hover:opacity-100 text-white"
+                  onClick={removeOriginal}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => setThumbnail(originalImage.url)}
+                className={cn(
+                  "text-[10px] py-0.5 rounded border font-medium transition-colors",
+                  originalImage.isThumbnail
+                    ? "bg-brand border-brand text-black"
+                    : "border-zinc-300 text-zinc-500 hover:border-brand hover:text-zinc-700",
+                )}
+              >
+                썸네일
+              </button>
+            </div>
+          ) : originalMode === "idle" ? (
+            // 비어있는 상태 — 추가 버튼
+            <div className="flex flex-wrap gap-2">
+              {ytSources.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {ytSources.map((yt, i) => (
+                    <button
+                      key={yt.url}
+                      type="button"
+                      onClick={() => setOriginal({
+                        imageType: "ORIGINAL",
+                        imageSource: "AUTO",
+                        url: `https://img.youtube.com/vi/${yt.videoId}/maxresdefault.jpg`,
+                        linkUrl: yt.url,
+                        isThumbnail: false,
+                        sortOrder: 0,
+                      })}
+                      className="flex items-center gap-2 px-3 py-1.5 text-xs rounded-md border hover:bg-muted transition-colors text-sky-600 border-sky-200"
+                    >
+                      <img src={`https://img.youtube.com/vi/${yt.videoId}/default.jpg`} alt="" className="w-10 h-6 object-cover rounded shrink-0" />
+                      YouTube {i + 1}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <label className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border cursor-pointer hover:bg-muted transition-colors">
+                <Upload className="h-3.5 w-3.5" />
+                파일 업로드
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="sr-only"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = "";
+                    if (!file) return;
+                    const result = await uploadImage(file, `original/${postId ?? "new"}`);
+                    if ("error" in result) { toast.error(result.error); return; }
+                    setOriginal({ imageType: "ORIGINAL", imageSource: "UPLOAD", url: result.url, linkUrl: null, isThumbnail: false, sortOrder: 0 });
+                  }}
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => setOriginalMode("url")}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border hover:bg-muted transition-colors"
+              >
+                <LinkIcon className="h-3.5 w-3.5" />
+                URL 입력
+              </button>
+            </div>
+          ) : (
+            // URL 입력 폼
+            <div className="space-y-1.5">
+              <Input value={urlInput} onChange={(e) => setUrlInput(e.target.value)} placeholder="이미지 URL (https://...)" className="h-8 text-sm" />
+              <Input value={linkUrlInput} onChange={(e) => setLinkUrlInput(e.target.value)} placeholder="클릭 링크 URL (선택, https://...)" className="h-8 text-sm" />
+              <div className="flex gap-2">
+                <Button
+                  type="button" size="sm" variant="outline" className="h-8"
+                  disabled={!urlInput.trim()}
+                  onClick={() => {
+                    setOriginal({ imageType: "ORIGINAL", imageSource: "URL", url: urlInput.trim(), linkUrl: linkUrlInput.trim() || null, isThumbnail: false, sortOrder: 0 });
+                    setUrlInput("");
+                    setLinkUrlInput("");
+                    setOriginalMode("idle");
+                  }}
+                >
+                  적용
+                </Button>
+                <Button type="button" size="sm" variant="ghost" className="h-8" onClick={() => setOriginalMode("idle")}>취소</Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* ─ 현재 썸네일 ─────────────────────────────────────────────────────── */}
       {thumbImage && (
         <div className="pt-3 border-t space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">현재 썸네일</p>
+          <div className="flex items-center gap-2">
+            <p className="text-xs font-medium text-muted-foreground">현재 썸네일</p>
+            {thumbSource && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{thumbSource}</span>
+            )}
+          </div>
           <div className="relative w-40 aspect-[3/2] rounded-lg overflow-hidden border">
             <img src={thumbImage.url} alt="썸네일" className="w-full h-full object-cover" />
           </div>

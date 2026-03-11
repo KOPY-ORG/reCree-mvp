@@ -8,8 +8,6 @@ interface OriginalImage {
   id: string;
   url: string;
   linkUrl?: string | null;
-  slotIndex?: number | null;
-  isSlotCard?: boolean;
 }
 
 interface Props {
@@ -92,14 +90,7 @@ function SourceCard({ image, onClick }: { image: OriginalImage; onClick?: () => 
 export function OriginalSourceCards({ images, originalLinkUrls }: Props) {
   if (images.length === 0) return null;
 
-  // slotIndex가 있는 경우: 슬롯 카드만 표시
-  const hasSlotData = images.some((img) => img.slotIndex != null);
-  const displayed = hasSlotData
-    ? [
-        images.find((img) => img.slotIndex === 0 && img.isSlotCard),
-        images.find((img) => img.slotIndex === 1 && img.isSlotCard),
-      ].filter((img): img is OriginalImage => img != null)
-    : images;
+  const displayed = images;
 
   return (
     <div className="absolute bottom-3 left-3 flex gap-2 z-10">
