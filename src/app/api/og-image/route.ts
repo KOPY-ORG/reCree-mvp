@@ -22,6 +22,23 @@ function isAllowedDomain(url: string): boolean {
   }
 }
 
+function decodeHtmlEntities(str: string): string {
+  return str
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)));
+}
+
+function extractMeta(html: string, property: string, nameAttr = "property"): string | null {
+  const re1 = new RegExp(`<meta[^>]+${nameAttr}=["']${property}["'][^>]+content=["']([^"']+)["']`, "i");
+  const re2 = new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+${nameAttr}=["']${property}["']`, "i");
+  return (html.match(re1) ?? html.match(re2))?.[1] ?? null;
+}
+
 function extractOgImage(html: string): string | null {
   // og:image
   const ogMatch = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
@@ -60,7 +77,20 @@ export async function GET(req: NextRequest) {
 
     const html = await res.text();
     const thumbnailUrl = extractOgImage(html);
-    return NextResponse.json({ thumbnailUrl });
+    const title =
+      extractMeta(html, "og:title") ??
+      extractMeta(html, "twitter:title", "name") ??
+      html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]?.trim() ??
+      null;
+    const description =
+      extractMeta(html, "og:description") ??
+      extractMeta(html, "description", "name") ??
+      null;
+    return NextResponse.json({
+      thumbnailUrl,
+      title: title ? decodeHtmlEntities(title) : null,
+      description: description ? decodeHtmlEntities(description) : null,
+    });
   } catch {
     return NextResponse.json({ thumbnailUrl: null });
   }

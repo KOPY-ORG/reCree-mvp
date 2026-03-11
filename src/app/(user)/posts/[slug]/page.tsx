@@ -7,6 +7,7 @@ import { MarkdownContent } from "./_components/MarkdownContent";
 import { PostDetailHeader } from "./_components/PostDetailHeader";
 import { BannerCarousel } from "./_components/BannerCarousel";
 import { OriginalSourceCards } from "./_components/OriginalSourceCards";
+import { SourceSection } from "./_components/SourceSection";
 import { PostMetaBar } from "./_components/PostMetaBar";
 import { getCurrentUser } from "@/lib/auth";
 
@@ -274,6 +275,9 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
           </div>
         </div>
       )}
+
+      {/* From the Source */}
+      <SourceSection sources={post.postSources} />
 
       {/* 출처 */}
       {post.source && (
