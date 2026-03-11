@@ -109,7 +109,7 @@ export function LabelSelectDialog({
   // ─── 토픽 effective color 계산 ───────────────────────────────────────────
 
   const topicsWithEffective = useMemo<TopicWithEffective[]>(() => {
-    const DEFAULT_COLOR = "#C6FD09";
+    const DEFAULT_COLOR = "#C8FF09";
     const DEFAULT_TEXT = "#000000";
     const effectiveMap = new Map<string, EffectiveColorInfo>();
 

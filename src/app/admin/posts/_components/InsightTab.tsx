@@ -157,12 +157,12 @@ export function InsightTab({
         </div>
         <div className="flex flex-wrap gap-1.5">
           {activeEntry.vibe.map((v, i) => (
-            <Badge key={i} className="gap-1 pr-1 bg-[#C6FD09]/20 text-[#3d5200] border border-[#C6FD09]/60 hover:bg-[#C6FD09]/20 font-semibold">
+            <Badge key={i} className="gap-1 pr-1 bg-brand-sub2 text-foreground border-0 hover:bg-brand-sub2">
               {v}
               <button
                 type="button"
                 onClick={() => removeVibe(i)}
-                className="ml-0.5 opacity-60 hover:opacity-100 hover:text-[#3d5200]"
+                className="ml-0.5 opacity-60 hover:opacity-100 hover:text-foreground"
               >
                 <X className="h-3 w-3" />
               </button>

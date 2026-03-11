@@ -214,7 +214,7 @@ export function TaxonomyTab({
               >
                 {tab === "topics" ? "토픽" : "태그"}
                 {count > 0 && (
-                  <span className="ml-1 inline-flex items-center justify-center bg-[#C6FD09] text-zinc-900 rounded-full min-w-[16px] h-[16px] text-[10px] px-1 font-bold">
+                  <span className="ml-1 inline-flex items-center justify-center bg-brand text-foreground rounded-full min-w-[16px] h-[16px] text-[10px] px-1 font-bold">
                     {count}
                   </span>
                 )}

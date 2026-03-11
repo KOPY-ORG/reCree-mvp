@@ -4,7 +4,7 @@ import { BannerTab, type BannerRow } from "./_components/BannerTab";
 import { SectionTab, type SectionRow } from "./_components/SectionTab";
 import type { PickablePost } from "./_components/PostPickerDialog";
 
-const DEFAULT_COLOR = "#C6FD09";
+const DEFAULT_COLOR = "#C8FF09";
 const DEFAULT_TEXT = "#000000";
 
 export default async function HomeCurationPage({

@@ -71,8 +71,8 @@ export default async function PreviewPostPage({ params }: Props) {
                 key={topic.nameEn}
                 className="rounded-full px-2.5 py-0.5 text-xs font-medium"
                 style={{
-                  backgroundColor: topic.colorHex ?? "#e5e7eb",
-                  color: topic.textColorHex ?? "#000",
+                  backgroundColor: topic.colorHex ?? "#F3F3F3",
+                  color: topic.textColorHex ?? "#000000",
                 }}
               >
                 {topic.nameKo}

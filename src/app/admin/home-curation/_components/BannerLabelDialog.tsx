@@ -71,10 +71,10 @@ export function BannerLabelDialog({
   function getColor(o: LabelOverride): { bg: string; text: string } {
     if (o.type === "topic") {
       const t = postTopics.find((t) => t.topicId === o.id);
-      return { bg: t?.effectiveColorHex ?? "#888", text: t?.effectiveTextColorHex ?? "#fff" };
+      return { bg: t?.effectiveColorHex ?? "#BABABA", text: t?.effectiveTextColorHex ?? "#FCFCFC" };
     }
     const t = postTags.find((t) => t.tagId === o.id);
-    return { bg: t?.effectiveColorHex ?? "#888", text: t?.effectiveTextColorHex ?? "#fff" };
+    return { bg: t?.effectiveColorHex ?? "#BABABA", text: t?.effectiveTextColorHex ?? "#FCFCFC" };
   }
 
   function getLabel(o: LabelOverride): string {

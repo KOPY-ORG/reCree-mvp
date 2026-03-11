@@ -30,13 +30,14 @@ async function main() {
   console.log("🌱 시드 시작...");
 
   // ─── 기존 데이터 삭제 (의존성 역순) ─────────────────────────────────────────
+  await prisma.tagGroupConfig.deleteMany();
   await prisma.tag.deleteMany();
   // Topic 자기참조이므로 가장 깊은 level부터 삭제
   await prisma.topic.deleteMany({ where: { level: 3 } });
   await prisma.topic.deleteMany({ where: { level: 2 } });
   await prisma.topic.deleteMany({ where: { level: 1 } });
   await prisma.topic.deleteMany({ where: { level: 0 } });
-  console.log("  기존 Topic/Tag 데이터 삭제 완료");
+  console.log("  기존 Topic/Tag/TagGroupConfig 데이터 삭제 완료");
 
   // ─── Level 0: 최상위 카테고리 (2개) ──────────────────────────────────────────
 
@@ -47,6 +48,8 @@ async function main() {
       slug: "k-pop",
       level: 0,
       sortOrder: 0,
+      colorHex: "#000000",
+      textColorHex: "#FFFFFF",
     },
   });
 
@@ -57,6 +60,8 @@ async function main() {
       slug: "k-contents",
       level: 0,
       sortOrder: 1,
+      colorHex: "#00DDFF",
+      textColorHex: "#000000",
     },
   });
 
@@ -472,6 +477,20 @@ async function main() {
   console.log(`\n  ✅ 총 Topic: ${totalTopics}개`);
   console.log("     (Level 0: 2 | Level 1: 7 | Level 2: 26 | Level 3: 5)");
 
+  // ─── TagGroupConfig ────────────────────────────────────────────────────────────
+  await prisma.tagGroupConfig.createMany({
+    data: [
+      { group: "FOOD",       nameEn: "Food",       colorHex: "#FFC300", textColorHex: "#000000", sortOrder: 0 },
+      { group: "SPOT",       nameEn: "Spot",       colorHex: "#C8FF09", textColorHex: "#000000", sortOrder: 1 },
+      { group: "EXPERIENCE", nameEn: "Experience", colorHex: "#FF0026", textColorHex: "#000000", sortOrder: 2 },
+      { group: "BEAUTY",     nameEn: "Beauty",     colorHex: "#FF08CA", textColorHex: "#000000", sortOrder: 3 },
+      { group: "ITEM",       nameEn: "Item",       colorHex: "#00FFC8", textColorHex: "#000000", sortOrder: 4 },
+    ],
+  });
+
+  const totalGroupConfigs = await prisma.tagGroupConfig.count();
+  console.log(`  ✅ 총 TagGroupConfig: ${totalGroupConfigs}개`);
+
   // ─── Tags (15개) ──────────────────────────────────────────────────────────────
   await prisma.tag.createMany({
     data: [
@@ -492,7 +511,7 @@ async function main() {
       // EXPERIENCE (3개)
       { name: "Dance",               nameKo: "댄스",       slug: "dance",               group: "EXPERIENCE", sortOrder: 0 },
       { name: "Cooking",             nameKo: "요리",       slug: "cooking",             group: "EXPERIENCE", sortOrder: 1 },
-      { name: "Beauty",              nameKo: "뷰티",       slug: "beauty",              group: "EXPERIENCE", sortOrder: 2 },
+      { name: "Beauty",              nameKo: "뷰티",       slug: "beauty",              group: "BEAUTY",     sortOrder: 2 },
     ],
   });
 
