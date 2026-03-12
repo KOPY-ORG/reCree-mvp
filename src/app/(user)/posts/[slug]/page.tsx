@@ -25,11 +25,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       slug: true,
       titleEn: true,
       bodyEn: true,
-      postImages: {
-        where: { isThumbnail: true },
-        select: { url: true },
-        take: 1,
-      },
     },
   });
 
@@ -38,7 +33,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description = post.bodyEn
     ? post.bodyEn.slice(0, 120)
     : "Discover K-content travel spots on reCree";
-  const imageUrl = post.postImages[0]?.url ?? "/og-default.png";
+  const imageUrl = "/og-default.png";
   const pageUrl = `https://recree.io/posts/${post.slug}`;
 
   return {
