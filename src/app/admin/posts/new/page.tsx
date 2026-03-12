@@ -60,6 +60,11 @@ export default async function NewPostPage() {
   const tagGroups = tagGroupConfigs.map((c) => ({
     group: c.group,
     nameEn: c.nameEn,
+    colorHex: c.colorHex,
+    colorHex2: c.colorHex2,
+    gradientDir: c.gradientDir,
+    gradientStop: c.gradientStop,
+    textColorHex: c.textColorHex,
   }));
 
   return (

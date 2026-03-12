@@ -89,6 +89,11 @@ export type TopicForForm = {
 export type TagGroupItem = {
   group: string;
   nameEn: string;
+  colorHex?: string;
+  colorHex2?: string | null;
+  gradientDir?: string;
+  gradientStop?: number;
+  textColorHex?: string;
 };
 
 export type PlaceForForm = {
@@ -209,8 +214,8 @@ export function PostForm({
   mode,
   postId,
   initialData,
-  allTags,
-  allTopics,
+  allTags: initialAllTags,
+  allTopics: initialAllTopics,
   tagGroups,
   onSuccess,
   isEmbedded,
@@ -272,6 +277,10 @@ export function PostForm({
   const [postTopics, setPostTopics] = useState<PostTopicState[]>(initialData?.postTopics ?? []);
   const [postTags, setPostTags] = useState<PostTagState[]>(initialData?.postTags ?? []);
 
+  // ── 인라인 추가용 로컬 목록 ──────────────────────────────────────────────────
+  const [localAllTopics, setLocalAllTopics] = useState<TopicForForm[]>(initialAllTopics);
+  const [localAllTags, setLocalAllTags] = useState<TagForForm[]>(initialAllTags);
+
   // ── 복수 장소 + Insight 상태 ─────────────────────────────────────────────────
   const [placeEntries, setPlaceEntries] = useState<PlaceEntry[]>(initPlaceEntries);
   const [activePlaceIndex, setActivePlaceIndex] = useState(0);
@@ -288,13 +297,14 @@ export function PostForm({
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
 
   // ── 파생값 ─────────────────────────────────────────────────────────────────
-  const topicEffectiveStyleMap = useMemo(() => {
+  type EffInfo = { hex: string; hex2: string | null; dir: string; stop: number; textHex: string };
+
+  const { topicEffectiveStyleMap, topicEffectiveInfoMap } = useMemo(() => {
     const DEFAULT_COLOR = "#C8FF09";
     const DEFAULT_TEXT = "#000000";
-    type EffInfo = { hex: string; hex2: string | null; dir: string; stop: number; textHex: string };
     const effectiveMap = new Map<string, EffInfo>();
     const styleMap = new Map<string, React.CSSProperties>();
-    for (const t of allTopics) {
+    for (const t of localAllTopics) {
       const parent = t.parentId ? effectiveMap.get(t.parentId) : undefined;
       const inherits = t.colorHex === null;
       const hex = t.colorHex ?? parent?.hex ?? DEFAULT_COLOR;
@@ -310,8 +320,13 @@ export function PostForm({
           : { backgroundColor: hex, color: textHex },
       );
     }
-    return styleMap;
-  }, [allTopics]);
+    return { topicEffectiveStyleMap: styleMap, topicEffectiveInfoMap: effectiveMap };
+  }, [localAllTopics]);
+
+  const tagGroupColorMap = useMemo(
+    () => new Map(tagGroups.map((g) => [g.group, g])),
+    [tagGroups],
+  );
 
   // ── Slug 자동 생성 + 중복 체크 ─────────────────────────────────────────────
   useEffect(() => {
@@ -867,8 +882,12 @@ export function PostForm({
                     <TaxonomyTab
                       postTopics={postTopics} setPostTopics={setPostTopics}
                       postTags={postTags} setPostTags={setPostTags}
-                      allTopics={allTopics} allTags={allTags} tagGroups={tagGroups}
+                      allTopics={localAllTopics} allTags={localAllTags} tagGroups={tagGroups}
                       topicEffectiveStyleMap={topicEffectiveStyleMap}
+                      topicEffectiveInfoMap={topicEffectiveInfoMap}
+                      tagGroupColorMap={tagGroupColorMap}
+                      onTopicAdded={(topic) => setLocalAllTopics((prev) => [...prev, topic])}
+                      onTagAdded={(tag) => setLocalAllTags((prev) => [...prev, tag])}
                     />
                   )}
                   {activeTab === "content" && (
@@ -1026,8 +1045,8 @@ export function PostForm({
                 setPostTopics={setPostTopics}
                 postTags={postTags}
                 setPostTags={setPostTags}
-                allTopics={allTopics}
-                allTags={allTags}
+                allTopics={localAllTopics}
+                allTags={localAllTags}
                 topicEffectiveStyleMap={topicEffectiveStyleMap}
               />
 

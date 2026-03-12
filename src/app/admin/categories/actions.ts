@@ -33,9 +33,25 @@ export type TopicFormData = {
 
 // ─── 생성 ─────────────────────────────────────────────────────────────────────
 
+export type TopicSavedData = {
+  id: string;
+  nameKo: string;
+  nameEn: string;
+  slug: string;
+  level: number;
+  parentId: string | null;
+  colorHex: string | null;
+  colorHex2: string | null;
+  gradientDir: string;
+  gradientStop: number;
+  textColorHex: string | null;
+  isActive: boolean;
+  sortOrder: number;
+};
+
 export async function createTopic(
   data: TopicFormData
-): Promise<{ error?: string }> {
+): Promise<{ error?: string; created?: TopicSavedData }> {
   try {
     // 같은 parentId 그룹의 마지막 sortOrder + 1
     const siblings = await prisma.topic.findMany({
@@ -57,7 +73,7 @@ export async function createTopic(
       level = (parent?.level ?? 0) + 1;
     }
 
-    await prisma.topic.create({
+    const created = await prisma.topic.create({
       data: {
         nameKo: data.nameKo,
         nameEn: data.nameEn,
@@ -72,10 +88,15 @@ export async function createTopic(
         isActive: data.isActive,
         sortOrder: nextSortOrder,
       },
+      select: {
+        id: true, nameKo: true, nameEn: true, slug: true, level: true,
+        parentId: true, colorHex: true, colorHex2: true, gradientDir: true,
+        gradientStop: true, textColorHex: true, isActive: true, sortOrder: true,
+      },
     });
 
     revalidatePath("/admin/categories");
-    return {};
+    return { created };
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     if (msg.includes("Unique constraint") && msg.includes("slug")) {
