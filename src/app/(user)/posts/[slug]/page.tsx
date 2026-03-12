@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { Sparkles, Waves, Flame, MapPin, Lightbulb } from "lucide-react";
 import { LocationCard } from "./_components/LocationCard";
 import { prisma } from "@/lib/prisma";
@@ -14,6 +15,48 @@ import { getCurrentUser } from "@/lib/auth";
 interface Props {
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ preview?: string }>;
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const post = await prisma.post.findUnique({
+    where: { slug },
+    select: {
+      slug: true,
+      titleEn: true,
+      bodyEn: true,
+      postImages: {
+        where: { isThumbnail: true },
+        select: { url: true },
+        take: 1,
+      },
+    },
+  });
+
+  if (!post) return {};
+
+  const description = post.bodyEn
+    ? post.bodyEn.slice(0, 120)
+    : "Discover K-content travel spots on reCree";
+  const imageUrl = post.postImages[0]?.url;
+  const pageUrl = `https://recree.io/posts/${post.slug}`;
+
+  return {
+    title: post.titleEn,
+    description,
+    openGraph: {
+      title: post.titleEn,
+      description,
+      url: pageUrl,
+      ...(imageUrl ? { images: [{ url: imageUrl }] } : {}),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: post.titleEn,
+      description,
+      ...(imageUrl ? { images: [imageUrl] } : {}),
+    },
+  };
 }
 
 export default async function PostDetailPage({ params, searchParams }: Props) {

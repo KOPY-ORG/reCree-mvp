@@ -28,6 +28,8 @@ export async function toggleScrap(
     },
   });
 
+  let saved: boolean;
+
   if (existing) {
     await prisma.$transaction([
       prisma.save.delete({ where: { id: existing.id } }),
@@ -36,8 +38,7 @@ export async function toggleScrap(
         data: { saveCount: { decrement: 1 } },
       }),
     ]);
-    revalidatePath("/saved");
-    return { saved: false };
+    saved = false;
   } else {
     await prisma.$transaction([
       prisma.save.create({
@@ -48,7 +49,9 @@ export async function toggleScrap(
         data: { saveCount: { increment: 1 } },
       }),
     ]);
-    revalidatePath("/saved");
-    return { saved: true };
+    saved = true;
   }
+
+  revalidatePath("/saved");
+  return { saved };
 }

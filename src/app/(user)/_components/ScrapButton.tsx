@@ -3,6 +3,7 @@
 import { useTransition, useState } from "react";
 import { Bookmark } from "lucide-react";
 import { toggleScrap } from "../_actions/scrap-actions";
+import { useToast } from "../_hooks/useToast";
 
 interface Props {
   postId: string;
@@ -10,12 +11,10 @@ interface Props {
   size?: "sm" | "md";
 }
 
-type Toast = { message: string; key: number };
-
 export function ScrapButton({ postId, initialSaved, size = "md" }: Props) {
   const [saved, setSaved] = useState(initialSaved);
   const [isPending, startTransition] = useTransition();
-  const [toast, setToast] = useState<Toast | null>(null);
+  const { toast, showToast } = useToast();
 
   const iconSize = size === "sm" ? "h-4 w-4" : "h-5 w-5";
   const unsavedClass =
@@ -23,18 +22,11 @@ export function ScrapButton({ postId, initialSaved, size = "md" }: Props) {
       ? "text-white/80 hover:text-white"
       : "text-muted-foreground hover:text-foreground";
 
-  function showToast(message: string) {
-    const key = Date.now();
-    setToast({ message, key });
-    setTimeout(() => setToast((t) => (t?.key === key ? null : t)), 2000);
-  }
-
   function handleClick(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
 
-    const optimistic = !saved;
-    setSaved(optimistic);
+    setSaved(!saved);
 
     startTransition(async () => {
       const result = await toggleScrap(postId);
