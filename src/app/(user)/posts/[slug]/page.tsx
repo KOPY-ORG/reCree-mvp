@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description = post.bodyEn
     ? post.bodyEn.slice(0, 120)
     : "Discover K-content travel spots on reCree";
-  const imageUrl = post.postImages[0]?.url;
+  const imageUrl = post.postImages[0]?.url ?? "/og-default.png";
   const pageUrl = `https://recree.io/posts/${post.slug}`;
 
   return {
@@ -48,13 +48,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: post.titleEn,
       description,
       url: pageUrl,
-      ...(imageUrl ? { images: [{ url: imageUrl }] } : {}),
+      siteName: "reCree",
+      images: [{ url: imageUrl }],
     },
     twitter: {
       card: "summary_large_image",
       title: post.titleEn,
       description,
-      ...(imageUrl ? { images: [imageUrl] } : {}),
+      images: [imageUrl],
     },
   };
 }
