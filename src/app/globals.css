@@ -8,6 +8,18 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-noto-sans-kr), var(--font-inter);
+  --color-gray-900: var(--palette-gray-900);
+
+  /* ── Typography Scale ───────────────── */
+  /* base: 16px (html 100%) */
+  --text-2xs:    0.6875rem;  /* 11px — 최소 보조 텍스트 */
+  --text-xs:     0.75rem;    /* 12px — 캡션, 메타데이터 */
+  --text-sm:     0.875rem;   /* 14px — 배지, 레이블, 보조 본문 ← 최소 기준 */
+  --text-base:   1rem;       /* 16px — 기본 본문 */
+  --text-lg:     1.125rem;   /* 18px — 섹션 타이틀 */
+  --text-xl:     1.25rem;    /* 20px — 페이지 타이틀 */
+  --text-2xl:    1.5rem;     /* 24px — 디스플레이 */
+
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
   --color-brand-sub: var(--brand-sub);
@@ -58,6 +70,7 @@
   --palette-brand-sub:  #D0FF6C;
   --palette-brand-sub2: #E7FFB3;
   --palette-black:      #000000;
+  --palette-gray-900:   #3F3D3D;
   --palette-gray-700:   #737373;
   --palette-gray-400:   #BABABA;
   --palette-gray-100:   #F3F3F3;
@@ -109,7 +122,7 @@
 
 @layer base {
   html {
-    font-size: 87.5%; /* 14px — GitHub 수준 기본 크기 */
+    font-size: 100%; /* 16px base — text-sm = 14px */
   }
   * {
     @apply border-border outline-ring/50;
@@ -121,3 +134,62 @@
 
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ── Post Body Markdown ── */
+.post-body .wmde-markdown {
+  font-family: var(--font-sans) !important;
+  font-size: 0.875rem !important; /* 14px */
+  line-height: 1.8 !important;
+  color: var(--palette-gray-900) !important;
+  background: transparent !important;
+}
+.post-body .wmde-markdown p {
+  margin-bottom: 1.1rem !important;
+}
+.post-body .wmde-markdown p:last-child {
+  margin-bottom: 0 !important;
+}
+.post-body .wmde-markdown h1,
+.post-body .wmde-markdown h2,
+.post-body .wmde-markdown h3 {
+  font-family: var(--font-sans) !important;
+  font-weight: 700 !important;
+  color: var(--foreground) !important;
+  margin-top: 1.75rem !important;
+  margin-bottom: 0.5rem !important;
+  line-height: 1.4 !important;
+}
+.post-body .wmde-markdown h2 { font-size: 1.0625rem !important; } /* 17px */
+.post-body .wmde-markdown h3 { font-size: 0.9375rem !important; } /* 15px */
+.post-body .wmde-markdown strong {
+  font-weight: 700 !important;
+  color: var(--foreground) !important;
+}
+.post-body .wmde-markdown ul,
+.post-body .wmde-markdown ol {
+  padding-left: 1.25rem !important;
+  margin-bottom: 1rem !important;
+}
+.post-body .wmde-markdown li {
+  margin-bottom: 0.35rem !important;
+  line-height: 1.7 !important;
+}
+.post-body .wmde-markdown blockquote {
+  border-left: 3px solid var(--palette-brand) !important;
+  padding: 0.5rem 0.875rem !important;
+  margin: 1.25rem 0 !important;
+  background: var(--palette-gray-100) !important;
+  border-radius: 0 0.5rem 0.5rem 0 !important;
+  color: var(--palette-gray-900) !important;
+}
+.post-body .wmde-markdown hr {
+  border-color: var(--palette-gray-100) !important;
+  margin: 1.5rem 0 !important;
+}
+.post-body .wmde-markdown code {
+  font-size: 0.8125rem !important;
+  background: var(--palette-gray-100) !important;
+  border-radius: 0.25rem !important;
+  padding: 0.1em 0.35em !important;
+  color: var(--palette-gray-900) !important;
+}

@@ -13,10 +13,10 @@ interface Props {
 
 export function MarkdownContent({ source }: Props) {
   return (
-    <div data-color-mode="light">
+    <div data-color-mode="light" className="post-body">
       <MDPreview
         source={source}
-        style={{ background: "transparent", fontSize: "0.9rem" }}
+        style={{ background: "transparent" }}
       />
     </div>
   );

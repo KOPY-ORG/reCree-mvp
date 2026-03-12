@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { createTopic, updateTopic, deleteTopic, checkTopicSlug } from "../actions";
+import { createTopic, updateTopic, deleteTopic, checkTopicSlug, type TopicSavedData } from "../actions";
 import type { TopicNode } from "./SortableTopicList";
 
 // ─── 타입 ─────────────────────────────────────────────────────────────────────
@@ -39,6 +39,7 @@ interface TopicDialogProps {
   allTopics: FlatTopic[];
   parentEffectiveColor: { hex: string; hex2: string | null; gradientDir: string; gradientStop: number; textHex: string } | null;
   onClose: () => void;
+  onSaved?: (topic: TopicSavedData) => void;
 }
 
 // ─── 상수 ─────────────────────────────────────────────────────────────────────
@@ -318,7 +319,7 @@ function ParentPicker({
 
 // ─── TopicDialog ───────────────────────────────────────────────────────────────
 
-export function TopicDialog({ open, topic, defaultParentId, allTopics, parentEffectiveColor, onClose }: TopicDialogProps) {
+export function TopicDialog({ open, topic, defaultParentId, allTopics, parentEffectiveColor, onClose, onSaved }: TopicDialogProps) {
   const isEdit = topic !== null;
   const [isPending, startTransition] = useTransition();
 
@@ -470,15 +471,25 @@ export function TopicDialog({ open, topic, defaultParentId, allTopics, parentEff
     };
 
     startTransition(async () => {
-      const result = isEdit
-        ? await updateTopic(topic!.id, data)
-        : await createTopic(data);
-
-      if (result.error) {
-        toast.error(result.error);
+      if (isEdit) {
+        const result = await updateTopic(topic!.id, data);
+        if (result.error) {
+          toast.error(result.error);
+        } else {
+          toast.success("수정되었습니다.");
+          onClose();
+        }
       } else {
-        toast.success(isEdit ? "수정되었습니다." : "생성되었습니다.");
-        onClose();
+        const result = await createTopic(data);
+        if (result.error) {
+          toast.error(result.error);
+        } else {
+          toast.success("생성되었습니다.");
+          if (result.created && onSaved) {
+            onSaved(result.created);
+          }
+          onClose();
+        }
       }
     });
   }

@@ -22,8 +22,11 @@ export type PostImageInput = {
   imageType: "BANNER" | "ORIGINAL";
   imageSource: "UPLOAD" | "URL" | "AUTO";
   url: string;
+  linkUrl?: string | null;
   isThumbnail: boolean;
   sortOrder: number;
+  slotIndex?: number | null;
+  isSlotCard?: boolean;
 };
 
 export type PostSourceInput = {
@@ -93,6 +96,12 @@ export async function searchPlaces(keyword: string) {
       longitude: true,
       phone: true,
       imageUrl: true,
+      rating: true,
+      status: true,
+      operatingHours: true,
+      googleMapsUrl: true,
+      naverMapsUrl: true,
+      gettingThere: true,
     },
     orderBy: { createdAt: "desc" },
     take: 10,
@@ -117,7 +126,9 @@ export async function getPlaceDetail(id: string) {
       rating: true,
       operatingHours: true,
       googleMapsUrl: true,
+      naverMapsUrl: true,
       status: true,
+      gettingThere: true,
     },
   });
 }
@@ -162,8 +173,11 @@ export async function createPost(
               imageType: img.imageType,
               imageSource: img.imageSource,
               url: img.url,
+              linkUrl: img.linkUrl ?? null,
               isThumbnail: img.isThumbnail,
               sortOrder: img.sortOrder,
+              slotIndex: img.slotIndex ?? null,
+              isSlotCard: img.isSlotCard ?? false,
             })),
           },
         }),
@@ -255,8 +269,11 @@ export async function updatePost(
                 imageType: img.imageType,
                 imageSource: img.imageSource,
                 url: img.url,
+                linkUrl: img.linkUrl ?? null,
                 isThumbnail: img.isThumbnail,
                 sortOrder: img.sortOrder,
+                slotIndex: img.slotIndex ?? null,
+                isSlotCard: img.isSlotCard ?? false,
               })),
             },
           }),
@@ -400,6 +417,12 @@ export async function getPostEditData(id: string) {
                 longitude: true,
                 phone: true,
                 imageUrl: true,
+                rating: true,
+                status: true,
+                operatingHours: true,
+                googleMapsUrl: true,
+                naverMapsUrl: true,
+                gettingThere: true,
               },
             },
           },
@@ -411,8 +434,11 @@ export async function getPostEditData(id: string) {
             imageType: true,
             imageSource: true,
             url: true,
+            linkUrl: true,
             isThumbnail: true,
             sortOrder: true,
+            slotIndex: true,
+            isSlotCard: true,
           },
         },
         postSources: {
@@ -511,8 +537,11 @@ export async function getPostEditData(id: string) {
       imageType: img.imageType as "BANNER" | "ORIGINAL",
       imageSource: img.imageSource as "UPLOAD" | "URL" | "AUTO",
       url: img.url,
+      linkUrl: img.linkUrl ?? null,
       isThumbnail: img.isThumbnail,
       sortOrder: img.sortOrder,
+      slotIndex: img.slotIndex ?? null,
+      isSlotCard: img.isSlotCard,
     })),
     postSources: post.postSources.map((s) => ({
       url: s.url,
@@ -534,6 +563,12 @@ export async function getPostEditData(id: string) {
             placeLongitude: firstPlace.place.longitude,
             placePhone: firstPlace.place.phone,
             placeImageUrl: firstPlace.place.imageUrl,
+            placeRating: firstPlace.place.rating,
+            placeStatus: firstPlace.place.status,
+            placeOperatingHours: firstPlace.place.operatingHours,
+            placeGoogleMapsUrl: firstPlace.place.googleMapsUrl,
+            placeNaverMapsUrl: firstPlace.place.naverMapsUrl,
+            placeGettingThere: firstPlace.place.gettingThere,
             context: firstPlace.context,
             vibe: firstPlace.vibe,
             mustTry: firstPlace.mustTry,

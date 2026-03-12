@@ -40,7 +40,7 @@ enum ReCreeshotStatus {
 
 enum ImageType {
   BANNER    // 장소 사진 (캐러셀, 최대 5장)
-  ORIGINAL  // 연예인 원본 장면/사진 (배너 좌하단 오버레이, 1장)
+  ORIGINAL  // 연예인 원본 장면/사진 (배너 좌하단 오버레이, 최대 2장)
 }
 
 enum ImageSource {
@@ -180,8 +180,11 @@ model PostImage {
   imageType   ImageType
   imageSource ImageSource @default(UPLOAD)
   url         String
+  linkUrl     String?     // 카드 클릭 시 이동 URL (ORIGINAL 이미지용)
   isThumbnail Boolean     @default(false)
   sortOrder   Int         @default(0)
+  slotIndex   Int?        // null=BANNER, 0=슬롯1, 1=슬롯2
+  isSlotCard  Boolean     @default(false)  // 슬롯별 미니 소스 카드 대표 이미지
   createdAt   DateTime    @default(now())
 
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)

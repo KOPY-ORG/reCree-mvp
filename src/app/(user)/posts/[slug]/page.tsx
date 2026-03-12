@@ -1,9 +1,15 @@
 import { notFound } from "next/navigation";
-import Image from "next/image";
-import Link from "next/link";
-import { ArrowLeft, MapPin } from "lucide-react";
+import { Sparkles, Waves, Flame, MapPin, Lightbulb } from "lucide-react";
+import { LocationCard } from "./_components/LocationCard";
 import { prisma } from "@/lib/prisma";
+import { resolveTopicColors, labelBackground, DEFAULT_COLOR, DEFAULT_TEXT, type ResolvedLabel } from "@/lib/post-labels";
 import { MarkdownContent } from "./_components/MarkdownContent";
+import { PostDetailHeader } from "./_components/PostDetailHeader";
+import { BannerCarousel } from "./_components/BannerCarousel";
+import { OriginalSourceCards } from "./_components/OriginalSourceCards";
+import { SourceSection } from "./_components/SourceSection";
+import { PostMetaBar } from "./_components/PostMetaBar";
+import { getCurrentUser } from "@/lib/auth";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -15,36 +21,59 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
   const { preview } = await searchParams;
   const isPreview = preview === "1";
 
-  const post = await prisma.post.findUnique({
+  const [post, tagGroupConfigs] = await Promise.all([
+    prisma.post.findUnique({
     where: { slug },
     include: {
       postTopics: {
-        select: {
+        where: { isVisible: true },
+        orderBy: { displayOrder: "asc" },
+        include: {
           topic: {
             select: {
               id: true,
               nameEn: true,
               colorHex: true,
+              colorHex2: true,
+              gradientDir: true,
+              gradientStop: true,
               textColorHex: true,
+              parent: {
+                select: {
+                  colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true,
+                  parent: {
+                    select: {
+                      colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true,
+                      parent: { select: { colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true } },
+                    },
+                  },
+                },
+              },
             },
           },
         },
       },
       postTags: {
-        select: {
+        where: { isVisible: true },
+        orderBy: { displayOrder: "asc" },
+        include: {
           tag: {
             select: {
               id: true,
               name: true,
+              group: true,
               colorHex: true,
+              colorHex2: true,
+              textColorHex: true,
             },
           },
         },
       },
       postImages: {
-        where: { isThumbnail: true },
-        select: { url: true },
-        take: 1,
+        orderBy: { sortOrder: "asc" },
+      },
+      postSources: {
+        orderBy: { sortOrder: "asc" },
       },
       postPlaces: {
         select: {
@@ -59,16 +88,58 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
               nameEn: true,
               nameKo: true,
               addressEn: true,
+              latitude: true,
+              longitude: true,
               googleMapsUrl: true,
+              phone: true,
+              operatingHours: true,
+              gettingThere: true,
             },
           },
         },
       },
     },
-  });
+  }),
+    prisma.tagGroupConfig.findMany({
+      select: { group: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true },
+    }),
+  ]);
 
   if (!post || (!isPreview && post.status !== "PUBLISHED")) notFound();
 
+  const bannerImages = post.postImages.filter((img) => img.imageType === "BANNER");
+  const originalImages = post.postImages.filter((img) => img.imageType === "ORIGINAL");
+  const originalLinkUrls = post.postSources
+    .filter((s) => s.isOriginalLink)
+    .map((s) => s.url);
+
+  // 색상 resolve
+  const configMap = new Map(tagGroupConfigs.map((c) => [c.group, c]));
+
+  const resolvedTopics: (ResolvedLabel & { nameEn: string })[] = post.postTopics.map(({ topic }) => ({
+    nameEn: topic.nameEn,
+    text: topic.nameEn,
+    ...resolveTopicColors(topic),
+  }));
+
+  const resolvedTags: ResolvedLabel[] = post.postTags.map(({ tag }) => {
+    const gc = configMap.get(tag.group);
+    return {
+      text: tag.name,
+      colorHex: tag.colorHex ?? gc?.colorHex ?? DEFAULT_COLOR,
+      colorHex2: tag.colorHex ? (tag.colorHex2 ?? null) : (gc?.colorHex2 ?? null),
+      gradientDir: gc?.gradientDir ?? "to bottom",
+      gradientStop: gc?.gradientStop ?? 150,
+      textColorHex: tag.textColorHex ?? gc?.textColorHex ?? DEFAULT_TEXT,
+    };
+  });
+
+  const currentUser = await getCurrentUser();
+  const isSaved = currentUser
+    ? !!(await prisma.save.findUnique({
+        where: { userId_targetType_targetId: { userId: currentUser.id, targetType: "POST", targetId: post.id } },
+      }))
+    : false;
   const spotInsight = post.postPlaces[0] ?? null;
   const insightEn = spotInsight?.insightEn as {
     context?: string;
@@ -77,169 +148,137 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
   } | null;
 
   return (
-    <article className="pb-8">
+    <article className="pb-8 max-w-2xl mx-auto">
+      <PostDetailHeader />
       {isPreview && (
         <div className="bg-amber-100 text-amber-800 text-xs text-center py-2 font-medium">
           미리보기 모드 — 실제 발행 전 상태입니다
         </div>
       )}
-      {/* 뒤로가기 */}
-      <div className="sticky top-0 z-10 flex items-center h-12 px-3 bg-background/80 backdrop-blur-sm border-b">
-        <Link
-          href="/"
-          className="flex items-center justify-center h-8 w-8 rounded-full hover:bg-muted transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-      </div>
 
-      {/* 썸네일 */}
-      {post.postImages[0]?.url && (
-        <div className="relative w-full aspect-[16/9] bg-muted">
-          <Image
-            src={post.postImages[0].url}
-            alt={post.titleEn}
-            fill
-            className="object-cover"
-            sizes="430px"
-            priority
-            unoptimized
-          />
+      {/* 배너 캐러셀 — 헤더(h-12) 높이만큼 위로 올려 풀블리드 */}
+      {bannerImages.length > 0 && (
+        <div className="-mt-12">
+          <BannerCarousel images={bannerImages}>
+            <OriginalSourceCards
+              images={originalImages}
+              originalLinkUrls={originalLinkUrls}
+            />
+          </BannerCarousel>
         </div>
       )}
 
-      {/* 제목 섹션 */}
-      <div className="px-4 pt-4 space-y-2">
-        {/* 토픽/태그 뱃지 */}
-        {(post.postTopics.length > 0 || post.postTags.length > 0) && (
-          <div className="flex flex-wrap gap-1.5">
-            {post.postTopics.map(({ topic }) => (
-              <span
-                key={topic.id}
-                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-                style={
-                  topic.colorHex
-                    ? {
-                        backgroundColor: topic.colorHex,
-                        color: topic.textColorHex ?? "#FCFCFC",
-                      }
-                    : {
-                        backgroundColor: "hsl(var(--muted))",
-                        color: "hsl(var(--muted-foreground))",
-                      }
-                }
-              >
-                {topic.nameEn}
-              </span>
-            ))}
-            {post.postTags.map(({ tag }) => (
-              <span
-                key={tag.id}
-                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-                style={
-                  tag.colorHex
-                    ? {
-                        backgroundColor: tag.colorHex + "22",
-                        color: tag.colorHex,
-                      }
-                    : {
-                        backgroundColor: "hsl(var(--muted))",
-                        color: "hsl(var(--muted-foreground))",
-                      }
-                }
-              >
-                {tag.name}
-              </span>
-            ))}
-          </div>
-        )}
+      {/* 배지 + 공유/스크랩 */}
+      <PostMetaBar
+        topics={resolvedTopics}
+        tags={resolvedTags}
+        isSaved={isSaved}
+        postId={post.id}
+        titleEn={post.titleEn}
+      />
 
-        <h1 className="text-xl font-bold leading-tight">{post.titleEn}</h1>
+      {/* 제목 */}
+      <div className="px-4 pb-2 space-y-1.5">
+        <h1 className="text-xl font-bold leading-tight">
+          {spotInsight?.place.nameEn ?? spotInsight?.place.nameKo ?? post.titleEn}
+        </h1>
+        {spotInsight && (
+          <p className="text-sm text-muted-foreground leading-snug">{post.titleEn}</p>
+        )}
       </div>
 
       {/* Spot Insight */}
       {spotInsight && (
-        <div className="mx-4 mt-5 rounded-xl border bg-muted/30 overflow-hidden">
-          {/* 장소 헤더 */}
-          <div className="flex items-center gap-2 px-4 py-3 border-b bg-muted/40">
-            <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
-            <div>
-              <p className="text-sm font-semibold">
-                {spotInsight.place.nameEn ?? spotInsight.place.nameKo}
-              </p>
-              {spotInsight.place.addressEn && (
-                <p className="text-xs text-muted-foreground">
-                  {spotInsight.place.addressEn}
-                </p>
-              )}
-            </div>
-            {spotInsight.place.googleMapsUrl && (
-              <a
-                href={spotInsight.place.googleMapsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="ml-auto text-xs text-muted-foreground underline shrink-0"
-              >
-                Map
-              </a>
-            )}
+        <div className="mx-4 mt-3 rounded-2xl border border-secondary bg-white overflow-hidden">
+          {/* 헤더 */}
+          <div className="px-4 pt-4 pb-3">
+            <p className="text-sm font-bold">Spot Insight</p>
           </div>
 
-          <div className="px-4 py-3 space-y-3 text-sm">
+          <div className="px-4 pb-4 space-y-5">
             {/* Context */}
             {insightEn?.context && (
-              <p className="text-foreground/80 leading-relaxed">
-                {insightEn.context}
-              </p>
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <Sparkles className="h-4 w-4 shrink-0 text-brand drop-shadow-[0_1px_1px_rgba(0,0,0,0.08)]" />
+                  <p className="text-sm font-bold text-foreground">Context</p>
+                </div>
+                <p className="text-sm text-gray-900 leading-relaxed pl-5">{insightEn.context}</p>
+              </div>
             )}
 
             {/* Vibe */}
             {spotInsight.vibe.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {spotInsight.vibe.map((v, i) => (
-                  <span
-                    key={i}
-                    className="px-2 py-0.5 rounded-full bg-brand/20 text-xs font-medium"
-                  >
-                    {v}
-                  </span>
-                ))}
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5">
+                  <Waves className="h-4 w-4 shrink-0 drop-shadow-[0_1px_1px_rgba(0,0,0,0.08)]" style={{ color: "#FFC60C" }} />
+                  <p className="text-sm font-bold text-foreground">Vibe</p>
+                </div>
+                <div className="flex flex-wrap gap-1.5 pl-5">
+                  {spotInsight.vibe.map((v, i) => (
+                    <span key={i} className="px-2.5 py-0.5 rounded-full bg-brand-sub2 text-xs font-medium">
+                      {v}
+                    </span>
+                  ))}
+                </div>
               </div>
             )}
 
             {/* Must-try */}
             {insightEn?.mustTry && (
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-                  Must Try
-                </p>
-                <p className="text-foreground/80 leading-relaxed">
-                  {insightEn.mustTry}
-                </p>
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <Flame className="h-4 w-4 shrink-0 drop-shadow-[0_1px_1px_rgba(0,0,0,0.08)]" style={{ color: "#F46022" }} />
+                  <p className="text-sm font-bold text-foreground">Must-try</p>
+                </div>
+                <p className="text-sm text-gray-900 leading-relaxed pl-5">{insightEn.mustTry}</p>
               </div>
             )}
 
             {/* Tip */}
             {insightEn?.tip && (
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-                  Tip
-                </p>
-                <p className="text-foreground/80 leading-relaxed">
-                  {insightEn.tip}
-                </p>
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <Lightbulb className="h-4 w-4 shrink-0 drop-shadow-[0_1px_1px_rgba(0,0,0,0.08)]" style={{ color: "#36D8FC" }} />
+                  <p className="text-sm font-bold text-foreground">Tip</p>
+                </div>
+                <p className="text-sm text-gray-900 leading-relaxed pl-5">{insightEn.tip}</p>
               </div>
             )}
           </div>
         </div>
       )}
 
+      {/* Location 카드 */}
+      {spotInsight && (
+        <LocationCard
+          nameEn={spotInsight.place.nameEn}
+          nameKo={spotInsight.place.nameKo}
+          addressEn={spotInsight.place.addressEn}
+          latitude={spotInsight.place.latitude ? Number(spotInsight.place.latitude) : null}
+          longitude={spotInsight.place.longitude ? Number(spotInsight.place.longitude) : null}
+          googleMapsUrl={spotInsight.place.googleMapsUrl}
+          phone={spotInsight.place.phone ?? null}
+          operatingHours={(spotInsight.place.operatingHours as string[] | null) ?? null}
+          gettingThere={spotInsight.place.gettingThere ?? null}
+        />
+      )}
+
       {/* 본문 */}
       {post.bodyEn && (
-        <div className="px-4 mt-6">
-          <MarkdownContent source={post.bodyEn} />
+        <div className="mx-4 mt-3 rounded-2xl border border-secondary bg-white overflow-hidden">
+          <div className="px-4 pt-4 pb-3">
+            <p className="text-sm font-bold">Story</p>
+            <p className="text-xs text-muted-foreground mt-0.5">The full story behind this spot</p>
+          </div>
+          <div className="px-4 pb-4">
+            <MarkdownContent source={post.bodyEn} />
+          </div>
         </div>
       )}
+
+      {/* From the Source */}
+      <SourceSection sources={post.postSources} />
 
       {/* 출처 */}
       {post.source && (
