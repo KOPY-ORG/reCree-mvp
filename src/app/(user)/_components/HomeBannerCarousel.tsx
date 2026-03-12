@@ -7,6 +7,7 @@ import Link from "next/link";
 export type BannerItem = {
   slug: string;
   titleEn: string;
+  displayName: string;
   thumbnailUrl: string | null;
   labels: {
     text: string;
@@ -89,7 +90,7 @@ export function HomeBannerCarousel({ banners }: { banners: BannerItem[] }) {
             </div>
           )}
           <h2 className="text-white font-bold text-lg leading-tight line-clamp-2">
-            {banner.titleEn}
+            {banner.displayName}
           </h2>
         </div>
       </Link>

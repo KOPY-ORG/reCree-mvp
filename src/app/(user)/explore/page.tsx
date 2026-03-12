@@ -1,58 +1,26 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Bookmark, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { getPostsWithLabels, type PostItem } from "@/lib/post-queries";
-import {
-  resolveTopicColors,
-  labelBackground,
-  DEFAULT_COLOR,
-  DEFAULT_TEXT,
-  type TagGroupColorMap,
-  type ResolvedLabel,
-} from "@/lib/post-labels";
+import { getPostsWithLabels, getSavedPostIds, type PostItem } from "@/lib/post-queries";
+import { type TagGroupColorMap } from "@/lib/post-labels";
+import { getCurrentUser } from "@/lib/auth";
+import { ScrapButton } from "../_components/ScrapButton";
+import { PostBadges } from "../_components/PostCard";
 
 type ExplorePost = PostItem;
 
 // ─── 서브 컴포넌트 ────────────────────────────────────────────────────────────
 
-function PostLabels({ post, tagGroupMap }: { post: ExplorePost; tagGroupMap: TagGroupColorMap }) {
-  const labels: ResolvedLabel[] = [];
-
-  for (const { topic } of post.postTopics) {
-    labels.push({ text: topic.nameEn, ...resolveTopicColors(topic) });
-  }
-  for (const { tag } of post.postTags) {
-    const gc = tagGroupMap.get(tag.group);
-    labels.push({
-      text: tag.name,
-      colorHex: tag.colorHex ?? gc?.colorHex ?? DEFAULT_COLOR,
-      colorHex2: tag.colorHex ? (tag.colorHex2 ?? null) : (gc?.colorHex2 ?? null),
-      gradientDir: gc?.gradientDir ?? "to bottom",
-      gradientStop: gc?.gradientStop ?? 150,
-      textColorHex: tag.textColorHex ?? gc?.textColorHex ?? DEFAULT_TEXT,
-    });
-  }
-
-  const visible = labels.slice(0, 3);
-  if (visible.length === 0) return null;
-
-  return (
-    <div className="flex flex-wrap gap-1 mt-1.5">
-      {visible.map((label, i) => (
-        <span
-          key={i}
-          className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold leading-none"
-          style={{ background: labelBackground(label), color: label.textColorHex }}
-        >
-          {label.text}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function PostListItem({ post, tagGroupMap }: { post: ExplorePost; tagGroupMap: TagGroupColorMap }) {
+function PostListItem({
+  post,
+  tagGroupMap,
+  isSaved,
+}: {
+  post: ExplorePost;
+  tagGroupMap: TagGroupColorMap;
+  isSaved: boolean;
+}) {
   return (
     <Link
       href={`/posts/${post.slug}`}
@@ -74,11 +42,15 @@ function PostListItem({ post, tagGroupMap }: { post: ExplorePost; tagGroupMap: T
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className="font-semibold text-sm line-clamp-2 leading-snug">{post.titleEn}</p>
-        <PostLabels post={post} tagGroupMap={tagGroupMap} />
+        <p className="font-semibold text-sm line-clamp-2 leading-snug">
+          {post.postPlaces[0]?.place.nameEn ?? post.postPlaces[0]?.place.nameKo ?? post.titleEn}
+        </p>
+        <div className="mt-1.5">
+          <PostBadges post={post} tagGroupMap={tagGroupMap} maxLabels={3} />
+        </div>
       </div>
 
-      <Bookmark className="size-4 shrink-0 text-muted-foreground/60" />
+      <ScrapButton postId={post.id} initialSaved={isSaved} size="md" />
     </Link>
   );
 }
@@ -133,7 +105,9 @@ export default async function ExplorePage({
 }) {
   const { tab = "posts" } = await searchParams;
 
-  const [tagGroupConfigs, recreeshots] = await Promise.all([
+  const currentUser = await getCurrentUser();
+
+  const [tagGroupConfigs, recreeshots, savedPostIds] = await Promise.all([
     prisma.tagGroupConfig.findMany({
       select: { group: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true },
     }),
@@ -142,6 +116,7 @@ export default async function ExplorePage({
       orderBy: { createdAt: "desc" },
       select: { id: true, imageUrl: true, matchScore: true, showBadge: true },
     }),
+    getSavedPostIds(currentUser?.id ?? null),
   ]);
 
   const tagGroupMap: TagGroupColorMap = new Map(tagGroupConfigs.map((c) => [c.group, c]));
@@ -186,7 +161,7 @@ export default async function ExplorePage({
           ) : (
             <>
               {posts.slice(0, 3).map((post) => (
-                <PostListItem key={post.id} post={post} tagGroupMap={tagGroupMap} />
+                <PostListItem key={post.id} post={post} tagGroupMap={tagGroupMap} isSaved={savedPostIds.has(post.id)} />
               ))}
 
               {recreeshots.length > 0 && (
@@ -194,7 +169,7 @@ export default async function ExplorePage({
               )}
 
               {posts.slice(3).map((post) => (
-                <PostListItem key={post.id} post={post} tagGroupMap={tagGroupMap} />
+                <PostListItem key={post.id} post={post} tagGroupMap={tagGroupMap} isSaved={savedPostIds.has(post.id)} />
               ))}
             </>
           )}

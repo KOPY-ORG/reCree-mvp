@@ -3,15 +3,16 @@ import Image from "next/image";
 import { ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { HomeBannerCarousel, type BannerItem } from "./_components/HomeBannerCarousel";
-import { getPostsWithLabels, type PostItem } from "@/lib/post-queries";
+import { getPostsWithLabels, getSavedPostIds, type PostItem } from "@/lib/post-queries";
 import {
   resolveTopicColors,
   DEFAULT_COLOR,
   DEFAULT_TEXT,
   type TagGroupColorMap,
 } from "@/lib/post-labels";
-import { PostCard, PostBadges } from "./_components/PostCard";
+import { PostCard } from "./_components/PostCard";
 import { SearchBar } from "./_components/SearchBar";
+import { getCurrentUser } from "@/lib/auth";
 
 // ─── 서브 컴포넌트 ────────────────────────────────────────────────────────────
 
@@ -19,10 +20,12 @@ function CuratedSectionRow({
   titleEn,
   posts,
   tagGroupMap,
+  savedPostIds,
 }: {
   titleEn: string;
   posts: PostItem[];
   tagGroupMap: TagGroupColorMap;
+  savedPostIds: Set<string>;
 }) {
   if (posts.length === 0) return null;
   return (
@@ -38,7 +41,7 @@ function CuratedSectionRow({
       </div>
       <div className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-1">
         {posts.map((post) => (
-          <PostCard key={post.id} post={post} tagGroupMap={tagGroupMap} />
+          <PostCard key={post.id} post={post} tagGroupMap={tagGroupMap} isSaved={savedPostIds.has(post.id)} />
         ))}
       </div>
     </section>
@@ -48,7 +51,9 @@ function CuratedSectionRow({
 // ─── 메인 페이지 ──────────────────────────────────────────────────────────────
 
 export default async function HomePage() {
-  const [homeBanners, sections, tagGroupConfigs] = await Promise.all([
+  const currentUser = await getCurrentUser();
+
+  const [homeBanners, sections, tagGroupConfigs, savedPostIds] = await Promise.all([
     prisma.homeBanner.findMany({
       where: { isActive: true },
       orderBy: { order: "asc" },
@@ -103,6 +108,12 @@ export default async function HomePage() {
                 },
               },
             },
+            postPlaces: {
+              take: 1,
+              select: {
+                place: { select: { nameEn: true, nameKo: true } },
+              },
+            },
           },
         },
       },
@@ -114,6 +125,7 @@ export default async function HomePage() {
     prisma.tagGroupConfig.findMany({
       select: { group: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true },
     }),
+    getSavedPostIds(currentUser?.id ?? null),
   ]);
 
   type SectionData =
@@ -234,6 +246,10 @@ export default async function HomePage() {
     return {
       slug: b.post.slug,
       titleEn: b.post.titleEn,
+      displayName:
+        b.post.postPlaces[0]?.place.nameEn ??
+        b.post.postPlaces[0]?.place.nameKo ??
+        b.post.titleEn,
       thumbnailUrl: b.post.postImages[0]?.url ?? null,
       labels,
     };
@@ -262,31 +278,13 @@ export default async function HomePage() {
         <SearchBar />
         <div className="grid grid-cols-2 gap-3">
           {fallbackPosts.map((post) => (
-            <Link key={post.id} href={`/posts/${post.slug}`}>
-              <div className="relative aspect-[3/2] rounded-lg overflow-hidden bg-muted">
-                {post.postImages[0]?.url ? (
-                  <Image
-                    src={post.postImages[0].url}
-                    alt={post.titleEn}
-                    fill
-                    unoptimized
-                    className="object-cover"
-                    sizes="(max-width: 672px) 50vw, 336px"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-muted" />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                <div className="absolute top-2 left-2 right-2">
-                  <PostBadges post={post} tagGroupMap={tagGroupMap} />
-                </div>
-                <div className="absolute bottom-2 left-2 right-2">
-                  <p className="text-white text-xs font-semibold line-clamp-2 leading-snug drop-shadow">
-                    {post.titleEn}
-                  </p>
-                </div>
-              </div>
-            </Link>
+            <PostCard
+              key={post.id}
+              post={post}
+              tagGroupMap={tagGroupMap}
+              isSaved={savedPostIds.has(post.id)}
+              variant="grid"
+            />
           ))}
         </div>
       </div>
@@ -346,6 +344,7 @@ export default async function HomePage() {
             titleEn={section.titleEn}
             posts={data.items}
             tagGroupMap={tagGroupMap}
+            savedPostIds={savedPostIds}
           />
         );
       })}
