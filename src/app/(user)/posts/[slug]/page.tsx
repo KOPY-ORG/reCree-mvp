@@ -33,6 +33,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description = post.bodyEn
     ? post.bodyEn.slice(0, 120)
     : "Discover K-content travel spots on reCree";
+  const ogTitle = post.titleEn.length > 60
+    ? post.titleEn.slice(0, 57) + "..."
+    : post.titleEn;
   const imageUrl = "/og-default.png";
   const pageUrl = `https://recree.io/posts/${post.slug}`;
 
@@ -40,7 +43,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: post.titleEn,
     description,
     openGraph: {
-      title: post.titleEn,
+      title: ogTitle,
       description,
       url: pageUrl,
       siteName: "reCree",
@@ -48,7 +51,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     twitter: {
       card: "summary_large_image",
-      title: post.titleEn,
+      title: ogTitle,
       description,
       images: [imageUrl],
     },
