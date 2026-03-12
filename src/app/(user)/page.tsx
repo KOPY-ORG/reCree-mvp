@@ -3,17 +3,16 @@ import Image from "next/image";
 import { ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { HomeBannerCarousel, type BannerItem } from "./_components/HomeBannerCarousel";
-import { getPostsWithLabels, type PostItem } from "@/lib/post-queries";
+import { getPostsWithLabels, getSavedPostIds, type PostItem } from "@/lib/post-queries";
 import {
   resolveTopicColors,
   DEFAULT_COLOR,
   DEFAULT_TEXT,
   type TagGroupColorMap,
 } from "@/lib/post-labels";
-import { PostCard, PostBadges } from "./_components/PostCard";
+import { PostCard } from "./_components/PostCard";
 import { SearchBar } from "./_components/SearchBar";
 import { getCurrentUser } from "@/lib/auth";
-import { ScrapButton } from "./_components/ScrapButton";
 
 // ─── 서브 컴포넌트 ────────────────────────────────────────────────────────────
 
@@ -109,6 +108,12 @@ export default async function HomePage() {
                 },
               },
             },
+            postPlaces: {
+              take: 1,
+              select: {
+                place: { select: { nameEn: true, nameKo: true } },
+              },
+            },
           },
         },
       },
@@ -120,14 +125,7 @@ export default async function HomePage() {
     prisma.tagGroupConfig.findMany({
       select: { group: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true },
     }),
-    currentUser
-      ? prisma.save
-          .findMany({
-            where: { userId: currentUser.id, targetType: "POST" },
-            select: { targetId: true },
-          })
-          .then((rows) => new Set(rows.map((r) => r.targetId)))
-      : Promise.resolve(new Set<string>()),
+    getSavedPostIds(currentUser?.id ?? null),
   ]);
 
   type SectionData =
@@ -248,6 +246,10 @@ export default async function HomePage() {
     return {
       slug: b.post.slug,
       titleEn: b.post.titleEn,
+      displayName:
+        b.post.postPlaces[0]?.place.nameEn ??
+        b.post.postPlaces[0]?.place.nameKo ??
+        b.post.titleEn,
       thumbnailUrl: b.post.postImages[0]?.url ?? null,
       labels,
     };
@@ -276,34 +278,13 @@ export default async function HomePage() {
         <SearchBar />
         <div className="grid grid-cols-2 gap-3">
           {fallbackPosts.map((post) => (
-            <Link key={post.id} href={`/posts/${post.slug}`}>
-              <div className="relative aspect-[3/2] rounded-lg overflow-hidden bg-muted">
-                {post.postImages[0]?.url ? (
-                  <Image
-                    src={post.postImages[0].url}
-                    alt={post.titleEn}
-                    fill
-                    unoptimized
-                    className="object-cover"
-                    sizes="(max-width: 672px) 50vw, 336px"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-muted" />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                <div className="absolute top-2 left-2 right-2">
-                  <PostBadges post={post} tagGroupMap={tagGroupMap} />
-                </div>
-                <div className="absolute bottom-2 left-2 right-10">
-                  <p className="text-white text-xs font-semibold line-clamp-2 leading-snug drop-shadow">
-                    {post.titleEn}
-                  </p>
-                </div>
-                <div className="absolute bottom-2 right-2 z-10">
-                  <ScrapButton postId={post.id} initialSaved={savedPostIds.has(post.id)} size="sm" />
-                </div>
-              </div>
-            </Link>
+            <PostCard
+              key={post.id}
+              post={post}
+              tagGroupMap={tagGroupMap}
+              isSaved={savedPostIds.has(post.id)}
+              variant="grid"
+            />
           ))}
         </div>
       </div>
