@@ -25,11 +25,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       slug: true,
       titleEn: true,
       bodyEn: true,
-      postImages: {
-        where: { isThumbnail: true },
-        select: { url: true },
-        take: 1,
-      },
     },
   });
 
@@ -38,23 +33,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description = post.bodyEn
     ? post.bodyEn.slice(0, 120)
     : "Discover K-content travel spots on reCree";
-  const imageUrl = post.postImages[0]?.url;
+  const ogTitle = post.titleEn.length > 60
+    ? post.titleEn.slice(0, 57) + "..."
+    : post.titleEn;
+  const imageUrl = "/og-default.png";
   const pageUrl = `https://recree.io/posts/${post.slug}`;
 
   return {
     title: post.titleEn,
     description,
     openGraph: {
-      title: post.titleEn,
+      title: ogTitle,
       description,
       url: pageUrl,
-      ...(imageUrl ? { images: [{ url: imageUrl }] } : {}),
+      siteName: "reCree",
+      images: [{ url: imageUrl }],
     },
     twitter: {
       card: "summary_large_image",
-      title: post.titleEn,
+      title: ogTitle,
       description,
-      ...(imageUrl ? { images: [imageUrl] } : {}),
+      images: [imageUrl],
     },
   };
 }

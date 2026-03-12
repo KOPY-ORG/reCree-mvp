@@ -37,18 +37,10 @@ export function PostMetaBar({ topics, tags, isSaved, postId, titleEn }: Props) {
       showToast("Link copied!");
       return;
     } catch {
-      // HTTP 등 clipboard 불가 → execCommand fallback
+      // HTTP 등 clipboard 불가 → prompt fallback
     }
 
-    const el = document.createElement("textarea");
-    el.value = url;
-    el.style.position = "fixed";
-    el.style.opacity = "0";
-    document.body.appendChild(el);
-    el.select();
-    document.execCommand("copy");
-    document.body.removeChild(el);
-    showToast("Link copied!");
+    prompt("Copy this link:", url);
   }
 
   return (
