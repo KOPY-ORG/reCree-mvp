@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Share2, Bookmark } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { Share2 } from "lucide-react";
 import { labelBackground, type ResolvedLabel } from "@/lib/post-labels";
+import { ScrapButton } from "@/app/(user)/_components/ScrapButton";
 
 interface ResolvedTopic extends ResolvedLabel {
   nameEn: string;
@@ -19,8 +19,7 @@ interface Props {
 
 type Toast = { message: string; key: number };
 
-export function PostMetaBar({ topics, tags, isSaved: initialSaved, postId }: Props) {
-  const [saved, setSaved] = useState(initialSaved);
+export function PostMetaBar({ topics, tags, isSaved, postId }: Props) {
   const [toast, setToast] = useState<Toast | null>(null);
 
   function showToast(message: string) {
@@ -36,33 +35,6 @@ export function PostMetaBar({ topics, tags, isSaved: initialSaved, postId }: Pro
       showToast("Link copied!");
     } catch {
       showToast("Copy failed");
-    }
-  }
-
-  async function handleSave() {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-
-    if (!session) {
-      showToast("Sign in to save");
-      return;
-    }
-
-    const userId = session.user.id;
-    const prev = saved;
-    setSaved(!prev); // optimistic
-
-    if (prev) {
-      const { error } = await supabase
-        .from("saves")
-        .delete()
-        .match({ user_id: userId, target_type: "POST", target_id: postId });
-      if (error) setSaved(prev);
-    } else {
-      const { error } = await supabase
-        .from("saves")
-        .insert({ user_id: userId, target_type: "POST", target_id: postId });
-      if (error) setSaved(prev);
     }
   }
 
@@ -98,13 +70,7 @@ export function PostMetaBar({ topics, tags, isSaved: initialSaved, postId }: Pro
         <button type="button" onClick={handleShare} className="text-muted-foreground hover:text-foreground transition-colors">
           <Share2 className="h-5 w-5" strokeWidth={1.5} />
         </button>
-        <button type="button" onClick={handleSave} className="transition-colors">
-          <Bookmark
-            className={`h-5 w-5 ${saved ? "" : "text-muted-foreground hover:text-foreground"}`}
-            strokeWidth={1.5}
-            style={saved ? { fill: "#C8FF09", stroke: "#C8FF09" } : undefined}
-          />
-        </button>
+        <ScrapButton postId={postId} initialSaved={isSaved} size="md" />
       </div>
 
       {/* 토스트 — 화면 하단 고정 */}

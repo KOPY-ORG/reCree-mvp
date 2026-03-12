@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Bookmark, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getPostsWithLabels, type PostItem } from "@/lib/post-queries";
 import {
@@ -11,6 +11,8 @@ import {
   type TagGroupColorMap,
   type ResolvedLabel,
 } from "@/lib/post-labels";
+import { getCurrentUser } from "@/lib/auth";
+import { ScrapButton } from "../_components/ScrapButton";
 
 type ExplorePost = PostItem;
 
@@ -52,7 +54,15 @@ function PostLabels({ post, tagGroupMap }: { post: ExplorePost; tagGroupMap: Tag
   );
 }
 
-function PostListItem({ post, tagGroupMap }: { post: ExplorePost; tagGroupMap: TagGroupColorMap }) {
+function PostListItem({
+  post,
+  tagGroupMap,
+  isSaved,
+}: {
+  post: ExplorePost;
+  tagGroupMap: TagGroupColorMap;
+  isSaved: boolean;
+}) {
   return (
     <Link
       href={`/posts/${post.slug}`}
@@ -78,7 +88,7 @@ function PostListItem({ post, tagGroupMap }: { post: ExplorePost; tagGroupMap: T
         <PostLabels post={post} tagGroupMap={tagGroupMap} />
       </div>
 
-      <Bookmark className="size-4 shrink-0 text-muted-foreground/60" />
+      <ScrapButton postId={post.id} initialSaved={isSaved} size="md" />
     </Link>
   );
 }
@@ -133,7 +143,9 @@ export default async function ExplorePage({
 }) {
   const { tab = "posts" } = await searchParams;
 
-  const [tagGroupConfigs, recreeshots] = await Promise.all([
+  const currentUser = await getCurrentUser();
+
+  const [tagGroupConfigs, recreeshots, savedPostIds] = await Promise.all([
     prisma.tagGroupConfig.findMany({
       select: { group: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true },
     }),
@@ -142,6 +154,14 @@ export default async function ExplorePage({
       orderBy: { createdAt: "desc" },
       select: { id: true, imageUrl: true, matchScore: true, showBadge: true },
     }),
+    currentUser
+      ? prisma.save
+          .findMany({
+            where: { userId: currentUser.id, targetType: "POST" },
+            select: { targetId: true },
+          })
+          .then((rows) => new Set(rows.map((r) => r.targetId)))
+      : Promise.resolve(new Set<string>()),
   ]);
 
   const tagGroupMap: TagGroupColorMap = new Map(tagGroupConfigs.map((c) => [c.group, c]));
@@ -186,7 +206,7 @@ export default async function ExplorePage({
           ) : (
             <>
               {posts.slice(0, 3).map((post) => (
-                <PostListItem key={post.id} post={post} tagGroupMap={tagGroupMap} />
+                <PostListItem key={post.id} post={post} tagGroupMap={tagGroupMap} isSaved={savedPostIds.has(post.id)} />
               ))}
 
               {recreeshots.length > 0 && (
@@ -194,7 +214,7 @@ export default async function ExplorePage({
               )}
 
               {posts.slice(3).map((post) => (
-                <PostListItem key={post.id} post={post} tagGroupMap={tagGroupMap} />
+                <PostListItem key={post.id} post={post} tagGroupMap={tagGroupMap} isSaved={savedPostIds.has(post.id)} />
               ))}
             </>
           )}

@@ -9,6 +9,7 @@ import {
   type ResolvedLabel,
 } from "@/lib/post-labels";
 import type { PostItem } from "@/lib/post-queries";
+import { ScrapButton } from "./ScrapButton";
 
 function resolvePostLabels(post: PostItem, tagGroupMap: TagGroupColorMap): ResolvedLabel[] {
   const labels: ResolvedLabel[] = [];
@@ -61,9 +62,11 @@ export function PostBadges({
 export function PostCard({
   post,
   tagGroupMap,
+  isSaved,
 }: {
   post: PostItem;
   tagGroupMap: TagGroupColorMap;
+  isSaved?: boolean;
 }) {
   return (
     <Link
@@ -87,10 +90,13 @@ export function PostCard({
         <div className="absolute top-2 left-2 right-2">
           <PostBadges post={post} tagGroupMap={tagGroupMap} />
         </div>
-        <div className="absolute bottom-2 left-2 right-2">
+        <div className="absolute bottom-2 left-2 right-10">
           <p className="text-white text-xs font-semibold line-clamp-2 leading-snug drop-shadow">
             {post.titleEn}
           </p>
+        </div>
+        <div className="absolute bottom-2 right-2 z-10">
+          <ScrapButton postId={post.id} initialSaved={isSaved ?? false} size="sm" />
         </div>
       </div>
     </Link>

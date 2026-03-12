@@ -12,6 +12,8 @@ import {
 } from "@/lib/post-labels";
 import { PostCard, PostBadges } from "./_components/PostCard";
 import { SearchBar } from "./_components/SearchBar";
+import { getCurrentUser } from "@/lib/auth";
+import { ScrapButton } from "./_components/ScrapButton";
 
 // ─── 서브 컴포넌트 ────────────────────────────────────────────────────────────
 
@@ -19,10 +21,12 @@ function CuratedSectionRow({
   titleEn,
   posts,
   tagGroupMap,
+  savedPostIds,
 }: {
   titleEn: string;
   posts: PostItem[];
   tagGroupMap: TagGroupColorMap;
+  savedPostIds: Set<string>;
 }) {
   if (posts.length === 0) return null;
   return (
@@ -38,7 +42,7 @@ function CuratedSectionRow({
       </div>
       <div className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-1">
         {posts.map((post) => (
-          <PostCard key={post.id} post={post} tagGroupMap={tagGroupMap} />
+          <PostCard key={post.id} post={post} tagGroupMap={tagGroupMap} isSaved={savedPostIds.has(post.id)} />
         ))}
       </div>
     </section>
@@ -48,7 +52,9 @@ function CuratedSectionRow({
 // ─── 메인 페이지 ──────────────────────────────────────────────────────────────
 
 export default async function HomePage() {
-  const [homeBanners, sections, tagGroupConfigs] = await Promise.all([
+  const currentUser = await getCurrentUser();
+
+  const [homeBanners, sections, tagGroupConfigs, savedPostIds] = await Promise.all([
     prisma.homeBanner.findMany({
       where: { isActive: true },
       orderBy: { order: "asc" },
@@ -114,6 +120,14 @@ export default async function HomePage() {
     prisma.tagGroupConfig.findMany({
       select: { group: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true },
     }),
+    currentUser
+      ? prisma.save
+          .findMany({
+            where: { userId: currentUser.id, targetType: "POST" },
+            select: { targetId: true },
+          })
+          .then((rows) => new Set(rows.map((r) => r.targetId)))
+      : Promise.resolve(new Set<string>()),
   ]);
 
   type SectionData =
@@ -280,10 +294,13 @@ export default async function HomePage() {
                 <div className="absolute top-2 left-2 right-2">
                   <PostBadges post={post} tagGroupMap={tagGroupMap} />
                 </div>
-                <div className="absolute bottom-2 left-2 right-2">
+                <div className="absolute bottom-2 left-2 right-10">
                   <p className="text-white text-xs font-semibold line-clamp-2 leading-snug drop-shadow">
                     {post.titleEn}
                   </p>
+                </div>
+                <div className="absolute bottom-2 right-2 z-10">
+                  <ScrapButton postId={post.id} initialSaved={savedPostIds.has(post.id)} size="sm" />
                 </div>
               </div>
             </Link>
@@ -346,6 +363,7 @@ export default async function HomePage() {
             titleEn={section.titleEn}
             posts={data.items}
             tagGroupMap={tagGroupMap}
+            savedPostIds={savedPostIds}
           />
         );
       })}
