@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Share2 } from "lucide-react";
+import { Upload } from "lucide-react";
 import { labelBackground, type ResolvedLabel } from "@/lib/post-labels";
 import { ScrapButton } from "@/app/(user)/_components/ScrapButton";
 
@@ -68,7 +68,7 @@ export function PostMetaBar({ topics, tags, isSaved, postId }: Props) {
       {/* 액션 버튼 */}
       <div className="flex items-center gap-3 shrink-0">
         <button type="button" onClick={handleShare} className="text-muted-foreground hover:text-foreground transition-colors">
-          <Share2 className="h-5 w-5" strokeWidth={1.5} />
+          <Upload className="h-5 w-5" strokeWidth={1.5} />
         </button>
         <ScrapButton postId={postId} initialSaved={isSaved} size="md" />
       </div>
