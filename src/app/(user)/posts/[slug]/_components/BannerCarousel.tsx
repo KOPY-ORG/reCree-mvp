@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import Image from "next/image";
-import { ImageIcon } from "lucide-react";
+import { ImageIcon, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface BannerImage {
   id: string;
@@ -68,7 +68,7 @@ export function BannerCarousel({ images, children }: Props) {
 
   return (
     <div
-      className="relative w-full aspect-[3/2] bg-muted overflow-hidden select-none touch-pan-y"
+      className="group relative w-full aspect-[3/2] bg-muted overflow-hidden select-none touch-pan-y"
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
@@ -97,7 +97,7 @@ export function BannerCarousel({ images, children }: Props) {
                   alt=""
                   fill
                   className="object-cover"
-                  sizes="430px"
+                  sizes="(min-width: 672px) 672px, 100vw"
                   priority={i === 1}
                   unoptimized
                   onLoad={() => setLoadedMap((m) => ({ ...m, [img.id]: true }))}
@@ -111,6 +111,28 @@ export function BannerCarousel({ images, children }: Props) {
 
       {/* 상단 그라디언트 */}
       <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/40 to-transparent pointer-events-none z-10" />
+
+      {/* 화살표 버튼 (데스크톱, 2장 이상) */}
+      {total >= 2 && (
+        <>
+          <button
+            type="button"
+            onClick={prev}
+            className="hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 z-20 items-center justify-center w-9 h-9 rounded-full bg-black/40 text-white opacity-0 hover:opacity-100 group-hover:opacity-100 transition-opacity hover:bg-black/60"
+            aria-label="이전 이미지"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            onClick={next}
+            className="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 z-20 items-center justify-center w-9 h-9 rounded-full bg-black/40 text-white opacity-0 hover:opacity-100 group-hover:opacity-100 transition-opacity hover:bg-black/60"
+            aria-label="다음 이미지"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        </>
+      )}
 
       {/* children overlay */}
       {children}

@@ -77,7 +77,7 @@ function SortableBannerItem({
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }}
       className={cn(
-        "relative group w-24 h-24 rounded-lg overflow-hidden border-2 cursor-pointer shrink-0",
+        "relative group w-32 aspect-[3/2] rounded-lg overflow-hidden border-2 cursor-pointer shrink-0",
         image.isThumbnail ? "border-brand" : "border-transparent hover:border-zinc-300",
       )}
       onClick={onSetThumb}
@@ -236,14 +236,14 @@ export function PostImageSection({ postId, images, onChange, sources }: Props) {
               </SortableContext>
             </DndContext>
           ) : (
-            <div className="flex items-center justify-center w-24 h-24 rounded-lg border border-dashed bg-muted/30 text-muted-foreground">
+            <div className="flex items-center justify-center w-32 aspect-[3/2] rounded-lg border border-dashed bg-muted/30 text-muted-foreground">
               <ImageIcon className="h-6 w-6" />
             </div>
           )}
 
           {bannerImages.length < MAX_BANNER && (
             <label className={cn(
-              "flex flex-col items-center justify-center w-24 h-24 rounded-lg border-2 border-dashed cursor-pointer shrink-0 transition-colors",
+              "flex flex-col items-center justify-center w-32 aspect-[3/2] rounded-lg border-2 border-dashed cursor-pointer shrink-0 transition-colors",
               bannerUploading ? "opacity-50 cursor-not-allowed" : "hover:border-zinc-400",
             )}>
               {bannerUploading
@@ -268,7 +268,7 @@ export function PostImageSection({ postId, images, onChange, sources }: Props) {
           {originalImage ? (
             // 이미지 있는 경우
             <div className="flex flex-col gap-1 w-32">
-              <div className="relative group w-32 h-24 rounded-lg overflow-hidden border">
+              <div className="relative group w-32 aspect-[3/2] rounded-lg overflow-hidden border">
                 <img src={originalImage.url} alt="" className="w-full h-full object-cover" />
                 <button
                   type="button"

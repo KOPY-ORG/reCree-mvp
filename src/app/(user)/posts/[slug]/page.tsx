@@ -148,7 +148,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
   } | null;
 
   return (
-    <article className="pb-8">
+    <article className="pb-8 max-w-2xl mx-auto">
       <PostDetailHeader />
       {isPreview && (
         <div className="bg-amber-100 text-amber-800 text-xs text-center py-2 font-medium">

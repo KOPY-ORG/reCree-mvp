@@ -398,26 +398,26 @@ export function PostForm({
     const activeEntry = placeEntries[activePlaceIndex];
     setIsTranslating(true);
     const { data, error } = await translateFields({
-      titleKo,
-      contextKo: activeEntry?.contextKo ?? "",
-      mustTryKo: activeEntry?.mustTryKo ?? "",
-      tipKo: activeEntry?.tipKo ?? "",
-      bodyKo,
+      title: titleKo,
+      body: bodyKo,
+      context: activeEntry?.contextKo ?? "",
+      mustTry: activeEntry?.mustTryKo ?? "",
+      tip: activeEntry?.tipKo ?? "",
     });
     if (error) {
       toast.error(error);
     } else if (data) {
-      if (data.titleKo) setTitleEn(data.titleKo);
-      if (data.bodyKo) setBodyEn(data.bodyKo);
+      if (data.title) setTitleEn(data.title);
+      if (data.body) setBodyEn(data.body);
       if (activeEntry && activePlaceIndex < placeEntries.length) {
         setPlaceEntries((prev) =>
           prev.map((e, idx) => {
             if (idx !== activePlaceIndex) return e;
             return {
               ...e,
-              contextEn: data.contextKo ?? e.contextEn,
-              mustTryEn: data.mustTryKo ?? e.mustTryEn,
-              tipEn: data.tipKo ?? e.tipEn,
+              contextEn: data.context ?? e.contextEn,
+              mustTryEn: data.mustTry ?? e.mustTryEn,
+              tipEn: data.tip ?? e.tipEn,
             };
           }),
         );
@@ -573,9 +573,9 @@ export function PostForm({
             </h1>
           </div>
           <div className="flex items-center gap-2">
-            {!isEmbedded && (isEdit && slug ? (
+            {!isEmbedded && (isEdit && initialData?.slug ? (
               <Button variant="outline" size="sm" asChild>
-                <a href={`/posts/${slug}?preview=1`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
+                <a href={`/posts/${initialData.slug}?preview=1`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
                   <Eye className="h-3.5 w-3.5" />
                   미리보기
                 </a>

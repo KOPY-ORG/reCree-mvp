@@ -67,7 +67,7 @@ function SourceCard({ image, onClick }: { image: OriginalImage; onClick?: () => 
 
   return (
     <div
-      className="relative w-18 aspect-[3/2] rounded-lg shadow-md overflow-hidden shrink-0 cursor-pointer ring-1 ring-white/60"
+      className="relative w-18 sm:w-24 md:w-32 lg:w-40 aspect-[3/2] rounded-lg shadow-md overflow-hidden shrink-0 cursor-pointer ring-1 ring-white/60"
       onClick={onClick}
     >
       {error ? (
@@ -79,7 +79,7 @@ function SourceCard({ image, onClick }: { image: OriginalImage; onClick?: () => 
           fill
           unoptimized
           className="object-cover"
-          sizes="48px"
+          sizes="(min-width: 1024px) 160px, (min-width: 768px) 128px, (min-width: 640px) 96px, 72px"
           onError={() => setError(true)}
         />
       )}
@@ -93,7 +93,7 @@ export function OriginalSourceCards({ images, originalLinkUrls }: Props) {
   const displayed = images;
 
   return (
-    <div className="absolute bottom-3 left-3 flex gap-2 z-10">
+    <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 flex gap-2 sm:gap-3 z-10">
       {displayed.map((img, i) => {
         const clickUrl = img.linkUrl ?? originalLinkUrls?.[i] ?? null;
         const handleClick = clickUrl
