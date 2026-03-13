@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { Eye, EyeOff, GripVertical } from "lucide-react";
+import { LabelBadge } from "@/components/LabelBadge";
 import {
   DndContext,
   closestCenter,
@@ -27,17 +28,15 @@ type SectionItem = {
   id: string;
   isVisible: boolean;
   label: string;
-  style: React.CSSProperties;
+  background: string;
+  color: string;
 };
 
-function getTagStyle(tag: TagForForm): React.CSSProperties {
-  if (tag.effectiveColorHex2) {
-    return {
-      background: `linear-gradient(${tag.effectiveGradientDir}, ${tag.effectiveColorHex} 0%, ${tag.effectiveColorHex2} ${tag.effectiveGradientStop}%)`,
-      color: tag.effectiveTextColorHex,
-    };
-  }
-  return { backgroundColor: tag.effectiveColorHex, color: tag.effectiveTextColorHex };
+function getTagColors(tag: TagForForm): { background: string; color: string } {
+  const background = tag.effectiveColorHex2
+    ? `linear-gradient(${tag.effectiveGradientDir}, ${tag.effectiveColorHex} 0%, ${tag.effectiveColorHex2} ${tag.effectiveGradientStop}%)`
+    : tag.effectiveColorHex;
+  return { background, color: tag.effectiveTextColorHex };
 }
 
 function SortableLabel({ item, isFirst }: { item: SectionItem; isFirst: boolean }) {
@@ -52,9 +51,7 @@ function SortableLabel({ item, isFirst }: { item: SectionItem; isFirst: boolean 
       <span {...attributes} {...listeners} className="cursor-grab text-muted-foreground hover:text-foreground shrink-0">
         <GripVertical className="h-3.5 w-3.5" />
       </span>
-      <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium" style={item.style}>
-        {item.label}
-      </span>
+      <LabelBadge text={item.label} background={item.background} color={item.color} />
       {isFirst && (
         <span className="ml-auto text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
           대표
@@ -94,9 +91,7 @@ function LabelSection({
             >
               {item.isVisible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
             </button>
-            <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium" style={item.style}>
-              {item.label}
-            </span>
+            <LabelBadge text={item.label} background={item.background} color={item.color} />
           </div>
         ))}
       </div>
@@ -141,12 +136,16 @@ export function LabelVisibilityCard({
   const topicItems = useMemo<SectionItem[]>(() =>
     postTopics
       .sort((a, b) => a.displayOrder - b.displayOrder)
-      .map((pt) => ({
-        id: pt.topicId,
-        isVisible: pt.isVisible,
-        label: topicMap.get(pt.topicId)?.nameEn ?? pt.topicId,
-        style: topicEffectiveStyleMap.get(pt.topicId) ?? {},
-      })),
+      .map((pt) => {
+        const s = topicEffectiveStyleMap.get(pt.topicId) ?? {};
+        return {
+          id: pt.topicId,
+          isVisible: pt.isVisible,
+          label: topicMap.get(pt.topicId)?.nameEn ?? pt.topicId,
+          background: String(s.background ?? ""),
+          color: String(s.color ?? "#000"),
+        };
+      }),
   [postTopics, topicMap, topicEffectiveStyleMap]);
 
   const tagItems = useMemo<SectionItem[]>(() =>
@@ -154,11 +153,13 @@ export function LabelVisibilityCard({
       .sort((a, b) => a.displayOrder - b.displayOrder)
       .map((pt) => {
         const t = tagMap.get(pt.tagId);
+        const { background, color } = t ? getTagColors(t) : { background: "", color: "#000" };
         return {
           id: pt.tagId,
           isVisible: pt.isVisible,
           label: t?.name ?? pt.tagId,
-          style: t ? getTagStyle(t) : {},
+          background,
+          color,
         };
       }),
   [postTags, tagMap]);

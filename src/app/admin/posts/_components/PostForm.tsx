@@ -315,7 +315,7 @@ export function PostForm({
         t.id,
         hex2
           ? { background: `linear-gradient(${dir}, ${hex} 0%, ${hex2} ${stop}%)`, color: textHex }
-          : { backgroundColor: hex, color: textHex },
+          : { background: hex, color: textHex },
       );
     }
     return { topicEffectiveStyleMap: styleMap, topicEffectiveInfoMap: effectiveMap };

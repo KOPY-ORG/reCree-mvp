@@ -7,6 +7,7 @@ import {
   type TagGroupColorMap,
   type ResolvedLabel,
 } from "@/lib/post-labels";
+import { LabelBadge } from "@/components/LabelBadge";
 import type { PostItem } from "@/lib/post-queries";
 import { ScrapButton } from "./ScrapButton";
 
@@ -41,13 +42,13 @@ export function PostBadges({
   return (
     <div className="flex flex-wrap gap-1">
       {labels.map((label, i) => (
-        <span
+        <LabelBadge
           key={i}
-          className="px-1 py-px rounded-full text-[9px] font-semibold leading-none"
-          style={{ background: labelBackground(label), color: label.textColorHex }}
-        >
-          {label.text}
-        </span>
+          text={label.text}
+          background={labelBackground(label)}
+          color={label.textColorHex}
+          className={variant === "list" ? "text-[10px]" : "text-[9px]"}
+        />
       ))}
     </div>
   );

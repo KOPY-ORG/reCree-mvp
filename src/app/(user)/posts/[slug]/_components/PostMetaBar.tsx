@@ -2,6 +2,7 @@
 
 import { Upload } from "lucide-react";
 import { labelBackground, type ResolvedLabel } from "@/lib/post-labels";
+import { LabelBadge } from "@/components/LabelBadge";
 import { ScrapButton } from "@/app/(user)/_components/ScrapButton";
 import { useToast } from "@/app/(user)/_hooks/useToast";
 
@@ -43,13 +44,13 @@ export function PostMetaBar({ labels, isSaved, postId, titleEn }: Props) {
       {/* 배지 영역 */}
       <div className="flex flex-wrap gap-1.5 flex-1 min-w-0 mr-3">
         {labels.map((label, i) => (
-          <span
+          <LabelBadge
             key={i}
-            className="px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0"
-            style={{ background: labelBackground(label), color: label.textColorHex }}
-          >
-            {label.text}
-          </span>
+            text={label.text}
+            background={labelBackground(label)}
+            color={label.textColorHex}
+            className="whitespace-nowrap shrink-0"
+          />
         ))}
       </div>
 

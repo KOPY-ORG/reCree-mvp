@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { labelBackground } from "@/lib/post-labels";
+import { LabelBadge } from "@/components/LabelBadge";
 
 export type BannerItem = {
   slug: string;
@@ -77,18 +79,12 @@ export function HomeBannerCarousel({ banners }: { banners: BannerItem[] }) {
           {banner.labels.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-1">
               {banner.labels.map((label, i) => (
-                <span
+                <LabelBadge
                   key={i}
-                  className="px-2 py-0.5 rounded-full text-xs font-semibold"
-                  style={{
-                    background: label.colorHex2
-                      ? `linear-gradient(${label.gradientDir}, ${label.colorHex}, ${label.colorHex2} ${label.gradientStop}%)`
-                      : label.colorHex,
-                    color: label.textColorHex,
-                  }}
-                >
-                  {label.text}
-                </span>
+                  text={label.text}
+                  background={labelBackground(label)}
+                  color={label.textColorHex}
+                />
               ))}
             </div>
           )}
