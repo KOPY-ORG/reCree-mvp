@@ -14,10 +14,10 @@ import type {
   TagForForm,
   TagGroupItem,
 } from "./PostForm";
+import type { EffectiveColorInfo } from "@/lib/post-labels";
 
 type PostTopicState = { topicId: string; isVisible: boolean; displayOrder: number };
 type PostTagState = { tagId: string; isVisible: boolean; displayOrder: number };
-type EffInfo = { hex: string; hex2: string | null; dir: string; stop: number; textHex: string };
 
 function getTagStyle(tag: TagForForm): React.CSSProperties {
   if (tag.effectiveColorHex2) {
@@ -38,7 +38,7 @@ interface Props {
   allTags: TagForForm[];
   tagGroups: TagGroupItem[];
   topicEffectiveStyleMap: Map<string, React.CSSProperties>;
-  topicEffectiveInfoMap: Map<string, EffInfo>;
+  topicEffectiveInfoMap: Map<string, EffectiveColorInfo>;
   tagGroupColorMap: Map<string, TagGroupItem>;
   onTopicAdded: (topic: TopicForForm) => void;
   onTagAdded: (tag: TagForForm) => void;

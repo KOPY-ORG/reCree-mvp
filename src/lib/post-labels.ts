@@ -3,6 +3,43 @@
 export const DEFAULT_COLOR = "#C8FF09";
 export const DEFAULT_TEXT = "#000000";
 
+// ── 어드민 토픽 flat 리스트 effective color 계산 ──────────────────────────────
+// level 순 정렬된 flat 배열을 받아 각 토픽의 effective color를 계산해 반환.
+// (colorHex === null → 부모 색상 상속)
+
+export type EffectiveColorInfo = {
+  hex: string;
+  hex2: string | null;
+  dir: string;
+  stop: number;
+  textHex: string;
+};
+
+export function computeTopicEffectiveColors(
+  topics: {
+    id: string;
+    parentId: string | null;
+    colorHex: string | null;
+    colorHex2: string | null;
+    gradientDir: string;
+    gradientStop: number;
+    textColorHex: string | null;
+  }[]
+): Map<string, EffectiveColorInfo> {
+  const map = new Map<string, EffectiveColorInfo>();
+  for (const t of topics) {
+    const parent = t.parentId ? map.get(t.parentId) : undefined;
+    const inherits = t.colorHex === null;
+    const hex = t.colorHex ?? parent?.hex ?? DEFAULT_COLOR;
+    const hex2 = inherits ? (parent?.hex2 ?? null) : t.colorHex2;
+    const dir = inherits ? (parent?.dir ?? "to bottom") : t.gradientDir;
+    const stop = inherits ? (parent?.stop ?? 150) : t.gradientStop;
+    const textHex = t.textColorHex ?? parent?.textHex ?? DEFAULT_TEXT;
+    map.set(t.id, { hex, hex2, dir, stop, textHex });
+  }
+  return map;
+}
+
 export type ColorNode = {
   colorHex?: string | null;
   colorHex2?: string | null;

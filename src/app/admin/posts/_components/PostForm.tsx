@@ -32,6 +32,7 @@ const MapPreview = dynamic(
   { ssr: false, loading: () => <div className="h-[260px] rounded-md bg-muted/50 animate-pulse" /> },
 );
 import type { PostStatus } from "@prisma/client";
+import { computeTopicEffectiveColors, type EffectiveColorInfo } from "@/lib/post-labels";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -295,30 +296,18 @@ export function PostForm({
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
 
   // ── 파생값 ─────────────────────────────────────────────────────────────────
-  type EffInfo = { hex: string; hex2: string | null; dir: string; stop: number; textHex: string };
-
   const { topicEffectiveStyleMap, topicEffectiveInfoMap } = useMemo(() => {
-    const DEFAULT_COLOR = "#C8FF09";
-    const DEFAULT_TEXT = "#000000";
-    const effectiveMap = new Map<string, EffInfo>();
+    const effectiveMap = computeTopicEffectiveColors(localAllTopics);
     const styleMap = new Map<string, React.CSSProperties>();
-    for (const t of localAllTopics) {
-      const parent = t.parentId ? effectiveMap.get(t.parentId) : undefined;
-      const inherits = t.colorHex === null;
-      const hex = t.colorHex ?? parent?.hex ?? DEFAULT_COLOR;
-      const hex2 = inherits ? (parent?.hex2 ?? null) : t.colorHex2;
-      const dir = inherits ? (parent?.dir ?? "to bottom") : t.gradientDir;
-      const stop = inherits ? (parent?.stop ?? 150) : t.gradientStop;
-      const textHex = t.textColorHex ?? parent?.textHex ?? DEFAULT_TEXT;
-      effectiveMap.set(t.id, { hex, hex2, dir, stop, textHex });
+    for (const [id, e] of effectiveMap) {
       styleMap.set(
-        t.id,
-        hex2
-          ? { background: `linear-gradient(${dir}, ${hex} 0%, ${hex2} ${stop}%)`, color: textHex }
-          : { background: hex, color: textHex },
+        id,
+        e.hex2
+          ? { background: `linear-gradient(${e.dir}, ${e.hex} 0%, ${e.hex2} ${e.stop}%)`, color: e.textHex }
+          : { background: e.hex, color: e.textHex },
       );
     }
-    return { topicEffectiveStyleMap: styleMap, topicEffectiveInfoMap: effectiveMap };
+    return { topicEffectiveStyleMap: styleMap, topicEffectiveInfoMap: effectiveMap as Map<string, EffectiveColorInfo> };
   }, [localAllTopics]);
 
   const tagGroupColorMap = useMemo(
