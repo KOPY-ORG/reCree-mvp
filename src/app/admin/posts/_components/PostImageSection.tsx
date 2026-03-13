@@ -98,7 +98,7 @@ function SortableBannerItem({
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }}
       className={cn(
-        "relative group w-32 aspect-[3/2] rounded-lg overflow-hidden border-2 cursor-pointer shrink-0",
+        "relative group w-32 aspect-[3/2] rounded-lg overflow-hidden border-[3px] cursor-pointer shrink-0",
         image.isThumbnail ? "border-brand" : "border-transparent hover:border-zinc-300",
       )}
       onClick={onSetThumb}
@@ -132,11 +132,6 @@ function SortableBannerItem({
       >
         <Crosshair className="h-3 w-3" />
       </button>
-      {image.isThumbnail && (
-        <div className="absolute bottom-0 inset-x-0 bg-brand/90 text-black text-[10px] text-center py-0.5 font-medium">
-          썸네일
-        </div>
-      )}
     </div>
   );
 }
@@ -379,7 +374,7 @@ export function PostImageSection({ postId, images, onChange, sources }: Props) {
             </label>
           )}
         </div>
-        <p className="text-[11px] text-muted-foreground">드래그로 순서 변경 · 이미지 클릭 시 썸네일 지정</p>
+        <p className="text-[11px] text-muted-foreground">드래그로 순서 변경 · 클릭 시 썸네일 지정</p>
       </div>
 
       {/* ─ 소스 이미지 (1장) ─────────────────────────────────────────────────── */}
@@ -393,41 +388,33 @@ export function PostImageSection({ postId, images, onChange, sources }: Props) {
           {originalImage ? (
             // 이미지 있는 경우 — 이미지 + 클릭 링크를 나란히
             <div className="flex gap-4 items-start">
-              <div className="flex flex-col gap-1 w-32 shrink-0">
-                <div className="relative group w-32 aspect-[3/2] rounded-lg overflow-hidden border">
-                  <img
-                    src={originalImage.url}
-                    alt=""
-                    className="w-full h-full object-cover"
-                    style={{ objectPosition: `${(originalImage.focalX ?? 0.5) * 100}% ${(originalImage.focalY ?? 0.5) * 100}%` }}
-                  />
-                  <button
-                    type="button"
-                    className="absolute top-1 right-1 p-0.5 rounded bg-black/50 opacity-0 group-hover:opacity-100 text-white"
-                    onClick={removeOriginal}
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                  <button
-                    type="button"
-                    className="absolute bottom-1 right-1 p-0.5 rounded bg-black/40 opacity-0 group-hover:opacity-100 text-white"
-                    onClick={() => setFocalDialog({ url: originalImage.url, focalX: originalImage.focalX ?? null, focalY: originalImage.focalY ?? null })}
-                    title="초점 설정"
-                  >
-                    <Crosshair className="h-3 w-3" />
-                  </button>
-                </div>
+              <div
+                className={cn(
+                  "relative group w-32 aspect-[3/2] rounded-lg overflow-hidden border-[3px] cursor-pointer shrink-0",
+                  originalImage.isThumbnail ? "border-brand" : "border-transparent hover:border-zinc-300",
+                )}
+                onClick={() => setThumbnail(originalImage.url)}
+              >
+                <img
+                  src={originalImage.url}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  style={{ objectPosition: `${(originalImage.focalX ?? 0.5) * 100}% ${(originalImage.focalY ?? 0.5) * 100}%` }}
+                />
                 <button
                   type="button"
-                  onClick={() => setThumbnail(originalImage.url)}
-                  className={cn(
-                    "text-[10px] py-0.5 rounded border font-medium transition-colors",
-                    originalImage.isThumbnail
-                      ? "bg-brand border-brand text-black"
-                      : "border-zinc-300 text-zinc-500 hover:border-brand hover:text-zinc-700",
-                  )}
+                  className="absolute top-1 right-1 p-0.5 rounded bg-black/40 opacity-0 group-hover:opacity-100 text-white"
+                  onClick={(e) => { e.stopPropagation(); removeOriginal(); }}
                 >
-                  썸네일
+                  <X className="h-3 w-3" />
+                </button>
+                <button
+                  type="button"
+                  className="absolute bottom-1 right-1 p-0.5 rounded bg-black/40 opacity-0 group-hover:opacity-100 text-white"
+                  onClick={(e) => { e.stopPropagation(); setFocalDialog({ url: originalImage.url, focalX: originalImage.focalX ?? null, focalY: originalImage.focalY ?? null }); }}
+                  title="초점 설정"
+                >
+                  <Crosshair className="h-3 w-3" />
                 </button>
               </div>
 
