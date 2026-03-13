@@ -16,13 +16,14 @@ export async function getPostsWithLabels(
       titleEn: true,
       postImages: {
         where: { isThumbnail: true },
-        select: { url: true },
+        select: { url: true, focalX: true, focalY: true },
         take: 1,
       },
       postTopics: {
         where: { isVisible: true },
         orderBy: { displayOrder: "asc" },
         select: {
+          displayOrder: true,
           topic: {
             select: {
               nameEn: true,
@@ -46,6 +47,7 @@ export async function getPostsWithLabels(
         where: { isVisible: true },
         orderBy: { displayOrder: "asc" },
         select: {
+          displayOrder: true,
           tag: { select: { name: true, group: true, colorHex: true, colorHex2: true, textColorHex: true } },
         },
       },

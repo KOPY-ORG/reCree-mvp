@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { Check, Copy, ExternalLink, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -218,17 +217,6 @@ function SourceCard({
         />
       </div>
 
-      {/* isOriginalLink */}
-      <div className="flex items-center gap-2 pt-1">
-        <Checkbox
-          id={`isOriginalLink-${index}`}
-          checked={source.isOriginalLink}
-          onCheckedChange={(checked) => onUpdate({ isOriginalLink: !!checked })}
-        />
-        <Label htmlFor={`isOriginalLink-${index}`} className="text-xs cursor-pointer">
-          원본이미지 클릭 시 이 링크로 이동
-        </Label>
-      </div>
     </div>
   );
 }

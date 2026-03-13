@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { Sparkles, Waves, Flame, MapPin, Lightbulb } from "lucide-react";
 import { LocationCard } from "./_components/LocationCard";
 import { prisma } from "@/lib/prisma";
-import { resolveTopicColors, labelBackground, DEFAULT_COLOR, DEFAULT_TEXT, type ResolvedLabel } from "@/lib/post-labels";
+import { resolveTopicColors, resolveTagColors, type ResolvedLabel } from "@/lib/post-labels";
 import { MarkdownContent } from "./_components/MarkdownContent";
 import { PostDetailHeader } from "./_components/PostDetailHeader";
 import { BannerCarousel } from "./_components/BannerCarousel";
@@ -158,23 +158,10 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
   // 색상 resolve
   const configMap = new Map(tagGroupConfigs.map((c) => [c.group, c]));
 
-  const resolvedTopics: (ResolvedLabel & { nameEn: string })[] = post.postTopics.map(({ topic }) => ({
-    nameEn: topic.nameEn,
-    text: topic.nameEn,
-    ...resolveTopicColors(topic),
-  }));
-
-  const resolvedTags: ResolvedLabel[] = post.postTags.map(({ tag }) => {
-    const gc = configMap.get(tag.group);
-    return {
-      text: tag.name,
-      colorHex: tag.colorHex ?? gc?.colorHex ?? DEFAULT_COLOR,
-      colorHex2: tag.colorHex ? (tag.colorHex2 ?? null) : (gc?.colorHex2 ?? null),
-      gradientDir: gc?.gradientDir ?? "to bottom",
-      gradientStop: gc?.gradientStop ?? 150,
-      textColorHex: tag.textColorHex ?? gc?.textColorHex ?? DEFAULT_TEXT,
-    };
-  });
+  const labels: ResolvedLabel[] = [
+    ...post.postTopics.map(({ topic }) => ({ text: topic.nameEn, ...resolveTopicColors(topic) })),
+    ...post.postTags.map(({ tag }) => ({ text: tag.name, ...resolveTagColors(tag, configMap.get(tag.group)) })),
+  ];
 
   const currentUser = await getCurrentUser();
   const isSaved = currentUser
@@ -191,16 +178,16 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
 
   return (
     <article className="pb-8 max-w-2xl mx-auto">
-      <PostDetailHeader />
+      {!isPreview && <PostDetailHeader />}
       {isPreview && (
         <div className="bg-amber-100 text-amber-800 text-xs text-center py-2 font-medium">
           미리보기 모드 — 실제 발행 전 상태입니다
         </div>
       )}
 
-      {/* 배너 캐러셀 — 헤더(h-12) 높이만큼 위로 올려 풀블리드 */}
+      {/* 배너 캐러셀 — 헤더(h-12) 높이만큼 위로 올려 풀블리드 (미리보기엔 헤더 없으므로 margin 제거) */}
       {bannerImages.length > 0 && (
-        <div className="-mt-12">
+        <div className={isPreview ? "" : "-mt-12"}>
           <BannerCarousel images={bannerImages}>
             <OriginalSourceCards
               images={originalImages}
@@ -210,10 +197,18 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
         </div>
       )}
 
+      {/* 배너 없을 때 소스 이미지 카드 (뱃지 위) */}
+      {bannerImages.length === 0 && (
+        <OriginalSourceCards
+          images={originalImages}
+          originalLinkUrls={originalLinkUrls}
+          className={`px-4 pb-1 flex gap-2 ${isPreview ? "pt-3" : "pt-14"}`}
+        />
+      )}
+
       {/* 배지 + 공유/스크랩 */}
       <PostMetaBar
-        topics={resolvedTopics}
-        tags={resolvedTags}
+        labels={labels}
         isSaved={isSaved}
         postId={post.id}
         titleEn={post.titleEn}
@@ -258,7 +253,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
                 </div>
                 <div className="flex flex-wrap gap-1.5 pl-5">
                   {spotInsight.vibe.map((v, i) => (
-                    <span key={i} className="px-2.5 py-0.5 rounded-full bg-brand-sub2 text-xs font-medium">
+                    <span key={i} className="px-2.5 py-0.5 rounded-full bg-muted text-xs font-medium">
                       {v}
                     </span>
                   ))}

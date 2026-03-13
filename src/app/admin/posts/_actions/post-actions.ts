@@ -27,6 +27,8 @@ export type PostImageInput = {
   sortOrder: number;
   slotIndex?: number | null;
   isSlotCard?: boolean;
+  focalX?: number | null;
+  focalY?: number | null;
 };
 
 export type PostSourceInput = {
@@ -178,6 +180,8 @@ export async function createPost(
               sortOrder: img.sortOrder,
               slotIndex: img.slotIndex ?? null,
               isSlotCard: img.isSlotCard ?? false,
+              focalX: img.focalX ?? null,
+              focalY: img.focalY ?? null,
             })),
           },
         }),
@@ -216,6 +220,8 @@ export async function createPost(
     });
 
     revalidatePath("/admin/posts");
+    revalidatePath("/");
+    revalidatePath("/explore");
     return { id: post.id };
   } catch (e) {
     console.error(e);
@@ -274,6 +280,8 @@ export async function updatePost(
                 sortOrder: img.sortOrder,
                 slotIndex: img.slotIndex ?? null,
                 isSlotCard: img.isSlotCard ?? false,
+                focalX: img.focalX ?? null,
+                focalY: img.focalY ?? null,
               })),
             },
           }),
@@ -314,6 +322,8 @@ export async function updatePost(
 
     revalidatePath("/admin/posts");
     revalidatePath(`/admin/posts/${id}/edit`);
+    revalidatePath("/");
+    revalidatePath("/explore");
     return {};
   } catch (e) {
     console.error(e);
@@ -327,6 +337,8 @@ export async function deletePost(id: string): Promise<{ error?: string }> {
   try {
     await prisma.post.delete({ where: { id } });
     revalidatePath("/admin/posts");
+    revalidatePath("/");
+    revalidatePath("/explore");
     return {};
   } catch (e) {
     console.error(e);
@@ -369,6 +381,8 @@ export async function publishPost(
       data: { status: "PUBLISHED", publishedAt: new Date() },
     });
     revalidatePath("/admin/posts");
+    revalidatePath("/");
+    revalidatePath("/explore");
     return {};
   } catch (e) {
     console.error(e);
@@ -383,6 +397,8 @@ export async function unpublishPost(id: string): Promise<{ error?: string }> {
       data: { status: "DRAFT", publishedAt: null },
     });
     revalidatePath("/admin/posts");
+    revalidatePath("/");
+    revalidatePath("/explore");
     return {};
   } catch (e) {
     console.error(e);
@@ -439,6 +455,8 @@ export async function getPostEditData(id: string) {
             sortOrder: true,
             slotIndex: true,
             isSlotCard: true,
+            focalX: true,
+            focalY: true,
           },
         },
         postSources: {
@@ -542,6 +560,8 @@ export async function getPostEditData(id: string) {
       sortOrder: img.sortOrder,
       slotIndex: img.slotIndex ?? null,
       isSlotCard: img.isSlotCard,
+      focalX: img.focalX ?? null,
+      focalY: img.focalY ?? null,
     })),
     postSources: post.postSources.map((s) => ({
       url: s.url,

@@ -17,7 +17,7 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Trash2, Plus, Tag } from "lucide-react";
+import { GripVertical, Trash2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -25,60 +25,31 @@ import {
   removeBanner,
   reorderBanners,
   toggleBannerActive,
-  type LabelOverride,
 } from "../_actions/home-curation-actions";
 import { PostPickerDialog, type PickablePost } from "./PostPickerDialog";
-import { BannerLabelDialog } from "./BannerLabelDialog";
 import { PostEditSheet } from "./PostEditSheet";
-
-export type BannerLabelItem = {
-  topicId?: string;
-  tagId?: string;
-  nameEn?: string;
-  name?: string;
-  isVisible: boolean;
-  effectiveColorHex: string;
-  effectiveTextColorHex: string;
-};
 
 export type BannerRow = {
   id: string;
   postId: string;
   order: number;
   isActive: boolean;
-  labelOverrides: LabelOverride[] | null;
   post: {
     slug: string;
     titleEn: string;
     thumbnailUrl: string | null; // postImages[0]?.url ?? null로 매핑됨
   };
-  postTopics: {
-    topicId: string;
-    nameEn: string;
-    isVisible: boolean;
-    effectiveColorHex: string;
-    effectiveTextColorHex: string;
-  }[];
-  postTags: {
-    tagId: string;
-    name: string;
-    isVisible: boolean;
-    effectiveColorHex: string;
-    effectiveTextColorHex: string;
-  }[];
 };
 
 function SortableBannerRow({
   banner,
   onRemove,
   onToggle,
-  onLabelEdit,
   onEdit,
 }: {
   banner: BannerRow;
   onRemove: (id: string) => void;
   onToggle: (id: string, v: boolean) => void;
-  onLabelEdit: (banner: BannerRow) => void;
   onEdit: (postId: string) => void;
 }) {
   const [handleHovered, setHandleHovered] = useState(false);
@@ -90,8 +61,6 @@ function SortableBannerRow({
     transition,
     opacity: isDragging ? 0.4 : 1,
   };
-
-  const hasOverrides = banner.labelOverrides !== null && banner.labelOverrides.length > 0;
 
   return (
     <div
@@ -112,18 +81,17 @@ function SortableBannerRow({
         <GripVertical className="size-4" />
       </span>
 
-      {banner.post.thumbnailUrl ? (
-        <Image
-          src={banner.post.thumbnailUrl}
-          alt={banner.post.titleEn}
-          width={56}
-          height={42}
-          unoptimized
-          className="rounded object-cover shrink-0"
-        />
-      ) : (
-        <div className="w-14 h-[42px] rounded bg-muted shrink-0" />
-      )}
+      <div className="relative w-14 h-[38px] rounded overflow-hidden shrink-0 bg-muted">
+        {banner.post.thumbnailUrl && (
+          <Image
+            src={banner.post.thumbnailUrl}
+            alt={banner.post.titleEn}
+            fill
+            unoptimized
+            className="object-cover"
+          />
+        )}
+      </div>
 
       <button
         type="button"
@@ -131,22 +99,6 @@ function SortableBannerRow({
         className="flex-1 text-sm font-medium truncate min-w-0 text-left hover:underline"
       >
         {banner.post.titleEn}
-      </button>
-
-      {hasOverrides && (
-        <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
-          커스텀 ({banner.labelOverrides!.length}개)
-        </span>
-      )}
-
-      <button
-        type="button"
-        onClick={() => onLabelEdit(banner)}
-        className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
-        aria-label="라벨 편집"
-        title="라벨 편집"
-      >
-        <Tag className="size-4" />
       </button>
 
       <Switch
@@ -176,7 +128,6 @@ export function BannerTab({
 }) {
   const [banners, setBanners] = useState(initialBanners);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [labelDialogBanner, setLabelDialogBanner] = useState<BannerRow | null>(null);
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const dndId = useId();
@@ -263,7 +214,6 @@ export function BannerTab({
                   banner={banner}
                   onRemove={handleRemove}
                   onToggle={handleToggle}
-                  onLabelEdit={setLabelDialogBanner}
                   onEdit={setEditingPostId}
                 />
               ))}
@@ -280,17 +230,6 @@ export function BannerTab({
         maxSelect={MAX_BANNERS - banners.length}
         onConfirm={handleAdd}
       />
-
-      {labelDialogBanner && (
-        <BannerLabelDialog
-          open={true}
-          onClose={() => setLabelDialogBanner(null)}
-          bannerId={labelDialogBanner.id}
-          postTopics={labelDialogBanner.postTopics}
-          postTags={labelDialogBanner.postTags}
-          initialOverrides={labelDialogBanner.labelOverrides}
-        />
-      )}
 
       <PostEditSheet
         postId={editingPostId}

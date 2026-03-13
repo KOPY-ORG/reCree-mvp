@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Pencil, Loader2, MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { LabelBadge } from "@/components/LabelBadge";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -209,31 +210,33 @@ export function PostsTable({ posts, isFiltered }: Props) {
                       const topicLabels = post.postTopics.map(({ displayOrder, topic }) => ({
                         id: `topic-${topic.id}`,
                         displayOrder,
-                        label: topic.nameEn,
-                        style: topic.colorHex2
-                          ? { background: `linear-gradient(${topic.gradientDir}, ${topic.colorHex} 0%, ${topic.colorHex2} ${topic.gradientStop}%)`, color: topic.textColorHex }
-                          : { backgroundColor: topic.colorHex, color: topic.textColorHex },
+                        text: topic.nameEn,
+                        background: topic.colorHex2
+                          ? `linear-gradient(${topic.gradientDir}, ${topic.colorHex} 0%, ${topic.colorHex2} ${topic.gradientStop}%)`
+                          : topic.colorHex,
+                        color: topic.textColorHex,
                       }));
                       const tagLabels = post.postTags.map(({ displayOrder, tag }) => ({
                         id: `tag-${tag.id}`,
                         displayOrder,
-                        label: tag.name,
-                        style: tag.effectiveColorHex2
-                          ? { background: `linear-gradient(${tag.effectiveGradientDir}, ${tag.effectiveColorHex} 0%, ${tag.effectiveColorHex2} ${tag.effectiveGradientStop}%)`, color: tag.effectiveTextColorHex }
-                          : { backgroundColor: tag.effectiveColorHex, color: tag.effectiveTextColorHex },
+                        text: tag.name,
+                        background: tag.effectiveColorHex2
+                          ? `linear-gradient(${tag.effectiveGradientDir}, ${tag.effectiveColorHex} 0%, ${tag.effectiveColorHex2} ${tag.effectiveGradientStop}%)`
+                          : tag.effectiveColorHex,
+                        color: tag.effectiveTextColorHex,
                       }));
                       const allLabels = [...topicLabels, ...tagLabels].sort((a, b) => a.displayOrder - b.displayOrder);
                       const MAX = 3;
                       return (
                         <div className="flex flex-wrap gap-1">
                           {allLabels.slice(0, MAX).map((item) => (
-                            <span
+                            <LabelBadge
                               key={item.id}
-                              className="inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium"
-                              style={item.style}
-                            >
-                              {item.label}
-                            </span>
+                              text={item.text}
+                              background={item.background}
+                              color={item.color}
+                              className="text-[10px]"
+                            />
                           ))}
                           {allLabels.length > MAX && (
                             <span className="text-xs text-muted-foreground">

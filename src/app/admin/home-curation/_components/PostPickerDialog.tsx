@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, useId } from "react";
 import { Search, GripVertical, X } from "lucide-react";
+import { LabelBadge } from "@/components/LabelBadge";
 import {
   DndContext,
   closestCenter,
@@ -240,16 +241,13 @@ export function PostPickerDialog({
                     {post.topicLabels && post.topicLabels.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1">
                         {post.topicLabels.slice(0, 3).map((t) => (
-                          <span
+                          <LabelBadge
                             key={t.id}
-                            className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold leading-none"
-                            style={{
-                              backgroundColor: t.colorHex ?? "#BABABA",
-                              color: "#FCFCFC",
-                            }}
-                          >
-                            {t.nameEn}
-                          </span>
+                            text={t.nameEn}
+                            background={t.colorHex ?? "#BABABA"}
+                            color="#FCFCFC"
+                            className="text-[10px]"
+                          />
                         ))}
                       </div>
                     )}

@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
-import { Upload, Link as LinkIcon, X, GripVertical, ImageIcon } from "lucide-react";
+import { Upload, Link as LinkIcon, X, GripVertical, ImageIcon, Crosshair } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -23,12 +23,22 @@ import { CSS } from "@dnd-kit/utilities";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import type { PostImageInput, PostSourceInput } from "../_actions/post-actions";
+import { ImageFocalPointDialog } from "./ImageFocalPointDialog";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_SIZE = 5 * 1024 * 1024;
 const MAX_BANNER = 5;
+const NONE_VALUE = "__none__";
+const CUSTOM_VALUE = "__custom__";
 
 type OriginalMode = "idle" | "url";
 
@@ -38,6 +48,15 @@ function extractYouTubeVideoId(url: string): string | null {
   );
   return match?.[1] ?? null;
 }
+
+function getPlatformShort(platform: string): string {
+  const map: Record<string, string> = {
+    YOUTUBE: "YouTube", INSTAGRAM: "Instagram", X: "X",
+    PINTEREST: "Pinterest", BLOG: "Blog", ARTICLE: "기사", OTHER: "기타",
+  };
+  return map[platform?.toUpperCase()] ?? platform ?? "URL";
+}
+
 
 async function uploadImage(
   file: File,
@@ -64,10 +83,12 @@ function SortableBannerItem({
   image,
   onRemove,
   onSetThumb,
+  onEditFocal,
 }: {
   image: PostImageInput;
   onRemove: () => void;
   onSetThumb: () => void;
+  onEditFocal: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: image.url });
@@ -77,12 +98,17 @@ function SortableBannerItem({
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }}
       className={cn(
-        "relative group w-32 aspect-[3/2] rounded-lg overflow-hidden border-2 cursor-pointer shrink-0",
+        "relative group w-32 aspect-[3/2] rounded-lg overflow-hidden border-[3px] cursor-pointer shrink-0",
         image.isThumbnail ? "border-brand" : "border-transparent hover:border-zinc-300",
       )}
       onClick={onSetThumb}
     >
-      <img src={image.url} alt="" className="w-full h-full object-cover" />
+      <img
+        src={image.url}
+        alt=""
+        className="w-full h-full object-cover"
+        style={{ objectPosition: `${(image.focalX ?? 0.5) * 100}% ${(image.focalY ?? 0.5) * 100}%` }}
+      />
       <div
         {...attributes}
         {...listeners}
@@ -98,10 +124,90 @@ function SortableBannerItem({
       >
         <X className="h-3 w-3" />
       </button>
-      {image.isThumbnail && (
-        <div className="absolute bottom-0 inset-x-0 bg-brand/90 text-black text-[10px] text-center py-0.5 font-medium">
-          썸네일
-        </div>
+      <button
+        type="button"
+        className="absolute bottom-1 right-1 p-0.5 rounded bg-black/40 opacity-0 group-hover:opacity-100 text-white"
+        onClick={(e) => { e.stopPropagation(); onEditFocal(); }}
+        title="초점 설정"
+      >
+        <Crosshair className="h-3 w-3" />
+      </button>
+    </div>
+  );
+}
+
+// ─── 클릭 링크 선택기 ─────────────────────────────────────────────────────────
+
+function LinkSelector({
+  linkUrl,
+  sources,
+  onChange,
+}: {
+  linkUrl: string | null;
+  sources: PostSourceInput[];
+  onChange: (url: string | null) => void;
+}) {
+  const sourceUrls = sources.filter((s) => s.url);
+  const isCustom = !!linkUrl && !sourceUrls.find((s) => s.url === linkUrl);
+  const [customInput, setCustomInput] = useState(isCustom ? (linkUrl ?? "") : "");
+  const selectValue = isCustom ? CUSTOM_VALUE : (linkUrl ?? NONE_VALUE);
+
+  return (
+    <div className="space-y-1.5">
+      <Select
+        value={selectValue}
+        onValueChange={(v) => {
+          if (v === NONE_VALUE) {
+            onChange(null);
+          } else if (v === CUSTOM_VALUE) {
+            onChange(customInput || null);
+          } else {
+            onChange(v);
+          }
+        }}
+      >
+        <SelectTrigger className="h-8 text-xs">
+          <SelectValue placeholder="링크 없음" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={NONE_VALUE}>없음</SelectItem>
+          {sourceUrls.map((s, i) => {
+            const ytId = s.platform?.toUpperCase() === "YOUTUBE" ? extractYouTubeVideoId(s.url) : null;
+            return (
+              <SelectItem key={i} value={s.url}>
+                <div className="flex items-center gap-2">
+                  {ytId ? (
+                    <img
+                      src={`https://img.youtube.com/vi/${ytId}/default.jpg`}
+                      alt=""
+                      className="w-10 h-6 object-cover rounded shrink-0"
+                    />
+                  ) : (
+                    <div className="w-10 h-6 rounded bg-muted flex items-center justify-center shrink-0 text-[9px] text-muted-foreground font-medium">
+                      {getPlatformShort(s.platform).slice(0, 2)}
+                    </div>
+                  )}
+                  <span>출처 {i + 1}</span>
+                  {s.sourceNote && (
+                    <span className="text-muted-foreground text-xs">· {s.sourceNote}</span>
+                  )}
+                </div>
+              </SelectItem>
+            );
+          })}
+          <SelectItem value={CUSTOM_VALUE}>직접 입력</SelectItem>
+        </SelectContent>
+      </Select>
+      {(isCustom || selectValue === CUSTOM_VALUE) && (
+        <Input
+          value={customInput}
+          onChange={(e) => {
+            setCustomInput(e.target.value);
+            onChange(e.target.value || null);
+          }}
+          placeholder="https://..."
+          className="h-8 text-xs"
+        />
       )}
     </div>
   );
@@ -123,7 +229,15 @@ export function PostImageSection({ postId, images, onChange, sources }: Props) {
   const [bannerUploading, setBannerUploading] = useState(false);
   const [originalMode, setOriginalMode] = useState<OriginalMode>("idle");
   const [urlInput, setUrlInput] = useState("");
-  const [linkUrlInput, setLinkUrlInput] = useState("");
+  const [focalDialog, setFocalDialog] = useState<{
+    url: string;
+    focalX: number | null;
+    focalY: number | null;
+  } | null>(null);
+
+  function updateFocal(url: string, focalX: number, focalY: number) {
+    onChange(images.map((img) => img.url === url ? { ...img, focalX, focalY } : img));
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -162,6 +276,21 @@ export function PostImageSection({ postId, images, onChange, sources }: Props) {
     onChange(images.map((img) => ({ ...img, isThumbnail: img.url === url })));
   }
 
+  function setOriginal(img: PostImageInput) {
+    replaceImages(bannerImages, img, img.url);
+  }
+
+  function removeOriginal() {
+    replaceImages(bannerImages, null);
+  }
+
+  function setOriginalLinkUrl(linkUrl: string | null) {
+    if (!originalImage) return;
+    onChange(images.map((img) =>
+      img.imageType === "ORIGINAL" ? { ...img, linkUrl } : img,
+    ));
+  }
+
   // ─ 배너 핸들러 ─────────────────────────────────────────────────────────────
 
   async function handleBannerUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -198,16 +327,6 @@ export function PostImageSection({ postId, images, onChange, sources }: Props) {
     replaceImages(arrayMove(bannerImages, oldIdx, newIdx), originalImage);
   }
 
-  // ─ 소스 이미지 핸들러 ──────────────────────────────────────────────────────
-
-  function setOriginal(img: PostImageInput) {
-    replaceImages(bannerImages, img, img.url);
-  }
-
-  function removeOriginal() {
-    replaceImages(bannerImages, null);
-  }
-
   const thumbImage = images.find((img) => img.isThumbnail);
   const thumbSource = thumbImage?.imageType === "BANNER" ? "배너" : thumbImage?.imageType === "ORIGINAL" ? "소스 이미지" : null;
 
@@ -231,6 +350,7 @@ export function PostImageSection({ postId, images, onChange, sources }: Props) {
                     image={img}
                     onRemove={() => removeBanner(img.url)}
                     onSetThumb={() => setThumbnail(img.url)}
+                    onEditFocal={() => setFocalDialog({ url: img.url, focalX: img.focalX ?? null, focalY: img.focalY ?? null })}
                   />
                 ))}
               </SortableContext>
@@ -254,7 +374,7 @@ export function PostImageSection({ postId, images, onChange, sources }: Props) {
             </label>
           )}
         </div>
-        <p className="text-[11px] text-muted-foreground">드래그로 순서 변경 · 이미지 클릭 시 썸네일 지정</p>
+        <p className="text-[11px] text-muted-foreground">드래그로 순서 변경 · 클릭 시 썸네일 지정</p>
       </div>
 
       {/* ─ 소스 이미지 (1장) ─────────────────────────────────────────────────── */}
@@ -266,56 +386,70 @@ export function PostImageSection({ postId, images, onChange, sources }: Props) {
 
         <div className="border rounded-lg p-3 bg-muted/20 space-y-3">
           {originalImage ? (
-            // 이미지 있는 경우
-            <div className="flex flex-col gap-1 w-32">
-              <div className="relative group w-32 aspect-[3/2] rounded-lg overflow-hidden border">
-                <img src={originalImage.url} alt="" className="w-full h-full object-cover" />
+            // 이미지 있는 경우 — 이미지 + 클릭 링크를 나란히
+            <div className="flex gap-4 items-start">
+              <div
+                className={cn(
+                  "relative group w-32 aspect-[3/2] rounded-lg overflow-hidden border-[3px] cursor-pointer shrink-0",
+                  originalImage.isThumbnail ? "border-brand" : "border-transparent hover:border-zinc-300",
+                )}
+                onClick={() => setThumbnail(originalImage.url)}
+              >
+                <img
+                  src={originalImage.url}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  style={{ objectPosition: `${(originalImage.focalX ?? 0.5) * 100}% ${(originalImage.focalY ?? 0.5) * 100}%` }}
+                />
                 <button
                   type="button"
-                  className="absolute top-1 right-1 p-0.5 rounded bg-black/50 opacity-0 group-hover:opacity-100 text-white"
-                  onClick={removeOriginal}
+                  className="absolute top-1 right-1 p-0.5 rounded bg-black/40 opacity-0 group-hover:opacity-100 text-white"
+                  onClick={(e) => { e.stopPropagation(); removeOriginal(); }}
                 >
                   <X className="h-3 w-3" />
                 </button>
+                <button
+                  type="button"
+                  className="absolute bottom-1 right-1 p-0.5 rounded bg-black/40 opacity-0 group-hover:opacity-100 text-white"
+                  onClick={(e) => { e.stopPropagation(); setFocalDialog({ url: originalImage.url, focalX: originalImage.focalX ?? null, focalY: originalImage.focalY ?? null }); }}
+                  title="초점 설정"
+                >
+                  <Crosshair className="h-3 w-3" />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setThumbnail(originalImage.url)}
-                className={cn(
-                  "text-[10px] py-0.5 rounded border font-medium transition-colors",
-                  originalImage.isThumbnail
-                    ? "bg-brand border-brand text-black"
-                    : "border-zinc-300 text-zinc-500 hover:border-brand hover:text-zinc-700",
-                )}
-              >
-                썸네일
-              </button>
+
+              {/* 클릭 링크 선택 */}
+              <div className="flex-1 min-w-0 space-y-1.5">
+                <p className="text-xs font-medium">클릭 링크</p>
+                <p className="text-[11px] text-muted-foreground">사용자가 카드 클릭 시 이동할 URL</p>
+                <LinkSelector
+                  linkUrl={originalImage.linkUrl ?? null}
+                  sources={sources}
+                  onChange={setOriginalLinkUrl}
+                />
+              </div>
             </div>
           ) : originalMode === "idle" ? (
             // 비어있는 상태 — 추가 버튼
             <div className="flex flex-wrap gap-2">
-              {ytSources.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {ytSources.map((yt, i) => (
-                    <button
-                      key={yt.url}
-                      type="button"
-                      onClick={() => setOriginal({
-                        imageType: "ORIGINAL",
-                        imageSource: "AUTO",
-                        url: `https://img.youtube.com/vi/${yt.videoId}/maxresdefault.jpg`,
-                        linkUrl: yt.url,
-                        isThumbnail: false,
-                        sortOrder: 0,
-                      })}
-                      className="flex items-center gap-2 px-3 py-1.5 text-xs rounded-md border hover:bg-muted transition-colors text-sky-600 border-sky-200"
-                    >
-                      <img src={`https://img.youtube.com/vi/${yt.videoId}/default.jpg`} alt="" className="w-10 h-6 object-cover rounded shrink-0" />
-                      YouTube {i + 1}
-                    </button>
-                  ))}
-                </div>
-              )}
+              {ytSources.map((yt, i) => (
+                <button
+                  key={yt.url}
+                  type="button"
+                  onClick={() => setOriginal({
+                    imageType: "ORIGINAL",
+                    imageSource: "AUTO",
+                    url: `https://img.youtube.com/vi/${yt.videoId}/maxresdefault.jpg`,
+                    linkUrl: yt.url,
+                    isThumbnail: false,
+                    sortOrder: 0,
+                  })}
+                  className="flex items-center gap-2 px-3 py-1.5 text-xs rounded-md border hover:bg-muted transition-colors text-sky-600 border-sky-200"
+                >
+                  <img src={`https://img.youtube.com/vi/${yt.videoId}/default.jpg`} alt="" className="w-10 h-6 object-cover rounded shrink-0" />
+                  YouTube {i + 1}
+                </button>
+              ))}
               <label className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border cursor-pointer hover:bg-muted transition-colors">
                 <Upload className="h-3.5 w-3.5" />
                 파일 업로드
@@ -346,15 +480,13 @@ export function PostImageSection({ postId, images, onChange, sources }: Props) {
             // URL 입력 폼
             <div className="space-y-1.5">
               <Input value={urlInput} onChange={(e) => setUrlInput(e.target.value)} placeholder="이미지 URL (https://...)" className="h-8 text-sm" />
-              <Input value={linkUrlInput} onChange={(e) => setLinkUrlInput(e.target.value)} placeholder="클릭 링크 URL (선택, https://...)" className="h-8 text-sm" />
               <div className="flex gap-2">
                 <Button
                   type="button" size="sm" variant="outline" className="h-8"
                   disabled={!urlInput.trim()}
                   onClick={() => {
-                    setOriginal({ imageType: "ORIGINAL", imageSource: "URL", url: urlInput.trim(), linkUrl: linkUrlInput.trim() || null, isThumbnail: false, sortOrder: 0 });
+                    setOriginal({ imageType: "ORIGINAL", imageSource: "URL", url: urlInput.trim(), linkUrl: null, isThumbnail: false, sortOrder: 0 });
                     setUrlInput("");
-                    setLinkUrlInput("");
                     setOriginalMode("idle");
                   }}
                 >
@@ -377,9 +509,29 @@ export function PostImageSection({ postId, images, onChange, sources }: Props) {
             )}
           </div>
           <div className="relative w-40 aspect-[3/2] rounded-lg overflow-hidden border">
-            <img src={thumbImage.url} alt="썸네일" className="w-full h-full object-cover" />
+            <img
+              src={thumbImage.url}
+              alt="썸네일"
+              className="w-full h-full object-cover"
+              style={{ objectPosition: `${(thumbImage.focalX ?? 0.5) * 100}% ${(thumbImage.focalY ?? 0.5) * 100}%` }}
+            />
           </div>
         </div>
+      )}
+
+      {/* ─ 초점 설정 다이얼로그 ────────────────────────────────────────────── */}
+      {focalDialog && (
+        <ImageFocalPointDialog
+          open
+          imageUrl={focalDialog.url}
+          focalX={focalDialog.focalX}
+          focalY={focalDialog.focalY}
+          onConfirm={(x, y) => {
+            updateFocal(focalDialog.url, x, y);
+            setFocalDialog(null);
+          }}
+          onClose={() => setFocalDialog(null)}
+        />
       )}
     </div>
   );

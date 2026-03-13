@@ -19,7 +19,6 @@ import {
   Languages,
   MapPin,
   Phone,
-  Plus,
   Sparkles,
   Star,
   Train,
@@ -33,6 +32,7 @@ const MapPreview = dynamic(
   { ssr: false, loading: () => <div className="h-[260px] rounded-md bg-muted/50 animate-pulse" /> },
 );
 import type { PostStatus } from "@prisma/client";
+import { computeTopicEffectiveColors, type EffectiveColorInfo } from "@/lib/post-labels";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -289,7 +289,6 @@ export function PostForm({
   const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "ok" | "error">("idle");
   const [slugManual, setSlugManual] = useState(false);
   const [placePickerOpen, setPlacePickerOpen] = useState(false);
-  const [detailPlaceId, setDetailPlaceId] = useState<string | null>(null);
   const [isTranslating, setIsTranslating] = useState(false);
   const [isTranslatingTitle, setIsTranslatingTitle] = useState(false);
   const [isGeneratingDraft, setIsGeneratingDraft] = useState(false);
@@ -297,30 +296,18 @@ export function PostForm({
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
 
   // ── 파생값 ─────────────────────────────────────────────────────────────────
-  type EffInfo = { hex: string; hex2: string | null; dir: string; stop: number; textHex: string };
-
   const { topicEffectiveStyleMap, topicEffectiveInfoMap } = useMemo(() => {
-    const DEFAULT_COLOR = "#C8FF09";
-    const DEFAULT_TEXT = "#000000";
-    const effectiveMap = new Map<string, EffInfo>();
+    const effectiveMap = computeTopicEffectiveColors(localAllTopics);
     const styleMap = new Map<string, React.CSSProperties>();
-    for (const t of localAllTopics) {
-      const parent = t.parentId ? effectiveMap.get(t.parentId) : undefined;
-      const inherits = t.colorHex === null;
-      const hex = t.colorHex ?? parent?.hex ?? DEFAULT_COLOR;
-      const hex2 = inherits ? (parent?.hex2 ?? null) : t.colorHex2;
-      const dir = inherits ? (parent?.dir ?? "to bottom") : t.gradientDir;
-      const stop = inherits ? (parent?.stop ?? 150) : t.gradientStop;
-      const textHex = t.textColorHex ?? parent?.textHex ?? DEFAULT_TEXT;
-      effectiveMap.set(t.id, { hex, hex2, dir, stop, textHex });
+    for (const [id, e] of effectiveMap) {
       styleMap.set(
-        t.id,
-        hex2
-          ? { background: `linear-gradient(${dir}, ${hex} 0%, ${hex2} ${stop}%)`, color: textHex }
-          : { backgroundColor: hex, color: textHex },
+        id,
+        e.hex2
+          ? { background: `linear-gradient(${e.dir}, ${e.hex} 0%, ${e.hex2} ${e.stop}%)`, color: e.textHex }
+          : { background: e.hex, color: e.textHex },
       );
     }
-    return { topicEffectiveStyleMap: styleMap, topicEffectiveInfoMap: effectiveMap };
+    return { topicEffectiveStyleMap: styleMap, topicEffectiveInfoMap: effectiveMap as Map<string, EffectiveColorInfo> };
   }, [localAllTopics]);
 
   const tagGroupColorMap = useMemo(
@@ -468,25 +455,9 @@ export function PostForm({
   }
 
   // ── 제출 ───────────────────────────────────────────────────────────────────
-  const handleSubmit = (targetStatus?: PostStatus) => {
-    const finalStatus = targetStatus ?? status;
 
-    if (!titleKo.trim()) { toast.error("한국어 제목을 입력해주세요."); return; }
-    if (!titleEn.trim()) { toast.error("영어 제목을 입력해주세요."); return; }
-    if (!slug.trim()) { toast.error("슬러그를 입력해주세요."); return; }
-    if (slugStatus === "error") { toast.error("슬러그가 이미 사용 중입니다."); return; }
-
-    if (finalStatus === "PUBLISHED") {
-      const missing: string[] = [];
-      if (postTopics.length === 0) missing.push("토픽 1개 이상");
-      if (!images.some((img) => img.isThumbnail)) missing.push("썸네일 이미지");
-      const visibleCount =
-        postTopics.filter((t) => t.isVisible).length + postTags.filter((t) => t.isVisible).length;
-      if (visibleCount < 1) missing.push("라벨 1개 이상 표시 설정 필요");
-      if (missing.length > 0) { toast.error(`발행 불가: ${missing.join(", ")} 필요`); return; }
-    }
-
-    const data: PostFormData = {
+  function buildFormData(finalStatus: PostStatus): PostFormData {
+    return {
       titleKo: titleKo.trim(),
       titleEn: titleEn.trim(),
       slug: slug.trim(),
@@ -515,8 +486,28 @@ export function PostForm({
         return { placeId: e.place.id, spotInsight };
       }),
     };
+  }
+
+  const handleSubmit = (targetStatus?: PostStatus) => {
+    const finalStatus = targetStatus ?? status;
+
+    if (!titleKo.trim()) { toast.error("한국어 제목을 입력해주세요."); return; }
+    if (!titleEn.trim()) { toast.error("영어 제목을 입력해주세요."); return; }
+    if (!slug.trim()) { toast.error("슬러그를 입력해주세요."); return; }
+    if (slugStatus === "error") { toast.error("슬러그가 이미 사용 중입니다."); return; }
+
+    if (finalStatus === "PUBLISHED") {
+      const missing: string[] = [];
+      if (postTopics.length === 0) missing.push("토픽 1개 이상");
+      if (!images.some((img) => img.isThumbnail)) missing.push("썸네일 이미지");
+      const visibleCount =
+        postTopics.filter((t) => t.isVisible).length + postTags.filter((t) => t.isVisible).length;
+      if (visibleCount < 1) missing.push("라벨 1개 이상 표시 설정 필요");
+      if (missing.length > 0) { toast.error(`발행 불가: ${missing.join(", ")} 필요`); return; }
+    }
 
     startTransition(async () => {
+      const data = buildFormData(finalStatus);
       let result: { error?: string };
       if (isEdit && postId) {
         const { updatePost } = await import("../_actions/post-actions");
@@ -536,6 +527,24 @@ export function PostForm({
         } else {
           router.push("/admin/posts");
         }
+      }
+    });
+  };
+
+  const handlePreview = () => {
+    if (!isEdit || !postId || !slug.trim()) return;
+    if (!titleKo.trim()) { toast.error("한국어 제목을 입력해주세요."); return; }
+    if (!slug.trim()) { toast.error("슬러그를 입력해주세요."); return; }
+
+    startTransition(async () => {
+      const data = buildFormData(status);
+      const { updatePost } = await import("../_actions/post-actions");
+      const result = await updatePost(postId, data);
+
+      if (result.error) {
+        toast.error(result.error);
+      } else {
+        window.open(`/posts/${slug.trim()}?preview=1`, "_blank");
       }
     });
   };
@@ -573,19 +582,15 @@ export function PostForm({
             </h1>
           </div>
           <div className="flex items-center gap-2">
-            {!isEmbedded && (isEdit && initialData?.slug ? (
-              <Button variant="outline" size="sm" asChild>
-                <a href={`/posts/${initialData.slug}?preview=1`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
-                  <Eye className="h-3.5 w-3.5" />
-                  미리보기
-                </a>
-              </Button>
-            ) : !isEdit && slug ? (
-              <Button variant="outline" size="sm" disabled>
-                <Eye className="h-3.5 w-3.5 mr-1" />
+            {!isEmbedded && isEdit && initialData?.slug && (
+              <Button variant="outline" size="sm" disabled={isPending} onClick={handlePreview}>
+                {isPending
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  : <Eye className="h-3.5 w-3.5" />
+                }
                 미리보기
               </Button>
-            ) : null)}
+            )}
 
             {isEmbedded ? (
               <Button variant="outline" size="sm" asChild>
@@ -1008,7 +1013,7 @@ export function PostForm({
                   {[
                     { label: "제목", done: !!titleEn.trim() },
                     { label: "본문", done: !!bodyEn.trim() },
-                    { label: "Insight", done: insightTranslated },
+                    { label: "Spot Insight", done: insightTranslated },
                   ].map(({ label, done }) => (
                     <div key={label} className="flex items-center justify-between text-xs">
                       <span className="text-muted-foreground">{label}</span>

@@ -8,6 +8,8 @@ interface BannerImage {
   id: string;
   url: string;
   sortOrder: number;
+  focalX?: number | null;
+  focalY?: number | null;
 }
 
 interface Props {
@@ -97,6 +99,7 @@ export function BannerCarousel({ images, children }: Props) {
                   alt=""
                   fill
                   className="object-cover"
+                  style={{ objectPosition: `${(img.focalX ?? 0.5) * 100}% ${(img.focalY ?? 0.5) * 100}%` }}
                   sizes="(min-width: 672px) 672px, 100vw"
                   priority={i === 1}
                   unoptimized

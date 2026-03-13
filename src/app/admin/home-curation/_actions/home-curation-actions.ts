@@ -1,7 +1,6 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import type { SectionType, ContentType } from "@prisma/client";
 
@@ -54,16 +53,6 @@ export async function reorderBanners(orderedIds: string[]) {
 
 export async function toggleBannerActive(bannerId: string, isActive: boolean) {
   await prisma.homeBanner.update({ where: { id: bannerId }, data: { isActive } });
-  revalidate();
-}
-
-export type LabelOverride = { type: "topic" | "tag"; id: string };
-
-export async function updateBannerLabels(bannerId: string, overrides: LabelOverride[]) {
-  await prisma.homeBanner.update({
-    where: { id: bannerId },
-    data: { labelOverrides: overrides.length > 0 ? overrides : Prisma.DbNull },
-  });
   revalidate();
 }
 

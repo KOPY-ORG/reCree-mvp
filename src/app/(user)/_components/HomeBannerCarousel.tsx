@@ -3,12 +3,16 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { labelBackground } from "@/lib/post-labels";
+import { LabelBadge } from "@/components/LabelBadge";
 
 export type BannerItem = {
   slug: string;
   titleEn: string;
   displayName: string;
   thumbnailUrl: string | null;
+  focalX?: number | null;
+  focalY?: number | null;
   labels: {
     text: string;
     colorHex: string;
@@ -63,6 +67,7 @@ export function HomeBannerCarousel({ banners }: { banners: BannerItem[] }) {
             fill
             unoptimized
             className="object-cover"
+            style={{ objectPosition: `${(banner.focalX ?? 0.5) * 100}% ${(banner.focalY ?? 0.5) * 100}%` }}
             sizes="(max-width: 672px) 100vw, 672px"
             priority
           />
@@ -70,26 +75,20 @@ export function HomeBannerCarousel({ banners }: { banners: BannerItem[] }) {
           <div className="w-full h-full bg-muted" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-        <div className="absolute bottom-8 left-4 right-4">
+        <div className="absolute bottom-10 left-4 right-4">
           {banner.labels.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mb-2">
+            <div className="flex flex-wrap gap-1.5 mb-1">
               {banner.labels.map((label, i) => (
-                <span
+                <LabelBadge
                   key={i}
-                  className="px-2 py-0.5 rounded-full text-xs font-semibold"
-                  style={{
-                    background: label.colorHex2
-                      ? `linear-gradient(${label.gradientDir}, ${label.colorHex}, ${label.colorHex2} ${label.gradientStop}%)`
-                      : label.colorHex,
-                    color: label.textColorHex,
-                  }}
-                >
-                  {label.text}
-                </span>
+                  text={label.text}
+                  background={labelBackground(label)}
+                  color={label.textColorHex}
+                />
               ))}
             </div>
           )}
-          <h2 className="text-white font-bold text-lg leading-tight line-clamp-2">
+          <h2 className="text-white font-bold text-lg leading-tight">
             {banner.displayName}
           </h2>
         </div>

@@ -6,8 +6,7 @@ import { HomeBannerCarousel, type BannerItem } from "./_components/HomeBannerCar
 import { getPostsWithLabels, getSavedPostIds, type PostItem } from "@/lib/post-queries";
 import {
   resolveTopicColors,
-  DEFAULT_COLOR,
-  DEFAULT_TEXT,
+  resolveTagColors,
   type TagGroupColorMap,
 } from "@/lib/post-labels";
 import { PostCard } from "./_components/PostCard";
@@ -59,14 +58,13 @@ export default async function HomePage() {
       orderBy: { order: "asc" },
       select: {
         id: true,
-        labelOverrides: true,
         post: {
           select: {
             slug: true,
             titleEn: true,
             postImages: {
               where: { isThumbnail: true },
-              select: { url: true },
+              select: { url: true, focalX: true, focalY: true },
               take: 1,
             },
             postTopics: {
@@ -196,52 +194,16 @@ export default async function HomePage() {
   const tagGroupMap: TagGroupColorMap = new Map(tagGroupConfigs.map((c) => [c.group, c]));
 
   // 배너 props 변환 — effective color 계산
-  type LabelOverride = { type: "topic" | "tag"; id: string };
-
   const bannerItems: BannerItem[] = homeBanners.map((b) => {
-    const overrides = b.labelOverrides as LabelOverride[] | null;
+    const topicLabel = b.post.postTopics
+      .filter((t) => t.isVisible)
+      .slice(0, 1)
+      .map((t) => ({ text: t.topic.nameEn, ...resolveTopicColors(t.topic) }));
 
-    function buildTopicLabel(pt: typeof b.post.postTopics[number]) {
-      const c = resolveTopicColors(pt.topic);
-      return { text: pt.topic.nameEn, ...c };
-    }
-
-    function buildTagLabel(pt: typeof b.post.postTags[number]) {
-      const { tag } = pt;
-      const gc = tagGroupMap.get(tag.group);
-      return {
-        text: tag.name,
-        colorHex: tag.colorHex ?? gc?.colorHex ?? DEFAULT_COLOR,
-        colorHex2: tag.colorHex !== null ? tag.colorHex2 : (gc?.colorHex2 ?? null),
-        gradientDir: gc?.gradientDir ?? "to bottom",
-        gradientStop: gc?.gradientStop ?? 150,
-        textColorHex: tag.textColorHex ?? gc?.textColorHex ?? DEFAULT_TEXT,
-      };
-    }
-
-    let labels: BannerItem["labels"];
-
-    if (overrides && overrides.length > 0) {
-      labels = overrides
-        .map((o) => {
-          if (o.type === "topic") {
-            const pt = b.post.postTopics.find((t) => t.topicId === o.id);
-            return pt ? buildTopicLabel(pt) : null;
-          } else {
-            const pt = b.post.postTags.find((t) => t.tagId === o.id);
-            return pt ? buildTagLabel(pt) : null;
-          }
-        })
-        .filter((l): l is NonNullable<typeof l> => l !== null);
-    } else {
-      const topicLabels = b.post.postTopics
-        .filter((t) => t.isVisible)
-        .map(buildTopicLabel);
-      const tagLabels = b.post.postTags
-        .filter((t) => t.isVisible)
-        .map(buildTagLabel);
-      labels = [...topicLabels, ...tagLabels].slice(0, 2);
-    }
+    const tagLabel = b.post.postTags
+      .filter((t) => t.isVisible)
+      .slice(0, 1)
+      .map((t) => ({ text: t.tag.name, ...resolveTagColors(t.tag, tagGroupMap.get(t.tag.group)) }));
 
     return {
       slug: b.post.slug,
@@ -251,7 +213,9 @@ export default async function HomePage() {
         b.post.postPlaces[0]?.place.nameKo ??
         b.post.titleEn,
       thumbnailUrl: b.post.postImages[0]?.url ?? null,
-      labels,
+      focalX: b.post.postImages[0]?.focalX ?? null,
+      focalY: b.post.postImages[0]?.focalY ?? null,
+      labels: [...topicLabel, ...tagLabel],
     };
   });
 

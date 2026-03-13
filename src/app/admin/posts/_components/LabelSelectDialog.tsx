@@ -11,16 +11,9 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import type { TopicForForm, TagForForm, TagGroupItem } from "./PostForm";
+import { computeTopicEffectiveColors, type EffectiveColorInfo } from "@/lib/post-labels";
 
 // ─── 타입 / 헬퍼 ─────────────────────────────────────────────────────────────
-
-type EffectiveColorInfo = {
-  hex: string;
-  hex2: string | null;
-  dir: string;
-  stop: number;
-  textHex: string;
-};
 
 type TopicWithEffective = TopicForForm & EffectiveColorInfo;
 
@@ -109,23 +102,8 @@ export function LabelSelectDialog({
   // ─── 토픽 effective color 계산 ───────────────────────────────────────────
 
   const topicsWithEffective = useMemo<TopicWithEffective[]>(() => {
-    const DEFAULT_COLOR = "#C8FF09";
-    const DEFAULT_TEXT = "#000000";
-    const effectiveMap = new Map<string, EffectiveColorInfo>();
-
-    return allTopics.map((t) => {
-      const parent = t.parentId ? effectiveMap.get(t.parentId) : undefined;
-      const inherits = t.colorHex === null;
-
-      const hex = t.colorHex ?? parent?.hex ?? DEFAULT_COLOR;
-      const hex2 = inherits ? (parent?.hex2 ?? null) : t.colorHex2;
-      const dir = inherits ? (parent?.dir ?? "to bottom") : t.gradientDir;
-      const stop = inherits ? (parent?.stop ?? 150) : t.gradientStop;
-      const textHex = t.textColorHex ?? parent?.textHex ?? DEFAULT_TEXT;
-
-      effectiveMap.set(t.id, { hex, hex2, dir, stop, textHex });
-      return { ...t, hex, hex2, dir, stop, textHex };
-    });
+    const effectiveMap = computeTopicEffectiveColors(allTopics);
+    return allTopics.map((t) => ({ ...t, ...effectiveMap.get(t.id)! }));
   }, [allTopics]);
 
   // 섹션 헤더로만 쓰이는 토픽 ID 집합

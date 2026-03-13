@@ -4,11 +4,7 @@ import { type TopicNode } from "./_components/SortableTopicList";
 import { CategoriesTabContent } from "./_components/CategoriesTabContent";
 import { TagsTabContent } from "./_components/TagsTabContent";
 import type { TagItem, TagGroupConfigItem } from "./_components/SortableTagList";
-
-// ─── 색상 상속 상수 ────────────────────────────────────────────────────────────
-
-const DEFAULT_COLOR = "#C8FF09";
-const DEFAULT_TEXT = "#000000";
+import { DEFAULT_COLOR, DEFAULT_TEXT } from "@/lib/post-labels";
 
 // ─── 트리 유틸 ────────────────────────────────────────────────────────────────
 

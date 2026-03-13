@@ -4,9 +4,6 @@ import { BannerTab, type BannerRow } from "./_components/BannerTab";
 import { SectionTab, type SectionRow } from "./_components/SectionTab";
 import type { PickablePost } from "./_components/PostPickerDialog";
 
-const DEFAULT_COLOR = "#C8FF09";
-const DEFAULT_TEXT = "#000000";
-
 export default async function HomeCurationPage({
   searchParams,
 }: {
@@ -14,7 +11,7 @@ export default async function HomeCurationPage({
 }) {
   const { tab = "banner" } = await searchParams;
 
-  const [homeBanners, sections, publishedPosts, topics, tags, tagGroupConfigs] =
+  const [homeBanners, sections, publishedPosts, topics, tags] =
     await Promise.all([
       prisma.homeBanner.findMany({
         orderBy: { order: "asc" },
@@ -23,7 +20,6 @@ export default async function HomeCurationPage({
           postId: true,
           order: true,
           isActive: true,
-          labelOverrides: true,
           post: {
             select: {
               slug: true,
@@ -32,36 +28,6 @@ export default async function HomeCurationPage({
                 where: { isThumbnail: true },
                 select: { url: true },
                 take: 1,
-              },
-              postTopics: {
-                select: {
-                  topicId: true,
-                  isVisible: true,
-                  topic: {
-                    select: {
-                      nameEn: true,
-                      colorHex: true,
-                      textColorHex: true,
-                      parent: {
-                        select: { colorHex: true, textColorHex: true },
-                      },
-                    },
-                  },
-                },
-              },
-              postTags: {
-                select: {
-                  tagId: true,
-                  isVisible: true,
-                  tag: {
-                    select: {
-                      name: true,
-                      group: true,
-                      colorHex: true,
-                      textColorHex: true,
-                    },
-                  },
-                },
               },
             },
           },
@@ -121,45 +87,18 @@ export default async function HomeCurationPage({
         orderBy: { sortOrder: "asc" },
         select: { id: true, nameKo: true, name: true },
       }),
-      prisma.tagGroupConfig.findMany({
-        select: { group: true, colorHex: true, textColorHex: true },
-      }),
     ]);
-
-  // effective color 계산
-  const tagGroupMap = new Map(tagGroupConfigs.map((c) => [c.group, c]));
 
   const bannerRows: BannerRow[] = homeBanners.map((b) => ({
     id: b.id,
     postId: b.postId,
     order: b.order,
     isActive: b.isActive,
-    labelOverrides: b.labelOverrides as BannerRow["labelOverrides"],
     post: {
       slug: b.post.slug,
       titleEn: b.post.titleEn,
       thumbnailUrl: b.post.postImages[0]?.url ?? null,
     },
-    postTopics: b.post.postTopics.map((pt) => {
-      const p = pt.topic.parent;
-      return {
-        topicId: pt.topicId,
-        nameEn: pt.topic.nameEn,
-        isVisible: pt.isVisible,
-        effectiveColorHex: pt.topic.colorHex ?? p?.colorHex ?? DEFAULT_COLOR,
-        effectiveTextColorHex: pt.topic.textColorHex ?? p?.textColorHex ?? DEFAULT_TEXT,
-      };
-    }),
-    postTags: b.post.postTags.map((pt) => {
-      const gc = tagGroupMap.get(pt.tag.group);
-      return {
-        tagId: pt.tagId,
-        name: pt.tag.name,
-        isVisible: pt.isVisible,
-        effectiveColorHex: pt.tag.colorHex ?? gc?.colorHex ?? DEFAULT_COLOR,
-        effectiveTextColorHex: pt.tag.textColorHex ?? gc?.textColorHex ?? DEFAULT_TEXT,
-      };
-    }),
   }));
 
   const sectionRows: SectionRow[] = sections;

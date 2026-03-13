@@ -2,58 +2,51 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   resolveTopicColors,
+  resolveTagColors,
   labelBackground,
-  DEFAULT_COLOR,
-  DEFAULT_TEXT,
   type TagGroupColorMap,
   type ResolvedLabel,
 } from "@/lib/post-labels";
+import { LabelBadge } from "@/components/LabelBadge";
 import type { PostItem } from "@/lib/post-queries";
 import { ScrapButton } from "./ScrapButton";
 
-function resolvePostLabels(post: PostItem, tagGroupMap: TagGroupColorMap): ResolvedLabel[] {
-  const labels: ResolvedLabel[] = [];
+function resolvePostLabels(
+  post: PostItem,
+  tagGroupMap: TagGroupColorMap,
+  variant: "home" | "list",
+): ResolvedLabel[] {
+  const topics = post.postTopics
+    .map(({ topic }) => ({ text: topic.nameEn, ...resolveTopicColors(topic) }));
+  const tags = post.postTags
+    .map(({ tag }) => ({ text: tag.name, ...resolveTagColors(tag, tagGroupMap.get(tag.group)) }));
 
-  for (const { topic } of post.postTopics) {
-    labels.push({ text: topic.nameEn, ...resolveTopicColors(topic) });
-  }
-  for (const { tag } of post.postTags) {
-    const gc = tagGroupMap.get(tag.group);
-    labels.push({
-      text: tag.name,
-      colorHex: tag.colorHex ?? gc?.colorHex ?? DEFAULT_COLOR,
-      colorHex2: tag.colorHex ? (tag.colorHex2 ?? null) : (gc?.colorHex2 ?? null),
-      gradientDir: gc?.gradientDir ?? "to bottom",
-      gradientStop: gc?.gradientStop ?? 150,
-      textColorHex: tag.textColorHex ?? gc?.textColorHex ?? DEFAULT_TEXT,
-    });
-  }
-
-  return labels;
+  if (variant === "home") return [...topics.slice(0, 1), ...tags.slice(0, 1)];
+  return [...topics.slice(0, 1), ...tags.slice(0, 2)];
 }
 
 export function PostBadges({
   post,
   tagGroupMap,
-  maxLabels = 2,
+  variant = "home",
 }: {
   post: PostItem;
   tagGroupMap: TagGroupColorMap;
-  maxLabels?: number;
+  variant?: "home" | "list";
 }) {
-  const labels = resolvePostLabels(post, tagGroupMap).slice(0, maxLabels);
+  const labels = resolvePostLabels(post, tagGroupMap, variant);
   if (labels.length === 0) return null;
 
   return (
     <div className="flex flex-wrap gap-1">
       {labels.map((label, i) => (
-        <span
+        <LabelBadge
           key={i}
-          className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold leading-none"
-          style={{ background: labelBackground(label), color: label.textColorHex }}
-        >
-          {label.text}
-        </span>
+          text={label.text}
+          background={labelBackground(label)}
+          color={label.textColorHex}
+          className={variant === "list" ? "text-[10px]" : "text-[9px]"}
+        />
       ))}
     </div>
   );
@@ -85,6 +78,9 @@ export function PostCard({
             fill
             unoptimized
             className="object-cover"
+            style={{
+              objectPosition: `${(post.postImages[0].focalX ?? 0.5) * 100}% ${(post.postImages[0].focalY ?? 0.5) * 100}%`,
+            }}
             sizes={imageSizes}
           />
         ) : (
