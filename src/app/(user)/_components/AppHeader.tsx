@@ -16,7 +16,7 @@ export async function AppHeader() {
   const initial = user?.email?.[0]?.toUpperCase() ?? null;
 
   return (
-    <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b">
+    <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
       <div className="h-14 flex items-center justify-between px-4 md:px-6 lg:px-10 xl:px-16">
         {/* 왼쪽: 로고 + 데스크탑 네비 */}
         <div className="flex items-center gap-6">

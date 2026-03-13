@@ -14,7 +14,7 @@ export function ExploreTabBar() {
   }
 
   return (
-    <div className="flex border-b border-border sticky top-14 bg-background z-10 px-4">
+    <div className="flex border-b border-border sticky top-10 bg-background z-10 px-4">
       {(["posts", "hall"] as const).map((t) => (
         <button
           key={t}

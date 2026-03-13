@@ -58,8 +58,8 @@ export default async function CategoryPage({
   }
 
   return (
-    // AppHeader h-14 (3.5rem) + BottomNav h-16 (4rem) = 7.5rem
-    <div className="flex h-[calc(100dvh-7.5rem)] overflow-hidden">
+    // SlimHeader h-10 (2.5rem) + BottomNav h-16 (4rem) = 6.5rem
+    <div className="flex h-[calc(100dvh-6.5rem)] overflow-hidden">
       {/* 사이드바 */}
       <div className="w-28 shrink-0 overflow-hidden bg-zinc-100">
         <CategorySidebar items={sidebarItems} />
