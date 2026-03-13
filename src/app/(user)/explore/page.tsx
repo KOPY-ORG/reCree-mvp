@@ -42,9 +42,14 @@ function PostListItem({
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className="font-semibold text-sm line-clamp-2 leading-snug">
+        <p className="font-semibold text-base line-clamp-2 leading-snug">
           {post.postPlaces[0]?.place.nameEn ?? post.postPlaces[0]?.place.nameKo ?? post.titleEn}
         </p>
+        {post.postPlaces[0] && (
+          <p className="text-[10px] font-normal text-muted-foreground line-clamp-2 leading-snug mt-0.5">
+            {post.titleEn}
+          </p>
+        )}
         <div className="mt-1.5">
           <PostBadges post={post} tagGroupMap={tagGroupMap} maxLabels={3} />
         </div>
