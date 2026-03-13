@@ -185,6 +185,8 @@ model PostImage {
   sortOrder   Int         @default(0)
   slotIndex   Int?        // null=BANNER, 0=슬롯1, 1=슬롯2
   isSlotCard  Boolean     @default(false)  // 슬롯별 미니 소스 카드 대표 이미지
+  focalX      Float?      // 0.0 ~ 1.0, null = 0.5 (center)
+  focalY      Float?      // 0.0 ~ 1.0, null = 0.5 (center)
   createdAt   DateTime    @default(now())
 
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)

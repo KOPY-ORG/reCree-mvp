@@ -65,7 +65,7 @@ export default async function HomePage() {
             titleEn: true,
             postImages: {
               where: { isThumbnail: true },
-              select: { url: true },
+              select: { url: true, focalX: true, focalY: true },
               take: 1,
             },
             postTopics: {
@@ -246,6 +246,8 @@ export default async function HomePage() {
         b.post.postPlaces[0]?.place.nameKo ??
         b.post.titleEn,
       thumbnailUrl: b.post.postImages[0]?.url ?? null,
+      focalX: b.post.postImages[0]?.focalX ?? null,
+      focalY: b.post.postImages[0]?.focalY ?? null,
       labels,
     };
   });

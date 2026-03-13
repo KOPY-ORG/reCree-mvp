@@ -79,6 +79,9 @@ export function PostCard({
             fill
             unoptimized
             className="object-cover"
+            style={{
+              objectPosition: `${(post.postImages[0].focalX ?? 0.5) * 100}% ${(post.postImages[0].focalY ?? 0.5) * 100}%`,
+            }}
             sizes={imageSizes}
           />
         ) : (

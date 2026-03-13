@@ -66,12 +66,14 @@ function SortableLabel({ item, isFirst }: { item: SectionItem; isFirst: boolean 
 
 function LabelSection({
   title,
+  dndId,
   items,
   sensors,
   onToggle,
   onDragEnd,
 }: {
   title: string;
+  dndId: string;
   items: SectionItem[];
   sensors: ReturnType<typeof useSensors>;
   onToggle: (id: string) => void;
@@ -101,7 +103,7 @@ function LabelSection({
       {visibleItems.length > 1 && (
         <div className="space-y-1">
           <p className="text-xs text-muted-foreground">순서 (드래그)</p>
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+          <DndContext id={dndId} sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
             <SortableContext items={visibleItems.map((item) => item.id)} strategy={verticalListSortingStrategy}>
               <div className="space-y-1">
                 {visibleItems.map((item, idx) => (
@@ -196,6 +198,7 @@ export function LabelVisibilityCard({
         {postTopics.length > 0 && (
           <LabelSection
             title="토픽"
+            dndId="label-topics-dnd"
             items={topicItems}
             sensors={sensors}
             onToggle={(id) => setPostTopics((prev) => prev.map((pt) => pt.topicId === id ? { ...pt, isVisible: !pt.isVisible } : pt))}
@@ -205,6 +208,7 @@ export function LabelVisibilityCard({
         {postTags.length > 0 && (
           <LabelSection
             title="태그"
+            dndId="label-tags-dnd"
             items={tagItems}
             sensors={sensors}
             onToggle={(id) => setPostTags((prev) => prev.map((pt) => pt.tagId === id ? { ...pt, isVisible: !pt.isVisible } : pt))}

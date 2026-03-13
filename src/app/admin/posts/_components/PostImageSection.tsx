@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
-import { Upload, Link as LinkIcon, X, GripVertical, ImageIcon } from "lucide-react";
+import { Upload, Link as LinkIcon, X, GripVertical, ImageIcon, Crosshair } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import type { PostImageInput, PostSourceInput } from "../_actions/post-actions";
+import { ImageFocalPointDialog } from "./ImageFocalPointDialog";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_SIZE = 5 * 1024 * 1024;
@@ -82,10 +83,12 @@ function SortableBannerItem({
   image,
   onRemove,
   onSetThumb,
+  onEditFocal,
 }: {
   image: PostImageInput;
   onRemove: () => void;
   onSetThumb: () => void;
+  onEditFocal: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: image.url });
@@ -100,7 +103,12 @@ function SortableBannerItem({
       )}
       onClick={onSetThumb}
     >
-      <img src={image.url} alt="" className="w-full h-full object-cover" />
+      <img
+        src={image.url}
+        alt=""
+        className="w-full h-full object-cover"
+        style={{ objectPosition: `${(image.focalX ?? 0.5) * 100}% ${(image.focalY ?? 0.5) * 100}%` }}
+      />
       <div
         {...attributes}
         {...listeners}
@@ -115,6 +123,14 @@ function SortableBannerItem({
         onClick={(e) => { e.stopPropagation(); onRemove(); }}
       >
         <X className="h-3 w-3" />
+      </button>
+      <button
+        type="button"
+        className="absolute bottom-1 right-1 p-0.5 rounded bg-black/40 opacity-0 group-hover:opacity-100 text-white"
+        onClick={(e) => { e.stopPropagation(); onEditFocal(); }}
+        title="초점 설정"
+      >
+        <Crosshair className="h-3 w-3" />
       </button>
       {image.isThumbnail && (
         <div className="absolute bottom-0 inset-x-0 bg-brand/90 text-black text-[10px] text-center py-0.5 font-medium">
@@ -218,6 +234,15 @@ export function PostImageSection({ postId, images, onChange, sources }: Props) {
   const [bannerUploading, setBannerUploading] = useState(false);
   const [originalMode, setOriginalMode] = useState<OriginalMode>("idle");
   const [urlInput, setUrlInput] = useState("");
+  const [focalDialog, setFocalDialog] = useState<{
+    url: string;
+    focalX: number | null;
+    focalY: number | null;
+  } | null>(null);
+
+  function updateFocal(url: string, focalX: number, focalY: number) {
+    onChange(images.map((img) => img.url === url ? { ...img, focalX, focalY } : img));
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -330,6 +355,7 @@ export function PostImageSection({ postId, images, onChange, sources }: Props) {
                     image={img}
                     onRemove={() => removeBanner(img.url)}
                     onSetThumb={() => setThumbnail(img.url)}
+                    onEditFocal={() => setFocalDialog({ url: img.url, focalX: img.focalX ?? null, focalY: img.focalY ?? null })}
                   />
                 ))}
               </SortableContext>
@@ -369,13 +395,26 @@ export function PostImageSection({ postId, images, onChange, sources }: Props) {
             <div className="flex gap-4 items-start">
               <div className="flex flex-col gap-1 w-32 shrink-0">
                 <div className="relative group w-32 aspect-[3/2] rounded-lg overflow-hidden border">
-                  <img src={originalImage.url} alt="" className="w-full h-full object-cover" />
+                  <img
+                    src={originalImage.url}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    style={{ objectPosition: `${(originalImage.focalX ?? 0.5) * 100}% ${(originalImage.focalY ?? 0.5) * 100}%` }}
+                  />
                   <button
                     type="button"
                     className="absolute top-1 right-1 p-0.5 rounded bg-black/50 opacity-0 group-hover:opacity-100 text-white"
                     onClick={removeOriginal}
                   >
                     <X className="h-3 w-3" />
+                  </button>
+                  <button
+                    type="button"
+                    className="absolute bottom-1 right-1 p-0.5 rounded bg-black/40 opacity-0 group-hover:opacity-100 text-white"
+                    onClick={() => setFocalDialog({ url: originalImage.url, focalX: originalImage.focalX ?? null, focalY: originalImage.focalY ?? null })}
+                    title="초점 설정"
+                  >
+                    <Crosshair className="h-3 w-3" />
                   </button>
                 </div>
                 <button
@@ -483,9 +522,29 @@ export function PostImageSection({ postId, images, onChange, sources }: Props) {
             )}
           </div>
           <div className="relative w-40 aspect-[3/2] rounded-lg overflow-hidden border">
-            <img src={thumbImage.url} alt="썸네일" className="w-full h-full object-cover" />
+            <img
+              src={thumbImage.url}
+              alt="썸네일"
+              className="w-full h-full object-cover"
+              style={{ objectPosition: `${(thumbImage.focalX ?? 0.5) * 100}% ${(thumbImage.focalY ?? 0.5) * 100}%` }}
+            />
           </div>
         </div>
+      )}
+
+      {/* ─ 초점 설정 다이얼로그 ────────────────────────────────────────────── */}
+      {focalDialog && (
+        <ImageFocalPointDialog
+          open
+          imageUrl={focalDialog.url}
+          focalX={focalDialog.focalX}
+          focalY={focalDialog.focalY}
+          onConfirm={(x, y) => {
+            updateFocal(focalDialog.url, x, y);
+            setFocalDialog(null);
+          }}
+          onClose={() => setFocalDialog(null)}
+        />
       )}
     </div>
   );

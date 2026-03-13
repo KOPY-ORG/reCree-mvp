@@ -16,7 +16,7 @@ export async function getPostsWithLabels(
       titleEn: true,
       postImages: {
         where: { isThumbnail: true },
-        select: { url: true },
+        select: { url: true, focalX: true, focalY: true },
         take: 1,
       },
       postTopics: {

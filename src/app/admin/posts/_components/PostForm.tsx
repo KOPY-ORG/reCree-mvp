@@ -19,7 +19,6 @@ import {
   Languages,
   MapPin,
   Phone,
-  Plus,
   Sparkles,
   Star,
   Train,
@@ -289,7 +288,6 @@ export function PostForm({
   const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "ok" | "error">("idle");
   const [slugManual, setSlugManual] = useState(false);
   const [placePickerOpen, setPlacePickerOpen] = useState(false);
-  const [detailPlaceId, setDetailPlaceId] = useState<string | null>(null);
   const [isTranslating, setIsTranslating] = useState(false);
   const [isTranslatingTitle, setIsTranslatingTitle] = useState(false);
   const [isGeneratingDraft, setIsGeneratingDraft] = useState(false);
@@ -1026,7 +1024,7 @@ export function PostForm({
                   {[
                     { label: "제목", done: !!titleEn.trim() },
                     { label: "본문", done: !!bodyEn.trim() },
-                    { label: "Insight", done: insightTranslated },
+                    { label: "Spot Insight", done: insightTranslated },
                   ].map(({ label, done }) => (
                     <div key={label} className="flex items-center justify-between text-xs">
                       <span className="text-muted-foreground">{label}</span>

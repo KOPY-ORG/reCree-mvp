@@ -112,18 +112,17 @@ function SortableBannerRow({
         <GripVertical className="size-4" />
       </span>
 
-      {banner.post.thumbnailUrl ? (
-        <Image
-          src={banner.post.thumbnailUrl}
-          alt={banner.post.titleEn}
-          width={56}
-          height={42}
-          unoptimized
-          className="rounded object-cover shrink-0"
-        />
-      ) : (
-        <div className="w-14 h-[42px] rounded bg-muted shrink-0" />
-      )}
+      <div className="relative w-14 h-[38px] rounded overflow-hidden shrink-0 bg-muted">
+        {banner.post.thumbnailUrl && (
+          <Image
+            src={banner.post.thumbnailUrl}
+            alt={banner.post.titleEn}
+            fill
+            unoptimized
+            className="object-cover"
+          />
+        )}
+      </div>
 
       <button
         type="button"

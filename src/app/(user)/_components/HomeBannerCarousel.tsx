@@ -9,6 +9,8 @@ export type BannerItem = {
   titleEn: string;
   displayName: string;
   thumbnailUrl: string | null;
+  focalX?: number | null;
+  focalY?: number | null;
   labels: {
     text: string;
     colorHex: string;
@@ -63,6 +65,7 @@ export function HomeBannerCarousel({ banners }: { banners: BannerItem[] }) {
             fill
             unoptimized
             className="object-cover"
+            style={{ objectPosition: `${(banner.focalX ?? 0.5) * 100}% ${(banner.focalY ?? 0.5) * 100}%` }}
             sizes="(max-width: 672px) 100vw, 672px"
             priority
           />
