@@ -97,16 +97,25 @@ async function fetchSheetCsv(): Promise<RawRow[]> {
   return result.data;
 }
 
-// ─── 이미 임포트된 Post sourceUrl 집합 조회 ──────────────────────────────────────
+// ─── 이미 임포트된 (googleMapsUrl, sourceUrl) 쌍 집합 조회 ──────────────────────
+// 같은 출처 URL이라도 장소가 다르면 별개 포스트이므로 쌍으로 비교
 
-async function getImportedSourceUrls(): Promise<Set<string>> {
-  const postSources = await prisma.postSource.findMany({
-    where: { url: { not: "" } },
-    select: { url: true },
+async function getImportedPostKeys(): Promise<Set<string>> {
+  const posts = await prisma.post.findMany({
+    select: {
+      postSources: { select: { url: true } },
+      postPlaces: { select: { place: { select: { googleMapsUrl: true } } } },
+    },
   });
-  const urls = new Set<string>();
-  postSources.forEach((p) => { if (p.url) urls.add(p.url); });
-  return urls;
+  const keys = new Set<string>();
+  for (const post of posts) {
+    const googleMapsUrl = post.postPlaces[0]?.place.googleMapsUrl;
+    if (!googleMapsUrl) continue;
+    for (const { url } of post.postSources) {
+      if (url) keys.add(`${googleMapsUrl}::${url}`);
+    }
+  }
+  return keys;
 }
 
 // ─── 기존 Place googleMapsUrl → id 맵 조회 ────────────────────────────────────
@@ -148,9 +157,9 @@ export async function fetchSheetPreview(): Promise<{
     return status === "완료" && review === "채택";
   });
 
-  const [existingPlaces, importedSourceUrls] = await Promise.all([
+  const [existingPlaces, importedPostKeys] = await Promise.all([
     getExistingPlaces(),
-    getImportedSourceUrls(),
+    getImportedPostKeys(),
   ]);
 
   const rows: SheetRow[] = [];
@@ -170,7 +179,8 @@ export async function fetchSheetPreview(): Promise<{
     const isExistingPlace = existingPlaceId !== null;
 
     const srcUrl = (r["source_url"] ?? "").trim();
-    const isAlreadyImported = !!srcUrl && importedSourceUrls.has(srcUrl);
+    const srcUrls = srcUrl ? srcUrl.split(",").map((u) => u.trim()).filter(Boolean) : [];
+    const isAlreadyImported = !!googleMapsLink && srcUrls.some((u) => importedPostKeys.has(`${googleMapsLink}::${u}`));
 
     rows.push({
       rowId: googleMapsLink ? `${googleMapsLink}::${idx}` : `row-${idx}`,
