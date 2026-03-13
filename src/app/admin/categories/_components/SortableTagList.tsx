@@ -47,6 +47,7 @@ export interface TagGroupConfigItem {
   gradientDir: string;
   gradientStop: number;
   textColorHex: string;
+  isVisible: boolean;
   sortOrder: number;
 }
 

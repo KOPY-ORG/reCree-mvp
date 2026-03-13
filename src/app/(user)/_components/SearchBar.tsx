@@ -4,7 +4,7 @@ import { Search } from "lucide-react";
 export function SearchBar() {
   return (
     <Link
-      href="/search"
+      href="/explore"
       className="flex items-center gap-2 h-11 w-full rounded-full border border-border bg-muted/30 px-4 mb-4 hover:border-brand transition-colors"
     >
       <Search className="size-4 text-muted-foreground shrink-0" />

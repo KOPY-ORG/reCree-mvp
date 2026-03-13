@@ -140,6 +140,7 @@ model TagGroupConfig {
   gradientDir  String   @default("to bottom")
   gradientStop Int      @default(150)
   textColorHex String   @default("#000000")
+  isVisible    Boolean  @default(true)
   sortOrder    Int      @default(0)
   updatedAt    DateTime @updatedAt
 }

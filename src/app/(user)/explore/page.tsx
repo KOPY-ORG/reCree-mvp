@@ -2,11 +2,17 @@ import Link from "next/link";
 import Image from "next/image";
 import { ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { getPostsWithLabels, getSavedPostIds, type PostItem } from "@/lib/post-queries";
+import { getSavedPostIds, type PostItem } from "@/lib/post-queries";
+import { getFilteredPosts, getTagGroupsWithTags } from "@/lib/filter-queries";
+import { getLevel0TopicsWithChildren } from "@/lib/topic-queries";
 import { type TagGroupColorMap } from "@/lib/post-labels";
 import { getCurrentUser } from "@/lib/auth";
 import { ScrapButton } from "../_components/ScrapButton";
 import { PostBadges } from "../_components/PostCard";
+import { ExploreSearchBar } from "./_components/ExploreSearchBar";
+import { TopicFilterRow } from "./_components/TopicFilterRow";
+import { TagFilterRow } from "./_components/TagFilterRow";
+import { ExploreTabBar } from "./_components/ExploreTabBar";
 
 // ─── 서브 컴포넌트 ────────────────────────────────────────────────────────────
 
@@ -41,7 +47,9 @@ function PostListItem({
 
       <div className="flex-1 min-w-0">
         <p className="font-semibold text-base line-clamp-2 leading-snug">
-          {post.postPlaces[0]?.place.nameEn ?? post.postPlaces[0]?.place.nameKo ?? post.titleEn}
+          {post.postPlaces[0]?.place.nameEn ??
+            post.postPlaces[0]?.place.nameKo ??
+            post.titleEn}
         </p>
         {post.postPlaces[0] && (
           <p className="text-[10px] font-normal text-muted-foreground line-clamp-2 leading-snug mt-0.5">
@@ -61,7 +69,12 @@ function PostListItem({
 function RecreeshotInlineSection({
   shots,
 }: {
-  shots: { id: string; imageUrl: string; matchScore: number | null; showBadge: boolean }[];
+  shots: {
+    id: string;
+    imageUrl: string;
+    matchScore: number | null;
+    showBadge: boolean;
+  }[];
 }) {
   if (shots.length === 0) return null;
   return (
@@ -104,67 +117,86 @@ function RecreeshotInlineSection({
 export default async function ExplorePage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{
+    tab?: string;
+    q?: string;
+    topicId?: string;
+    tagId?: string;
+  }>;
 }) {
-  const { tab = "posts" } = await searchParams;
-
+  const { tab = "posts", q, topicId, tagId } = await searchParams;
   const currentUser = await getCurrentUser();
 
-  const [tagGroupConfigs, recreeshots, savedPostIds] = await Promise.all([
-    prisma.tagGroupConfig.findMany({
-      select: { group: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true },
-    }),
-    prisma.reCreeshot.findMany({
-      where: { status: "ACTIVE" },
-      orderBy: { createdAt: "desc" },
-      select: { id: true, imageUrl: true, matchScore: true, showBadge: true },
-    }),
-    getSavedPostIds(currentUser?.id ?? null),
-  ]);
+  const [level0Topics, tagGroups, tagGroupConfigs, recreeshots, savedPostIds] =
+    await Promise.all([
+      getLevel0TopicsWithChildren(),
+      getTagGroupsWithTags(),
+      prisma.tagGroupConfig.findMany({
+        select: {
+          group: true,
+          colorHex: true,
+          colorHex2: true,
+          gradientDir: true,
+          gradientStop: true,
+          textColorHex: true,
+        },
+      }),
+      prisma.reCreeshot.findMany({
+        where: { status: "ACTIVE" },
+        orderBy: { createdAt: "desc" },
+        select: { id: true, imageUrl: true, matchScore: true, showBadge: true },
+      }),
+      getSavedPostIds(currentUser?.id ?? null),
+    ]);
 
-  const tagGroupMap: TagGroupColorMap = new Map(tagGroupConfigs.map((c) => [c.group, c]));
+  const tagGroupMap: TagGroupColorMap = new Map(
+    tagGroupConfigs.map((c) => [c.group, c])
+  );
 
-  const posts = tab === "posts"
-    ? await getPostsWithLabels({ status: "PUBLISHED" }, { orderBy: { publishedAt: "desc" } })
-    : [];
+  const posts =
+    tab === "posts" ? await getFilteredPosts({ q, topicId, tagId }) : [];
+
+  const hasFilter = !!(q || topicId || tagId);
 
   return (
     <div className="max-w-2xl mx-auto">
-      {/* 탭 */}
-      <div className="flex border-b border-border sticky top-0 bg-background z-10">
-        <Link
-          href="?tab=posts"
-          className={`flex-1 text-center py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
-            tab === "posts"
-              ? "border-foreground text-foreground"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          Posts
-        </Link>
-        <Link
-          href="?tab=hall"
-          className={`flex-1 text-center py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
-            tab === "hall"
-              ? "border-foreground text-foreground"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          Hall
-        </Link>
-      </div>
+      {/* 검색바 */}
+      <ExploreSearchBar />
+
+      {/* 필터 Row 1: Topic Level 0 */}
+      <TopicFilterRow topics={level0Topics} />
+
+      {/* 필터 Row 2: TagGroup */}
+      <TagFilterRow tagGroups={tagGroups} />
+
+      {/* 탭 바 (sticky top-14 = AppHeader 높이) */}
+      <ExploreTabBar />
 
       {/* Posts 탭 */}
       {tab === "posts" && (
         <div className="px-4">
           {posts.length === 0 ? (
             <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
-              아직 포스트가 없습니다.
+              {hasFilter ? "No posts found." : "아직 포스트가 없습니다."}
             </div>
+          ) : hasFilter ? (
+            posts.map((post) => (
+              <PostListItem
+                key={post.id}
+                post={post}
+                tagGroupMap={tagGroupMap}
+                isSaved={savedPostIds.has(post.id)}
+              />
+            ))
           ) : (
             <>
               {posts.slice(0, 3).map((post) => (
-                <PostListItem key={post.id} post={post} tagGroupMap={tagGroupMap} isSaved={savedPostIds.has(post.id)} />
+                <PostListItem
+                  key={post.id}
+                  post={post}
+                  tagGroupMap={tagGroupMap}
+                  isSaved={savedPostIds.has(post.id)}
+                />
               ))}
 
               {recreeshots.length > 0 && (
@@ -172,7 +204,12 @@ export default async function ExplorePage({
               )}
 
               {posts.slice(3).map((post) => (
-                <PostListItem key={post.id} post={post} tagGroupMap={tagGroupMap} isSaved={savedPostIds.has(post.id)} />
+                <PostListItem
+                  key={post.id}
+                  post={post}
+                  tagGroupMap={tagGroupMap}
+                  isSaved={savedPostIds.has(post.id)}
+                />
               ))}
             </>
           )}
@@ -189,7 +226,10 @@ export default async function ExplorePage({
           ) : (
             <div className="grid grid-cols-2 gap-2">
               {recreeshots.map((shot) => (
-                <div key={shot.id} className="relative aspect-[3/4] rounded-lg overflow-hidden bg-muted">
+                <div
+                  key={shot.id}
+                  className="relative aspect-[3/4] rounded-lg overflow-hidden bg-muted"
+                >
                   <Image
                     src={shot.imageUrl}
                     alt="recreeshot"
