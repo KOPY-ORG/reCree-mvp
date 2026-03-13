@@ -257,7 +257,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
                 </div>
                 <div className="flex flex-wrap gap-1.5 pl-5">
                   {spotInsight.vibe.map((v, i) => (
-                    <span key={i} className="px-2.5 py-0.5 rounded-full bg-brand-sub2 text-xs font-medium">
+                    <span key={i} className="px-2.5 py-0.5 rounded-full bg-muted text-xs font-medium">
                       {v}
                     </span>
                   ))}
