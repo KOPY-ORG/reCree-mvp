@@ -43,9 +43,9 @@ function AllCircle({ href }: { href: string }) {
   return (
     <Link
       href={href}
-      className="flex flex-col items-center gap-1 shrink-0 w-20 active:scale-95 transition-transform"
+      className="flex flex-col items-center gap-1 active:scale-95 transition-transform"
     >
-      <div className="size-20 rounded-full flex items-center justify-center font-bold text-sm bg-brand text-black">
+      <div className="w-full aspect-square rounded-full flex items-center justify-center font-bold text-sm bg-zinc-900 text-white">
         All
       </div>
       <span className="text-[10px] text-center text-foreground leading-tight">
@@ -58,9 +58,11 @@ function AllCircle({ href }: { href: string }) {
 /** TagGroup 선택 시: 해당 그룹의 태그 원형 칩 표시 */
 export function CategoryTagGrid({ tagGroup }: { tagGroup: TagGroup }) {
   return (
-    <div className="p-4">
-      <div className="flex flex-wrap gap-4">
+    <div className="p-4 space-y-4">
+      <div className="grid grid-cols-3 gap-3">
         <AllCircle href="/explore" />
+      </div>
+      <div className="grid grid-cols-3 gap-3">
         {tagGroup.tags.map((tag) => (
           <TopicCircle
             key={tag.id}
@@ -104,9 +106,11 @@ export function CategoryTopicGrid({
     }
 
     return (
-      <div className="p-4">
-        <div className="flex flex-wrap gap-4">
+      <div className="p-4 space-y-4">
+        <div className="grid grid-cols-3 gap-3">
           <AllCircle href={`/explore?topicId=${parentTopic.id}`} />
+        </div>
+        <div className="grid grid-cols-3 gap-3">
           {matchingGroup.tags.map((tag) => (
             <TopicCircle
               key={tag.id}
@@ -132,7 +136,7 @@ export function CategoryTopicGrid({
   if (!hasLevel2) {
     return (
       <div className="p-4">
-        <div className="flex flex-wrap gap-4">
+        <div className="grid grid-cols-3 gap-3">
           <AllCircle href={`/explore?topicId=${parentTopic.id}`} />
           {level1Topics.map((topic) => {
             const colors = resolveTopicColors({ ...topic, parent: parentTopic });
@@ -153,7 +157,7 @@ export function CategoryTopicGrid({
   // K-Contents 스타일: Level 1이 섹션 헤더, Level 2가 원형 칩
   return (
     <div className="p-4 space-y-6">
-      <div className="flex flex-wrap gap-4">
+      <div className="grid grid-cols-3 gap-3">
         <AllCircle href={`/explore?topicId=${parentTopic.id}`} />
       </div>
       {level1Topics.map((l1) => {
@@ -161,7 +165,7 @@ export function CategoryTopicGrid({
 
         if (l1.children.length === 0) {
           return (
-            <div key={l1.id} className="flex flex-wrap gap-4">
+            <div key={l1.id} className="grid grid-cols-3 gap-3">
               <TopicCircle
                 href={`/explore?topicId=${l1.id}`}
                 name={l1.nameEn}
@@ -173,13 +177,10 @@ export function CategoryTopicGrid({
 
         return (
           <div key={l1.id}>
-            <h3
-              className="text-xs font-bold uppercase tracking-wider mb-3 px-1"
-              style={{ color: l1Colors.colorHex }}
-            >
+            <h3 className="text-xs font-bold uppercase tracking-wider mb-3 px-1 text-foreground">
               {l1.nameEn}
             </h3>
-            <div className="flex flex-wrap gap-3">
+            <div className="grid grid-cols-3 gap-3">
               {l1.children.map((l2) => {
                 const l2Colors = resolveTopicColors({ ...l2, parent: l1 });
                 return (
@@ -188,7 +189,6 @@ export function CategoryTopicGrid({
                     href={`/explore?topicId=${l2.id}`}
                     name={l2.nameEn}
                     {...l2Colors}
-                    size="sm"
                   />
                 );
               })}

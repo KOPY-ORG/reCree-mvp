@@ -13,7 +13,7 @@ export function CategorySidebar({ items }: { items: SidebarItem[] }) {
   const groupId = searchParams.get("groupId");
 
   return (
-    <div className="flex flex-col py-2 overflow-y-auto h-full">
+    <div className="flex flex-col overflow-y-auto h-full">
       {items.map((item) => {
         const isActive =
           item.kind === "topic"
@@ -25,22 +25,15 @@ export function CategorySidebar({ items }: { items: SidebarItem[] }) {
             ? `/category?topicId=${item.id}`
             : `/category?groupId=${item.group}`;
 
-        const colorHex = item.colorHex ?? "#C8FF09";
-
         return (
           <button
             key={item.kind === "topic" ? item.id : item.group}
             onClick={() => router.push(href)}
-            className={`w-full px-3 py-3 text-left text-xs font-medium transition-colors border-l-2 ${
+            className={`w-full px-3 py-3 text-left text-xs font-medium transition-colors ${
               isActive
-                ? "border-l-foreground"
-                : "border-l-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                ? "bg-background text-foreground"
+                : "text-muted-foreground hover:text-foreground"
             }`}
-            style={
-              isActive
-                ? { backgroundColor: colorHex + "22", color: "inherit" }
-                : undefined
-            }
           >
             {item.nameEn}
           </button>
