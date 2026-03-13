@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { Sparkles, Waves, Flame, MapPin, Lightbulb } from "lucide-react";
 import { LocationCard } from "./_components/LocationCard";
 import { prisma } from "@/lib/prisma";
-import { resolveTopicColors, labelBackground, DEFAULT_COLOR, DEFAULT_TEXT, type ResolvedLabel } from "@/lib/post-labels";
+import { resolveTopicColors, resolveTagColors, type ResolvedLabel } from "@/lib/post-labels";
 import { MarkdownContent } from "./_components/MarkdownContent";
 import { PostDetailHeader } from "./_components/PostDetailHeader";
 import { BannerCarousel } from "./_components/BannerCarousel";
@@ -158,23 +158,18 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
   // 색상 resolve
   const configMap = new Map(tagGroupConfigs.map((c) => [c.group, c]));
 
-  const resolvedTopics: (ResolvedLabel & { nameEn: string })[] = post.postTopics.map(({ topic }) => ({
-    nameEn: topic.nameEn,
-    text: topic.nameEn,
-    ...resolveTopicColors(topic),
-  }));
-
-  const resolvedTags: ResolvedLabel[] = post.postTags.map(({ tag }) => {
-    const gc = configMap.get(tag.group);
-    return {
-      text: tag.name,
-      colorHex: tag.colorHex ?? gc?.colorHex ?? DEFAULT_COLOR,
-      colorHex2: tag.colorHex ? (tag.colorHex2 ?? null) : (gc?.colorHex2 ?? null),
-      gradientDir: gc?.gradientDir ?? "to bottom",
-      gradientStop: gc?.gradientStop ?? 150,
-      textColorHex: tag.textColorHex ?? gc?.textColorHex ?? DEFAULT_TEXT,
-    };
-  });
+  const labels: ResolvedLabel[] = [
+    ...post.postTopics.map(({ displayOrder, topic }) => ({
+      _order: displayOrder,
+      label: { text: topic.nameEn, ...resolveTopicColors(topic) },
+    })),
+    ...post.postTags.map(({ displayOrder, tag }) => ({
+      _order: displayOrder,
+      label: { text: tag.name, ...resolveTagColors(tag, configMap.get(tag.group)) },
+    })),
+  ]
+    .sort((a, b) => a._order - b._order)
+    .map((e) => e.label);
 
   const currentUser = await getCurrentUser();
   const isSaved = currentUser
@@ -212,8 +207,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
 
       {/* 배지 + 공유/스크랩 */}
       <PostMetaBar
-        topics={resolvedTopics}
-        tags={resolvedTags}
+        labels={labels}
         isSaved={isSaved}
         postId={post.id}
         titleEn={post.titleEn}

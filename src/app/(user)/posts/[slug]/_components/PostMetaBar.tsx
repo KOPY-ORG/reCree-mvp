@@ -5,19 +5,14 @@ import { labelBackground, type ResolvedLabel } from "@/lib/post-labels";
 import { ScrapButton } from "@/app/(user)/_components/ScrapButton";
 import { useToast } from "@/app/(user)/_hooks/useToast";
 
-interface ResolvedTopic extends ResolvedLabel {
-  nameEn: string;
-}
-
 interface Props {
-  topics: ResolvedTopic[];
-  tags: ResolvedLabel[];
+  labels: ResolvedLabel[];
   isSaved: boolean;
   postId: string;
   titleEn: string;
 }
 
-export function PostMetaBar({ topics, tags, isSaved, postId, titleEn }: Props) {
+export function PostMetaBar({ labels, isSaved, postId, titleEn }: Props) {
   const { toast, showToast } = useToast();
 
   async function handleShare() {
@@ -47,22 +42,13 @@ export function PostMetaBar({ topics, tags, isSaved, postId, titleEn }: Props) {
     <div className="relative flex justify-between items-start px-4 pt-3 pb-2">
       {/* 배지 영역 */}
       <div className="flex flex-wrap gap-1.5 flex-1 min-w-0 mr-3">
-        {topics.slice(0, 1).map((topic) => (
+        {labels.map((label, i) => (
           <span
-            key={topic.nameEn}
+            key={i}
             className="px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0"
-            style={{ background: labelBackground(topic), color: topic.textColorHex }}
+            style={{ background: labelBackground(label), color: label.textColorHex }}
           >
-            {topic.nameEn}
-          </span>
-        ))}
-        {tags.slice(0, 3).map((tag) => (
-          <span
-            key={tag.text}
-            className="px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0"
-            style={{ background: labelBackground(tag), color: tag.textColorHex }}
-          >
-            {tag.text}
+            {label.text}
           </span>
         ))}
       </div>
