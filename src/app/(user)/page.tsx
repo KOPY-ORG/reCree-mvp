@@ -6,8 +6,7 @@ import { HomeBannerCarousel, type BannerItem } from "./_components/HomeBannerCar
 import { getPostsWithLabels, getSavedPostIds, type PostItem } from "@/lib/post-queries";
 import {
   resolveTopicColors,
-  DEFAULT_COLOR,
-  DEFAULT_TEXT,
+  resolveTagColors,
   type TagGroupColorMap,
 } from "@/lib/post-labels";
 import { PostCard } from "./_components/PostCard";
@@ -209,14 +208,7 @@ export default async function HomePage() {
     function buildTagLabel(pt: typeof b.post.postTags[number]) {
       const { tag } = pt;
       const gc = tagGroupMap.get(tag.group);
-      return {
-        text: tag.name,
-        colorHex: tag.colorHex ?? gc?.colorHex ?? DEFAULT_COLOR,
-        colorHex2: tag.colorHex !== null ? tag.colorHex2 : (gc?.colorHex2 ?? null),
-        gradientDir: gc?.gradientDir ?? "to bottom",
-        gradientStop: gc?.gradientStop ?? 150,
-        textColorHex: tag.textColorHex ?? gc?.textColorHex ?? DEFAULT_TEXT,
-      };
+      return { text: tag.name, ...resolveTagColors(tag, gc) };
     }
 
     let labels: BannerItem["labels"];
@@ -234,13 +226,16 @@ export default async function HomePage() {
         })
         .filter((l): l is NonNullable<typeof l> => l !== null);
     } else {
-      const topicLabels = b.post.postTopics
+      const topicEntries = b.post.postTopics
         .filter((t) => t.isVisible)
-        .map(buildTopicLabel);
-      const tagLabels = b.post.postTags
+        .map((t) => ({ order: t.displayOrder, label: buildTopicLabel(t) }));
+      const tagEntries = b.post.postTags
         .filter((t) => t.isVisible)
-        .map(buildTagLabel);
-      labels = [...topicLabels, ...tagLabels].slice(0, 2);
+        .map((t) => ({ order: t.displayOrder, label: buildTagLabel(t) }));
+      labels = [...topicEntries, ...tagEntries]
+        .sort((a, b) => a.order - b.order)
+        .map((e) => e.label)
+        .slice(0, 2);
     }
 
     return {

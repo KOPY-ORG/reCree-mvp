@@ -58,6 +58,19 @@ export type ResolvedLabel = {
   textColorHex: string;
 };
 
+export function resolveTagColors(
+  tag: { colorHex?: string | null; colorHex2?: string | null; textColorHex?: string | null },
+  gc: { colorHex: string; colorHex2: string | null; gradientDir: string; gradientStop: number; textColorHex: string } | undefined
+): Omit<ResolvedLabel, "text"> {
+  return {
+    colorHex: tag.colorHex ?? gc?.colorHex ?? DEFAULT_COLOR,
+    colorHex2: tag.colorHex ? (tag.colorHex2 ?? null) : (gc?.colorHex2 ?? null),
+    gradientDir: gc?.gradientDir ?? "to bottom",
+    gradientStop: gc?.gradientStop ?? 150,
+    textColorHex: tag.textColorHex ?? gc?.textColorHex ?? DEFAULT_TEXT,
+  };
+}
+
 export function labelBackground(label: ResolvedLabel): string {
   return label.colorHex2
     ? `linear-gradient(${label.gradientDir}, ${label.colorHex}, ${label.colorHex2} ${label.gradientStop}%)`

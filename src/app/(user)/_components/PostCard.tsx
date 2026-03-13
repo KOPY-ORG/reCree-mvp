@@ -2,9 +2,8 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   resolveTopicColors,
+  resolveTagColors,
   labelBackground,
-  DEFAULT_COLOR,
-  DEFAULT_TEXT,
   type TagGroupColorMap,
   type ResolvedLabel,
 } from "@/lib/post-labels";
@@ -12,24 +11,17 @@ import type { PostItem } from "@/lib/post-queries";
 import { ScrapButton } from "./ScrapButton";
 
 function resolvePostLabels(post: PostItem, tagGroupMap: TagGroupColorMap): ResolvedLabel[] {
-  const labels: ResolvedLabel[] = [];
+  const entries: { order: number; label: ResolvedLabel }[] = [];
 
-  for (const { topic } of post.postTopics) {
-    labels.push({ text: topic.nameEn, ...resolveTopicColors(topic) });
+  for (const { displayOrder, topic } of post.postTopics) {
+    entries.push({ order: displayOrder, label: { text: topic.nameEn, ...resolveTopicColors(topic) } });
   }
-  for (const { tag } of post.postTags) {
+  for (const { displayOrder, tag } of post.postTags) {
     const gc = tagGroupMap.get(tag.group);
-    labels.push({
-      text: tag.name,
-      colorHex: tag.colorHex ?? gc?.colorHex ?? DEFAULT_COLOR,
-      colorHex2: tag.colorHex ? (tag.colorHex2 ?? null) : (gc?.colorHex2 ?? null),
-      gradientDir: gc?.gradientDir ?? "to bottom",
-      gradientStop: gc?.gradientStop ?? 150,
-      textColorHex: tag.textColorHex ?? gc?.textColorHex ?? DEFAULT_TEXT,
-    });
+    entries.push({ order: displayOrder, label: { text: tag.name, ...resolveTagColors(tag, gc) } });
   }
 
-  return labels;
+  return entries.sort((a, b) => a.order - b.order).map((e) => e.label);
 }
 
 export function PostBadges({

@@ -23,6 +23,7 @@ export async function getPostsWithLabels(
         where: { isVisible: true },
         orderBy: { displayOrder: "asc" },
         select: {
+          displayOrder: true,
           topic: {
             select: {
               nameEn: true,
@@ -46,6 +47,7 @@ export async function getPostsWithLabels(
         where: { isVisible: true },
         orderBy: { displayOrder: "asc" },
         select: {
+          displayOrder: true,
           tag: { select: { name: true, group: true, colorHex: true, colorHex2: true, textColorHex: true } },
         },
       },
