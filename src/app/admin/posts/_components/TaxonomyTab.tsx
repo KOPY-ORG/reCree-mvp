@@ -83,13 +83,6 @@ export function TaxonomyTab({
   const selectedTopicIdSet = useMemo(() => new Set(postTopics.map((pt) => pt.topicId)), [postTopics]);
   const selectedTagIdSet = useMemo(() => new Set(postTags.map((pt) => pt.tagId)), [postTags]);
 
-  // 선택 불가 토픽 (헤더 역할)
-  const hasChildrenSet = useMemo(() => {
-    const s = new Set<string>();
-    allTopics.forEach((t) => { if (t.parentId) s.add(t.parentId); });
-    return s;
-  }, [allTopics]);
-
   const nonSelectableTopicIds = useMemo(
     () => new Set(allTopics.filter((t) => t.level === 0 || t.level === 1).map((t) => t.id)),
     [allTopics],
@@ -99,7 +92,7 @@ export function TaxonomyTab({
     if (selectedTopicIdSet.has(topicId)) {
       setPostTopics((prev) => prev.filter((pt) => pt.topicId !== topicId));
     } else {
-      setPostTopics((prev) => [...prev, { topicId, isVisible: true, displayOrder: 0 }]);
+      setPostTopics((prev) => [...prev, { topicId, isVisible: true, displayOrder: prev.length }]);
     }
   };
 
@@ -107,7 +100,7 @@ export function TaxonomyTab({
     if (selectedTagIdSet.has(tagId)) {
       setPostTags((prev) => prev.filter((pt) => pt.tagId !== tagId));
     } else {
-      setPostTags((prev) => [...prev, { tagId, isVisible: true, displayOrder: 0 }]);
+      setPostTags((prev) => [...prev, { tagId, isVisible: true, displayOrder: prev.length }]);
     }
   };
 
@@ -195,7 +188,7 @@ export function TaxonomyTab({
     };
     onTagAdded(newTag);
     // 자동 선택
-    setPostTags((prev) => [...prev, { tagId: saved.id, isVisible: true, displayOrder: 0 }]);
+    setPostTags((prev) => [...prev, { tagId: saved.id, isVisible: true, displayOrder: prev.length }]);
   }
 
   function renderTopicChip(topic: (typeof topicsWithStyle)[0]) {

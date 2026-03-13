@@ -17,10 +17,8 @@ function resolvePostLabels(
   variant: "home" | "list",
 ): ResolvedLabel[] {
   const topics = post.postTopics
-    .sort((a, b) => a.displayOrder - b.displayOrder)
     .map(({ topic }) => ({ text: topic.nameEn, ...resolveTopicColors(topic) }));
   const tags = post.postTags
-    .sort((a, b) => a.displayOrder - b.displayOrder)
     .map(({ tag }) => ({ text: tag.name, ...resolveTagColors(tag, tagGroupMap.get(tag.group)) }));
 
   if (variant === "home") return [...topics.slice(0, 1), ...tags.slice(0, 1)];

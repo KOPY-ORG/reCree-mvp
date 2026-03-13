@@ -220,6 +220,8 @@ export async function createPost(
     });
 
     revalidatePath("/admin/posts");
+    revalidatePath("/");
+    revalidatePath("/explore");
     return { id: post.id };
   } catch (e) {
     console.error(e);
@@ -320,6 +322,8 @@ export async function updatePost(
 
     revalidatePath("/admin/posts");
     revalidatePath(`/admin/posts/${id}/edit`);
+    revalidatePath("/");
+    revalidatePath("/explore");
     return {};
   } catch (e) {
     console.error(e);
@@ -333,6 +337,8 @@ export async function deletePost(id: string): Promise<{ error?: string }> {
   try {
     await prisma.post.delete({ where: { id } });
     revalidatePath("/admin/posts");
+    revalidatePath("/");
+    revalidatePath("/explore");
     return {};
   } catch (e) {
     console.error(e);
@@ -375,6 +381,8 @@ export async function publishPost(
       data: { status: "PUBLISHED", publishedAt: new Date() },
     });
     revalidatePath("/admin/posts");
+    revalidatePath("/");
+    revalidatePath("/explore");
     return {};
   } catch (e) {
     console.error(e);
@@ -389,6 +397,8 @@ export async function unpublishPost(id: string): Promise<{ error?: string }> {
       data: { status: "DRAFT", publishedAt: null },
     });
     revalidatePath("/admin/posts");
+    revalidatePath("/");
+    revalidatePath("/explore");
     return {};
   } catch (e) {
     console.error(e);

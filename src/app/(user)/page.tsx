@@ -197,13 +197,11 @@ export default async function HomePage() {
   const bannerItems: BannerItem[] = homeBanners.map((b) => {
     const topicLabel = b.post.postTopics
       .filter((t) => t.isVisible)
-      .sort((a, c) => a.displayOrder - c.displayOrder)
       .slice(0, 1)
       .map((t) => ({ text: t.topic.nameEn, ...resolveTopicColors(t.topic) }));
 
     const tagLabel = b.post.postTags
       .filter((t) => t.isVisible)
-      .sort((a, c) => a.displayOrder - c.displayOrder)
       .slice(0, 1)
       .map((t) => ({ text: t.tag.name, ...resolveTagColors(t.tag, tagGroupMap.get(t.tag.group)) }));
 
