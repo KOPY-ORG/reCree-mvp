@@ -51,7 +51,7 @@ function PostListItem({
           </p>
         )}
         <div className="mt-1.5">
-          <PostBadges post={post} tagGroupMap={tagGroupMap} maxLabels={3} />
+          <PostBadges post={post} tagGroupMap={tagGroupMap} variant="list" />
         </div>
       </div>
 

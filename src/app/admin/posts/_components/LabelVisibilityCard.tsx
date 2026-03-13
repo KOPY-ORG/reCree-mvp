@@ -23,6 +23,13 @@ import type { TopicForForm, TagForForm } from "./PostForm";
 type PostTopicState = { topicId: string; isVisible: boolean; displayOrder: number };
 type PostTagState = { tagId: string; isVisible: boolean; displayOrder: number };
 
+type SectionItem = {
+  id: string;
+  isVisible: boolean;
+  label: string;
+  style: React.CSSProperties;
+};
+
 function getTagStyle(tag: TagForForm): React.CSSProperties {
   if (tag.effectiveColorHex2) {
     return {
@@ -33,17 +40,7 @@ function getTagStyle(tag: TagForForm): React.CSSProperties {
   return { backgroundColor: tag.effectiveColorHex, color: tag.effectiveTextColorHex };
 }
 
-type LabelItem = {
-  id: string;
-  type: "topic" | "tag";
-  displayOrder: number;
-  topicId?: string;
-  tagId?: string;
-  label: string;
-  style: React.CSSProperties;
-};
-
-function SortableLabel({ item }: { item: LabelItem }) {
+function SortableLabel({ item, isFirst }: { item: SectionItem; isFirst: boolean }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: item.id });
   return (
@@ -55,12 +52,66 @@ function SortableLabel({ item }: { item: LabelItem }) {
       <span {...attributes} {...listeners} className="cursor-grab text-muted-foreground hover:text-foreground shrink-0">
         <GripVertical className="h-3.5 w-3.5" />
       </span>
-      <span
-        className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
-        style={item.style}
-      >
+      <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium" style={item.style}>
         {item.label}
       </span>
+      {isFirst && (
+        <span className="ml-auto text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+          대표
+        </span>
+      )}
+    </div>
+  );
+}
+
+function LabelSection({
+  title,
+  items,
+  sensors,
+  onToggle,
+  onDragEnd,
+}: {
+  title: string;
+  items: SectionItem[];
+  sensors: ReturnType<typeof useSensors>;
+  onToggle: (id: string) => void;
+  onDragEnd: (event: DragEndEvent) => void;
+}) {
+  const visibleItems = items.filter((item) => item.isVisible);
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs text-muted-foreground font-medium">{title}</p>
+      <div className="space-y-1">
+        {items.map((item) => (
+          <div key={item.id} className="flex items-center gap-2 text-xs">
+            <button
+              type="button"
+              onClick={() => onToggle(item.id)}
+              className={`shrink-0 transition-colors ${item.isVisible ? "text-foreground" : "text-muted-foreground/40"}`}
+            >
+              {item.isVisible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+            </button>
+            <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium" style={item.style}>
+              {item.label}
+            </span>
+          </div>
+        ))}
+      </div>
+      {visibleItems.length > 1 && (
+        <div className="space-y-1">
+          <p className="text-xs text-muted-foreground">순서 (드래그)</p>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+            <SortableContext items={visibleItems.map((item) => item.id)} strategy={verticalListSortingStrategy}>
+              <div className="space-y-1">
+                {visibleItems.map((item, idx) => (
+                  <SortableLabel key={item.id} item={item} isFirst={idx === 0} />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        </div>
+      )}
     </div>
   );
 }
@@ -85,129 +136,80 @@ export function LabelVisibilityCard({
   const topicMap = useMemo(() => new Map(allTopics.map((t) => [t.id, t])), [allTopics]);
   const tagMap = useMemo(() => new Map(allTags.map((t) => [t.id, t])), [allTags]);
 
-  const totalCount = postTopics.length + postTags.length;
-
-  const visibleItems = useMemo<LabelItem[]>(() => {
-    const items: LabelItem[] = [
-      ...postTopics.filter((pt) => pt.isVisible).map((pt) => ({
-        id: `topic-${pt.topicId}`,
-        type: "topic" as const,
-        topicId: pt.topicId,
-        displayOrder: pt.displayOrder,
+  const topicItems = useMemo<SectionItem[]>(() =>
+    postTopics
+      .sort((a, b) => a.displayOrder - b.displayOrder)
+      .map((pt) => ({
+        id: pt.topicId,
+        isVisible: pt.isVisible,
         label: topicMap.get(pt.topicId)?.nameEn ?? pt.topicId,
         style: topicEffectiveStyleMap.get(pt.topicId) ?? {},
       })),
-      ...postTags.filter((pt) => pt.isVisible).map((pt) => {
+  [postTopics, topicMap, topicEffectiveStyleMap]);
+
+  const tagItems = useMemo<SectionItem[]>(() =>
+    postTags
+      .sort((a, b) => a.displayOrder - b.displayOrder)
+      .map((pt) => {
         const t = tagMap.get(pt.tagId);
         return {
-          id: `tag-${pt.tagId}`,
-          type: "tag" as const,
-          tagId: pt.tagId,
-          displayOrder: pt.displayOrder,
+          id: pt.tagId,
+          isVisible: pt.isVisible,
           label: t?.name ?? pt.tagId,
           style: t ? getTagStyle(t) : {},
         };
       }),
-    ];
-    return items.sort((a, b) => a.displayOrder - b.displayOrder);
-  }, [postTopics, postTags, topicMap, tagMap, topicEffectiveStyleMap]);
+  [postTags, tagMap]);
 
-  const toggleTopicVisible = (topicId: string) => {
-    setPostTopics((prev) =>
-      prev.map((pt) => pt.topicId === topicId ? { ...pt, isVisible: !pt.isVisible } : pt),
-    );
-  };
-
-  const toggleTagVisible = (tagId: string) => {
-    setPostTags((prev) =>
-      prev.map((pt) => pt.tagId === tagId ? { ...pt, isVisible: !pt.isVisible } : pt),
-    );
-  };
-
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleTopicDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const oldIndex = visibleItems.findIndex((item) => item.id === active.id);
-    const newIndex = visibleItems.findIndex((item) => item.id === over.id);
+    const visibleTopics = topicItems.filter((i) => i.isVisible);
+    const oldIndex = visibleTopics.findIndex((i) => i.id === active.id);
+    const newIndex = visibleTopics.findIndex((i) => i.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
-    const reordered = arrayMove(visibleItems, oldIndex, newIndex);
-    reordered.forEach((item, idx) => {
-      if (item.type === "topic" && item.topicId) {
-        setPostTopics((prev) => prev.map((pt) => pt.topicId === item.topicId ? { ...pt, displayOrder: idx } : pt));
-      } else if (item.type === "tag" && item.tagId) {
-        setPostTags((prev) => prev.map((pt) => pt.tagId === item.tagId ? { ...pt, displayOrder: idx } : pt));
-      }
+    arrayMove(visibleTopics, oldIndex, newIndex).forEach((item, idx) => {
+      setPostTopics((prev) => prev.map((pt) => pt.topicId === item.id ? { ...pt, displayOrder: idx } : pt));
     });
   };
 
-  if (totalCount === 0) return null;
+  const handleTagDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const visibleTags = tagItems.filter((i) => i.isVisible);
+    const oldIndex = visibleTags.findIndex((i) => i.id === active.id);
+    const newIndex = visibleTags.findIndex((i) => i.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    arrayMove(visibleTags, oldIndex, newIndex).forEach((item, idx) => {
+      setPostTags((prev) => prev.map((pt) => pt.tagId === item.id ? { ...pt, displayOrder: idx } : pt));
+    });
+  };
+
+  if (postTopics.length === 0 && postTags.length === 0) return null;
 
   return (
     <Card className="gap-3 py-4 border-0">
       <CardHeader>
         <CardTitle className="text-sm font-semibold">라벨 표시 설정</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {/* 눈 토글 */}
-        <div className="space-y-1">
-          {postTopics.map((pt) => {
-            const t = topicMap.get(pt.topicId);
-            if (!t) return null;
-            return (
-              <div key={pt.topicId} className="flex items-center gap-2 text-xs">
-                <button
-                  type="button"
-                  onClick={() => toggleTopicVisible(pt.topicId)}
-                  className={`shrink-0 transition-colors ${pt.isVisible ? "text-foreground" : "text-muted-foreground/40"}`}
-                >
-                  {pt.isVisible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-                </button>
-                <span
-                  className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
-                  style={topicEffectiveStyleMap.get(t.id) ?? {}}
-                >
-                  {t.nameEn}
-                </span>
-              </div>
-            );
-          })}
-          {postTags.map((pt) => {
-            const t = tagMap.get(pt.tagId);
-            if (!t) return null;
-            return (
-              <div key={pt.tagId} className="flex items-center gap-2 text-xs">
-                <button
-                  type="button"
-                  onClick={() => toggleTagVisible(pt.tagId)}
-                  className={`shrink-0 transition-colors ${pt.isVisible ? "text-foreground" : "text-muted-foreground/40"}`}
-                >
-                  {pt.isVisible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-                </button>
-                <span
-                  className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
-                  style={getTagStyle(t)}
-                >
-                  {t.name}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* 노출 순서 DnD */}
-        {visibleItems.length > 1 && (
-          <div className="space-y-1.5">
-            <p className="text-xs text-muted-foreground">노출 순서 (드래그)</p>
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={visibleItems.map((item) => item.id)} strategy={verticalListSortingStrategy}>
-                <div className="space-y-1">
-                  {visibleItems.map((item) => (
-                    <SortableLabel key={item.id} item={item} />
-                  ))}
-                </div>
-              </SortableContext>
-            </DndContext>
-          </div>
+      <CardContent className="space-y-4">
+        {postTopics.length > 0 && (
+          <LabelSection
+            title="토픽"
+            items={topicItems}
+            sensors={sensors}
+            onToggle={(id) => setPostTopics((prev) => prev.map((pt) => pt.topicId === id ? { ...pt, isVisible: !pt.isVisible } : pt))}
+            onDragEnd={handleTopicDragEnd}
+          />
+        )}
+        {postTags.length > 0 && (
+          <LabelSection
+            title="태그"
+            items={tagItems}
+            sensors={sensors}
+            onToggle={(id) => setPostTags((prev) => prev.map((pt) => pt.tagId === id ? { ...pt, isVisible: !pt.isVisible } : pt))}
+            onDragEnd={handleTagDragEnd}
+          />
         )}
       </CardContent>
     </Card>

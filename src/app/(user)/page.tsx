@@ -232,10 +232,10 @@ export default async function HomePage() {
       const tagEntries = b.post.postTags
         .filter((t) => t.isVisible)
         .map((t) => ({ order: t.displayOrder, label: buildTagLabel(t) }));
-      labels = [...topicEntries, ...tagEntries]
-        .sort((a, b) => a.order - b.order)
-        .map((e) => e.label)
-        .slice(0, 2);
+      labels = [
+        ...topicEntries.sort((a, b) => a.order - b.order).slice(0, 1).map((e) => e.label),
+        ...tagEntries.sort((a, b) => a.order - b.order).slice(0, 1).map((e) => e.label),
+      ];
     }
 
     return {

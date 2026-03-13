@@ -10,30 +10,32 @@ import {
 import type { PostItem } from "@/lib/post-queries";
 import { ScrapButton } from "./ScrapButton";
 
-function resolvePostLabels(post: PostItem, tagGroupMap: TagGroupColorMap): ResolvedLabel[] {
-  const entries: { order: number; label: ResolvedLabel }[] = [];
+function resolvePostLabels(
+  post: PostItem,
+  tagGroupMap: TagGroupColorMap,
+  variant: "home" | "list",
+): ResolvedLabel[] {
+  const topics = post.postTopics
+    .sort((a, b) => a.displayOrder - b.displayOrder)
+    .map(({ topic }) => ({ text: topic.nameEn, ...resolveTopicColors(topic) }));
+  const tags = post.postTags
+    .sort((a, b) => a.displayOrder - b.displayOrder)
+    .map(({ tag }) => ({ text: tag.name, ...resolveTagColors(tag, tagGroupMap.get(tag.group)) }));
 
-  for (const { displayOrder, topic } of post.postTopics) {
-    entries.push({ order: displayOrder, label: { text: topic.nameEn, ...resolveTopicColors(topic) } });
-  }
-  for (const { displayOrder, tag } of post.postTags) {
-    const gc = tagGroupMap.get(tag.group);
-    entries.push({ order: displayOrder, label: { text: tag.name, ...resolveTagColors(tag, gc) } });
-  }
-
-  return entries.sort((a, b) => a.order - b.order).map((e) => e.label);
+  if (variant === "home") return [...topics.slice(0, 1), ...tags.slice(0, 1)];
+  return [...topics.slice(0, 1), ...tags.slice(0, 2)];
 }
 
 export function PostBadges({
   post,
   tagGroupMap,
-  maxLabels = 2,
+  variant = "home",
 }: {
   post: PostItem;
   tagGroupMap: TagGroupColorMap;
-  maxLabels?: number;
+  variant?: "home" | "list";
 }) {
-  const labels = resolvePostLabels(post, tagGroupMap).slice(0, maxLabels);
+  const labels = resolvePostLabels(post, tagGroupMap, variant);
   if (labels.length === 0) return null;
 
   return (
