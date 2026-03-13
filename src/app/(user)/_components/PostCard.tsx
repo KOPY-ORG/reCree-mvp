@@ -43,7 +43,7 @@ export function PostBadges({
       {labels.map((label, i) => (
         <span
           key={i}
-          className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold leading-none"
+          className="px-1 py-px rounded-full text-[9px] font-semibold leading-none"
           style={{ background: labelBackground(label), color: label.textColorHex }}
         >
           {label.text}
