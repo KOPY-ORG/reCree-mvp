@@ -12,7 +12,8 @@ interface OriginalImage {
 
 interface Props {
   images: OriginalImage[];
-  originalLinkUrls?: string[];  // fallback (isOriginalLink 순서대로, 슬롯별 매핑)
+  originalLinkUrls?: string[];
+  className?: string;
 }
 
 function getShortDomain(url: string): string {
@@ -87,13 +88,13 @@ function SourceCard({ image, onClick }: { image: OriginalImage; onClick?: () => 
   );
 }
 
-export function OriginalSourceCards({ images, originalLinkUrls }: Props) {
+export function OriginalSourceCards({ images, originalLinkUrls, className }: Props) {
   if (images.length === 0) return null;
 
   const displayed = images;
 
   return (
-    <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 flex gap-2 sm:gap-3 z-10">
+    <div className={className ?? "absolute bottom-3 left-3 sm:bottom-4 sm:left-4 flex gap-2 sm:gap-3 z-10"}>
       {displayed.map((img, i) => {
         const clickUrl = img.linkUrl ?? originalLinkUrls?.[i] ?? null;
         const handleClick = clickUrl

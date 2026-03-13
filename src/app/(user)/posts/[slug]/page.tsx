@@ -201,6 +201,15 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
         </div>
       )}
 
+      {/* 배너 없을 때 소스 이미지 카드 (뱃지 위) */}
+      {bannerImages.length === 0 && (
+        <OriginalSourceCards
+          images={originalImages}
+          originalLinkUrls={originalLinkUrls}
+          className="px-4 pt-14 pb-1 flex gap-2"
+        />
+      )}
+
       {/* 배지 + 공유/스크랩 */}
       <PostMetaBar
         labels={labels}
