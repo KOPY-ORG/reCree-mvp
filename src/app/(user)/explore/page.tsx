@@ -4,7 +4,7 @@ import { ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getSavedPostIds, type PostItem } from "@/lib/post-queries";
 import { getFilteredPosts, getTagGroupsWithTags } from "@/lib/filter-queries";
-import { getLevel0TopicsWithChildren } from "@/lib/topic-queries";
+import { getLevel0TopicsDeep } from "@/lib/topic-queries";
 import { type TagGroupColorMap } from "@/lib/post-labels";
 import { getCurrentUser } from "@/lib/auth";
 import { ScrapButton } from "../_components/ScrapButton";
@@ -129,7 +129,7 @@ export default async function ExplorePage({
 
   const [level0Topics, tagGroups, tagGroupConfigs, recreeshots, savedPostIds] =
     await Promise.all([
-      getLevel0TopicsWithChildren(),
+      getLevel0TopicsDeep(),
       getTagGroupsWithTags(),
       prisma.tagGroupConfig.findMany({
         select: {

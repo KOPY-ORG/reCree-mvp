@@ -14,27 +14,20 @@ export function ExploreTabBar() {
   }
 
   return (
-    <div className="flex border-b border-border sticky top-14 bg-background z-10">
-      <button
-        onClick={() => switchTab("posts")}
-        className={`flex-1 text-center py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
-          tab === "posts"
-            ? "border-foreground text-foreground"
-            : "border-transparent text-muted-foreground hover:text-foreground"
-        }`}
-      >
-        Posts
-      </button>
-      <button
-        onClick={() => switchTab("hall")}
-        className={`flex-1 text-center py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
-          tab === "hall"
-            ? "border-foreground text-foreground"
-            : "border-transparent text-muted-foreground hover:text-foreground"
-        }`}
-      >
-        Hall
-      </button>
+    <div className="flex border-b border-border sticky top-14 bg-background z-10 px-4">
+      {(["posts", "hall"] as const).map((t) => (
+        <button
+          key={t}
+          onClick={() => switchTab(t)}
+          className={`px-3 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors capitalize ${
+            tab === t
+              ? "border-foreground text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {t === "posts" ? "Posts" : "Hall"}
+        </button>
+      ))}
     </div>
   );
 }

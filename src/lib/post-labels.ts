@@ -1,6 +1,6 @@
 // 포스트 라벨 색상 헬퍼 — 홈·탐색 등 여러 페이지에서 공유
 
-export const DEFAULT_COLOR = "#C8FF09";
+export const DEFAULT_COLOR = "#e4e4e7";
 export const DEFAULT_TEXT = "#000000";
 
 // ── 어드민 토픽 flat 리스트 effective color 계산 ──────────────────────────────

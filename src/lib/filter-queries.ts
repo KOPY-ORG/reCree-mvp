@@ -1,6 +1,7 @@
 // 필터 적용 Post 조회 + TagGroup 조회 — 서버 전용
 import { prisma } from "@/lib/prisma";
 import { getPostsWithLabels } from "@/lib/post-queries";
+import { getDescendantTopicIds } from "@/lib/topic-queries";
 
 export async function getFilteredPosts(params: {
   q?: string;
@@ -10,7 +11,8 @@ export async function getFilteredPosts(params: {
   const AND: object[] = [{ status: "PUBLISHED" }];
 
   if (params.topicId) {
-    AND.push({ postTopics: { some: { topicId: params.topicId } } });
+    const topicIds = await getDescendantTopicIds(params.topicId);
+    AND.push({ postTopics: { some: { topicId: { in: topicIds } } } });
   }
   if (params.tagId) {
     AND.push({ postTags: { some: { tagId: params.tagId } } });

@@ -40,3 +40,52 @@ export async function getLevel0TopicsWithChildren() {
 export type Level0TopicWithChildren = Awaited<
   ReturnType<typeof getLevel0TopicsWithChildren>
 >[number];
+
+/** Level 0 → Level 1 → Level 2 → Level 3 전체 계층 (Explore 바텀시트용) */
+export async function getLevel0TopicsDeep() {
+  return prisma.topic.findMany({
+    where: { level: 0, isActive: true },
+    include: {
+      children: {
+        where: { isActive: true },
+        orderBy: { sortOrder: "asc" },
+        include: {
+          children: {
+            where: { isActive: true },
+            orderBy: { sortOrder: "asc" },
+            include: {
+              children: {
+                where: { isActive: true },
+                orderBy: { sortOrder: "asc" },
+              },
+            },
+          },
+        },
+      },
+    },
+    orderBy: { sortOrder: "asc" },
+  });
+}
+
+export type Level0TopicDeep = Awaited<ReturnType<typeof getLevel0TopicsDeep>>[number];
+
+/** 주어진 topicId의 자신 + 모든 하위 토픽 ID 반환 (재귀) */
+export async function getDescendantTopicIds(topicId: string): Promise<string[]> {
+  const allTopics = await prisma.topic.findMany({
+    where: { isActive: true },
+    select: { id: true, parentId: true },
+  });
+
+  const result = new Set<string>([topicId]);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const topic of allTopics) {
+      if (topic.parentId && result.has(topic.parentId) && !result.has(topic.id)) {
+        result.add(topic.id);
+        changed = true;
+      }
+    }
+  }
+  return Array.from(result);
+}
