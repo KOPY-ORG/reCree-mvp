@@ -1,4 +1,5 @@
 // 포스트 라벨 색상 헬퍼 — 홈·탐색 등 여러 페이지에서 공유
+import type React from "react";
 
 export const DEFAULT_COLOR = "#e4e4e7";
 export const DEFAULT_TEXT = "#000000";
@@ -106,6 +107,12 @@ export function resolveTagColors(
     gradientStop: gc?.gradientStop ?? 150,
     textColorHex: tag.textColorHex ?? gc?.textColorHex ?? DEFAULT_TEXT,
   };
+}
+
+/** 동적 컬러 뱃지의 선택 상태 ring (box-shadow 기반) */
+export function badgeRingStyle(color: string | null, active: boolean): React.CSSProperties {
+  if (!active || !color) return {};
+  return { boxShadow: `0 0 0 2px #fff, 0 0 0 4px ${color}` };
 }
 
 export function labelBackground(label: ResolvedLabel): string {

@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { ChevronDown, ChevronUp, X } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { labelBackground, DEFAULT_COLOR, DEFAULT_TEXT } from "@/lib/post-labels";
+import { labelBackground, badgeRingStyle, DEFAULT_COLOR, DEFAULT_TEXT } from "@/lib/post-labels";
 import { LabelBadge } from "@/components/LabelBadge";
 
 type TopicBase = {
@@ -137,13 +137,7 @@ export function TopicFilterRow({ topics }: { topics: Level0Topic[] }) {
     return labelBackground({ text: "", colorHex, colorHex2, gradientDir, gradientStop, textColorHex });
   }
 
-  // box-shadow 기반 ring (dynamic color용, 단색 기준)
-  function ringStyle(color: string | null, active: boolean) {
-    if (!active || !color) return {};
-    return { boxShadow: `0 0 0 2px #fff, 0 0 0 4px ${color}` };
-  }
-
-  return (
+return (
     <>
       {/* Level 0 칩 행 */}
       <div className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pb-2">
@@ -272,7 +266,7 @@ export function TopicFilterRow({ topics }: { topics: Level0Topic[] }) {
                         background={topicBg(l2, activeL1, openTopic)}
                         color={fg}
                         className="shrink-0 px-3 py-1 transition-all active:opacity-70"
-                        style={{ ...ringStyle(l2.colorHex ?? activeL1?.colorHex ?? openTopic?.colorHex, highlight) }}
+                        style={{ ...badgeRingStyle(l2.colorHex ?? activeL1?.colorHex ?? openTopic?.colorHex, highlight) }}
                         onClick={() => {
                           if (hasChildren) {
                             setActiveL2Id(isSelected ? null : l2.id);
@@ -331,7 +325,7 @@ export function TopicFilterRow({ topics }: { topics: Level0Topic[] }) {
                             background={topicBg(l3, activeL2, activeL1, openTopic)}
                             color={fg}
                             className="shrink-0 px-3 py-1 transition-all active:opacity-70"
-                            style={ringStyle(l3.colorHex ?? activeL2.colorHex ?? activeL1?.colorHex ?? openTopic?.colorHex, isActive)}
+                            style={badgeRingStyle(l3.colorHex ?? activeL2.colorHex ?? activeL1?.colorHex ?? openTopic?.colorHex, isActive)}
                             onClick={() => navigate(l3.id)}
                           />
                         );

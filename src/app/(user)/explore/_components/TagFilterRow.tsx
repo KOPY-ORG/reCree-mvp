@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { ChevronDown, X } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { labelBackground, resolveTagColors, DEFAULT_TEXT } from "@/lib/post-labels";
+import { labelBackground, badgeRingStyle, resolveTagColors, DEFAULT_TEXT } from "@/lib/post-labels";
 import { LabelBadge } from "@/components/LabelBadge";
 
 type Tag = {
@@ -59,13 +59,7 @@ function tagBg(tag: Tag, group: TagGroup): string {
     return tag.textColorHex ?? group.textColorHex ?? DEFAULT_TEXT;
   }
 
-  // 활성 태그 chip ring (단색 기준)
-  function ringStyle(color: string | null, active: boolean) {
-    if (!active || !color) return {};
-    return { boxShadow: `0 0 0 2px #fff, 0 0 0 4px ${color}` };
-  }
-
-  return (
+return (
     <>
       <div className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pb-3">
         <button
@@ -156,7 +150,7 @@ function tagBg(tag: Tag, group: TagGroup): string {
                     background={tagBg(tag, openGroupData)}
                     color={tagFg(tag, openGroupData)}
                     className="shrink-0 px-3 py-1 transition-all active:opacity-70"
-                    style={ringStyle(tag.colorHex ?? openGroupData.colorHex, isActive)}
+                    style={badgeRingStyle(tag.colorHex ?? openGroupData.colorHex, isActive)}
                     onClick={() => navigate(tag.id)}
                   />
                 );
