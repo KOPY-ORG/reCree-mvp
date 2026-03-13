@@ -182,16 +182,16 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
 
   return (
     <article className="pb-8 max-w-2xl mx-auto">
-      <PostDetailHeader />
+      {!isPreview && <PostDetailHeader />}
       {isPreview && (
         <div className="bg-amber-100 text-amber-800 text-xs text-center py-2 font-medium">
           미리보기 모드 — 실제 발행 전 상태입니다
         </div>
       )}
 
-      {/* 배너 캐러셀 — 헤더(h-12) 높이만큼 위로 올려 풀블리드 */}
+      {/* 배너 캐러셀 — 헤더(h-12) 높이만큼 위로 올려 풀블리드 (미리보기엔 헤더 없으므로 margin 제거) */}
       {bannerImages.length > 0 && (
-        <div className="-mt-12">
+        <div className={isPreview ? "" : "-mt-12"}>
           <BannerCarousel images={bannerImages}>
             <OriginalSourceCards
               images={originalImages}
@@ -206,7 +206,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
         <OriginalSourceCards
           images={originalImages}
           originalLinkUrls={originalLinkUrls}
-          className="px-4 pt-14 pb-1 flex gap-2"
+          className={`px-4 pb-1 flex gap-2 ${isPreview ? "pt-3" : "pt-14"}`}
         />
       )}
 

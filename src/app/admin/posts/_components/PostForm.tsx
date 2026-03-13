@@ -468,25 +468,9 @@ export function PostForm({
   }
 
   // ── 제출 ───────────────────────────────────────────────────────────────────
-  const handleSubmit = (targetStatus?: PostStatus) => {
-    const finalStatus = targetStatus ?? status;
 
-    if (!titleKo.trim()) { toast.error("한국어 제목을 입력해주세요."); return; }
-    if (!titleEn.trim()) { toast.error("영어 제목을 입력해주세요."); return; }
-    if (!slug.trim()) { toast.error("슬러그를 입력해주세요."); return; }
-    if (slugStatus === "error") { toast.error("슬러그가 이미 사용 중입니다."); return; }
-
-    if (finalStatus === "PUBLISHED") {
-      const missing: string[] = [];
-      if (postTopics.length === 0) missing.push("토픽 1개 이상");
-      if (!images.some((img) => img.isThumbnail)) missing.push("썸네일 이미지");
-      const visibleCount =
-        postTopics.filter((t) => t.isVisible).length + postTags.filter((t) => t.isVisible).length;
-      if (visibleCount < 1) missing.push("라벨 1개 이상 표시 설정 필요");
-      if (missing.length > 0) { toast.error(`발행 불가: ${missing.join(", ")} 필요`); return; }
-    }
-
-    const data: PostFormData = {
+  function buildFormData(finalStatus: PostStatus): PostFormData {
+    return {
       titleKo: titleKo.trim(),
       titleEn: titleEn.trim(),
       slug: slug.trim(),
@@ -515,8 +499,28 @@ export function PostForm({
         return { placeId: e.place.id, spotInsight };
       }),
     };
+  }
+
+  const handleSubmit = (targetStatus?: PostStatus) => {
+    const finalStatus = targetStatus ?? status;
+
+    if (!titleKo.trim()) { toast.error("한국어 제목을 입력해주세요."); return; }
+    if (!titleEn.trim()) { toast.error("영어 제목을 입력해주세요."); return; }
+    if (!slug.trim()) { toast.error("슬러그를 입력해주세요."); return; }
+    if (slugStatus === "error") { toast.error("슬러그가 이미 사용 중입니다."); return; }
+
+    if (finalStatus === "PUBLISHED") {
+      const missing: string[] = [];
+      if (postTopics.length === 0) missing.push("토픽 1개 이상");
+      if (!images.some((img) => img.isThumbnail)) missing.push("썸네일 이미지");
+      const visibleCount =
+        postTopics.filter((t) => t.isVisible).length + postTags.filter((t) => t.isVisible).length;
+      if (visibleCount < 1) missing.push("라벨 1개 이상 표시 설정 필요");
+      if (missing.length > 0) { toast.error(`발행 불가: ${missing.join(", ")} 필요`); return; }
+    }
 
     startTransition(async () => {
+      const data = buildFormData(finalStatus);
       let result: { error?: string };
       if (isEdit && postId) {
         const { updatePost } = await import("../_actions/post-actions");
@@ -536,6 +540,24 @@ export function PostForm({
         } else {
           router.push("/admin/posts");
         }
+      }
+    });
+  };
+
+  const handlePreview = () => {
+    if (!isEdit || !postId || !slug.trim()) return;
+    if (!titleKo.trim()) { toast.error("한국어 제목을 입력해주세요."); return; }
+    if (!slug.trim()) { toast.error("슬러그를 입력해주세요."); return; }
+
+    startTransition(async () => {
+      const data = buildFormData(status);
+      const { updatePost } = await import("../_actions/post-actions");
+      const result = await updatePost(postId, data);
+
+      if (result.error) {
+        toast.error(result.error);
+      } else {
+        window.open(`/posts/${slug.trim()}?preview=1`, "_blank");
       }
     });
   };
@@ -573,19 +595,15 @@ export function PostForm({
             </h1>
           </div>
           <div className="flex items-center gap-2">
-            {!isEmbedded && (isEdit && initialData?.slug ? (
-              <Button variant="outline" size="sm" asChild>
-                <a href={`/posts/${initialData.slug}?preview=1`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
-                  <Eye className="h-3.5 w-3.5" />
-                  미리보기
-                </a>
-              </Button>
-            ) : !isEdit && slug ? (
-              <Button variant="outline" size="sm" disabled>
-                <Eye className="h-3.5 w-3.5 mr-1" />
+            {!isEmbedded && isEdit && initialData?.slug && (
+              <Button variant="outline" size="sm" disabled={isPending} onClick={handlePreview}>
+                {isPending
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  : <Eye className="h-3.5 w-3.5" />
+                }
                 미리보기
               </Button>
-            ) : null)}
+            )}
 
             {isEmbedded ? (
               <Button variant="outline" size="sm" asChild>
