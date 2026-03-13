@@ -159,12 +159,8 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
   const configMap = new Map(tagGroupConfigs.map((c) => [c.group, c]));
 
   const labels: ResolvedLabel[] = [
-    ...post.postTopics
-      .sort((a, b) => a.displayOrder - b.displayOrder)
-      .map(({ topic }) => ({ text: topic.nameEn, ...resolveTopicColors(topic) })),
-    ...post.postTags
-      .sort((a, b) => a.displayOrder - b.displayOrder)
-      .map(({ tag }) => ({ text: tag.name, ...resolveTagColors(tag, configMap.get(tag.group)) })),
+    ...post.postTopics.map(({ topic }) => ({ text: topic.nameEn, ...resolveTopicColors(topic) })),
+    ...post.postTags.map(({ tag }) => ({ text: tag.name, ...resolveTagColors(tag, configMap.get(tag.group)) })),
   ];
 
   const currentUser = await getCurrentUser();

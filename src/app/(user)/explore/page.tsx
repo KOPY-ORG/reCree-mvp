@@ -8,8 +8,6 @@ import { getCurrentUser } from "@/lib/auth";
 import { ScrapButton } from "../_components/ScrapButton";
 import { PostBadges } from "../_components/PostCard";
 
-type ExplorePost = PostItem;
-
 // ─── 서브 컴포넌트 ────────────────────────────────────────────────────────────
 
 function PostListItem({
@@ -17,7 +15,7 @@ function PostListItem({
   tagGroupMap,
   isSaved,
 }: {
-  post: ExplorePost;
+  post: PostItem;
   tagGroupMap: TagGroupColorMap;
   isSaved: boolean;
 }) {
