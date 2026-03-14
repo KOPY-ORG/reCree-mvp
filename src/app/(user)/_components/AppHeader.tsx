@@ -39,7 +39,7 @@ export async function AppHeader() {
         <div className="flex items-center gap-2">
           {/* 데스크탑 전용 검색 버튼 */}
           <Link
-            href="/explore"
+            href="/search"
             className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-md border text-muted-foreground hover:text-foreground hover:border-foreground transition-colors text-sm"
           >
             <Search className="size-4" />

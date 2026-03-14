@@ -1,11 +1,305 @@
-import { redirect } from "next/navigation";
+"use client";
 
-export default async function SearchPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ q?: string }>;
-}) {
-  const { q } = await searchParams;
-  const target = q ? `/explore?q=${encodeURIComponent(q)}` : "/explore";
-  redirect(target);
+import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef } from "react";
+import { Search, X, ChevronLeft, MapPin } from "lucide-react";
+import { searchSuggestions, type Suggestion } from "./_actions/search-actions";
+
+const POPULAR_SEARCHES = [
+  "BTS Pop-Up Store",
+  "BLACKPINK Cafe",
+  "Itaewon",
+  "Insadong",
+  "Namsan Tower",
+  "Myeongdong",
+  "Han River Park",
+  "Hongdae",
+  "Gyeongbokgung",
+  "Bukchon Hanok",
+];
+
+const RECENT_KEY = "recree_recent_searches";
+const MAX_RECENT = 10;
+const RECENT_POSTS_KEY = "recree_recent_posts";
+const MAX_RECENT_POSTS = 5;
+
+type RecentPost = { title: string; slug: string; placeName?: string };
+
+function getRecent(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    return JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveRecent(query: string) {
+  const prev = getRecent().filter((q) => q !== query);
+  localStorage.setItem(RECENT_KEY, JSON.stringify([query, ...prev].slice(0, MAX_RECENT)));
+}
+
+function removeRecent(query: string) {
+  localStorage.setItem(RECENT_KEY, JSON.stringify(getRecent().filter((q) => q !== query)));
+}
+
+function getRecentPosts(): RecentPost[] {
+  if (typeof window === "undefined") return [];
+  try {
+    return JSON.parse(localStorage.getItem(RECENT_POSTS_KEY) ?? "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveRecentPost(title: string, slug: string, placeName?: string) {
+  const prev = getRecentPosts().filter((p) => p.slug !== slug);
+  localStorage.setItem(
+    RECENT_POSTS_KEY,
+    JSON.stringify([{ title, slug, placeName }, ...prev].slice(0, MAX_RECENT_POSTS))
+  );
+}
+
+function removeRecentPost(slug: string) {
+  localStorage.setItem(
+    RECENT_POSTS_KEY,
+    JSON.stringify(getRecentPosts().filter((p) => p.slug !== slug))
+  );
+}
+
+export default function SearchPage() {
+  const router = useRouter();
+  const [value, setValue] = useState("");
+  const [recent, setRecent] = useState<string[]>(() => getRecent());
+  const [recentPosts, setRecentPosts] = useState<RecentPost[]>(() => getRecentPosts());
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      if (!value.trim()) {
+        setSuggestions([]);
+        return;
+      }
+      const results = await searchSuggestions(value);
+      setSuggestions(results);
+    }, 200);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [value]);
+
+  function navigateKeyword(text: string) {
+    saveRecent(text);
+    router.push(`/explore?q=${encodeURIComponent(text)}`);
+  }
+
+  function navigatePost(title: string, slug: string, placeName?: string) {
+    saveRecentPost(title, slug, placeName);
+    router.push(`/posts/${slug}`);
+  }
+
+  function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (value.trim()) navigateKeyword(value.trim());
+  }
+
+  function handleRemoveRecent(q: string) {
+    removeRecent(q);
+    setRecent(getRecent());
+  }
+
+  function handleRemoveRecentPost(slug: string) {
+    removeRecentPost(slug);
+    setRecentPosts(getRecentPosts());
+  }
+
+  function handleClearAll() {
+    localStorage.removeItem(RECENT_KEY);
+    localStorage.removeItem(RECENT_POSTS_KEY);
+    setRecent([]);
+    setRecentPosts([]);
+  }
+
+  const isTyping = value.trim().length > 0;
+  const left = POPULAR_SEARCHES.slice(0, 5);
+  const right = POPULAR_SEARCHES.slice(5);
+
+  return (
+    <div className="min-h-dvh bg-background flex flex-col">
+      {/* 상단 검색바 */}
+      <div className="sticky top-0 z-40 bg-background border-b">
+        <form onSubmit={handleSubmit} className="h-11 flex items-center gap-2 px-3">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="shrink-0 p-1 text-foreground"
+          >
+            <ChevronLeft className="size-5" />
+          </button>
+
+          <div className="relative flex-1">
+            <input
+              type="text"
+              autoFocus
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              placeholder="검색어를 입력하세요"
+              className="w-full h-8 pl-3 pr-14 rounded-full border border-border bg-muted/30 text-sm focus:outline-none focus:border-brand transition-colors"
+            />
+            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+              {value && (
+                <button
+                  type="button"
+                  onClick={() => setValue("")}
+                  className="flex items-center justify-center size-4 rounded-full bg-muted-foreground/30 hover:bg-muted-foreground/50 transition-colors"
+                >
+                  <X className="size-2.5 text-background" strokeWidth={2.5} />
+                </button>
+              )}
+              <button type="submit" className="text-muted-foreground hover:text-foreground">
+                <Search className="size-3.5" />
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      {/* 콘텐츠 */}
+      <div className="flex-1 overflow-y-auto">
+        {isTyping ? (
+          <ul>
+            {suggestions.map((s) => (
+              <li key={s.type === "post" ? `post-${s.slug}` : `kw-${s.text}`}>
+                <button
+                  onClick={() =>
+                    s.type === "post"
+                      ? navigatePost(s.text, s.slug, s.placeName)
+                      : navigateKeyword(s.text)
+                  }
+                  className="flex items-center gap-3 w-full px-4 py-3 text-sm hover:bg-muted/40 transition-colors text-left border-b border-border/40 last:border-0"
+                >
+                  {s.type === "post" ? (
+                    <MapPin className="size-4 text-muted-foreground shrink-0" />
+                  ) : (
+                    <Search className="size-4 text-muted-foreground shrink-0" />
+                  )}
+                  {s.type === "post" ? (
+                    <div className="flex flex-col min-w-0">
+                      <span className="truncate">{s.placeName ?? s.text}</span>
+                      {s.placeName && (
+                        <span className="text-xs text-muted-foreground truncate">{s.text}</span>
+                      )}
+                    </div>
+                  ) : (
+                    <span>{s.text}</span>
+                  )}
+                </button>
+              </li>
+            ))}
+            {suggestions.length === 0 && (
+              <li className="px-4 py-10 text-center text-sm text-muted-foreground">
+                검색 결과가 없습니다
+              </li>
+            )}
+          </ul>
+        ) : (
+          <div className="px-4 py-5 space-y-7">
+            {/* 최근 검색어 + 최근 포스트 */}
+            {(recent.length > 0 || recentPosts.length > 0) && (
+              <section>
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="font-semibold text-sm">최근 검색어</h2>
+                  <button
+                    onClick={handleClearAll}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    모두삭제
+                  </button>
+                </div>
+                {recent.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {recent.map((q) => (
+                      <span
+                        key={q}
+                        className="flex items-center gap-1.5 h-7 px-3 rounded-full border border-border text-sm"
+                      >
+                        <button onClick={() => navigateKeyword(q)}>{q}</button>
+                        <button
+                          onClick={() => handleRemoveRecent(q)}
+                          className="flex items-center justify-center size-4 rounded-full bg-muted-foreground/25 hover:bg-muted-foreground/40 transition-colors"
+                        >
+                          <X className="size-2.5 text-background" strokeWidth={2.5} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {recentPosts.length > 0 && (
+                  <div>
+                    {recentPosts.map((p) => (
+                      <div key={p.slug} className="flex items-center gap-3 py-2.5">
+                        <MapPin className="size-4 shrink-0 text-muted-foreground" />
+                        <button
+                          onClick={() => navigatePost(p.title, p.slug, p.placeName)}
+                          className="flex flex-col min-w-0 flex-1 text-sm text-left"
+                        >
+                          <span className="truncate">{p.placeName ?? p.title}</span>
+                          {p.placeName && (
+                            <span className="text-xs text-muted-foreground truncate">{p.title}</span>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => handleRemoveRecentPost(p.slug)}
+                          className="flex items-center justify-center size-4 rounded-full bg-muted-foreground/25 hover:bg-muted-foreground/40 transition-colors shrink-0"
+                        >
+                          <X className="size-2.5 text-background" strokeWidth={2.5} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+
+            {/* 인기 검색어 */}
+            <section>
+              <h2 className="font-semibold text-sm mb-3">인기 검색어</h2>
+              <div className="grid grid-cols-2 gap-y-3">
+                <div className="space-y-3">
+                  {left.map((q, i) => (
+                    <button
+                      key={q}
+                      onClick={() => navigateKeyword(q)}
+                      className="flex items-center gap-3 w-full text-left"
+                    >
+                      <span className={`w-5 text-sm font-semibold shrink-0 ${i < 3 ? "text-brand" : "text-muted-foreground"}`}>
+                        {i + 1}
+                      </span>
+                      <span className="text-sm truncate">{q}</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="space-y-3">
+                  {right.map((q, i) => (
+                    <button
+                      key={q}
+                      onClick={() => navigateKeyword(q)}
+                      className="flex items-center gap-3 w-full text-left"
+                    >
+                      <span className="w-5 text-sm font-semibold shrink-0 text-muted-foreground">
+                        {i + 6}
+                      </span>
+                      <span className="text-sm truncate">{q}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </section>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }

@@ -1,7 +1,7 @@
 import { AppHeader } from "./_components/AppHeader";
 import { SlimHeader } from "./_components/SlimHeader";
 import { ConditionalHeader } from "./_components/ConditionalHeader";
-import { BottomNav } from "./_components/BottomNav";
+import { ConditionalBottomNav } from "./_components/ConditionalBottomNav";
 
 export default function UserLayout({
   children,
@@ -16,7 +16,7 @@ export default function UserLayout({
       />
       <main className="flex-1 w-full">{children}</main>
       <div className="lg:hidden sticky bottom-0 z-40">
-        <BottomNav />
+        <ConditionalBottomNav />
       </div>
     </div>
   );

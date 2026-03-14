@@ -239,7 +239,7 @@ export default async function HomePage() {
 
     return (
       <div className="px-4 py-4 max-w-2xl mx-auto">
-        <SearchBar />
+        <div className="mt-3 mb-5 mx-1"><SearchBar /></div>
         <div className="grid grid-cols-2 gap-3">
           {fallbackPosts.map((post) => (
             <PostCard

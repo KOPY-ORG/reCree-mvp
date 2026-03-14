@@ -9,10 +9,10 @@ import { type TagGroupColorMap } from "@/lib/post-labels";
 import { getCurrentUser } from "@/lib/auth";
 import { ScrapButton } from "../_components/ScrapButton";
 import { PostBadges } from "../_components/PostCard";
-import { ExploreSearchBar } from "./_components/ExploreSearchBar";
 import { TopicFilterRow } from "./_components/TopicFilterRow";
 import { TagFilterRow } from "./_components/TagFilterRow";
 import { ExploreTabBar } from "./_components/ExploreTabBar";
+import { ExploreSearchActiveBar } from "./_components/ExploreSearchActiveBar";
 
 // ─── 서브 컴포넌트 ────────────────────────────────────────────────────────────
 
@@ -160,8 +160,9 @@ export default async function ExplorePage({
 
   return (
     <div className="max-w-2xl mx-auto">
-      {/* 검색바 */}
-      <ExploreSearchBar />
+
+      {/* 검색어 활성 바 */}
+      {q && <ExploreSearchActiveBar q={q} />}
 
       {/* 필터 Row 1: Topic Level 0 */}
       <TopicFilterRow topics={level0Topics} />

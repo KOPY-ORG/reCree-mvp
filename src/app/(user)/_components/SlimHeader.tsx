@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { User } from "lucide-react";
+import { User, Search } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 
 export async function SlimHeader() {
@@ -11,10 +11,14 @@ export async function SlimHeader() {
       <div className="h-10 flex items-center justify-between px-4">
         <span className="font-bold text-base tracking-tight">reCree</span>
 
-        <Link
-          href={user ? "/profile" : "/login"}
-          className="text-foreground hover:text-muted-foreground transition-colors"
-        >
+        <div className="flex items-center gap-3">
+          <Link href="/search" className="text-muted-foreground hover:text-foreground transition-colors">
+            <Search className="size-4" />
+          </Link>
+          <Link
+            href={user ? "/profile" : "/login"}
+            className="text-foreground hover:text-muted-foreground transition-colors"
+          >
           {initial ? (
             <div className="size-6 rounded-full bg-brand flex items-center justify-center text-xs font-semibold text-black">
               {initial}
@@ -22,7 +26,8 @@ export async function SlimHeader() {
           ) : (
             <User className="size-4 text-muted-foreground" />
           )}
-        </Link>
+          </Link>
+        </div>
       </div>
     </header>
   );

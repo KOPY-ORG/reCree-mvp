@@ -20,8 +20,12 @@ export async function getFilteredPosts(params: {
   if (params.q) {
     AND.push({
       OR: [
+        // 포스트 제목
         { titleEn: { contains: params.q, mode: "insensitive" } },
         { titleKo: { contains: params.q, mode: "insensitive" } },
+        // Story (본문)
+        { bodyEn: { contains: params.q, mode: "insensitive" } },
+        // 토픽/태그
         {
           postTopics: {
             some: { topic: { nameEn: { contains: params.q, mode: "insensitive" } } },
@@ -32,9 +36,31 @@ export async function getFilteredPosts(params: {
             some: { tag: { name: { contains: params.q, mode: "insensitive" } } },
           },
         },
+        // 장소명 (영문/한글)
         {
           postPlaces: {
             some: { place: { nameEn: { contains: params.q, mode: "insensitive" } } },
+          },
+        },
+        {
+          postPlaces: {
+            some: { place: { nameKo: { contains: params.q, mode: "insensitive" } } },
+          },
+        },
+        // Spot Insight
+        {
+          postPlaces: {
+            some: { context: { contains: params.q, mode: "insensitive" } },
+          },
+        },
+        {
+          postPlaces: {
+            some: { mustTry: { contains: params.q, mode: "insensitive" } },
+          },
+        },
+        {
+          postPlaces: {
+            some: { tip: { contains: params.q, mode: "insensitive" } },
           },
         },
       ],

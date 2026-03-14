@@ -2,7 +2,8 @@
 
 import { usePathname } from "next/navigation";
 
-const SLIM_PATHS = ["/explore", "/category"];
+const NO_HEADER_PATHS = ["/category", "/search"];
+const SLIM_PATHS = ["/explore"];
 
 export function ConditionalHeader({
   fullHeader,
@@ -14,6 +15,7 @@ export function ConditionalHeader({
   const pathname = usePathname();
 
   if (pathname.startsWith("/posts/")) return null;
-  if (SLIM_PATHS.includes(pathname)) return <>{slimHeader}</>;
+  if (NO_HEADER_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"))) return null;
+  if (SLIM_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"))) return <>{slimHeader}</>;
   return <>{fullHeader}</>;
 }
