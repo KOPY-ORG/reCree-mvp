@@ -252,7 +252,7 @@ export function TopicFilterRow({ topics }: { topics: Level0Topic[] }) {
                         background={topicBg(l2, activeL1, openTopic)}
                         color={fg}
                         className="shrink-0 px-3 py-1 transition-all active:opacity-70"
-                        style={{ ...badgeRingStyle(l2.colorHex ?? activeL1?.colorHex ?? openTopic?.colorHex, highlight) }}
+                        style={{ ...badgeRingStyle(l2.colorHex ?? activeL1?.colorHex ?? openTopic?.colorHex ?? null, highlight) }}
                         onClick={() => {
                           if (hasChildren) {
                             setActiveL2Id(isSelected ? null : l2.id);
@@ -305,7 +305,7 @@ export function TopicFilterRow({ topics }: { topics: Level0Topic[] }) {
                             background={topicBg(l3, activeL2, activeL1, openTopic)}
                             color={fg}
                             className="shrink-0 px-3 py-1 transition-all active:opacity-70"
-                            style={badgeRingStyle(l3.colorHex ?? activeL2.colorHex ?? activeL1?.colorHex ?? openTopic?.colorHex, isActive)}
+                            style={badgeRingStyle(l3.colorHex ?? activeL2.colorHex ?? activeL1?.colorHex ?? openTopic?.colorHex ?? null, isActive)}
                             onClick={() => navigateGroup(openTopic!.id, l3.id)}
                           />
                         );

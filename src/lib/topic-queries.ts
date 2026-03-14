@@ -8,7 +8,7 @@ export async function getLevel0Topics() {
   });
 }
 
-/** Level 0 Topic의 자식(Level 1) + 손자(Level 2) 조회 */
+/** 임의 Topic의 자식(+손자) 조회 — 카테고리 드릴다운용 */
 export async function getTopicChildren(parentId: string) {
   const level1Topics = await prisma.topic.findMany({
     where: { parentId, isActive: true },
@@ -16,11 +16,25 @@ export async function getTopicChildren(parentId: string) {
       children: {
         where: { isActive: true },
         orderBy: { sortOrder: "asc" },
+        include: {
+          children: {
+            where: { isActive: true },
+            orderBy: { sortOrder: "asc" },
+          },
+        },
       },
     },
     orderBy: { sortOrder: "asc" },
   });
   return { level1Topics };
+}
+
+/** 단일 Topic + parent 조회 (카테고리 back 링크용) */
+export async function getTopicWithParent(topicId: string) {
+  return prisma.topic.findUnique({
+    where: { id: topicId },
+    include: { parent: true },
+  });
 }
 
 /** Level 0 Topics + 각각의 Level 1 자식 (Explore 필터용) */

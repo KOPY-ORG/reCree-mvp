@@ -1,5 +1,16 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
-import { resolveTopicColors, resolveTagColors, labelBackground, DEFAULT_TEXT } from "@/lib/post-labels";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import {
+  resolveTopicColors,
+  resolveTagColors,
+  labelBackground,
+  badgeRingStyle,
+  DEFAULT_TEXT,
+  DEFAULT_COLOR,
+} from "@/lib/post-labels";
 import { LabelBadge } from "@/components/LabelBadge";
 
 type ChildTopic = {
@@ -13,8 +24,12 @@ type ChildTopic = {
   parentId: string | null;
 };
 
-type Level1Topic = ChildTopic & {
+type Level2Topic = ChildTopic & {
   children: ChildTopic[];
+};
+
+type Level1Topic = ChildTopic & {
+  children: Level2Topic[];
 };
 
 type ParentTopic = ChildTopic;
@@ -87,6 +102,8 @@ export function CategoryTopicGrid({
   parentTopic: ParentTopic;
   tagGroups: TagGroup[];
 }) {
+  const [expandedL2Id, setExpandedL2Id] = useState<string | null>(null);
+
   // Level 1 자식 없는 경우 → 이름 기반 매칭 TagGroup 태그 표시
   if (level1Topics.length === 0) {
     const suffix = parentTopic.nameEn.replace(/^K-/i, "").toLowerCase();
@@ -160,6 +177,7 @@ export function CategoryTopicGrid({
       <AllBadge href={`/explore?topicId=${parentTopic.id}`} className="mb-4" />
       {level1Topics.map((l1) => {
         const l1Colors = resolveTopicColors({ ...l1, parent: parentTopic });
+        const expandedL2 = l1.children.find((l2) => l2.id === expandedL2Id) ?? null;
 
         if (l1.children.length === 0) {
           const bg = labelBackground({ text: "", ...l1Colors });
@@ -189,18 +207,87 @@ export function CategoryTopicGrid({
                 const l2Colors = resolveTopicColors({ ...l2, parent: { ...l1, parent: parentTopic } });
                 const bg = labelBackground({ text: "", ...l2Colors });
                 const fg = l2Colors.textColorHex ?? DEFAULT_TEXT;
+                const hasChildren = l2.children.length > 0;
+                const isExpanded = expandedL2Id === l2.id;
+
+                if (!hasChildren) {
+                  return (
+                    <Link key={l2.id} href={`/explore?topicId=${l2.id}`}>
+                      <LabelBadge
+                        text={l2.nameEn}
+                        background={bg}
+                        color={fg}
+                        className="px-3 py-1 text-xs cursor-pointer"
+                      />
+                    </Link>
+                  );
+                }
+
                 return (
-                  <Link key={l2.id} href={`/explore?topicId=${l2.id}`}>
-                    <LabelBadge
-                      text={l2.nameEn}
-                      background={bg}
-                      color={fg}
-                      className="px-3 py-1 text-xs cursor-pointer"
-                    />
-                  </Link>
+                  <LabelBadge
+                    key={l2.id}
+                    as="button"
+                    text={l2.nameEn}
+                    background={bg}
+                    color={fg}
+                    className="px-3 py-1 text-xs cursor-pointer transition-all active:opacity-70"
+                    style={badgeRingStyle(l2.colorHex ?? l1.colorHex ?? null, isExpanded)}
+                    onClick={() => setExpandedL2Id(isExpanded ? null : l2.id)}
+                  >
+                    {isExpanded ? (
+                      <ChevronUp className="size-3 opacity-70" />
+                    ) : (
+                      <ChevronDown className="size-3 opacity-70" />
+                    )}
+                  </LabelBadge>
                 );
               })}
             </div>
+
+            {/* L3 펼침 카드 */}
+            {expandedL2 && (
+              <div className="rounded-2xl bg-muted/60 p-4 mt-3 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{
+                      background: labelBackground({
+                        text: "",
+                        colorHex: expandedL2.colorHex ?? l1.colorHex ?? DEFAULT_COLOR,
+                        colorHex2: expandedL2.colorHex2 ?? null,
+                        gradientDir: expandedL2.gradientDir,
+                        gradientStop: expandedL2.gradientStop,
+                        textColorHex: expandedL2.textColorHex ?? DEFAULT_TEXT,
+                      }),
+                    }}
+                  />
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    {expandedL2.nameEn}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <AllBadge href={`/explore?topicId=${expandedL2.id}`} />
+                  {expandedL2.children.map((l3) => {
+                    const l3Colors = resolveTopicColors({
+                      ...l3,
+                      parent: { ...expandedL2, parent: { ...l1, parent: parentTopic } },
+                    });
+                    const bg = labelBackground({ text: "", ...l3Colors });
+                    const fg = l3Colors.textColorHex ?? DEFAULT_TEXT;
+                    return (
+                      <Link key={l3.id} href={`/explore?topicId=${l3.id}`}>
+                        <LabelBadge
+                          text={l3.nameEn}
+                          background={bg}
+                          color={fg}
+                          className="px-3 py-1 text-xs cursor-pointer"
+                        />
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         );
       })}
