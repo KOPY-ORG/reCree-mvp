@@ -2,8 +2,20 @@
 
 import { usePathname } from "next/navigation";
 
-export function ConditionalHeader({ children }: { children: React.ReactNode }) {
+const NO_HEADER_PATHS = ["/category", "/search"];
+const EXPLORE_PATHS = ["/explore"];
+
+export function ConditionalHeader({
+  header,
+  exploreHeader,
+}: {
+  header: React.ReactNode;
+  exploreHeader: React.ReactNode;
+}) {
   const pathname = usePathname();
+
   if (pathname.startsWith("/posts/")) return null;
-  return <>{children}</>;
+  if (NO_HEADER_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"))) return null;
+  if (EXPLORE_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"))) return <>{exploreHeader}</>;
+  return <>{header}</>;
 }

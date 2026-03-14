@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useId } from "react";
-import { Plus, Pencil, Search, Trash2, GripVertical } from "lucide-react";
+import { Plus, Pencil, Search, Trash2, GripVertical, Eye, EyeOff } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -25,6 +25,7 @@ import { TagGroupConfigDialog } from "./TagGroupConfigDialog";
 import {
   deleteTagGroup,
   reorderTagGroups,
+  toggleTagGroupVisibility,
   type TagGroupConfigCreated,
   type TagGroupConfigData,
   type TagSavedData,
@@ -62,6 +63,7 @@ function GroupColumn({
   onAdd,
   onEditGroupConfig,
   onDeleteGroup,
+  onToggleVisibility,
   hideInactive,
   searchQuery,
   dragHandleProps,
@@ -73,6 +75,7 @@ function GroupColumn({
   onAdd: (group: string) => void;
   onEditGroupConfig: (config: TagGroupConfigItem) => void;
   onDeleteGroup: (group: string) => void;
+  onToggleVisibility: (group: string) => void;
   hideInactive?: boolean;
   searchQuery?: string;
   dragHandleProps?: React.HTMLAttributes<HTMLSpanElement>;
@@ -116,6 +119,18 @@ function GroupColumn({
         />
         <span className="flex-1" />
         <span className="text-xs tabular-nums text-muted-foreground shrink-0">{tags.length}</span>
+        <button
+          type="button"
+          onClick={() => onToggleVisibility(groupConfig.group)}
+          className={`p-1 rounded transition-colors shrink-0 ${
+            groupConfig.isVisible
+              ? "text-muted-foreground hover:text-foreground hover:bg-muted"
+              : "text-amber-500 hover:text-amber-600 hover:bg-amber-50"
+          }`}
+          title={groupConfig.isVisible ? "유저에게 노출 중 (클릭 시 숨김)" : "유저에게 숨겨짐 (클릭 시 노출)"}
+        >
+          {groupConfig.isVisible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+        </button>
         <button
           type="button"
           onClick={() => onEditGroupConfig(groupConfig)}
@@ -273,6 +288,21 @@ export function TagsTabContent({ tagsByGroup: initialTagsByGroup, groupConfigs: 
     });
   }
 
+  function handleToggleVisibility(group: string) {
+    startTransition(async () => {
+      const result = await toggleTagGroupVisibility(group);
+      if (result.error) {
+        toast.error(result.error);
+      } else {
+        setOrderedConfigs((prev) =>
+          prev.map((c) =>
+            c.group === group ? { ...c, isVisible: result.isVisible! } : c
+          )
+        );
+      }
+    });
+  }
+
   function handleDeleteGroup(group: string) {
     const config = orderedConfigs.find((c) => c.group === group);
     if (!confirm(`"${config?.nameEn || group}" 그룹을 삭제하시겠습니까?`)) return;
@@ -402,6 +432,7 @@ export function TagsTabContent({ tagsByGroup: initialTagsByGroup, groupConfigs: 
                 onAdd={openCreate}
                 onEditGroupConfig={openGroupConfigEdit}
                 onDeleteGroup={handleDeleteGroup}
+                onToggleVisibility={handleToggleVisibility}
                 hideInactive={hideInactive}
                 searchQuery={searchQuery}
               />

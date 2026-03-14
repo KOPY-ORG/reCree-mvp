@@ -1,0 +1,172 @@
+"use client";
+
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
+import { ChevronDown, X } from "lucide-react";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { labelBackground, badgeRingStyle, resolveTagColors } from "@/lib/post-labels";
+import { LabelBadge } from "@/components/LabelBadge";
+import { AllBadge } from "@/components/AllBadge";
+
+type Tag = {
+  id: string;
+  name: string;
+  colorHex: string | null;
+  colorHex2?: string | null;
+  textColorHex: string | null;
+};
+
+type TagGroup = {
+  group: string;
+  nameEn: string;
+  colorHex: string;
+  colorHex2: string | null;
+  gradientDir: string;
+  gradientStop: number;
+  textColorHex: string;
+  tags: Tag[];
+};
+
+export function TagFilterRow({ tagGroups }: { tagGroups: TagGroup[] }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tagIds = searchParams.getAll("tagId");
+  const activeTagGroup = searchParams.get("tagGroup");
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
+
+  const openGroupData = openGroup ? tagGroups.find((g) => g.group === openGroup) : null;
+
+  function getGroupSelection(groupName: string): string | null {
+    const group = tagGroups.find((g) => g.group === groupName);
+    return tagIds.find((id) => group?.tags.some((t) => t.id === id)) ?? null;
+  }
+
+  function buildGroupParams(groupName: string, newTagId: string | null) {
+    const params = new URLSearchParams(searchParams.toString());
+    const group = tagGroups.find((g) => g.group === groupName);
+    const groupTagIds = new Set(group?.tags.map((t) => t.id) ?? []);
+    params.delete("tagId");
+    for (const id of searchParams.getAll("tagId")) {
+      if (!groupTagIds.has(id)) params.append("tagId", id);
+    }
+    if (newTagId) params.append("tagId", newTagId);
+    params.delete("tagGroup");
+    if (!newTagId) params.set("tagGroup", groupName);
+    params.delete("tab");
+    return params;
+  }
+
+  function navigateGroup(groupName: string, newTagId: string | null) {
+    router.push(`/explore?${buildGroupParams(groupName, newTagId).toString()}`);
+    setOpenGroup(null);
+  }
+
+  function clearGroupAll(groupName: string) {
+    const params = buildGroupParams(groupName, null);
+    params.delete("tagGroup");
+    router.push(`/explore?${params.toString()}`);
+    setOpenGroup(null);
+  }
+
+  function clearAll() {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("tagId");
+    params.delete("tagGroup");
+    params.delete("tab");
+    router.push(`/explore?${params.toString()}`);
+  }
+
+  return (
+    <>
+      <div className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pt-2 pb-2 [--pill-py:0.25rem]">
+        <button
+          onClick={clearAll}
+          className={`pill-badge shrink-0 border transition-colors ${
+            tagIds.length === 0 && !activeTagGroup
+              ? "bg-foreground text-background border-foreground"
+              : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
+          }`}
+        >
+          All
+        </button>
+
+        {tagGroups.map((group) => {
+          const selectedTagId = getGroupSelection(group.group);
+          const isGroupAll = !selectedTagId && activeTagGroup === group.group;
+          const isActive = !!selectedTagId || isGroupAll;
+          const activeTag = group.tags.find((t) => t.id === selectedTagId);
+          const label = activeTag ? `${group.nameEn} / ${activeTag.name}` : group.nameEn;
+
+          return (
+            <button
+              key={group.group}
+              onClick={() => setOpenGroup(group.group)}
+              className={`pill-badge shrink-0 border transition-colors ${
+                isActive
+                  ? "bg-foreground text-background border-foreground"
+                  : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
+              }`}
+            >
+              {label}
+              {isActive ? (
+                <X
+                  className="size-3 shrink-0"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    clearGroupAll(group.group);
+                  }}
+                />
+              ) : (
+                <ChevronDown className="size-3 shrink-0 opacity-50" />
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      <Sheet open={!!openGroup} onOpenChange={(v) => !v && setOpenGroup(null)}>
+        <SheetContent
+          side="bottom"
+          showCloseButton={false}
+          className="rounded-t-2xl max-h-[80vh] p-0 flex flex-col gap-0"
+        >
+          <SheetTitle className="sr-only">{openGroupData?.nameEn}</SheetTitle>
+
+          <div className="flex justify-center pt-3 pb-1 shrink-0">
+            <div className="w-9 h-1 rounded-full bg-muted-foreground/25" />
+          </div>
+
+          <div className="px-5 pt-1 pb-3 shrink-0">
+            <p className="text-base font-bold">{openGroupData?.nameEn}</p>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-4 pb-6 [--pill-py:0.25rem]">
+            <div className="flex flex-wrap gap-2">
+              <AllBadge
+                onClick={() => openGroupData && navigateGroup(openGroupData.group, null)}
+                active={!!(openGroupData && !getGroupSelection(openGroupData.group) && activeTagGroup === openGroupData.group)}
+                className="shrink-0"
+              />
+
+              {openGroupData?.tags.map((tag) => {
+                const isActive = getGroupSelection(openGroupData.group) === tag.id;
+                return (
+                  <LabelBadge
+                    key={tag.id}
+                    as="button"
+                    text={tag.name}
+                    background={labelBackground({ text: "", ...resolveTagColors(tag, openGroupData) })}
+                    color={resolveTagColors(tag, openGroupData).textColorHex}
+                    className="shrink-0 transition-all active:opacity-70"
+                    style={badgeRingStyle(tag.colorHex ?? openGroupData.colorHex, isActive)}
+                    onClick={() => navigateGroup(openGroupData.group, tag.id)}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+    </>
+  );
+}

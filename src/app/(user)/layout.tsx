@@ -1,6 +1,7 @@
 import { AppHeader } from "./_components/AppHeader";
+import { ExploreHeader } from "./_components/ExploreHeader";
 import { ConditionalHeader } from "./_components/ConditionalHeader";
-import { BottomNav } from "./_components/BottomNav";
+import { ConditionalBottomNav } from "./_components/ConditionalBottomNav";
 
 export default function UserLayout({
   children,
@@ -9,10 +10,10 @@ export default function UserLayout({
 }) {
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background">
-      <ConditionalHeader><AppHeader /></ConditionalHeader>
-      <main className="flex-1 w-full">{children}</main>
+      <ConditionalHeader header={<AppHeader />} exploreHeader={<ExploreHeader />} />
+      <main className="flex-1 w-full overflow-x-hidden">{children}</main>
       <div className="lg:hidden sticky bottom-0 z-40">
-        <BottomNav />
+        <ConditionalBottomNav />
       </div>
     </div>
   );

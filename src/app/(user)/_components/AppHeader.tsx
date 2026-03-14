@@ -16,11 +16,11 @@ export async function AppHeader() {
   const initial = user?.email?.[0]?.toUpperCase() ?? null;
 
   return (
-    <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b">
-      <div className="h-14 flex items-center justify-between px-4 md:px-6 lg:px-10 xl:px-16">
+    <header className="app-header">
+      <div className="h-12 flex items-center justify-between px-4 md:px-6 lg:px-10 xl:px-16">
         {/* 왼쪽: 로고 + 데스크탑 네비 */}
         <div className="flex items-center gap-6">
-          <span className="font-bold text-lg tracking-tight">reCree</span>
+          <span className="font-bold text-base tracking-tight">reCree</span>
 
           <nav className="hidden lg:flex items-center gap-1">
             {NAV_LINKS.map(({ label, href }) => (
@@ -39,7 +39,7 @@ export async function AppHeader() {
         <div className="flex items-center gap-2">
           {/* 데스크탑 전용 검색 버튼 */}
           <Link
-            href="/explore"
+            href="/search"
             className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-md border text-muted-foreground hover:text-foreground hover:border-foreground transition-colors text-sm"
           >
             <Search className="size-4" />
