@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { Search, X, ChevronLeft, MapPin, ChevronRight } from "lucide-react";
 import { searchSuggestions, getPopularSearches, type Suggestion } from "./_actions/search-actions";
+import { SearchBar } from "../_components/SearchBar";
 
 const RECENT_KEY = "recree_recent_searches";
 const MAX_RECENT = 10;
@@ -147,30 +148,7 @@ export default function SearchPage() {
             <ChevronLeft className="size-5" />
           </button>
 
-          <div className="relative flex-1">
-            <input
-              type="text"
-              autoFocus
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              placeholder="Search K-artists, dramas, foods"
-              className="w-full h-8 pl-3 pr-14 rounded-full border border-border bg-muted/30 text-sm focus:outline-none focus:border-brand transition-colors"
-            />
-            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-              {value && (
-                <button
-                  type="button"
-                  onClick={() => setValue("")}
-                  className="flex items-center justify-center size-4 rounded-full bg-muted-foreground/30 hover:bg-muted-foreground/50 transition-colors"
-                >
-                  <X className="size-2.5 text-background" strokeWidth={2.5} />
-                </button>
-              )}
-              <button type="submit" className="text-muted-foreground hover:text-foreground">
-                <Search className="size-3.5" />
-              </button>
-            </div>
-          </div>
+          <SearchBar variant="input" value={value} onChange={setValue} autoFocus />
         </form>
       </header>
 
