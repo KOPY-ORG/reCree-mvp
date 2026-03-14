@@ -135,6 +135,12 @@
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
+/* ── 공통 앱 헤더 스타일 ── */
+.app-header {
+  @apply sticky top-0 z-40 bg-background/95 backdrop-blur-sm;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+
 /* ── Post Body Markdown ── */
 .post-body .wmde-markdown {
   font-family: var(--font-sans) !important;
