@@ -11,7 +11,7 @@ export default function UserLayout({
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background">
       <ConditionalHeader header={<AppHeader />} exploreHeader={<ExploreHeader />} />
-      <main className="flex-1 w-full pt-2">{children}</main>
+      <main className="flex-1 w-full">{children}</main>
       <div className="lg:hidden sticky bottom-0 z-40">
         <ConditionalBottomNav />
       </div>

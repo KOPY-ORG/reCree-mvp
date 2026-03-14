@@ -138,7 +138,7 @@ export function TopicFilterRow({ topics }: { topics: Level0Topic[] }) {
 
   return (
     <>
-      <div className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pt-2 pb-2">
+      <div className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pt-2">
         <button
           onClick={clearAll}
           className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${

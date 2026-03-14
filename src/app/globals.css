@@ -138,7 +138,7 @@
 /* ── 공통 앱 헤더 스타일 ── */
 .app-header {
   @apply sticky top-0 z-40 bg-background/95 backdrop-blur-sm;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
 }
 
 /* ── Post Body Markdown ── */

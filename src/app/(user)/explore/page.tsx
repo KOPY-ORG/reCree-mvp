@@ -162,16 +162,14 @@ export default async function ExplorePage({
   const hasFilter = !!(q || topicIds.length || tagIds.length || tagGroup);
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto pb-14">
 
-      {/* 검색어 활성 바 */}
-      {q && <ExploreSearchActiveBar q={q} />}
-
-      {/* 필터 Row 1: Topic Level 0 */}
-      <TopicFilterRow topics={level0Topics} />
-
-      {/* 필터 Row 2: TagGroup */}
-      <TagFilterRow tagGroups={tagGroups} />
+      {/* 필터 영역 */}
+      <div className="border-b border-border/50">
+        {q && <ExploreSearchActiveBar q={q} />}
+        <TopicFilterRow topics={level0Topics} />
+        <TagFilterRow tagGroups={tagGroups} />
+      </div>
 
       {/* 탭 바 (sticky top-14 = AppHeader 높이) */}
       <ExploreTabBar />

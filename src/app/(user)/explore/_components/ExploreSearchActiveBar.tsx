@@ -14,7 +14,7 @@ export function ExploreSearchActiveBar({ q }: { q: string }) {
   };
 
   return (
-    <div className="px-4 py-2">
+    <div className="px-4 pt-2">
       <div className="flex items-center h-8 rounded-full border border-border bg-muted/30 px-3 gap-2">
         <button
           className="flex items-center gap-2 flex-1 min-w-0"
