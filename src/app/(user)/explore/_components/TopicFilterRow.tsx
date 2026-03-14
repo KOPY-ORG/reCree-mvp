@@ -6,6 +6,7 @@ import { ChevronDown, ChevronUp, X } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { labelBackground, badgeRingStyle, resolveTopicColors } from "@/lib/post-labels";
 import { LabelBadge } from "@/components/LabelBadge";
+import { AllBadge } from "@/components/AllBadge";
 
 type TopicBase = {
   id: string;
@@ -122,7 +123,7 @@ export function TopicFilterRow({ topics }: { topics: Level0Topic[] }) {
 
   return (
     <>
-      <div className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pt-2">
+      <div className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pt-2 [--pill-py:0.25rem]">
         <button
           onClick={clearAll}
           className={`pill-badge shrink-0 border transition-colors ${
@@ -208,18 +209,15 @@ export function TopicFilterRow({ topics }: { topics: Level0Topic[] }) {
 
           <div className="flex-1 overflow-y-auto">
             {activeL1 && (
-              <div className="px-4 pt-4 pb-6 space-y-4">
+              <div className="px-4 pt-4 pb-6 space-y-4 [--pill-py:0.25rem]">
                 <div className="flex flex-wrap gap-2">
-                  <button
+                  <AllBadge
                     onClick={() => navigateGroup(openTopic!.id, activeL1.id)}
-                    className={`pill-badge shrink-0 border transition-colors ${
-                      getGroupSelection(openTopic!.id) === activeL1.id
-                        ? "bg-foreground text-background border-foreground"
-                        : "border-dashed border-border text-muted-foreground hover:border-foreground hover:text-foreground active:opacity-70"
-                    }`}
+                    active={getGroupSelection(openTopic!.id) === activeL1.id}
+                    className="shrink-0"
                   >
                     All {activeL1.nameEn}
-                  </button>
+                  </AllBadge>
 
                   {activeL1.children.map((l2) => {
                     const isSelected = activeL2Id === l2.id;
@@ -268,16 +266,11 @@ export function TopicFilterRow({ topics }: { topics: Level0Topic[] }) {
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <button
+                      <AllBadge
                         onClick={() => navigateGroup(openTopic!.id, activeL2.id)}
-                        className={`pill-badge shrink-0 border transition-colors ${
-                          getGroupSelection(openTopic!.id) === activeL2.id
-                            ? "bg-foreground text-background border-foreground"
-                            : "border-dashed border-border text-muted-foreground hover:border-foreground hover:text-foreground active:opacity-70"
-                        }`}
-                      >
-                        All
-                      </button>
+                        active={getGroupSelection(openTopic!.id) === activeL2.id}
+                        className="shrink-0"
+                      />
                       {activeL2.children.map((l3) => {
                         const l3Colors = resolveTopicColors({ ...l3, parent: { ...activeL2, parent: { ...activeL1!, parent: openTopic! } } });
                         const isActive = getGroupSelection(openTopic!.id) === l3.id;

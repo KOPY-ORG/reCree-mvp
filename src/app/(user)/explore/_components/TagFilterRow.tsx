@@ -6,6 +6,7 @@ import { ChevronDown, X } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { labelBackground, badgeRingStyle, resolveTagColors } from "@/lib/post-labels";
 import { LabelBadge } from "@/components/LabelBadge";
+import { AllBadge } from "@/components/AllBadge";
 
 type Tag = {
   id: string;
@@ -77,7 +78,7 @@ export function TagFilterRow({ tagGroups }: { tagGroups: TagGroup[] }) {
 
   return (
     <>
-      <div className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pt-2 pb-2">
+      <div className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pt-2 pb-2 [--pill-py:0.25rem]">
         <button
           onClick={clearAll}
           className={`pill-badge shrink-0 border transition-colors ${
@@ -139,18 +140,13 @@ export function TagFilterRow({ tagGroups }: { tagGroups: TagGroup[] }) {
             <p className="text-base font-bold">{openGroupData?.nameEn}</p>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-4 pb-6">
+          <div className="flex-1 overflow-y-auto px-4 pb-6 [--pill-py:0.25rem]">
             <div className="flex flex-wrap gap-2">
-              <button
+              <AllBadge
                 onClick={() => openGroupData && navigateGroup(openGroupData.group, null)}
-                className={`pill-badge shrink-0 border transition-colors ${
-                  openGroupData && (!getGroupSelection(openGroupData.group) && activeTagGroup === openGroupData.group)
-                    ? "bg-foreground text-background border-foreground"
-                    : "border-dashed border-border text-muted-foreground hover:border-foreground hover:text-foreground active:opacity-70"
-                }`}
-              >
-                All
-              </button>
+                active={!!(openGroupData && !getGroupSelection(openGroupData.group) && activeTagGroup === openGroupData.group)}
+                className="shrink-0"
+              />
 
               {openGroupData?.tags.map((tag) => {
                 const isActive = getGroupSelection(openGroupData.group) === tag.id;
