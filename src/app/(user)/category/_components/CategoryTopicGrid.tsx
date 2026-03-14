@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { resolveTopicColors } from "@/lib/post-labels";
-import { TopicCircle } from "./TopicCircle";
+import { resolveTopicColors, resolveTagColors, labelBackground, DEFAULT_TEXT } from "@/lib/post-labels";
+import { LabelBadge } from "@/components/LabelBadge";
 
 type ChildTopic = {
   id: string;
@@ -38,43 +38,40 @@ type TagGroup = {
   tags: Tag[];
 };
 
-/** 항상 상단에 표시되는 "All" 원형 칩 */
-function AllCircle({ href }: { href: string }) {
+function AllBadge({ href, className }: { href: string; className?: string }) {
   return (
-    <Link
-      href={href}
-      className="flex flex-col items-center gap-1 active:scale-95 transition-transform"
-    >
-      <div className="w-full aspect-square rounded-full flex items-center justify-center font-bold text-sm bg-zinc-900 text-white">
+    <div className={className}>
+      <Link
+        href={href}
+        className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border border-dashed border-border text-muted-foreground hover:border-foreground hover:text-foreground transition-colors"
+      >
         All
-      </div>
-      <span className="text-[10px] text-center text-foreground leading-tight">
-        All
-      </span>
-    </Link>
+      </Link>
+    </div>
   );
 }
 
-/** TagGroup 선택 시: 해당 그룹의 태그 원형 칩 표시 */
+/** TagGroup 선택 시: 해당 그룹의 태그 pill 표시 */
 export function CategoryTagGrid({ tagGroup }: { tagGroup: TagGroup }) {
   return (
-    <div className="p-4 space-y-4">
-      <div className="grid grid-cols-3 gap-3">
-        <AllCircle href="/explore" />
-      </div>
-      <div className="grid grid-cols-3 gap-3">
-        {tagGroup.tags.map((tag) => (
-          <TopicCircle
-            key={tag.id}
-            href={`/explore?tagId=${tag.id}`}
-            name={tag.name}
-            colorHex={tag.colorHex ?? tagGroup.colorHex}
-            colorHex2={tag.colorHex ? tag.colorHex2 : tagGroup.colorHex2}
-            gradientDir={tagGroup.gradientDir}
-            gradientStop={tagGroup.gradientStop}
-            textColorHex={tag.textColorHex ?? tagGroup.textColorHex}
-          />
-        ))}
+    <div className="p-4 space-y-6">
+      <AllBadge href={`/explore?tagGroup=${tagGroup.group}`} className="mb-4" />
+      <div className="flex flex-wrap gap-2">
+        {tagGroup.tags.map((tag) => {
+          const resolved = resolveTagColors(tag, tagGroup);
+          const bg = labelBackground({ text: "", ...resolved });
+          const fg = tag.textColorHex ?? tagGroup.textColorHex ?? DEFAULT_TEXT;
+          return (
+            <Link key={tag.id} href={`/explore?tagId=${tag.id}`}>
+              <LabelBadge
+                text={tag.name}
+                background={bg}
+                color={fg}
+                className="px-3 py-1 text-xs cursor-pointer"
+              />
+            </Link>
+          );
+        })}
       </div>
     </div>
   );
@@ -106,47 +103,22 @@ export function CategoryTopicGrid({
     }
 
     return (
-      <div className="p-4 space-y-4">
-        <div className="grid grid-cols-3 gap-3">
-          <AllCircle href={`/explore?topicId=${parentTopic.id}`} />
-        </div>
-        <div className="grid grid-cols-3 gap-3">
-          {matchingGroup.tags.map((tag) => (
-            <TopicCircle
-              key={tag.id}
-              href={`/explore?tagId=${tag.id}`}
-              name={tag.name}
-              colorHex={tag.colorHex ?? matchingGroup.colorHex}
-              colorHex2={
-                tag.colorHex ? tag.colorHex2 : matchingGroup.colorHex2
-              }
-              gradientDir={matchingGroup.gradientDir}
-              gradientStop={matchingGroup.gradientStop}
-              textColorHex={tag.textColorHex ?? matchingGroup.textColorHex}
-            />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  // K-Pop 스타일: Level 1이 바로 원형 칩 (Level 2 없음)
-  const hasLevel2 = level1Topics.some((t) => t.children.length > 0);
-
-  if (!hasLevel2) {
-    return (
-      <div className="p-4">
-        <div className="grid grid-cols-3 gap-3">
-          <AllCircle href={`/explore?topicId=${parentTopic.id}`} />
-          {level1Topics.map((topic) => {
-            const colors = resolveTopicColors({ ...topic, parent: parentTopic });
+      <div className="p-4 space-y-6">
+        <AllBadge href={`/explore?tagGroup=${matchingGroup.group}`} className="mb-4" />
+        <div className="flex flex-wrap gap-2">
+          {matchingGroup.tags.map((tag) => {
+            const resolved = resolveTagColors(tag, matchingGroup);
+            const bg = labelBackground({ text: "", ...resolved });
+            const fg = tag.textColorHex ?? matchingGroup.textColorHex ?? DEFAULT_TEXT;
             return (
-              <TopicCircle
-                key={topic.id}
-                href={`/explore?topicId=${topic.id}`}
-                name={topic.nameEn}
-                {...colors}
-              />
+              <Link key={tag.id} href={`/explore?tagId=${tag.id}`}>
+                <LabelBadge
+                  text={tag.name}
+                  background={bg}
+                  color={fg}
+                  className="px-3 py-1 text-xs cursor-pointer"
+                />
+              </Link>
             );
           })}
         </div>
@@ -154,23 +126,54 @@ export function CategoryTopicGrid({
     );
   }
 
-  // K-Contents 스타일: Level 1이 섹션 헤더, Level 2가 원형 칩
+  // Level 1이 바로 pill 칩 (Level 2 없음)
+  const hasLevel2 = level1Topics.some((t) => t.children.length > 0);
+
+  if (!hasLevel2) {
+    return (
+      <div className="p-4 space-y-6">
+        <AllBadge href={`/explore?topicId=${parentTopic.id}`} className="mb-4" />
+        <div className="flex flex-wrap gap-2">
+          {level1Topics.map((topic) => {
+            const colors = resolveTopicColors({ ...topic, parent: parentTopic });
+            const bg = labelBackground({ text: "", ...colors });
+            const fg = colors.textColorHex ?? DEFAULT_TEXT;
+            return (
+              <Link key={topic.id} href={`/explore?topicId=${topic.id}`}>
+                <LabelBadge
+                  text={topic.nameEn}
+                  background={bg}
+                  color={fg}
+                  className="px-3 py-1 text-xs cursor-pointer"
+                />
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // Level 1이 섹션 헤더, Level 2가 pill 칩
   return (
     <div className="p-4 space-y-6">
-      <div className="grid grid-cols-3 gap-3">
-        <AllCircle href={`/explore?topicId=${parentTopic.id}`} />
-      </div>
+      <AllBadge href={`/explore?topicId=${parentTopic.id}`} className="mb-4" />
       {level1Topics.map((l1) => {
         const l1Colors = resolveTopicColors({ ...l1, parent: parentTopic });
 
         if (l1.children.length === 0) {
+          const bg = labelBackground({ text: "", ...l1Colors });
+          const fg = l1Colors.textColorHex ?? DEFAULT_TEXT;
           return (
-            <div key={l1.id} className="grid grid-cols-3 gap-3">
-              <TopicCircle
-                href={`/explore?topicId=${l1.id}`}
-                name={l1.nameEn}
-                {...l1Colors}
-              />
+            <div key={l1.id} className="flex flex-wrap gap-2">
+              <Link href={`/explore?topicId=${l1.id}`}>
+                <LabelBadge
+                  text={l1.nameEn}
+                  background={bg}
+                  color={fg}
+                  className="px-3 py-1 text-xs cursor-pointer"
+                />
+              </Link>
             </div>
           );
         }
@@ -180,16 +183,21 @@ export function CategoryTopicGrid({
             <h3 className="text-xs font-bold uppercase tracking-wider mb-3 px-1 text-foreground">
               {l1.nameEn}
             </h3>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="flex flex-wrap gap-2">
+              <AllBadge href={`/explore?topicId=${l1.id}`} />
               {l1.children.map((l2) => {
-                const l2Colors = resolveTopicColors({ ...l2, parent: l1 });
+                const l2Colors = resolveTopicColors({ ...l2, parent: { ...l1, parent: parentTopic } });
+                const bg = labelBackground({ text: "", ...l2Colors });
+                const fg = l2Colors.textColorHex ?? DEFAULT_TEXT;
                 return (
-                  <TopicCircle
-                    key={l2.id}
-                    href={`/explore?topicId=${l2.id}`}
-                    name={l2.nameEn}
-                    {...l2Colors}
-                  />
+                  <Link key={l2.id} href={`/explore?topicId=${l2.id}`}>
+                    <LabelBadge
+                      text={l2.nameEn}
+                      background={bg}
+                      color={fg}
+                      className="px-3 py-1 text-xs cursor-pointer"
+                    />
+                  </Link>
                 );
               })}
             </div>

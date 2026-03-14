@@ -30,6 +30,7 @@ export function TagFilterRow({ tagGroups }: { tagGroups: TagGroup[] }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tagIds = searchParams.getAll("tagId");
+  const activeTagGroup = searchParams.get("tagGroup");
   const [openGroup, setOpenGroup] = useState<string | null>(null);
 
   const openGroupData = openGroup ? tagGroups.find((g) => g.group === openGroup) : null;
@@ -49,6 +50,24 @@ export function TagFilterRow({ tagGroups }: { tagGroups: TagGroup[] }) {
       if (!groupTagIds.has(id)) params.append("tagId", id);
     }
     if (newTagId) params.append("tagId", newTagId);
+    // tagGroup 파라미터 교체
+    params.delete("tagGroup");
+    if (!newTagId) params.set("tagGroup", groupName);
+    params.delete("tab");
+    router.push(`/explore?${params.toString()}`);
+    setOpenGroup(null);
+  }
+
+  function clearGroupAll(groupName: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    const group = tagGroups.find((g) => g.group === groupName);
+    const groupTagIds = new Set(group?.tags.map((t) => t.id) ?? []);
+    const current = searchParams.getAll("tagId");
+    params.delete("tagId");
+    for (const id of current) {
+      if (!groupTagIds.has(id)) params.append("tagId", id);
+    }
+    params.delete("tagGroup");
     params.delete("tab");
     router.push(`/explore?${params.toString()}`);
     setOpenGroup(null);
@@ -57,6 +76,7 @@ export function TagFilterRow({ tagGroups }: { tagGroups: TagGroup[] }) {
   function clearAll() {
     const params = new URLSearchParams(searchParams.toString());
     params.delete("tagId");
+    params.delete("tagGroup");
     params.delete("tab");
     router.push(`/explore?${params.toString()}`);
   }
@@ -76,7 +96,7 @@ export function TagFilterRow({ tagGroups }: { tagGroups: TagGroup[] }) {
         <button
           onClick={clearAll}
           className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
-            tagIds.length === 0
+            tagIds.length === 0 && !activeTagGroup
               ? "bg-foreground text-background border-foreground"
               : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
           }`}
@@ -86,9 +106,10 @@ export function TagFilterRow({ tagGroups }: { tagGroups: TagGroup[] }) {
 
         {tagGroups.map((group) => {
           const selectedTagId = getGroupSelection(group.group);
-          const isActive = !!selectedTagId;
+          const isGroupAll = !selectedTagId && activeTagGroup === group.group;
+          const isActive = !!selectedTagId || isGroupAll;
           const activeTag = group.tags.find((t) => t.id === selectedTagId);
-          const label = isActive && activeTag ? `${group.nameEn} / ${activeTag.name}` : group.nameEn;
+          const label = activeTag ? `${group.nameEn} / ${activeTag.name}` : group.nameEn;
 
           return (
             <button
@@ -106,7 +127,7 @@ export function TagFilterRow({ tagGroups }: { tagGroups: TagGroup[] }) {
                   className="size-3 shrink-0"
                   onClick={(e) => {
                     e.stopPropagation();
-                    navigateGroup(group.group, null);
+                    clearGroupAll(group.group);
                   }}
                 />
               ) : (
@@ -138,7 +159,7 @@ export function TagFilterRow({ tagGroups }: { tagGroups: TagGroup[] }) {
               <button
                 onClick={() => openGroupData && navigateGroup(openGroupData.group, null)}
                 className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
-                  openGroupData && !getGroupSelection(openGroupData.group)
+                  openGroupData && (!getGroupSelection(openGroupData.group) && activeTagGroup === openGroupData.group)
                     ? "bg-foreground text-background border-foreground"
                     : "border-dashed border-border text-muted-foreground hover:border-foreground hover:text-foreground active:opacity-70"
                 }`}

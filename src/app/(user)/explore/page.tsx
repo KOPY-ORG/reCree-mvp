@@ -122,9 +122,10 @@ export default async function ExplorePage({
     q?: string;
     topicId?: string | string[];
     tagId?: string | string[];
+    tagGroup?: string;
   }>;
 }) {
-  const { tab = "posts", q, topicId, tagId } = await searchParams;
+  const { tab = "posts", q, topicId, tagId, tagGroup } = await searchParams;
   const topicIds = topicId ? (Array.isArray(topicId) ? topicId : [topicId]) : [];
   const tagIds = tagId ? (Array.isArray(tagId) ? tagId : [tagId]) : [];
   const currentUser = await getCurrentUser();
@@ -156,9 +157,9 @@ export default async function ExplorePage({
   );
 
   const posts =
-    tab === "posts" ? await getFilteredPosts({ q, topicIds, tagIds }) : [];
+    tab === "posts" ? await getFilteredPosts({ q, topicIds, tagIds, tagGroupName: tagGroup }) : [];
 
-  const hasFilter = !!(q || topicIds.length || tagIds.length);
+  const hasFilter = !!(q || topicIds.length || tagIds.length || tagGroup);
 
   return (
     <div className="max-w-2xl mx-auto">

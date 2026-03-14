@@ -7,6 +7,7 @@ export async function getFilteredPosts(params: {
   q?: string;
   topicIds?: string[];
   tagIds?: string[];
+  tagGroupName?: string;
 }) {
   const AND: object[] = [{ status: "PUBLISHED" }];
 
@@ -19,6 +20,15 @@ export async function getFilteredPosts(params: {
   if (params.tagIds?.length) {
     for (const tagId of params.tagIds) {
       AND.push({ postTags: { some: { tagId } } });
+    }
+  }
+  if (params.tagGroupName) {
+    const groupTags = await prisma.tag.findMany({
+      where: { group: params.tagGroupName, isActive: true },
+      select: { id: true },
+    });
+    if (groupTags.length > 0) {
+      AND.push({ postTags: { some: { tagId: { in: groupTags.map((t) => t.id) } } } });
     }
   }
   if (params.q) {
