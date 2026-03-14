@@ -7,7 +7,7 @@ const NAV_LINKS = [
   { label: "Home", href: "/" },
   { label: "Category", href: "/category" },
   { label: "Explore", href: "/explore" },
-  { label: "My Map", href: "/my-trip" },
+  { label: "My Map", href: "/my-map" },
   { label: "Saved", href: "/saved" },
 ];
 
