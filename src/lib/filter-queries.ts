@@ -18,53 +18,52 @@ export async function getFilteredPosts(params: {
     AND.push({ postTags: { some: { tagId: params.tagId } } });
   }
   if (params.q) {
-    AND.push({
-      OR: [
-        // 포스트 제목
-        { titleEn: { contains: params.q, mode: "insensitive" } },
-        { titleKo: { contains: params.q, mode: "insensitive" } },
-        // Story (본문)
-        { bodyEn: { contains: params.q, mode: "insensitive" } },
-        // 토픽/태그
-        {
-          postTopics: {
-            some: { topic: { nameEn: { contains: params.q, mode: "insensitive" } } },
+    const words = params.q.trim().split(/\s+/).filter(Boolean);
+    // 각 단어마다: 제목/본문/토픽/태그/장소 중 어딘가에 포함되어야 함 (AND across words)
+    for (const w of words) {
+      AND.push({
+        OR: [
+          { titleEn: { contains: w, mode: "insensitive" } },
+          { titleKo: { contains: w, mode: "insensitive" } },
+          { bodyEn: { contains: w, mode: "insensitive" } },
+          {
+            postTopics: {
+              some: { topic: { nameEn: { contains: w, mode: "insensitive" } } },
+            },
           },
-        },
-        {
-          postTags: {
-            some: { tag: { name: { contains: params.q, mode: "insensitive" } } },
+          {
+            postTags: {
+              some: { tag: { name: { contains: w, mode: "insensitive" } } },
+            },
           },
-        },
-        // 장소명 (영문/한글)
-        {
-          postPlaces: {
-            some: { place: { nameEn: { contains: params.q, mode: "insensitive" } } },
+          {
+            postPlaces: {
+              some: { place: { nameEn: { contains: w, mode: "insensitive" } } },
+            },
           },
-        },
-        {
-          postPlaces: {
-            some: { place: { nameKo: { contains: params.q, mode: "insensitive" } } },
+          {
+            postPlaces: {
+              some: { place: { nameKo: { contains: w, mode: "insensitive" } } },
+            },
           },
-        },
-        // Spot Insight
-        {
-          postPlaces: {
-            some: { context: { contains: params.q, mode: "insensitive" } },
+          {
+            postPlaces: {
+              some: { context: { contains: w, mode: "insensitive" } },
+            },
           },
-        },
-        {
-          postPlaces: {
-            some: { mustTry: { contains: params.q, mode: "insensitive" } },
+          {
+            postPlaces: {
+              some: { mustTry: { contains: w, mode: "insensitive" } },
+            },
           },
-        },
-        {
-          postPlaces: {
-            some: { tip: { contains: params.q, mode: "insensitive" } },
+          {
+            postPlaces: {
+              some: { tip: { contains: w, mode: "insensitive" } },
+            },
           },
-        },
-      ],
-    });
+        ],
+      });
+    }
   }
 
   return getPostsWithLabels({ AND }, { orderBy: { publishedAt: "desc" } });
