@@ -22,15 +22,8 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { createTag, updateTag, deleteTag, checkTagSlug, type TagSavedData } from "../actions";
 import type { TagItem } from "./SortableTagList";
-
-// ─── slug 자동 생성 ────────────────────────────────────────────────────────────
-
-function generateSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9-]/g, "");
-}
+import { TextColorPicker } from "./color-fields";
+import { generateSlug } from "../_utils";
 
 // ─── TagDialogProps ───────────────────────────────────────────────────────────
 
@@ -57,6 +50,7 @@ export function TagDialog({ open, tag, defaultGroup, groupOptions, onClose, onSa
   const [slugDuplicate, setSlugDuplicate] = useState(false);
   const [slugChecking, setSlugChecking] = useState(false);
   const [group, setGroup] = useState<string>("");
+  const [textColorHex, setTextColorHex] = useState<null | string>(null);
   const [isActive, setIsActive] = useState(true);
 
   // slug 실시간 중복 체크
@@ -81,6 +75,7 @@ export function TagDialog({ open, tag, defaultGroup, groupOptions, onClose, onSa
         setSlug(tag.slug);
         setSlugManual(false);
         setGroup(tag.group);
+        setTextColorHex(tag.textColorHex ?? null);
         setIsActive(tag.isActive);
       } else {
         setName("");
@@ -88,6 +83,7 @@ export function TagDialog({ open, tag, defaultGroup, groupOptions, onClose, onSa
         setSlug("");
         setSlugManual(false);
         setGroup(defaultGroup ?? groupOptions[0]?.value ?? "");
+        setTextColorHex(null);
         setIsActive(true);
       }
     }
@@ -120,7 +116,7 @@ export function TagDialog({ open, tag, defaultGroup, groupOptions, onClose, onSa
       group,
       colorHex: null as string | null,
       colorHex2: null as string | null,
-      textColorHex: null as string | null,
+      textColorHex,
       isActive,
     };
 
@@ -229,6 +225,9 @@ export function TagDialog({ open, tag, defaultGroup, groupOptions, onClose, onSa
               </SelectContent>
             </Select>
           </div>
+
+          {/* 글자색 */}
+          <TextColorPicker value={textColorHex} onChange={setTextColorHex} showInherit />
 
           {/* isActive */}
           <div className="flex items-center justify-between">
