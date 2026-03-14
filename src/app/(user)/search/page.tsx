@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
-import { Search, X, ChevronLeft, MapPin } from "lucide-react";
+import { Search, X, ChevronLeft, MapPin, ChevronRight } from "lucide-react";
 import { searchSuggestions, type Suggestion } from "./_actions/search-actions";
 
 const POPULAR_SEARCHES = [
@@ -180,18 +180,21 @@ export default function SearchPage() {
                   }
                   className="flex items-center gap-3 w-full px-4 py-3 text-sm hover:bg-muted/40 transition-colors text-left border-b border-border/40 last:border-0"
                 >
-                  {s.type === "post" ? (
-                    <MapPin className="size-4 text-muted-foreground shrink-0" />
-                  ) : (
+                  {s.type === "keyword" ? (
                     <Search className="size-4 text-muted-foreground shrink-0" />
+                  ) : (
+                    <MapPin className="size-4 text-muted-foreground shrink-0" />
                   )}
                   {s.type === "post" ? (
-                    <div className="flex flex-col min-w-0">
-                      <span className="truncate">{s.placeName ?? s.text}</span>
-                      {s.placeName && (
-                        <span className="text-xs text-muted-foreground truncate">{s.text}</span>
-                      )}
-                    </div>
+                    <>
+                      <div className="flex flex-col min-w-0 flex-1">
+                        <span className="truncate">{s.placeName ?? s.text}</span>
+                        {s.placeName && (
+                          <span className="text-xs text-muted-foreground truncate">{s.text}</span>
+                        )}
+                      </div>
+                      <ChevronRight className="size-4 text-muted-foreground shrink-0" />
+                    </>
                   ) : (
                     <span>{s.text}</span>
                   )}

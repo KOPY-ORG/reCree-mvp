@@ -66,7 +66,44 @@ export async function getFilteredPosts(params: {
     }
   }
 
-  return getPostsWithLabels({ AND }, { orderBy: { publishedAt: "desc" } });
+  const posts = await getPostsWithLabels({ AND }, { orderBy: { publishedAt: "desc" } });
+
+  if (!params.q) return posts;
+
+  // 검색어 단어 중 하나와 토픽명이 정확히 일치하는 포스트를 우선 정렬
+  const words = params.q.trim().split(/\s+/).filter(Boolean).map((w) => w.toLowerCase());
+  const priorityIds = await prisma.post.findMany({
+    where: {
+      id: { in: posts.map((p) => p.id) },
+      OR: [
+        // 카드에 보이는 토픽 중 검색어 단어와 정확히 일치하는 것
+        {
+          postTopics: {
+            some: {
+              isVisible: true,
+              topic: { nameEn: { in: words, mode: "insensitive" } },
+            },
+          },
+        },
+        // 카드에 보이는 태그 중 검색어 단어와 정확히 일치하는 것
+        {
+          postTags: {
+            some: {
+              isVisible: true,
+              tag: { name: { in: words, mode: "insensitive" } },
+            },
+          },
+        },
+      ],
+    },
+    select: { id: true },
+  });
+  const prioritySet = new Set(priorityIds.map((p) => p.id));
+
+  return [
+    ...posts.filter((p) => prioritySet.has(p.id)),
+    ...posts.filter((p) => !prioritySet.has(p.id)),
+  ];
 }
 
 /** TagGroup + 소속 Tag 목록 (Explore 필터 Row 2용) */
