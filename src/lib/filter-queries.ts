@@ -2,6 +2,7 @@
 import { prisma } from "@/lib/prisma";
 import { getPostsWithLabels } from "@/lib/post-queries";
 import { getDescendantTopicIds } from "@/lib/topic-queries";
+import { parseSearchWords } from "@/lib/search-utils";
 
 export async function getFilteredPosts(params: {
   q?: string;
@@ -31,61 +32,96 @@ export async function getFilteredPosts(params: {
       AND.push({ postTags: { some: { tagId: { in: groupTags.map((t) => t.id) } } } });
     }
   }
-  if (params.q) {
-    const words = params.q.trim().split(/\s+/).filter(Boolean);
-    for (const w of words) {
-      AND.push({
-        OR: [
-          { titleEn: { contains: w, mode: "insensitive" } },
-          { titleKo: { contains: w, mode: "insensitive" } },
-          { bodyEn: { contains: w, mode: "insensitive" } },
-          { postTopics: { some: { topic: { nameEn: { contains: w, mode: "insensitive" } } } } },
-          { postTags: { some: { tag: { name: { contains: w, mode: "insensitive" } } } } },
-          { postPlaces: { some: { place: { nameEn: { contains: w, mode: "insensitive" } } } } },
-          { postPlaces: { some: { place: { nameKo: { contains: w, mode: "insensitive" } } } } },
-          { postPlaces: { some: { context: { contains: w, mode: "insensitive" } } } },
-          { postPlaces: { some: { mustTry: { contains: w, mode: "insensitive" } } } },
-          { postPlaces: { some: { tip: { contains: w, mode: "insensitive" } } } },
-        ],
-      });
-    }
+  const searchWords = params.q ? parseSearchWords(params.q) : [];
+
+  if (searchWords.length === 0) {
+    return getPostsWithLabels({ AND }, { orderBy: { publishedAt: "desc" } });
   }
 
+  // 각 단어에 대해 매칭 토픽 ID(하위 토픽 포함) 사전 계산
+  const wordTopicIds = await Promise.all(
+    searchWords.map(async (w) => {
+      const matchingTopics = await prisma.topic.findMany({
+        where: { nameEn: { contains: w, mode: "insensitive" }, isActive: true },
+        select: { id: true },
+      });
+      if (matchingTopics.length === 0) return [];
+      const allIds = await Promise.all(matchingTopics.map((t) => getDescendantTopicIds(t.id)));
+      return [...new Set(allIds.flat())];
+    })
+  );
+
+  // 토픽 계층 포함 단어 조건
+  const wordConditionWithTopics = (w: string, topicIds: string[]) => ({
+    OR: [
+      { titleEn: { contains: w, mode: "insensitive" as const } },
+      { titleKo: { contains: w, mode: "insensitive" as const } },
+      { bodyEn: { contains: w, mode: "insensitive" as const } },
+      ...(topicIds.length > 0
+        ? [{ postTopics: { some: { topicId: { in: topicIds } } } }]
+        : [{ postTopics: { some: { topic: { nameEn: { contains: w, mode: "insensitive" as const } } } } }]
+      ),
+      { postTags: { some: { tag: { name: { contains: w, mode: "insensitive" as const } } } } },
+      { postPlaces: { some: { place: { nameEn: { contains: w, mode: "insensitive" as const } } } } },
+      { postPlaces: { some: { place: { nameKo: { contains: w, mode: "insensitive" as const } } } } },
+      { postPlaces: { some: { context: { contains: w, mode: "insensitive" as const } } } },
+      { postPlaces: { some: { mustTry: { contains: w, mode: "insensitive" as const } } } },
+      { postPlaces: { some: { tip: { contains: w, mode: "insensitive" as const } } } },
+    ],
+  });
+
+  const enrichedConditions = searchWords.map((w, i) => wordConditionWithTopics(w, wordTopicIds[i]));
+
+  // 토픽·태그 전용 조건 (1차 점수용 — 구조적 매칭)
+  const structuredCondition = (w: string, topicIds: string[]) => ({
+    OR: [
+      ...(topicIds.length > 0
+        ? [{ postTopics: { some: { topicId: { in: topicIds } } } }]
+        : [{ postTopics: { some: { topic: { nameEn: { contains: w, mode: "insensitive" as const } } } } }]
+      ),
+      { postTags: { some: { tag: { name: { contains: w, mode: "insensitive" as const } } } } },
+    ],
+  });
+
+  // 1차(구조적) / 2차(전체) 점수 병렬 집계
+  const structuredScores = new Map<string, number>();
+  const totalScores = new Map<string, number>();
+
+  await Promise.all(
+    searchWords.map(async (w, i) => {
+      const topicIds = wordTopicIds[i];
+      const [structuredHits, fullHits] = await Promise.all([
+        prisma.post.findMany({
+          where: { AND: [...AND, structuredCondition(w, topicIds)] },
+          select: { slug: true },
+        }),
+        prisma.post.findMany({
+          where: { AND: [...AND, enrichedConditions[i]] },
+          select: { slug: true },
+        }),
+      ]);
+      for (const { slug } of structuredHits) {
+        structuredScores.set(slug, (structuredScores.get(slug) ?? 0) + 1);
+      }
+      for (const { slug } of fullHits) {
+        totalScores.set(slug, (totalScores.get(slug) ?? 0) + 1);
+      }
+    })
+  );
+
+  if (totalScores.size === 0) return [];
+
+  // 매칭 포스트 전체 조회
+  AND.push({ OR: enrichedConditions });
   const posts = await getPostsWithLabels({ AND }, { orderBy: { publishedAt: "desc" } });
 
-  if (!params.q) return posts;
-
-  const words = params.q.trim().split(/\s+/).filter(Boolean).map((w) => w.toLowerCase());
-  const priorityIds = await prisma.post.findMany({
-    where: {
-      id: { in: posts.map((p) => p.id) },
-      OR: [
-        {
-          postTopics: {
-            some: {
-              isVisible: true,
-              topic: { nameEn: { in: words, mode: "insensitive" } },
-            },
-          },
-        },
-        {
-          postTags: {
-            some: {
-              isVisible: true,
-              tag: { name: { in: words, mode: "insensitive" } },
-            },
-          },
-        },
-      ],
-    },
-    select: { id: true },
+  // 1차: 구조적 점수(토픽·태그) 내림차순, 동점이면 전체 점수 내림차순
+  return posts.sort((a, b) => {
+    const sa1 = structuredScores.get(a.slug) ?? 0;
+    const sb1 = structuredScores.get(b.slug) ?? 0;
+    if (sb1 !== sa1) return sb1 - sa1;
+    return (totalScores.get(b.slug) ?? 0) - (totalScores.get(a.slug) ?? 0);
   });
-  const prioritySet = new Set(priorityIds.map((p) => p.id));
-
-  return [
-    ...posts.filter((p) => prioritySet.has(p.id)),
-    ...posts.filter((p) => !prioritySet.has(p.id)),
-  ];
 }
 
 /** TagGroup + 소속 Tag 목록 (Explore 필터 Row 2용) */
