@@ -575,7 +575,7 @@ export function TopicDialog({ open, topic, defaultParentId, allTopics, parentEff
                   gradientStop={gradientStop}
                   onGradientStop={setGradientStop}
                 />
-                <TextColorPicker value={textColorHex} onChange={setTextColorHex} />
+                <TextColorPicker value={textColorHex} onChange={(v) => setTextColorHex(v ?? "#000000")} />
 
                 {/* 미리보기 */}
                 <div className="flex items-center gap-2 pt-0.5">
