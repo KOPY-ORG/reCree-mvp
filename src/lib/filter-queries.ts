@@ -12,9 +12,12 @@ export async function getFilteredPosts(params: {
 }) {
   const AND: object[] = [{ status: "PUBLISHED" }];
 
+  // 하위 토픽 ID 미리 계산 (이후 정렬에서도 재사용)
+  const expandedTopicIdSets: string[][] = [];
   if (params.topicIds?.length) {
     for (const topicId of params.topicIds) {
       const ids = await getDescendantTopicIds(topicId);
+      expandedTopicIdSets.push(ids);
       AND.push({ postTopics: { some: { topicId: { in: ids } } } });
     }
   }
@@ -35,7 +38,24 @@ export async function getFilteredPosts(params: {
   const searchWords = params.q ? parseSearchWords(params.q) : [];
 
   if (searchWords.length === 0) {
-    return getPostsWithLabels({ AND }, { orderBy: { publishedAt: "desc" } });
+    const posts = await getPostsWithLabels({ AND }, { orderBy: { publishedAt: "desc" } });
+
+    // 토픽 필터가 있을 때 대표 토픽(displayOrder 0) 매칭 포스트를 상위로
+    if (expandedTopicIdSets.length > 0) {
+      const allFilteredTopicIds = [...new Set(expandedTopicIdSets.flat())];
+      const representativeHits = await prisma.postTopic.findMany({
+        where: { topicId: { in: allFilteredTopicIds }, displayOrder: 0 },
+        select: { postId: true },
+      });
+      const representativePostIds = new Set(representativeHits.map((h) => h.postId));
+      return posts.sort((a, b) => {
+        const aRep = representativePostIds.has(a.id) ? 1 : 0;
+        const bRep = representativePostIds.has(b.id) ? 1 : 0;
+        return bRep - aRep; // 동점이면 publishedAt 순서(기존) 유지
+      });
+    }
+
+    return posts;
   }
 
   // 각 단어에 대해 매칭 토픽 ID(하위 토픽 포함) 사전 계산
@@ -83,18 +103,26 @@ export async function getFilteredPosts(params: {
     ],
   });
 
-  // 1차(구조적) / 2차(전체) 점수 병렬 집계
+  // 1차(구조적) / 2차(대표 토픽) / 3차(전체) 점수 병렬 집계
   const structuredScores = new Map<string, number>();
+  const representativeScores = new Map<string, number>();
   const totalScores = new Map<string, number>();
 
   await Promise.all(
     searchWords.map(async (w, i) => {
       const topicIds = wordTopicIds[i];
-      const [structuredHits, fullHits] = await Promise.all([
+      const [structuredHits, repHits, fullHits] = await Promise.all([
         prisma.post.findMany({
           where: { AND: [...AND, structuredCondition(w, topicIds)] },
           select: { slug: true },
         }),
+        // 검색어가 대표 토픽(displayOrder 0)으로 매칭되는 포스트
+        topicIds.length > 0
+          ? prisma.post.findMany({
+              where: { AND: [...AND, { postTopics: { some: { topicId: { in: topicIds }, displayOrder: 0 } } }] },
+              select: { slug: true },
+            })
+          : Promise.resolve([]),
         prisma.post.findMany({
           where: { AND: [...AND, enrichedConditions[i]] },
           select: { slug: true },
@@ -102,6 +130,9 @@ export async function getFilteredPosts(params: {
       ]);
       for (const { slug } of structuredHits) {
         structuredScores.set(slug, (structuredScores.get(slug) ?? 0) + 1);
+      }
+      for (const { slug } of repHits) {
+        representativeScores.set(slug, (representativeScores.get(slug) ?? 0) + 1);
       }
       for (const { slug } of fullHits) {
         totalScores.set(slug, (totalScores.get(slug) ?? 0) + 1);
@@ -115,11 +146,14 @@ export async function getFilteredPosts(params: {
   AND.push({ OR: enrichedConditions });
   const posts = await getPostsWithLabels({ AND }, { orderBy: { publishedAt: "desc" } });
 
-  // 1차: 구조적 점수(토픽·태그) 내림차순, 동점이면 전체 점수 내림차순
+  // 1차: 구조적 점수(토픽·태그), 2차: 대표 토픽 매칭, 3차: 전체 점수
   return posts.sort((a, b) => {
     const sa1 = structuredScores.get(a.slug) ?? 0;
     const sb1 = structuredScores.get(b.slug) ?? 0;
     if (sb1 !== sa1) return sb1 - sa1;
+    const ra = representativeScores.get(a.slug) ?? 0;
+    const rb = representativeScores.get(b.slug) ?? 0;
+    if (rb !== ra) return rb - ra;
     return (totalScores.get(b.slug) ?? 0) - (totalScores.get(a.slug) ?? 0);
   });
 }
