@@ -2,6 +2,15 @@
 
 import { prisma } from "@/lib/prisma";
 
+export async function getPopularSearches(): Promise<string[]> {
+  const items = await prisma.popularSearch.findMany({
+    where: { isActive: true },
+    orderBy: { order: "asc" },
+    select: { keyword: true },
+  });
+  return items.map((i) => i.keyword);
+}
+
 export type Suggestion =
   | { type: "keyword"; text: string }
   | { type: "post"; text: string; slug: string; placeName?: string };

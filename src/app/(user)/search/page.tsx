@@ -3,20 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { Search, X, ChevronLeft, MapPin, ChevronRight } from "lucide-react";
-import { searchSuggestions, type Suggestion } from "./_actions/search-actions";
-
-const POPULAR_SEARCHES = [
-  "BTS Pop-Up Store",
-  "BLACKPINK Cafe",
-  "Itaewon",
-  "Insadong",
-  "Namsan Tower",
-  "Myeongdong",
-  "Han River Park",
-  "Hongdae",
-  "Gyeongbokgung",
-  "Bukchon Hanok",
-];
+import { searchSuggestions, getPopularSearches, type Suggestion } from "./_actions/search-actions";
 
 const RECENT_KEY = "recree_recent_searches";
 const MAX_RECENT = 10;
@@ -67,13 +54,35 @@ function removeRecentPost(slug: string) {
   );
 }
 
+function SearchSkeleton() {
+  const widths = ["w-28", "w-36", "w-24", "w-32", "w-20", "w-28"];
+  return (
+    <>
+      {widths.map((w, i) => (
+        <div
+          key={i}
+          className="flex items-center gap-3 px-4 py-3 border-b border-border/40 last:border-0"
+        >
+          <div className="size-4 rounded-full bg-muted shrink-0" />
+          <div className={`h-3.5 rounded-full bg-muted ${w}`} />
+        </div>
+      ))}
+    </>
+  );
+}
+
 export default function SearchPage() {
   const router = useRouter();
   const [value, setValue] = useState("");
   const [recent, setRecent] = useState<string[]>(() => getRecent());
   const [recentPosts, setRecentPosts] = useState<RecentPost[]>(() => getRecentPosts());
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [popular, setPopular] = useState<string[]>([]);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    getPopularSearches().then(setPopular);
+  }, []);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -123,14 +132,13 @@ export default function SearchPage() {
   }
 
   const isTyping = value.trim().length > 0;
-  const left = POPULAR_SEARCHES.slice(0, 5);
-  const right = POPULAR_SEARCHES.slice(5);
+  const hasRecent = recent.length > 0 || recentPosts.length > 0;
 
   return (
     <div className="min-h-dvh bg-background flex flex-col">
-      {/* 상단 검색바 */}
-      <div className="sticky top-0 z-40 bg-background border-b">
-        <form onSubmit={handleSubmit} className="h-11 flex items-center gap-2 px-3">
+      {/* 헤더 */}
+      <header className="app-header">
+        <form onSubmit={handleSubmit} className="h-12 flex items-center gap-2 px-3">
           <button
             type="button"
             onClick={() => router.back()}
@@ -145,7 +153,7 @@ export default function SearchPage() {
               autoFocus
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              placeholder="검색어를 입력하세요"
+              placeholder="Search K-artists, dramas, foods"
               className="w-full h-8 pl-3 pr-14 rounded-full border border-border bg-muted/30 text-sm focus:outline-none focus:border-brand transition-colors"
             />
             <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
@@ -164,7 +172,7 @@ export default function SearchPage() {
             </div>
           </div>
         </form>
-      </div>
+      </header>
 
       {/* 콘텐츠 */}
       <div className="flex-1 overflow-y-auto">
@@ -203,22 +211,21 @@ export default function SearchPage() {
             ))}
             {suggestions.length === 0 && (
               <li className="px-4 py-10 text-center text-sm text-muted-foreground">
-                검색 결과가 없습니다
+                No results found.
               </li>
             )}
           </ul>
         ) : (
           <div className="px-4 py-5 space-y-7">
-            {/* 최근 검색어 + 최근 포스트 */}
-            {(recent.length > 0 || recentPosts.length > 0) && (
+            {hasRecent && (
               <section>
                 <div className="flex items-center justify-between mb-3">
-                  <h2 className="font-semibold text-sm">최근 검색어</h2>
+                  <h2 className="font-semibold text-sm">Recent</h2>
                   <button
                     onClick={handleClearAll}
                     className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    모두삭제
+                    Clear all
                   </button>
                 </div>
                 {recent.length > 0 && (
@@ -265,41 +272,43 @@ export default function SearchPage() {
                 )}
               </section>
             )}
-
-            {/* 인기 검색어 */}
-            <section>
-              <h2 className="font-semibold text-sm mb-3">인기 검색어</h2>
-              <div className="grid grid-cols-2 gap-y-3">
-                <div className="space-y-3">
-                  {left.map((q, i) => (
-                    <button
-                      key={q}
-                      onClick={() => navigateKeyword(q)}
-                      className="flex items-center gap-3 w-full text-left"
-                    >
-                      <span className={`w-5 text-sm font-semibold shrink-0 ${i < 3 ? "text-brand" : "text-muted-foreground"}`}>
-                        {i + 1}
-                      </span>
-                      <span className="text-sm truncate">{q}</span>
-                    </button>
-                  ))}
+            {popular.length > 0 ? (
+              <section>
+                <h2 className="font-semibold text-sm mb-3">Popular</h2>
+                <div className="grid grid-cols-2 gap-y-3">
+                  <div className="space-y-3">
+                    {popular.slice(0, Math.ceil(popular.length / 2)).map((q, i) => (
+                      <button
+                        key={q}
+                        onClick={() => navigateKeyword(q)}
+                        className="flex items-center gap-3 w-full text-left"
+                      >
+                        <span className={`w-5 text-sm font-semibold shrink-0 ${i < 3 ? "text-brand" : "text-muted-foreground"}`}>
+                          {i + 1}
+                        </span>
+                        <span className="text-sm truncate">{q}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="space-y-3">
+                    {popular.slice(Math.ceil(popular.length / 2)).map((q, i) => (
+                      <button
+                        key={q}
+                        onClick={() => navigateKeyword(q)}
+                        className="flex items-center gap-3 w-full text-left"
+                      >
+                        <span className="w-5 text-sm font-semibold shrink-0 text-muted-foreground">
+                          {Math.ceil(popular.length / 2) + i + 1}
+                        </span>
+                        <span className="text-sm truncate">{q}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="space-y-3">
-                  {right.map((q, i) => (
-                    <button
-                      key={q}
-                      onClick={() => navigateKeyword(q)}
-                      className="flex items-center gap-3 w-full text-left"
-                    >
-                      <span className="w-5 text-sm font-semibold shrink-0 text-muted-foreground">
-                        {i + 6}
-                      </span>
-                      <span className="text-sm truncate">{q}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </section>
+              </section>
+            ) : (
+              <SearchSkeleton />
+            )}
           </div>
         )}
       </div>
