@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { ChevronDown, X } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { labelBackground, badgeRingStyle, resolveTagColors, DEFAULT_TEXT } from "@/lib/post-labels";
+import { labelBackground, badgeRingStyle, resolveTagColors } from "@/lib/post-labels";
 import { LabelBadge } from "@/components/LabelBadge";
 
 type Tag = {
@@ -40,35 +40,29 @@ export function TagFilterRow({ tagGroups }: { tagGroups: TagGroup[] }) {
     return tagIds.find((id) => group?.tags.some((t) => t.id === id)) ?? null;
   }
 
-  function navigateGroup(groupName: string, newTagId: string | null) {
+  function buildGroupParams(groupName: string, newTagId: string | null) {
     const params = new URLSearchParams(searchParams.toString());
     const group = tagGroups.find((g) => g.group === groupName);
     const groupTagIds = new Set(group?.tags.map((t) => t.id) ?? []);
-    const current = searchParams.getAll("tagId");
     params.delete("tagId");
-    for (const id of current) {
+    for (const id of searchParams.getAll("tagId")) {
       if (!groupTagIds.has(id)) params.append("tagId", id);
     }
     if (newTagId) params.append("tagId", newTagId);
-    // tagGroup 파라미터 교체
     params.delete("tagGroup");
     if (!newTagId) params.set("tagGroup", groupName);
     params.delete("tab");
-    router.push(`/explore?${params.toString()}`);
+    return params;
+  }
+
+  function navigateGroup(groupName: string, newTagId: string | null) {
+    router.push(`/explore?${buildGroupParams(groupName, newTagId).toString()}`);
     setOpenGroup(null);
   }
 
   function clearGroupAll(groupName: string) {
-    const params = new URLSearchParams(searchParams.toString());
-    const group = tagGroups.find((g) => g.group === groupName);
-    const groupTagIds = new Set(group?.tags.map((t) => t.id) ?? []);
-    const current = searchParams.getAll("tagId");
-    params.delete("tagId");
-    for (const id of current) {
-      if (!groupTagIds.has(id)) params.append("tagId", id);
-    }
+    const params = buildGroupParams(groupName, null);
     params.delete("tagGroup");
-    params.delete("tab");
     router.push(`/explore?${params.toString()}`);
     setOpenGroup(null);
   }
@@ -81,21 +75,12 @@ export function TagFilterRow({ tagGroups }: { tagGroups: TagGroup[] }) {
     router.push(`/explore?${params.toString()}`);
   }
 
-  function tagBg(tag: Tag, group: TagGroup): string {
-    const resolved = resolveTagColors(tag, group);
-    return labelBackground({ text: "", ...resolved });
-  }
-
-  function tagFg(tag: Tag, group: TagGroup): string {
-    return tag.textColorHex ?? group.textColorHex ?? DEFAULT_TEXT;
-  }
-
   return (
     <>
       <div className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pt-2 pb-2">
         <button
           onClick={clearAll}
-          className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+          className={`pill-badge shrink-0 border transition-colors ${
             tagIds.length === 0 && !activeTagGroup
               ? "bg-foreground text-background border-foreground"
               : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
@@ -115,7 +100,7 @@ export function TagFilterRow({ tagGroups }: { tagGroups: TagGroup[] }) {
             <button
               key={group.group}
               onClick={() => setOpenGroup(group.group)}
-              className={`shrink-0 flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+              className={`pill-badge shrink-0 border transition-colors ${
                 isActive
                   ? "bg-foreground text-background border-foreground"
                   : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
@@ -158,7 +143,7 @@ export function TagFilterRow({ tagGroups }: { tagGroups: TagGroup[] }) {
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => openGroupData && navigateGroup(openGroupData.group, null)}
-                className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                className={`pill-badge shrink-0 border transition-colors ${
                   openGroupData && (!getGroupSelection(openGroupData.group) && activeTagGroup === openGroupData.group)
                     ? "bg-foreground text-background border-foreground"
                     : "border-dashed border-border text-muted-foreground hover:border-foreground hover:text-foreground active:opacity-70"
@@ -174,9 +159,9 @@ export function TagFilterRow({ tagGroups }: { tagGroups: TagGroup[] }) {
                     key={tag.id}
                     as="button"
                     text={tag.name}
-                    background={tagBg(tag, openGroupData)}
-                    color={tagFg(tag, openGroupData)}
-                    className="shrink-0 px-3 py-1 transition-all active:opacity-70"
+                    background={labelBackground({ text: "", ...resolveTagColors(tag, openGroupData) })}
+                    color={resolveTagColors(tag, openGroupData).textColorHex}
+                    className="shrink-0 transition-all active:opacity-70"
                     style={badgeRingStyle(tag.colorHex ?? openGroupData.colorHex, isActive)}
                     onClick={() => navigateGroup(openGroupData.group, tag.id)}
                   />

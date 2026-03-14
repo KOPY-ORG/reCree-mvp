@@ -28,7 +28,7 @@ export function ExploreSearchActiveBar({ q }: { q: string }) {
           className="size-4 shrink-0 rounded-full bg-muted-foreground/25 flex items-center justify-center"
           aria-label="검색 초기화"
         >
-          <X className="size-2.5 text-foreground" />
+          <X className="size-2.5 text-foreground" strokeWidth={2.5} />
         </button>
       </div>
     </div>

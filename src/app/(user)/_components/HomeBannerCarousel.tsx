@@ -77,7 +77,7 @@ export function HomeBannerCarousel({ banners }: { banners: BannerItem[] }) {
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
         <div className="absolute bottom-10 left-4 right-4">
           {banner.labels.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mb-1">
+            <div className="flex flex-wrap gap-1.5 mb-1 [--pill-fs:var(--text-xs)]">
               {banner.labels.map((label, i) => (
                 <LabelBadge
                   key={i}

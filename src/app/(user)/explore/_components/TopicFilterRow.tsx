@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { ChevronDown, ChevronUp, X } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { labelBackground, badgeRingStyle, DEFAULT_COLOR, DEFAULT_TEXT } from "@/lib/post-labels";
+import { labelBackground, badgeRingStyle, resolveTopicColors } from "@/lib/post-labels";
 import { LabelBadge } from "@/components/LabelBadge";
 
 type TopicBase = {
@@ -120,28 +120,12 @@ export function TopicFilterRow({ topics }: { topics: Level0Topic[] }) {
     router.push(`/explore?${params.toString()}`);
   }
 
-  function topicFg(t: TopicBase, ...ancestors: (TopicBase | null | undefined)[]): string {
-    const chain = [t, ...ancestors].filter(Boolean) as TopicBase[];
-    return chain.find((a) => a.textColorHex)?.textColorHex ?? DEFAULT_TEXT;
-  }
-
-  function topicBg(t: TopicBase, ...ancestors: (TopicBase | null | undefined)[]): string {
-    const chain = [t, ...ancestors].filter(Boolean) as TopicBase[];
-    const source = chain.find((a) => a.colorHex) ?? null;
-    const colorHex = source?.colorHex ?? DEFAULT_COLOR;
-    const colorHex2 = source?.colorHex2 ?? null;
-    const gradientDir = source?.gradientDir ?? "to bottom";
-    const gradientStop = source?.gradientStop ?? 150;
-    const textColorHex = t.textColorHex ?? source?.textColorHex ?? DEFAULT_TEXT;
-    return labelBackground({ text: "", colorHex, colorHex2, gradientDir, gradientStop, textColorHex });
-  }
-
   return (
     <>
       <div className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pt-2">
         <button
           onClick={clearAll}
-          className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+          className={`pill-badge shrink-0 border transition-colors ${
             topicIds.length === 0
               ? "bg-foreground text-background border-foreground"
               : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
@@ -163,7 +147,7 @@ export function TopicFilterRow({ topics }: { topics: Level0Topic[] }) {
                   navigateGroup(topic.id, topic.id);
                 }
               }}
-              className={`shrink-0 flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+              className={`pill-badge shrink-0 border transition-colors ${
                 isActive
                   ? "bg-foreground text-background border-foreground"
                   : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
@@ -228,7 +212,7 @@ export function TopicFilterRow({ topics }: { topics: Level0Topic[] }) {
                 <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => navigateGroup(openTopic!.id, activeL1.id)}
-                    className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                    className={`pill-badge shrink-0 border transition-colors ${
                       getGroupSelection(openTopic!.id) === activeL1.id
                         ? "bg-foreground text-background border-foreground"
                         : "border-dashed border-border text-muted-foreground hover:border-foreground hover:text-foreground active:opacity-70"
@@ -241,7 +225,7 @@ export function TopicFilterRow({ topics }: { topics: Level0Topic[] }) {
                     const isSelected = activeL2Id === l2.id;
                     const isNavigated = getGroupSelection(openTopic!.id) === l2.id;
                     const highlight = isSelected || isNavigated;
-                    const fg = topicFg(l2, activeL1, openTopic);
+                    const l2Colors = resolveTopicColors({ ...l2, parent: { ...activeL1, parent: openTopic! } });
                     const hasChildren = l2.children.length > 0;
 
                     return (
@@ -249,9 +233,9 @@ export function TopicFilterRow({ topics }: { topics: Level0Topic[] }) {
                         key={l2.id}
                         as="button"
                         text={l2.nameEn}
-                        background={topicBg(l2, activeL1, openTopic)}
-                        color={fg}
-                        className="shrink-0 px-3 py-1 transition-all active:opacity-70"
+                        background={labelBackground({ text: "", ...l2Colors })}
+                        color={l2Colors.textColorHex}
+                        className="shrink-0 transition-all active:opacity-70"
                         style={{ ...badgeRingStyle(l2.colorHex ?? activeL1?.colorHex ?? openTopic?.colorHex ?? null, highlight) }}
                         onClick={() => {
                           if (hasChildren) {
@@ -277,7 +261,7 @@ export function TopicFilterRow({ topics }: { topics: Level0Topic[] }) {
                     <div className="flex items-center gap-2">
                       <span
                         className="w-2 h-2 rounded-full shrink-0"
-                        style={{ background: topicBg(activeL2, activeL1, openTopic) }}
+                        style={{ background: labelBackground({ text: "", ...resolveTopicColors({ ...activeL2, parent: { ...activeL1!, parent: openTopic! } }) }) }}
                       />
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                         {activeL2.nameEn}
@@ -286,7 +270,7 @@ export function TopicFilterRow({ topics }: { topics: Level0Topic[] }) {
                     <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => navigateGroup(openTopic!.id, activeL2.id)}
-                        className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                        className={`pill-badge shrink-0 border transition-colors ${
                           getGroupSelection(openTopic!.id) === activeL2.id
                             ? "bg-foreground text-background border-foreground"
                             : "border-dashed border-border text-muted-foreground hover:border-foreground hover:text-foreground active:opacity-70"
@@ -295,16 +279,16 @@ export function TopicFilterRow({ topics }: { topics: Level0Topic[] }) {
                         All
                       </button>
                       {activeL2.children.map((l3) => {
-                        const fg = topicFg(l3, activeL2, activeL1, openTopic);
+                        const l3Colors = resolveTopicColors({ ...l3, parent: { ...activeL2, parent: { ...activeL1!, parent: openTopic! } } });
                         const isActive = getGroupSelection(openTopic!.id) === l3.id;
                         return (
                           <LabelBadge
                             key={l3.id}
                             as="button"
                             text={l3.nameEn}
-                            background={topicBg(l3, activeL2, activeL1, openTopic)}
-                            color={fg}
-                            className="shrink-0 px-3 py-1 transition-all active:opacity-70"
+                            background={labelBackground({ text: "", ...l3Colors })}
+                            color={l3Colors.textColorHex}
+                            className="shrink-0 transition-all active:opacity-70"
                             style={badgeRingStyle(l3.colorHex ?? activeL2.colorHex ?? activeL1?.colorHex ?? openTopic?.colorHex ?? null, isActive)}
                             onClick={() => navigateGroup(openTopic!.id, l3.id)}
                           />

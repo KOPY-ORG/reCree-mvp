@@ -275,36 +275,41 @@ export default function SearchPage() {
             {popular.length > 0 ? (
               <section>
                 <h2 className="font-semibold text-sm mb-3">Popular</h2>
-                <div className="grid grid-cols-2 gap-y-3">
-                  <div className="space-y-3">
-                    {popular.slice(0, Math.ceil(popular.length / 2)).map((q, i) => (
-                      <button
-                        key={q}
-                        onClick={() => navigateKeyword(q)}
-                        className="flex items-center gap-3 w-full text-left"
-                      >
-                        <span className={`w-5 text-sm font-semibold shrink-0 ${i < 3 ? "text-brand" : "text-muted-foreground"}`}>
-                          {i + 1}
-                        </span>
-                        <span className="text-sm truncate">{q}</span>
-                      </button>
-                    ))}
-                  </div>
-                  <div className="space-y-3">
-                    {popular.slice(Math.ceil(popular.length / 2)).map((q, i) => (
-                      <button
-                        key={q}
-                        onClick={() => navigateKeyword(q)}
-                        className="flex items-center gap-3 w-full text-left"
-                      >
-                        <span className="w-5 text-sm font-semibold shrink-0 text-muted-foreground">
-                          {Math.ceil(popular.length / 2) + i + 1}
-                        </span>
-                        <span className="text-sm truncate">{q}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                {(() => {
+                  const mid = Math.ceil(popular.length / 2);
+                  return (
+                    <div className="grid grid-cols-2 gap-y-3">
+                      <div className="space-y-3">
+                        {popular.slice(0, mid).map((q, i) => (
+                          <button
+                            key={q}
+                            onClick={() => navigateKeyword(q)}
+                            className="flex items-center gap-3 w-full text-left"
+                          >
+                            <span className={`w-5 text-sm font-semibold shrink-0 ${i < 3 ? "text-brand" : "text-muted-foreground"}`}>
+                              {i + 1}
+                            </span>
+                            <span className="text-sm truncate">{q}</span>
+                          </button>
+                        ))}
+                      </div>
+                      <div className="space-y-3">
+                        {popular.slice(mid).map((q, i) => (
+                          <button
+                            key={q}
+                            onClick={() => navigateKeyword(q)}
+                            className="flex items-center gap-3 w-full text-left"
+                          >
+                            <span className="w-5 text-sm font-semibold shrink-0 text-muted-foreground">
+                              {mid + i + 1}
+                            </span>
+                            <span className="text-sm truncate">{q}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </section>
             ) : (
               <SearchSkeleton />

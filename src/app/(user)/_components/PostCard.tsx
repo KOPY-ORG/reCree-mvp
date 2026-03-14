@@ -38,14 +38,13 @@ export function PostBadges({
   if (labels.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap gap-1">
+    <div className="flex flex-wrap gap-1 [--pill-fs:0.625rem]">
       {labels.map((label, i) => (
         <LabelBadge
           key={i}
           text={label.text}
           background={labelBackground(label)}
           color={label.textColorHex}
-          className={variant === "list" ? "text-[10px]" : "text-[9px]"}
         />
       ))}
     </div>

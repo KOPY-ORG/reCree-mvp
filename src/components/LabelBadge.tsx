@@ -1,7 +1,6 @@
 import { cn } from "@/lib/utils";
 
-const BASE =
-  "inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold leading-none text-xs";
+const BASE = "pill-badge";
 
 type BaseProps = {
   text: string;

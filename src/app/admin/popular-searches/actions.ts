@@ -6,12 +6,15 @@ import { revalidatePath } from "next/cache";
 export async function addPopularSearch(keyword: string) {
   const trimmed = keyword.trim();
   if (!trimmed) return { error: "키워드를 입력하세요." };
-
-  const maxOrder = await prisma.popularSearch.aggregate({ _max: { order: true } });
-  await prisma.popularSearch.create({
-    data: { keyword: trimmed, order: (maxOrder._max.order ?? 0) + 1 },
-  });
-  revalidatePath("/admin/popular-searches");
+  try {
+    const maxOrder = await prisma.popularSearch.aggregate({ _max: { order: true } });
+    await prisma.popularSearch.create({
+      data: { keyword: trimmed, order: (maxOrder._max.order ?? 0) + 1 },
+    });
+    revalidatePath("/admin/popular-searches");
+  } catch {
+    return { error: "이미 존재하는 키워드입니다." };
+  }
 }
 
 export async function deletePopularSearch(id: string) {
