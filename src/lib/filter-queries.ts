@@ -5,62 +5,37 @@ import { getDescendantTopicIds } from "@/lib/topic-queries";
 
 export async function getFilteredPosts(params: {
   q?: string;
-  topicId?: string;
-  tagId?: string;
+  topicIds?: string[];
+  tagIds?: string[];
 }) {
   const AND: object[] = [{ status: "PUBLISHED" }];
 
-  if (params.topicId) {
-    const topicIds = await getDescendantTopicIds(params.topicId);
-    AND.push({ postTopics: { some: { topicId: { in: topicIds } } } });
+  if (params.topicIds?.length) {
+    for (const topicId of params.topicIds) {
+      const ids = await getDescendantTopicIds(topicId);
+      AND.push({ postTopics: { some: { topicId: { in: ids } } } });
+    }
   }
-  if (params.tagId) {
-    AND.push({ postTags: { some: { tagId: params.tagId } } });
+  if (params.tagIds?.length) {
+    for (const tagId of params.tagIds) {
+      AND.push({ postTags: { some: { tagId } } });
+    }
   }
   if (params.q) {
     const words = params.q.trim().split(/\s+/).filter(Boolean);
-    // 각 단어마다: 제목/본문/토픽/태그/장소 중 어딘가에 포함되어야 함 (AND across words)
     for (const w of words) {
       AND.push({
         OR: [
           { titleEn: { contains: w, mode: "insensitive" } },
           { titleKo: { contains: w, mode: "insensitive" } },
           { bodyEn: { contains: w, mode: "insensitive" } },
-          {
-            postTopics: {
-              some: { topic: { nameEn: { contains: w, mode: "insensitive" } } },
-            },
-          },
-          {
-            postTags: {
-              some: { tag: { name: { contains: w, mode: "insensitive" } } },
-            },
-          },
-          {
-            postPlaces: {
-              some: { place: { nameEn: { contains: w, mode: "insensitive" } } },
-            },
-          },
-          {
-            postPlaces: {
-              some: { place: { nameKo: { contains: w, mode: "insensitive" } } },
-            },
-          },
-          {
-            postPlaces: {
-              some: { context: { contains: w, mode: "insensitive" } },
-            },
-          },
-          {
-            postPlaces: {
-              some: { mustTry: { contains: w, mode: "insensitive" } },
-            },
-          },
-          {
-            postPlaces: {
-              some: { tip: { contains: w, mode: "insensitive" } },
-            },
-          },
+          { postTopics: { some: { topic: { nameEn: { contains: w, mode: "insensitive" } } } } },
+          { postTags: { some: { tag: { name: { contains: w, mode: "insensitive" } } } } },
+          { postPlaces: { some: { place: { nameEn: { contains: w, mode: "insensitive" } } } } },
+          { postPlaces: { some: { place: { nameKo: { contains: w, mode: "insensitive" } } } } },
+          { postPlaces: { some: { context: { contains: w, mode: "insensitive" } } } },
+          { postPlaces: { some: { mustTry: { contains: w, mode: "insensitive" } } } },
+          { postPlaces: { some: { tip: { contains: w, mode: "insensitive" } } } },
         ],
       });
     }
@@ -70,13 +45,11 @@ export async function getFilteredPosts(params: {
 
   if (!params.q) return posts;
 
-  // 검색어 단어 중 하나와 토픽명이 정확히 일치하는 포스트를 우선 정렬
   const words = params.q.trim().split(/\s+/).filter(Boolean).map((w) => w.toLowerCase());
   const priorityIds = await prisma.post.findMany({
     where: {
       id: { in: posts.map((p) => p.id) },
       OR: [
-        // 카드에 보이는 토픽 중 검색어 단어와 정확히 일치하는 것
         {
           postTopics: {
             some: {
@@ -85,7 +58,6 @@ export async function getFilteredPosts(params: {
             },
           },
         },
-        // 카드에 보이는 태그 중 검색어 단어와 정확히 일치하는 것
         {
           postTags: {
             some: {

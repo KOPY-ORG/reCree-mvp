@@ -25,77 +25,70 @@ type Level0Topic = TopicBase & { children: Level1Topic[] };
 export function TopicFilterRow({ topics }: { topics: Level0Topic[] }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const topicId = searchParams.get("topicId");
+  const topicIds = searchParams.getAll("topicId");
 
   const [openId, setOpenId] = useState<string | null>(null);
   const [activeL1Id, setActiveL1Id] = useState<string | null>(null);
   const [activeL2Id, setActiveL2Id] = useState<string | null>(null);
 
-  const activeLevel0 = topics.find(
-    (t) =>
-      t.id === topicId ||
-      t.children.some(
-        (l1) =>
-          l1.id === topicId ||
-          l1.children.some(
-            (l2) =>
-              l2.id === topicId || l2.children.some((l3) => l3.id === topicId)
-          )
-      )
-  );
+  // topicId가 해당 level0 그룹 소속인지 확인
+  function isInGroup(level0Id: string, topicId: string): boolean {
+    const group = topics.find((t) => t.id === level0Id);
+    if (!group) return false;
+    if (group.id === topicId) return true;
+    for (const l1 of group.children) {
+      if (l1.id === topicId) return true;
+      for (const l2 of l1.children) {
+        if (l2.id === topicId) return true;
+        for (const l3 of l2.children) {
+          if (l3.id === topicId) return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  // 해당 그룹에서 현재 선택된 topicId
+  function getGroupSelection(level0Id: string): string | null {
+    return topicIds.find((id) => isInGroup(level0Id, id)) ?? null;
+  }
 
   // 선택된 topicId의 표시 레이블 ("K-POP / BTS" 형태)
   function getSelectedLabel(t0: Level0Topic): string {
-    if (!topicId || t0.id === topicId) return t0.nameEn;
+    const selected = getGroupSelection(t0.id);
+    if (!selected || selected === t0.id) return t0.nameEn;
     for (const l1 of t0.children) {
-      if (l1.id === topicId) return `${t0.nameEn} / ${l1.nameEn}`;
+      if (l1.id === selected) return `${t0.nameEn} / ${l1.nameEn}`;
       for (const l2 of l1.children) {
-        if (l2.id === topicId) return `${t0.nameEn} / ${l2.nameEn}`;
+        if (l2.id === selected) return `${t0.nameEn} / ${l2.nameEn}`;
         for (const l3 of l2.children) {
-          if (l3.id === topicId) return `${t0.nameEn} / ${l3.nameEn}`;
+          if (l3.id === selected) return `${t0.nameEn} / ${l3.nameEn}`;
         }
       }
     }
     return t0.nameEn;
   }
 
-  // 선택된 토픽의 배경(단색/그라데이션)과 텍스트 색상
-
   const openTopic = openId ? topics.find((t) => t.id === openId) : null;
   const resolvedL1Id = activeL1Id ?? openTopic?.children[0]?.id ?? null;
-  const activeL1 =
-    openTopic?.children.find((c) => c.id === resolvedL1Id) ?? null;
-  const activeL2 =
-    activeL2Id
-      ? (activeL1?.children.find((c) => c.id === activeL2Id) ?? null)
-      : null;
+  const activeL1 = openTopic?.children.find((c) => c.id === resolvedL1Id) ?? null;
+  const activeL2 = activeL2Id ? (activeL1?.children.find((c) => c.id === activeL2Id) ?? null) : null;
 
-  // 시트 열 때 현재 topicId에 해당하는 L1/L2 상태 복원
   function openSheet(id: string) {
     const topic = topics.find((t) => t.id === id);
     if (!topic) return;
 
+    const existingId = getGroupSelection(id);
     let restoredL1Id = topic.children[0]?.id ?? null;
     let restoredL2Id: string | null = null;
 
-    if (topicId) {
+    if (existingId) {
       outer: for (const l1 of topic.children) {
-        if (l1.id === topicId) {
-          restoredL1Id = l1.id;
-          break;
-        }
+        if (l1.id === existingId) { restoredL1Id = l1.id; break; }
         for (const l2 of l1.children) {
-          if (l2.id === topicId) {
-            restoredL1Id = l1.id;
-            restoredL2Id = l2.id;
-            break outer;
-          }
+          if (l2.id === existingId) { restoredL1Id = l1.id; restoredL2Id = l2.id; break outer; }
           for (const l3 of l2.children) {
-            if (l3.id === topicId) {
-              restoredL1Id = l1.id;
-              restoredL2Id = l2.id;
-              break outer;
-            }
+            if (l3.id === existingId) { restoredL1Id = l1.id; restoredL2Id = l2.id; break outer; }
           }
         }
       }
@@ -106,26 +99,32 @@ export function TopicFilterRow({ topics }: { topics: Level0Topic[] }) {
     setActiveL2Id(restoredL2Id);
   }
 
-  function navigate(newTopicId: string | null) {
+  // 해당 그룹의 선택만 교체
+  function navigateGroup(level0Id: string, newTopicId: string | null) {
     const params = new URLSearchParams(searchParams.toString());
-    if (newTopicId) {
-      params.set("topicId", newTopicId);
-    } else {
-      params.delete("topicId");
+    const current = searchParams.getAll("topicId");
+    params.delete("topicId");
+    for (const id of current) {
+      if (!isInGroup(level0Id, id)) params.append("topicId", id);
     }
+    if (newTopicId) params.append("topicId", newTopicId);
     params.delete("tab");
     router.push(`/explore?${params.toString()}`);
     setOpenId(null);
   }
 
-  // 글자색: 자체 textColorHex 없으면 조상 순서대로 탐색
+  function clearAll() {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("topicId");
+    params.delete("tab");
+    router.push(`/explore?${params.toString()}`);
+  }
+
   function topicFg(t: TopicBase, ...ancestors: (TopicBase | null | undefined)[]): string {
     const chain = [t, ...ancestors].filter(Boolean) as TopicBase[];
     return chain.find((a) => a.textColorHex)?.textColorHex ?? DEFAULT_TEXT;
   }
 
-  // TopicBase → labelBackground 문자열 (단색/그라데이션 통일)
-  // 자체 색 없으면 ancestors 순서대로 올라가며 첫 번째 색상 사용
   function topicBg(t: TopicBase, ...ancestors: (TopicBase | null | undefined)[]): string {
     const chain = [t, ...ancestors].filter(Boolean) as TopicBase[];
     const source = chain.find((a) => a.colorHex) ?? null;
@@ -137,14 +136,13 @@ export function TopicFilterRow({ topics }: { topics: Level0Topic[] }) {
     return labelBackground({ text: "", colorHex, colorHex2, gradientDir, gradientStop, textColorHex });
   }
 
-return (
+  return (
     <>
-      {/* Level 0 칩 행 */}
       <div className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pb-2">
         <button
-          onClick={() => navigate(null)}
+          onClick={clearAll}
           className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
-            !topicId
+            topicIds.length === 0
               ? "bg-foreground text-background border-foreground"
               : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
           }`}
@@ -153,7 +151,7 @@ return (
         </button>
 
         {topics.map((topic) => {
-          const isActive = activeLevel0?.id === topic.id;
+          const isActive = topicIds.some((id) => isInGroup(topic.id, id));
           const label = isActive ? getSelectedLabel(topic) : topic.nameEn;
           return (
             <button
@@ -162,7 +160,7 @@ return (
                 if (topic.children.length > 0) {
                   openSheet(topic.id);
                 } else {
-                  navigate(topic.id);
+                  navigateGroup(topic.id, topic.id);
                 }
               }}
               className={`shrink-0 flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
@@ -177,7 +175,7 @@ return (
                   className="size-3 shrink-0"
                   onClick={(e) => {
                     e.stopPropagation();
-                    navigate(null);
+                    navigateGroup(topic.id, null);
                   }}
                 />
               ) : (
@@ -188,7 +186,6 @@ return (
         })}
       </div>
 
-      {/* 바텀 시트 */}
       <Sheet open={!!openId} onOpenChange={(v) => !v && setOpenId(null)}>
         <SheetContent
           side="bottom"
@@ -197,17 +194,14 @@ return (
         >
           <SheetTitle className="sr-only">{openTopic?.nameEn}</SheetTitle>
 
-          {/* 드래그 핸들 */}
           <div className="flex justify-center pt-3 pb-1 shrink-0">
             <div className="w-9 h-1 rounded-full bg-muted-foreground/25" />
           </div>
 
-          {/* 헤더 */}
           <div className="px-5 pt-1 pb-3 shrink-0">
             <p className="text-base font-bold">{openTopic?.nameEn}</p>
           </div>
 
-          {/* Level 1 언더라인 탭 */}
           <div className="flex overflow-x-auto scrollbar-hide border-b border-border shrink-0">
             {openTopic?.children.map((l1) => {
               const isActive = l1.id === resolvedL1Id;
@@ -215,35 +209,27 @@ return (
               return (
                 <button
                   key={l1.id}
-                  onClick={() => {
-                    setActiveL1Id(l1.id);
-                    setActiveL2Id(null);
-                  }}
+                  onClick={() => { setActiveL1Id(l1.id); setActiveL2Id(null); }}
                   className="shrink-0 px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap active:opacity-70"
                   style={{
                     color: isActive ? accentColor : undefined,
                     borderBottomColor: isActive ? accentColor : "transparent",
                   }}
                 >
-                  <span className={isActive ? "" : "text-muted-foreground"}>
-                    {l1.nameEn}
-                  </span>
+                  <span className={isActive ? "" : "text-muted-foreground"}>{l1.nameEn}</span>
                 </button>
               );
             })}
           </div>
 
-          {/* 스크롤 콘텐츠 영역 */}
           <div className="flex-1 overflow-y-auto">
             {activeL1 && (
               <div className="px-4 pt-4 pb-6 space-y-4">
-                {/* Level 2 그룹 칩 */}
                 <div className="flex flex-wrap gap-2">
-                  {/* All [L1] 버튼 */}
                   <button
-                    onClick={() => navigate(activeL1.id)}
+                    onClick={() => navigateGroup(openTopic!.id, activeL1.id)}
                     className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
-                      topicId === activeL1.id
+                      getGroupSelection(openTopic!.id) === activeL1.id
                         ? "bg-foreground text-background border-foreground"
                         : "border-dashed border-border text-muted-foreground hover:border-foreground hover:text-foreground active:opacity-70"
                     }`}
@@ -253,7 +239,7 @@ return (
 
                   {activeL1.children.map((l2) => {
                     const isSelected = activeL2Id === l2.id;
-                    const isNavigated = topicId === l2.id;
+                    const isNavigated = getGroupSelection(openTopic!.id) === l2.id;
                     const highlight = isSelected || isNavigated;
                     const fg = topicFg(l2, activeL1, openTopic);
                     const hasChildren = l2.children.length > 0;
@@ -271,7 +257,7 @@ return (
                           if (hasChildren) {
                             setActiveL2Id(isSelected ? null : l2.id);
                           } else {
-                            navigate(l2.id);
+                            navigateGroup(openTopic!.id, l2.id);
                           }
                         }}
                       >
@@ -286,37 +272,31 @@ return (
                   })}
                 </div>
 
-                {/* Level 3 멤버 패널 */}
                 {activeL2 && activeL2.children.length > 0 && (
                   <div className="rounded-2xl bg-muted/60 p-4 space-y-3">
                     <div className="flex items-center gap-2">
                       <span
                         className="w-2 h-2 rounded-full shrink-0"
-                        style={{
-                          background: topicBg(activeL2, activeL1, openTopic),
-                        }}
+                        style={{ background: topicBg(activeL2, activeL1, openTopic) }}
                       />
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                         {activeL2.nameEn}
                       </p>
                     </div>
-
                     <div className="flex flex-wrap gap-2">
-                      {/* All [L2] 버튼 */}
                       <button
-                        onClick={() => navigate(activeL2.id)}
+                        onClick={() => navigateGroup(openTopic!.id, activeL2.id)}
                         className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
-                          topicId === activeL2.id
+                          getGroupSelection(openTopic!.id) === activeL2.id
                             ? "bg-foreground text-background border-foreground"
                             : "border-dashed border-border text-muted-foreground hover:border-foreground hover:text-foreground active:opacity-70"
                         }`}
                       >
                         All
                       </button>
-
                       {activeL2.children.map((l3) => {
                         const fg = topicFg(l3, activeL2, activeL1, openTopic);
-                        const isActive = topicId === l3.id;
+                        const isActive = getGroupSelection(openTopic!.id) === l3.id;
                         return (
                           <LabelBadge
                             key={l3.id}
@@ -326,7 +306,7 @@ return (
                             color={fg}
                             className="shrink-0 px-3 py-1 transition-all active:opacity-70"
                             style={badgeRingStyle(l3.colorHex ?? activeL2.colorHex ?? activeL1?.colorHex ?? openTopic?.colorHex, isActive)}
-                            onClick={() => navigate(l3.id)}
+                            onClick={() => navigateGroup(openTopic!.id, l3.id)}
                           />
                         );
                       })}

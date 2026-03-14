@@ -120,11 +120,13 @@ export default async function ExplorePage({
   searchParams: Promise<{
     tab?: string;
     q?: string;
-    topicId?: string;
-    tagId?: string;
+    topicId?: string | string[];
+    tagId?: string | string[];
   }>;
 }) {
   const { tab = "posts", q, topicId, tagId } = await searchParams;
+  const topicIds = topicId ? (Array.isArray(topicId) ? topicId : [topicId]) : [];
+  const tagIds = tagId ? (Array.isArray(tagId) ? tagId : [tagId]) : [];
   const currentUser = await getCurrentUser();
 
   const [level0Topics, tagGroups, tagGroupConfigs, recreeshots, savedPostIds] =
@@ -154,9 +156,9 @@ export default async function ExplorePage({
   );
 
   const posts =
-    tab === "posts" ? await getFilteredPosts({ q, topicId, tagId }) : [];
+    tab === "posts" ? await getFilteredPosts({ q, topicIds, tagIds }) : [];
 
-  const hasFilter = !!(q || topicId || tagId);
+  const hasFilter = !!(q || topicIds.length || tagIds.length);
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -229,7 +231,7 @@ export default async function ExplorePage({
               {recreeshots.map((shot) => (
                 <div
                   key={shot.id}
-                  className="relative aspect-[3/4] rounded-lg overflow-hidden bg-muted"
+                  className="relative aspect-3/4 rounded-lg overflow-hidden bg-muted"
                 >
                   <Image
                     src={shot.imageUrl}

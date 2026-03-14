@@ -29,28 +29,39 @@ type TagGroup = {
 export function TagFilterRow({ tagGroups }: { tagGroups: TagGroup[] }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const tagId = searchParams.get("tagId");
+  const tagIds = searchParams.getAll("tagId");
   const [openGroup, setOpenGroup] = useState<string | null>(null);
 
-  const activeGroup = tagGroups.find((g) => g.tags.some((t) => t.id === tagId));
-  const activeTag = activeGroup?.tags.find((t) => t.id === tagId);
-  const openGroupData = openGroup
-    ? tagGroups.find((g) => g.group === openGroup)
-    : null;
+  const openGroupData = openGroup ? tagGroups.find((g) => g.group === openGroup) : null;
 
-  function navigate(newTagId: string | null) {
+  function getGroupSelection(groupName: string): string | null {
+    const group = tagGroups.find((g) => g.group === groupName);
+    return tagIds.find((id) => group?.tags.some((t) => t.id === id)) ?? null;
+  }
+
+  function navigateGroup(groupName: string, newTagId: string | null) {
     const params = new URLSearchParams(searchParams.toString());
-    if (newTagId) {
-      params.set("tagId", newTagId);
-    } else {
-      params.delete("tagId");
+    const group = tagGroups.find((g) => g.group === groupName);
+    const groupTagIds = new Set(group?.tags.map((t) => t.id) ?? []);
+    const current = searchParams.getAll("tagId");
+    params.delete("tagId");
+    for (const id of current) {
+      if (!groupTagIds.has(id)) params.append("tagId", id);
     }
+    if (newTagId) params.append("tagId", newTagId);
     params.delete("tab");
     router.push(`/explore?${params.toString()}`);
     setOpenGroup(null);
   }
 
-function tagBg(tag: Tag, group: TagGroup): string {
+  function clearAll() {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("tagId");
+    params.delete("tab");
+    router.push(`/explore?${params.toString()}`);
+  }
+
+  function tagBg(tag: Tag, group: TagGroup): string {
     const resolved = resolveTagColors(tag, group);
     return labelBackground({ text: "", ...resolved });
   }
@@ -59,13 +70,13 @@ function tagBg(tag: Tag, group: TagGroup): string {
     return tag.textColorHex ?? group.textColorHex ?? DEFAULT_TEXT;
   }
 
-return (
+  return (
     <>
       <div className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pb-3">
         <button
-          onClick={() => navigate(null)}
+          onClick={clearAll}
           className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
-            !tagId
+            tagIds.length === 0
               ? "bg-foreground text-background border-foreground"
               : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
           }`}
@@ -74,11 +85,10 @@ return (
         </button>
 
         {tagGroups.map((group) => {
-          const isActive = activeGroup?.group === group.group;
-          const label =
-            isActive && activeTag
-              ? `${group.nameEn} / ${activeTag.name}`
-              : group.nameEn;
+          const selectedTagId = getGroupSelection(group.group);
+          const isActive = !!selectedTagId;
+          const activeTag = group.tags.find((t) => t.id === selectedTagId);
+          const label = isActive && activeTag ? `${group.nameEn} / ${activeTag.name}` : group.nameEn;
 
           return (
             <button
@@ -96,7 +106,7 @@ return (
                   className="size-3 shrink-0"
                   onClick={(e) => {
                     e.stopPropagation();
-                    navigate(null);
+                    navigateGroup(group.group, null);
                   }}
                 />
               ) : (
@@ -115,24 +125,20 @@ return (
         >
           <SheetTitle className="sr-only">{openGroupData?.nameEn}</SheetTitle>
 
-          {/* 드래그 핸들 */}
           <div className="flex justify-center pt-3 pb-1 shrink-0">
             <div className="w-9 h-1 rounded-full bg-muted-foreground/25" />
           </div>
 
-          {/* 헤더 */}
           <div className="px-5 pt-1 pb-3 shrink-0">
             <p className="text-base font-bold">{openGroupData?.nameEn}</p>
           </div>
 
-          {/* 태그 칩 */}
           <div className="flex-1 overflow-y-auto px-4 pb-6">
             <div className="flex flex-wrap gap-2">
-              {/* All 버튼 */}
               <button
-                onClick={() => navigate(null)}
+                onClick={() => openGroupData && navigateGroup(openGroupData.group, null)}
                 className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
-                  !tagId
+                  openGroupData && !getGroupSelection(openGroupData.group)
                     ? "bg-foreground text-background border-foreground"
                     : "border-dashed border-border text-muted-foreground hover:border-foreground hover:text-foreground active:opacity-70"
                 }`}
@@ -141,7 +147,7 @@ return (
               </button>
 
               {openGroupData?.tags.map((tag) => {
-                const isActive = tagId === tag.id;
+                const isActive = getGroupSelection(openGroupData.group) === tag.id;
                 return (
                   <LabelBadge
                     key={tag.id}
@@ -151,7 +157,7 @@ return (
                     color={tagFg(tag, openGroupData)}
                     className="shrink-0 px-3 py-1 transition-all active:opacity-70"
                     style={badgeRingStyle(tag.colorHex ?? openGroupData.colorHex, isActive)}
-                    onClick={() => navigate(tag.id)}
+                    onClick={() => navigateGroup(openGroupData.group, tag.id)}
                   />
                 );
               })}
