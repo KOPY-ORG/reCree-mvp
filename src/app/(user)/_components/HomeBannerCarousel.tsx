@@ -47,7 +47,7 @@ export function HomeBannerCarousel({ banners }: { banners: BannerItem[] }) {
 
   return (
     <div
-      className="relative w-full aspect-[16/9] rounded-xl overflow-hidden mb-4"
+      className="relative w-full aspect-[16/9] rounded-xl overflow-hidden"
       onTouchStart={(e) => {
         touchStartX.current = e.touches[0].clientX;
       }}
