@@ -17,10 +17,10 @@ export async function AppHeader() {
 
   return (
     <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
-      <div className="h-14 flex items-center justify-between px-4 md:px-6 lg:px-10 xl:px-16">
+      <div className="h-12 flex items-center justify-between px-4 md:px-6 lg:px-10 xl:px-16">
         {/* 왼쪽: 로고 + 데스크탑 네비 */}
         <div className="flex items-center gap-6">
-          <span className="font-bold text-lg tracking-tight">reCree</span>
+          <span className="font-bold text-base tracking-tight">reCree</span>
 
           <nav className="hidden lg:flex items-center gap-1">
             {NAV_LINKS.map(({ label, href }) => (

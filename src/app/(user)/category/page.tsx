@@ -3,7 +3,7 @@ import { getLevel0Topics, getTopicChildren } from "@/lib/topic-queries";
 import { getTagGroupsWithTags } from "@/lib/filter-queries";
 import { CategorySidebar } from "./_components/CategorySidebar";
 import { CategoryTopicGrid, CategoryTagGrid } from "./_components/CategoryTopicGrid";
-import { SearchBarHeader } from "../_components/SearchBarHeader";
+import { CategoryHeader } from "../_components/CategoryHeader";
 
 export default async function CategoryPage({
   searchParams,
@@ -60,11 +60,11 @@ export default async function CategoryPage({
 
   return (
     <>
-      {/* SearchBarHeader: h-11 (2.75rem) */}
-      <SearchBarHeader />
+      {/* CategoryHeader: h-12 (3rem) */}
+      <CategoryHeader />
 
-      {/* BottomNav h-16 (4rem) + SearchBarHeader h-11 (2.75rem) = 6.75rem */}
-      <div className="flex h-[calc(100dvh-6.75rem)] overflow-hidden">
+      {/* BottomNav h-16 (4rem) + CategoryHeader h-12 (3rem) = 7rem */}
+      <div className="flex h-[calc(100dvh-7rem)] overflow-hidden">
         {/* 사이드바 */}
         <div className="w-28 shrink-0 overflow-hidden bg-zinc-100">
           <CategorySidebar items={sidebarItems} />

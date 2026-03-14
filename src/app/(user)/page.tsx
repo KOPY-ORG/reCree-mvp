@@ -257,8 +257,8 @@ export default async function HomePage() {
 
   // ─── 메인 렌더링 ─────────────────────────────────────────────────────────────
   return (
-    <div className="px-4 py-4 max-w-2xl mx-auto">
-      <SearchBar />
+    <div className="px-4 pt-2 pb-4 max-w-2xl mx-auto">
+      <SearchBar className="mb-3" />
 
       {hasBanners && <HomeBannerCarousel banners={bannerItems} />}
 
