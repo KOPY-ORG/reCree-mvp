@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Search, User, Star, AlignJustify } from "lucide-react";
@@ -16,7 +16,7 @@ import { PlaceBottomSheet } from "./PlaceBottomSheet";
 // ─── 타입 ─────────────────────────────────────────────────────────────────────
 
 type Tab = "places" | "my-maps";
-type SheetState = "collapsed" | "peek" | "expanded";
+type SheetState = "collapsed" | "tab-only" | "peek" | "expanded";
 
 type Level3Topic = {
   id: string; nameEn: string;
@@ -133,8 +133,9 @@ function PlaceListItem({
 
 // ─── 메인 컴포넌트 ─────────────────────────────────────────────────────────────
 
-const SHEET_BOTTOM_OFFSET = 0;
+const SHEET_TAB_ONLY_HEIGHT = 72;
 const SHEET_PEEK_HEIGHT = 340;
+const SHEET_EXPANDED_TOP_MARGIN = 56;
 
 export function MapPageClient({
   allPlaces,
@@ -152,6 +153,15 @@ export function MapPageClient({
   const [selectedTagGroup, setSelectedTagGroup] = useState<string | null>(null);
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [sheetState, setSheetState] = useState<SheetState>("peek");
+  const [isDraggingState, setIsDraggingState] = useState(false);
+
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const dragStartY = useRef(0);
+  const dragStartHeight = useRef(0);
+  const isDragging = useRef(false);
+  const lastPointerY = useRef(0);
+  const lastPointerTime = useRef(0);
+  const dragVelocityY = useRef(0);
 
   const savedPostIdsSet = useMemo(() => new Set(savedPostIdsArr), [savedPostIdsArr]);
   const tagGroupMap: TagGroupColorMap = useMemo(
@@ -218,9 +228,77 @@ export function MapPageClient({
   function cycleSheet() {
     setSheetState((s) => {
       if (s === "collapsed") return "peek";
+      if (s === "tab-only") return "peek";
       if (s === "peek") return "expanded";
-      return "collapsed";
+      return "peek"; // expanded → peek
     });
+  }
+
+  function getSnapHeights(): [number, number, number, number] {
+    const containerH = window.innerHeight - 64;
+    return [0, SHEET_TAB_ONLY_HEIGHT, SHEET_PEEK_HEIGHT, containerH - SHEET_EXPANDED_TOP_MARGIN];
+  }
+
+  function handleDragStart(e: React.PointerEvent) {
+    if (!sheetRef.current) return;
+    const currentH = sheetRef.current.getBoundingClientRect().height;
+    dragStartY.current = e.clientY;
+    dragStartHeight.current = currentH;
+    isDragging.current = true;
+    lastPointerY.current = e.clientY;
+    lastPointerTime.current = e.timeStamp;
+    dragVelocityY.current = 0;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    setIsDraggingState(true);
+  }
+
+  function handleDragMove(e: React.PointerEvent) {
+    if (!isDragging.current || !sheetRef.current) return;
+    const newH = dragStartHeight.current - (e.clientY - dragStartY.current);
+    const containerH = window.innerHeight - 64;
+    const clampedH = Math.max(0, Math.min(newH, containerH - 80));
+    sheetRef.current.style.height = `${clampedH}px`;
+
+    const dt = e.timeStamp - lastPointerTime.current;
+    if (dt > 0) {
+      dragVelocityY.current = (e.clientY - lastPointerY.current) / dt;
+    }
+    lastPointerY.current = e.clientY;
+    lastPointerTime.current = e.timeStamp;
+  }
+
+  function handleDragEnd() {
+    if (!isDragging.current) return;
+    isDragging.current = false;
+
+    const FLICK_THRESHOLD = 0.5;
+    const stateOrder: SheetState[] = ["collapsed", "tab-only", "peek", "expanded"];
+
+    let nextState: SheetState;
+    if (dragVelocityY.current > FLICK_THRESHOLD) {
+      // 아래 방향 플링 — 한 단계 내림
+      const cur = stateOrder.indexOf(sheetState);
+      nextState = stateOrder[Math.max(0, cur - 1)];
+    } else if (dragVelocityY.current < -FLICK_THRESHOLD) {
+      // 위 방향 플링 — 한 단계 올림
+      const cur = stateOrder.indexOf(sheetState);
+      nextState = stateOrder[Math.min(stateOrder.length - 1, cur + 1)];
+    } else {
+      // 현재 높이에서 가장 가까운 snap point
+      const currentH = sheetRef.current?.getBoundingClientRect().height ?? 0;
+      const snapHeights = getSnapHeights();
+      const dists = snapHeights.map((h) => Math.abs(currentH - h));
+      const minIdx = dists.indexOf(Math.min(...dists));
+      nextState = stateOrder[minIdx];
+    }
+
+    setIsDraggingState(false);
+    setSheetState(nextState);
+  }
+
+  function handleHandleClick() {
+    if (Math.abs(dragStartY.current - lastPointerY.current) > 8) return;
+    cycleSheet();
   }
 
   const sheetStyle: React.CSSProperties = {
@@ -228,10 +306,12 @@ export function MapPageClient({
     height:
       sheetState === "collapsed"
         ? "0px"
+        : sheetState === "tab-only"
+        ? `${SHEET_TAB_ONLY_HEIGHT}px`
         : sheetState === "peek"
         ? `${SHEET_PEEK_HEIGHT}px`
-        : "calc(100% - 80px)",
-    transition: "height 320ms cubic-bezier(0.32, 0.72, 0, 1)",
+        : `calc(100% - ${SHEET_EXPANDED_TOP_MARGIN}px)`,
+    transition: isDraggingState ? "none" : "height 320ms cubic-bezier(0.32, 0.72, 0, 1)",
     overflow: "hidden",
   };
 
@@ -276,18 +356,22 @@ export function MapPageClient({
             </Link>
           </div>
 
-          {/* 필터 행 — 배경 없음, 개별 pill만 */}
-          <MapTopicFilterRow
-            topics={topics}
-            selectedTopicId={selectedTopicId}
-            onSelect={handleTopicSelect}
-          />
-          <MapTagFilterRow
-            tagGroups={tagGroups}
-            selectedTagId={selectedTagId}
-            selectedTagGroup={selectedTagGroup}
-            onSelectTag={handleTagSelect}
-          />
+          {/* 필터 행 — expanded 상태에서는 시트가 덮으므로 숨김 */}
+          {sheetState !== "expanded" && (
+            <>
+              <MapTopicFilterRow
+                topics={topics}
+                selectedTopicId={selectedTopicId}
+                onSelect={handleTopicSelect}
+              />
+              <MapTagFilterRow
+                tagGroups={tagGroups}
+                selectedTagId={selectedTagId}
+                selectedTagGroup={selectedTagGroup}
+                onSelectTag={handleTagSelect}
+              />
+            </>
+          )}
         </div>
 
         {/* ── 로그인 유도 오버레이 ── */}
@@ -305,42 +389,53 @@ export function MapPageClient({
 
         {/* ── 바텀 시트 (리스트만) ── */}
         <div
+          ref={sheetRef}
           className="absolute inset-x-0 z-20 bg-background rounded-t-2xl flex flex-col shadow-[0_-8px_40px_rgba(0,0,0,0.18)]"
           style={sheetStyle}
         >
-          {/* 드래그 핸들 */}
-          <button
-            onClick={cycleSheet}
-            className="flex justify-center pt-2.5 pb-2 shrink-0 w-full"
-            aria-label="목록 열기/닫기"
+          {/* 드래그 가능 헤더 영역 */}
+          <div
+            onPointerDown={handleDragStart}
+            onPointerMove={handleDragMove}
+            onPointerUp={handleDragEnd}
+            onPointerCancel={handleDragEnd}
+            style={{ touchAction: "none" }}
+            className="shrink-0"
           >
-            <div className="w-9 h-1 rounded-full bg-muted-foreground/30" />
-          </button>
+            {/* 드래그 핸들 */}
+            <button
+              onClick={handleHandleClick}
+              className="flex justify-center pt-2.5 pb-2 w-full"
+              aria-label="목록 열기/닫기"
+            >
+              <div className="w-9 h-1 rounded-full bg-muted-foreground/30" />
+            </button>
 
-          {/* 탭 바 — ExploreTabBar 스타일 */}
-          <div className="flex justify-center pb-2.5 shrink-0">
-            <div className="flex items-center rounded-full bg-muted p-1 gap-0.5">
-              {(["places", "my-maps"] as const).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => handleTabChange(tab)}
-                  className={`px-5 py-1.5 rounded-full text-sm font-semibold transition-all ${
-                    activeTab === tab
-                      ? "bg-brand text-black shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {tab === "places" ? "Places" : "My Maps"}
-                </button>
-              ))}
+            {/* 탭 바 — ExploreTabBar 스타일 */}
+            <div className="flex justify-center pb-2.5">
+              <div className="flex items-center rounded-full bg-muted p-1 gap-0.5">
+                {(["places", "my-maps"] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => handleTabChange(tab)}
+                    className={`px-5 py-1.5 rounded-full text-sm font-semibold transition-all ${
+                      activeTab === tab
+                        ? "bg-brand text-black shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {tab === "places" ? "Places" : "My Maps"}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* 장소 수 */}
-          <div className="px-4 pb-2 shrink-0">
-            <p className="text-xs font-medium text-muted-foreground">
-              {filteredPlaces.length} places
-            </p>
+            {/* 장소 수 */}
+            <div className="px-4 pb-2">
+              <p className="text-xs font-medium text-muted-foreground">
+                {filteredPlaces.length} places
+              </p>
+            </div>
           </div>
 
           {/* 목록 */}
