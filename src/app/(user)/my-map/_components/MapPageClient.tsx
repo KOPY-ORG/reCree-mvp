@@ -224,6 +224,11 @@ export function MapPageClient({
     setSheetState("collapsed");
   }
 
+  function handlePlaceClose() {
+    setSelectedPlaceId(null);
+    setSheetState("tab-only");
+  }
+
   function cycleSheet() {
     setSheetState((s) => {
       if (s === "collapsed") return "peek";
@@ -389,10 +394,18 @@ export function MapPageClient({
           </div>
         )}
 
+        {/* ── 장소 상세 바텀 시트 ── */}
+        <PlaceBottomSheet
+          place={selectedPlace}
+          savedPostIds={savedPostIdsSet}
+          tagGroupMap={tagGroupMap}
+          onClose={handlePlaceClose}
+        />
+
         {/* ── 바텀 시트 (리스트만) ── */}
         <div
           ref={sheetRef}
-          className="absolute inset-x-0 z-20 bg-background rounded-t-2xl flex flex-col shadow-[0_-8px_40px_rgba(0,0,0,0.18)]"
+          className="absolute inset-x-0 z-20 bg-background rounded-t-[2rem] flex flex-col shadow-[0_-8px_40px_rgba(0,0,0,0.18)]"
           style={sheetStyle}
         >
           {/* 드래그 가능 헤더 영역 */}
@@ -472,13 +485,6 @@ export function MapPageClient({
         )}
       </div>
 
-      {/* 장소 상세 바텀 시트 */}
-      <PlaceBottomSheet
-        place={selectedPlace}
-        savedPostIds={savedPostIdsSet}
-        tagGroupMap={tagGroupMap}
-        onClose={() => setSelectedPlaceId(null)}
-      />
     </>
   );
 }
