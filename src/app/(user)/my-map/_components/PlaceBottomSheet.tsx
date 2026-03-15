@@ -11,8 +11,8 @@ import {
   ExternalLink,
   Phone,
   Star,
-  X,
 } from "lucide-react";
+import { CloseButton } from "./CloseButton";
 import { LabelBadge } from "@/components/LabelBadge";
 import {
   labelBackground,
@@ -101,7 +101,6 @@ function PostCard({
 export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: Props) {
   const [state, setState] = useState<PlaceSheetState>("half");
   const [infoOpen, setInfoOpen] = useState(false);
-  const [slideIndex, setSlideIndex] = useState(0);
   const { toast, showToast } = useToast();
 
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -118,7 +117,6 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
     if (place) {
       setState("half");
       setInfoOpen(false);
-      setSlideIndex(0);
     }
   }, [place?.id]);
 
@@ -194,13 +192,7 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
         <div className="flex items-start justify-between gap-2 mb-2">
           <p className="text-lg font-bold leading-tight">{place.nameEn}</p>
           <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              onClick={onClose}
-              aria-label="Close"
-              className="flex items-center justify-center w-6 h-6 rounded-full bg-muted"
-            >
-              <X className="size-3 text-muted-foreground" />
-            </button>
+            <CloseButton onClick={onClose} />
           </div>
         </div>
 

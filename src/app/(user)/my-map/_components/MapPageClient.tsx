@@ -6,6 +6,7 @@ import { useSheetDrag } from "../_hooks/useSheetDrag";
 import Image from "next/image";
 import Link from "next/link";
 import { Search, User, Star, AlignJustify, X, MapPin } from "lucide-react";
+import { CloseButton } from "./CloseButton";
 import type { MapPlace } from "@/lib/map-queries";
 import type { TagGroupColorMap } from "@/lib/post-labels";
 import { MapTopicFilterRow } from "./MapTopicFilterRow";
@@ -79,7 +80,7 @@ function SearchResultItem({
       {/* 장소명 + 메타 — 클릭 시 PlaceBottomSheet */}
       <button
         onClick={onClick}
-        className="w-full px-4 pt-4 pb-2 text-left active:bg-muted/30 transition-colors"
+        className="w-full px-5 pt-4 pb-2 text-left active:bg-muted/30 transition-colors"
       >
         <p className="font-bold text-base leading-tight line-clamp-1">{place.nameEn}</p>
         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
@@ -127,9 +128,9 @@ function SearchResultItem({
         ];
         if (allImages.length === 0) return null;
         return (
-          <div className="flex gap-2 px-4 pb-4 overflow-x-auto scrollbar-hide">
+          <div className="flex gap-2.5 px-5 pb-4 overflow-x-auto scrollbar-hide">
             {allImages.map((url, i) => (
-              <div key={i} className="size-[88px] shrink-0 rounded-xl overflow-hidden bg-muted relative">
+              <div key={i} className="size-[100px] shrink-0 rounded-xl overflow-hidden bg-muted relative">
                 <Image
                   src={url}
                   alt={place.nameEn}
@@ -187,11 +188,9 @@ export function MapPageClient({
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
   const [selectedTagGroup, setSelectedTagGroup] = useState<string | null>(null);
-  const [sheetState, setSheetState] = useState<SheetState>(() => {
-    if (searchParams.get("place")) return "collapsed";
-    if (searchParams.get("q")) return "peek";
-    return "peek";
-  });
+  const [sheetState, setSheetState] = useState<SheetState>(
+    searchParams.get("place") ? "collapsed" : "peek"
+  );
   const sheetRef = useRef<HTMLDivElement>(null);
 
   const savedPostIdsSet = useMemo(() => new Set(savedPostIdsArr), [savedPostIdsArr]);
@@ -321,7 +320,6 @@ export function MapPageClient({
           highlightedIds={isSearchMode ? new Set(displayPlaces.map((p) => p.id)) : undefined}
           boundsKey={isSearchMode ? searchQuery : undefined}
           onMarkerClick={handleMarkerClick}
-          onNearbyClick={() => setSheetState("collapsed")}
           className="absolute inset-0"
         />
 
@@ -432,10 +430,14 @@ export function MapPageClient({
 
             {isSearchMode ? (
               /* 검색 결과 헤더 */
-              <div className="px-4 pb-2 pt-1">
-                <p className="text-xs font-medium text-muted-foreground">
-                  {displayPlaces.length} result{displayPlaces.length !== 1 ? "s" : ""} for &ldquo;{searchQuery}&rdquo;
-                </p>
+              <div className="flex items-center justify-between px-5 pb-3 pt-1">
+                <div>
+                  <p className="text-xl font-bold leading-tight">{searchQuery}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {displayPlaces.length} result{displayPlaces.length !== 1 ? "s" : ""}
+                  </p>
+                </div>
+                <CloseButton onClick={clearSearch} label="검색 초기화" />
               </div>
             ) : (
               <>
@@ -459,7 +461,7 @@ export function MapPageClient({
                 </div>
 
                 {/* 장소 수 */}
-                <div className="px-4 pb-2">
+                <div className="px-5 pb-2">
                   <p className="text-xs font-medium text-muted-foreground">
                     {filteredPlaces.length} places
                   </p>

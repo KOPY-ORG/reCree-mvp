@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import { Navigation } from "lucide-react";
 import { APIProvider, Map, AdvancedMarker, useMap } from "@vis.gl/react-google-maps";
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
@@ -20,7 +19,6 @@ interface Props {
   highlightedIds?: Set<string>;
   boundsKey?: string;
   onMarkerClick: (placeId: string) => void;
-  onNearbyClick?: () => void;
   className?: string;
 }
 
@@ -30,7 +28,6 @@ function MapContent({
   highlightedIds,
   boundsKey,
   onMarkerClick,
-  onNearbyClick,
 }: Omit<Props, "className">) {
   const map = useMap();
 
@@ -70,14 +67,6 @@ function MapContent({
     map.panBy(0, offsetY);
   }, [map, selectedPlaceId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function handleNearby() {
-    if (!map || !navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition((pos) => {
-      map.setCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-      map.setZoom(14);
-    });
-    onNearbyClick?.();
-  }
 
   return (
     <>
@@ -127,19 +116,12 @@ function MapContent({
         })}
       </Map>
 
-      {/* 현위치 버튼 - 우하단 */}
-      <button
-        onClick={handleNearby}
-        className="absolute bottom-4 right-4 z-10 w-10 h-10 rounded-full bg-background shadow-md border border-border flex items-center justify-center active:opacity-70"
-        aria-label="현재 위치"
-      >
-        <Navigation className="size-4 text-foreground" />
-      </button>
+
     </>
   );
 }
 
-export function InteractiveMap({ places, selectedPlaceId, highlightedIds, boundsKey, onMarkerClick, onNearbyClick, className }: Props) {
+export function InteractiveMap({ places, selectedPlaceId, highlightedIds, boundsKey, onMarkerClick, className }: Props) {
   if (!API_KEY) {
     return (
       <div className={`flex items-center justify-center bg-muted/50 text-sm text-muted-foreground ${className ?? ""}`}>
@@ -157,7 +139,6 @@ export function InteractiveMap({ places, selectedPlaceId, highlightedIds, bounds
           highlightedIds={highlightedIds}
           boundsKey={boundsKey}
           onMarkerClick={onMarkerClick}
-          onNearbyClick={onNearbyClick}
         />
       </APIProvider>
     </div>
