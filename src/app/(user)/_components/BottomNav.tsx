@@ -8,7 +8,7 @@ const TABS = [
   { label: "Category", icon: Menu, href: "/category" },
   { label: "Explore", icon: Search, href: "/explore" },
   { label: "Home", icon: House, href: "/" },
-  { label: "My Map", icon: MapPin, href: "/my-trip" },
+  { label: "My Map", icon: MapPin, href: "/my-map" },
   { label: "Saved", icon: Bookmark, href: "/saved" },
 ] as const;
 
@@ -19,7 +19,7 @@ export function BottomNav() {
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   return (
-    <nav className="shrink-0 h-16 bg-background border-t flex items-center z-40">
+    <nav className="shrink-0 h-16 bg-background border-t border-border/30 flex items-center z-40">
       {TABS.map(({ label, icon: Icon, href }) => {
         const active = isActive(href);
         return (

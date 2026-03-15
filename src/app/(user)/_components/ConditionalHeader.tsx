@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 
-const NO_HEADER_PATHS = ["/category", "/search"];
+const NO_HEADER_PATHS = ["/category", "/search", "/my-map"];
 const EXPLORE_PATHS = ["/explore"];
 
 export function ConditionalHeader({

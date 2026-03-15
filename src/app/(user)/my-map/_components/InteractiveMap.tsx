@@ -1,0 +1,149 @@
+"use client";
+
+import { useEffect } from "react";
+import { Navigation } from "lucide-react";
+import { APIProvider, Map, AdvancedMarker, useMap } from "@vis.gl/react-google-maps";
+
+const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
+const MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID ?? "DEMO_MAP_ID";
+
+type MarkerPlace = {
+  id: string;
+  latitude: number;
+  longitude: number;
+  nameEn: string;
+};
+
+interface Props {
+  places: MarkerPlace[];
+  selectedPlaceId: string | null;
+  onMarkerClick: (placeId: string) => void;
+  onNearbyClick?: () => void;
+  className?: string;
+}
+
+function MapContent({
+  places,
+  selectedPlaceId,
+  onMarkerClick,
+  onNearbyClick,
+}: Omit<Props, "className">) {
+  const map = useMap();
+
+  // 초기 bounds 설정 (places 목록 변경 시)
+  useEffect(() => {
+    if (!map || places.length === 0) return;
+    if (places.length === 1) {
+      map.setCenter({ lat: places[0].latitude, lng: places[0].longitude });
+      map.setZoom(14);
+      return;
+    }
+    try {
+      const bounds = new google.maps.LatLngBounds();
+      places.forEach((p) => bounds.extend({ lat: p.latitude, lng: p.longitude }));
+      map.fitBounds(bounds, 60);
+    } catch {
+      // google.maps 미로드 시 무시
+    }
+  }, [map, places]);
+
+  // 장소 선택 시 해당 마커를 바텀시트 위 중앙에 위치
+  useEffect(() => {
+    if (!map || !selectedPlaceId) return;
+    const place = places.find((p) => p.id === selectedPlaceId);
+    if (!place) return;
+
+    map.panTo({ lat: place.latitude, lng: place.longitude });
+    // half 시트 높이(~50%)의 절반만큼 아래로 이동 → 마커가 시트 위 영역 중앙에 보임
+    const offsetY = Math.round((window.innerHeight - 64) * 0.25);
+    map.panBy(0, offsetY);
+  }, [map, selectedPlaceId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function handleNearby() {
+    if (!map || !navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition((pos) => {
+      map.setCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      map.setZoom(14);
+    });
+    onNearbyClick?.();
+  }
+
+  return (
+    <>
+      <Map
+        defaultCenter={{ lat: 37.5665, lng: 126.978 }}
+        defaultZoom={11}
+        mapId={MAP_ID}
+        gestureHandling="greedy"
+        disableDefaultUI
+        className="w-full h-full"
+      >
+        {places.map((place) => {
+          const isSelected = selectedPlaceId === place.id;
+          return (
+            <AdvancedMarker
+              key={place.id}
+              position={{ lat: place.latitude, lng: place.longitude }}
+              onClick={() => onMarkerClick(place.id)}
+              title={place.nameEn}
+              zIndex={isSelected ? 10 : 1}
+            >
+              {isSelected ? (
+                // 선택된 마커: 장소명 말풍선 + 핀
+                <div className="flex flex-col items-center">
+                  <div className="px-2.5 py-1 bg-foreground text-background text-[11px] font-semibold rounded-lg shadow-lg whitespace-nowrap max-w-[140px] truncate">
+                    {place.nameEn}
+                  </div>
+                  <div
+                    className="w-0 h-0 -mt-px"
+                    style={{
+                      borderLeft: "5px solid transparent",
+                      borderRight: "5px solid transparent",
+                      borderTop: "6px solid hsl(var(--foreground))",
+                    }}
+                  />
+                  <div className="w-2.5 h-2.5 rounded-full bg-brand border-2 border-white shadow -mt-0.5" />
+                </div>
+              ) : (
+                // 기본 마커: 작은 점
+                <div className="w-3 h-3 rounded-full bg-foreground/80 border-2 border-white shadow-sm" />
+              )}
+            </AdvancedMarker>
+          );
+        })}
+      </Map>
+
+      {/* 현위치 버튼 - 우하단 */}
+      <button
+        onClick={handleNearby}
+        className="absolute bottom-4 right-4 z-10 w-10 h-10 rounded-full bg-background shadow-md border border-border flex items-center justify-center active:opacity-70"
+        aria-label="현재 위치"
+      >
+        <Navigation className="size-4 text-foreground" />
+      </button>
+    </>
+  );
+}
+
+export function InteractiveMap({ places, selectedPlaceId, onMarkerClick, onNearbyClick, className }: Props) {
+  if (!API_KEY) {
+    return (
+      <div className={`flex items-center justify-center bg-muted/50 text-sm text-muted-foreground ${className ?? ""}`}>
+        지도를 불러올 수 없습니다.
+      </div>
+    );
+  }
+
+  return (
+    <div className={`overflow-hidden ${className ?? ""}`}>
+      <APIProvider apiKey={API_KEY}>
+        <MapContent
+          places={places}
+          selectedPlaceId={selectedPlaceId}
+          onMarkerClick={onMarkerClick}
+          onNearbyClick={onNearbyClick}
+        />
+      </APIProvider>
+    </div>
+  );
+}
