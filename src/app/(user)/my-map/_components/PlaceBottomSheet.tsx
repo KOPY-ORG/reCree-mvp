@@ -259,9 +259,9 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
               {urls.map((url, i) => (
                 <div
                   key={i}
-                  className={`relative aspect-[3/2] w-[60%] shrink-0 snap-start rounded-xl overflow-hidden bg-muted ${i === 0 ? "ml-5" : ""} ${i === urls.length - 1 ? "mr-5" : ""}`}
+                  className={`relative aspect-[3/2] w-[40%] shrink-0 snap-start rounded-xl overflow-hidden bg-muted ${i === 0 ? "ml-5" : ""} ${i === urls.length - 1 ? "mr-5" : ""}`}
                 >
-                  <Image src={url} alt="" fill unoptimized className="object-cover" sizes="78vw" />
+                  <Image src={url} alt="" fill unoptimized className="object-cover" sizes="40vw" />
                 </div>
               ))}
             </div>

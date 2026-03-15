@@ -19,6 +19,7 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import type { PlaceStatus } from "@prisma/client";
+import { STATUS_LABELS } from "../_constants";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -141,12 +142,6 @@ async function uploadPlaceImage(
 
 // ─── 상수 ──────────────────────────────────────────────────────────────────────
 
-
-const STATUS_LABELS: Record<PlaceStatus, string> = {
-  OPEN: "영업중",
-  CLOSED_TEMP: "임시휴업",
-  CLOSED_PERMANENT: "폐업",
-};
 
 // ─── 컴포넌트 ──────────────────────────────────────────────────────────────────
 

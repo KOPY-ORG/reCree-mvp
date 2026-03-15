@@ -224,16 +224,6 @@ function groupByPlace(rows: RawPostPlaceRow[]): MapPlace[] {
   return Array.from(map.values());
 }
 
-/** ID 목록으로 장소 데이터 조회 (검색 결과용) */
-export async function getMapPlacesByIds(ids: string[]): Promise<MapPlace[]> {
-  if (ids.length === 0) return [];
-  const rows = await fetchPostPlaceRows({
-    placeId: { in: ids },
-    post: { status: "PUBLISHED" },
-  });
-  return groupByPlace(rows);
-}
-
 /** 포스트 없는 장소도 포함하는 검색용 조회 */
 export async function getMapPlacesByIdsWithFallback(ids: string[]): Promise<MapPlace[]> {
   if (ids.length === 0) return [];
