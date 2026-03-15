@@ -134,7 +134,6 @@ function PlaceListItem({
 // ─── 메인 컴포넌트 ─────────────────────────────────────────────────────────────
 
 const SHEET_TAB_ONLY_HEIGHT = 72;
-const SHEET_PEEK_HEIGHT = 340;
 const SHEET_EXPANDED_TOP_MARGIN = 56;
 
 export function MapPageClient({
@@ -198,7 +197,7 @@ export function MapPageClient({
 
   function handleTabChange(tab: Tab) {
     setActiveTab(tab);
-    setSheetState("peek");
+    setSheetState(tab === "my-maps" && !isLoggedIn ? "tab-only" : "peek");
     setSelectedPlaceId(null);
   }
 
@@ -236,7 +235,8 @@ export function MapPageClient({
 
   function getSnapHeights(): [number, number, number, number] {
     const containerH = window.innerHeight - 64;
-    return [0, SHEET_TAB_ONLY_HEIGHT, SHEET_PEEK_HEIGHT, containerH - SHEET_EXPANDED_TOP_MARGIN];
+    const peekH = Math.round(containerH * 0.4);
+    return [0, SHEET_TAB_ONLY_HEIGHT, peekH, containerH - SHEET_EXPANDED_TOP_MARGIN];
   }
 
   function handleDragStart(e: React.PointerEvent) {
@@ -309,7 +309,7 @@ export function MapPageClient({
         : sheetState === "tab-only"
         ? `${SHEET_TAB_ONLY_HEIGHT}px`
         : sheetState === "peek"
-        ? `${SHEET_PEEK_HEIGHT}px`
+        ? "calc((100dvh - 64px) * 0.4)"
         : `calc(100% - ${SHEET_EXPANDED_TOP_MARGIN}px)`,
     transition: isDraggingState ? "none" : "height 320ms cubic-bezier(0.32, 0.72, 0, 1)",
     overflow: "hidden",
