@@ -101,6 +101,7 @@ function PostCard({
 export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: Props) {
   const [state, setState] = useState<PlaceSheetState>("half");
   const [infoOpen, setInfoOpen] = useState(false);
+  const [slideIndex, setSlideIndex] = useState(0);
   const { toast, showToast } = useToast();
 
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -117,6 +118,7 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
     if (place) {
       setState("half");
       setInfoOpen(false);
+      setSlideIndex(0);
     }
   }, [place?.id]);
 
@@ -181,7 +183,7 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
       <div
         {...dragHandlers}
         ref={headerRef}
-        className="shrink-0 px-5 pb-4"
+        className="shrink-0 px-5 pb-3"
       >
         {/* 드래그 핸들 */}
         <div className="flex justify-center pt-3 pb-2">
@@ -247,18 +249,24 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
 
       {/* 스크롤 영역 */}
       <div className="flex-1 overflow-y-auto">
-        {/* 이미지 */}
-        {place.imageUrl && (
-          <div className="relative w-full aspect-video">
-            <Image
-              src={place.imageUrl}
-              alt={place.nameEn}
-              fill
-              unoptimized
-              className="object-cover"
-            />
-          </div>
-        )}
+        {/* 장소 이미지 슬라이더 */}
+        {(place.placeImages.length > 0 || place.imageUrl) && (() => {
+          const urls = place.placeImages.length > 0
+            ? place.placeImages.map((img) => img.url)
+            : [place.imageUrl!];
+          return (
+            <div className="flex gap-2.5 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-3 [scroll-padding-left:20px]">
+              {urls.map((url, i) => (
+                <div
+                  key={i}
+                  className={`relative aspect-[3/2] w-[60%] shrink-0 snap-start rounded-xl overflow-hidden bg-muted ${i === 0 ? "ml-5" : ""} ${i === urls.length - 1 ? "mr-5" : ""}`}
+                >
+                  <Image src={url} alt="" fill unoptimized className="object-cover" sizes="78vw" />
+                </div>
+              ))}
+            </div>
+          );
+        })()}
 
         {/* More info 토글 */}
         {hasExtraInfo && (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { ExternalLink, MapPin, Phone, Star } from "lucide-react";
@@ -42,6 +42,8 @@ export function PlaceDetailSheet({
   const [place, setPlace] = useState<PlaceDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  const [slideIndex, setSlideIndex] = useState(0);
+  const sliderRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open || !placeId) {
@@ -50,6 +52,7 @@ export function PlaceDetailSheet({
     }
     setLoading(true);
     setError(false);
+    setSlideIndex(0);
     getPlaceDetail(placeId)
       .then((data) => {
         setPlace(data);
@@ -90,17 +93,36 @@ export function PlaceDetailSheet({
 
         {!loading && !error && place && (
           <div className="flex-1">
-            {/* 썸네일 이미지 */}
-            {place.imageUrl && (
-              <div className="relative h-48 w-full">
-                <Image
-                  src={place.imageUrl}
-                  alt={place.nameKo}
-                  fill
-                  className="object-cover"
-                />
-              </div>
-            )}
+            {/* 장소 이미지 슬라이더 */}
+            {(place.placeImages.length > 0 || place.imageUrl) && (() => {
+              const urls = place.placeImages.length > 0
+                ? place.placeImages.map((img) => img.url)
+                : [place.imageUrl!];
+              return (
+                <div className="relative">
+                  <div
+                    ref={sliderRef}
+                    className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none"
+                    onScroll={(e) => {
+                      const el = e.currentTarget;
+                      const idx = Math.round(el.scrollLeft / el.clientWidth);
+                      setSlideIndex(idx);
+                    }}
+                  >
+                    {urls.map((url, i) => (
+                      <div key={i} className="relative aspect-square w-full shrink-0 snap-start bg-muted">
+                        <Image src={url} alt="" fill unoptimized className="object-cover" sizes="440px" />
+                      </div>
+                    ))}
+                  </div>
+                  {urls.length > 1 && (
+                    <div className="absolute bottom-2 right-3 rounded-full bg-black/50 px-2 py-0.5 text-xs text-white tabular-nums">
+                      {slideIndex + 1} / {urls.length}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             <div className="p-5 space-y-4">
               {/* 이름 + 상태 배지 */}

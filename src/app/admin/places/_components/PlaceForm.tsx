@@ -268,6 +268,14 @@ export function PlaceForm({
       toast.error("영어 장소명을 입력해주세요.");
       return;
     }
+    if (!areaId) {
+      toast.error("지역을 선택해주세요.");
+      return;
+    }
+    if (selectedPlaceTypes.length === 0) {
+      toast.error("장소 유형을 1개 이상 선택해주세요.");
+      return;
+    }
     const data: PlaceFormData = {
       nameKo: nameKo.trim(),
       nameEn: nameEn.trim(),
@@ -1009,7 +1017,7 @@ export function PlaceForm({
                 {allAreas.length > 0 && (
                   <Card className="gap-3 py-4 border-0">
                     <CardHeader>
-                      <CardTitle className="text-sm font-semibold">지역</CardTitle>
+                      <CardTitle className="text-sm font-semibold">지역 <span className="text-destructive">*</span></CardTitle>
                     </CardHeader>
                     <CardContent>
                       <Select
@@ -1055,7 +1063,7 @@ export function PlaceForm({
                 {allPlaceTypes.length > 0 && (
                   <Card className="gap-3 py-4 border-0">
                     <CardHeader>
-                      <CardTitle className="text-sm font-semibold">장소 유형</CardTitle>
+                      <CardTitle className="text-sm font-semibold">장소 유형 <span className="text-destructive">*</span></CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="flex flex-wrap gap-1.5">

@@ -179,19 +179,29 @@ function SearchResultItem({
               <span className="text-xs text-muted-foreground">·</span>
               <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
                 <MapPin className="size-2.5" />
-                {place.area.nameKo}
+                {place.area.nameEn ?? place.area.nameKo}
               </span>
             </>
           )}
         </div>
       </button>
 
-      {/* 배너 이미지 정사각형 가로 슬라이드 */}
+      {/* 이미지 가로 슬라이드: 썸네일 → 장소 이미지 → 배너, 중복 제거 */}
       {(() => {
-        const placeImgs = place.placeImages.map((img) => img.url);
+        const seen = new Set<string>();
+        const dedup = (url: string) => {
+          if (seen.has(url)) return false;
+          seen.add(url);
+          return true;
+        };
         const thumbnails = place.posts.map((p) => p.imageUrl).filter(Boolean) as string[];
+        const placeImgs = place.placeImages.map((img) => img.url);
         const banners = place.posts.flatMap((p) => p.images);
-        const allImages = [...placeImgs, ...thumbnails, ...banners];
+        const allImages = [
+          ...thumbnails.filter(dedup),
+          ...placeImgs.filter(dedup),
+          ...banners.filter(dedup),
+        ];
         if (allImages.length === 0) return null;
         return (
           <div className="flex gap-2 px-4 pb-4 overflow-x-auto scrollbar-hide">

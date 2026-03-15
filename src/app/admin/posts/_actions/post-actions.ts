@@ -149,6 +149,10 @@ export async function getPlaceDetail(id: string) {
       naverMapsUrl: true,
       status: true,
       gettingThere: true,
+      placeImages: {
+        orderBy: { sortOrder: "asc" },
+        select: { url: true, isThumbnail: true },
+      },
     },
   });
 }

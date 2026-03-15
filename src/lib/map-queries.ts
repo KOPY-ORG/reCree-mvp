@@ -55,7 +55,7 @@ export type MapPlace = {
   imageUrl: string | null;
   phone: string | null;
   operatingHours: string[] | null;
-  area: { id: string; nameKo: string; level: number; parent: { nameKo: string } | null } | null;
+  area: { id: string; nameKo: string; nameEn: string | null; level: number; parent: { nameKo: string; nameEn: string | null } | null } | null;
   placeImages: { url: string; isThumbnail: boolean; sortOrder: number }[];
   posts: MapPost[];
 };
@@ -85,8 +85,9 @@ async function fetchPostPlaceRows(where: object) {
             select: {
               id: true,
               nameKo: true,
+              nameEn: true,
               level: true,
-              parent: { select: { nameKo: true } },
+              parent: { select: { nameKo: true, nameEn: true } },
             },
           },
           placeImages: {
