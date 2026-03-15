@@ -395,6 +395,8 @@ export function MapPageClient({
         <InteractiveMap
           places={displayPlaces}
           selectedPlaceId={selectedPlaceId}
+          highlightedIds={isSearchMode ? new Set(displayPlaces.map((p) => p.id)) : undefined}
+          boundsKey={isSearchMode ? searchQuery : undefined}
           onMarkerClick={handleMarkerClick}
           onNearbyClick={() => setSheetState("collapsed")}
           className="absolute inset-0"
