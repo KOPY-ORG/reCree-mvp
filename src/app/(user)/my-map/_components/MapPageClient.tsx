@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useSheetDrag } from "../_hooks/useSheetDrag";
 import Image from "next/image";
 import Link from "next/link";
-import { Search, User, Star, AlignJustify } from "lucide-react";
+import { Search, User, Star, AlignJustify, X } from "lucide-react";
 import type { MapPlace } from "@/lib/map-queries";
 import type { TagGroupColorMap } from "@/lib/post-labels";
 import { labelBackground, resolveTagColors } from "@/lib/post-labels";
@@ -51,6 +51,8 @@ interface Props {
   tagGroupConfigs: TagGroupConfig[];
   isLoggedIn: boolean;
   userInitial: string | null;
+  searchQuery: string;
+  searchedPlaces: MapPlace[] | null;
 }
 
 // ─── 헬퍼 ─────────────────────────────────────────────────────────────────────
@@ -62,7 +64,7 @@ function isTopicMatch(topic: TopicNode, targetId: string): boolean {
   return false;
 }
 
-// ─── 장소 리스트 아이템 ────────────────────────────────────────────────────────
+// ─── 장소 리스트 아이템 (기본) ─────────────────────────────────────────────────
 
 function PlaceListItem({
   place,
@@ -134,6 +136,74 @@ function PlaceListItem({
   );
 }
 
+// ─── 장소 리스트 아이템 (검색 결과) ────────────────────────────────────────────
+
+function SearchResultItem({
+  place,
+  tagGroupMap,
+  isSelected,
+  onClick,
+}: {
+  place: MapPlace;
+  tagGroupMap: TagGroupColorMap;
+  isSelected: boolean;
+  onClick: () => void;
+}) {
+  const firstPost = place.posts[0];
+
+  return (
+    <div className={`border-b border-border/40 ${isSelected ? "bg-muted/40" : ""}`}>
+      {/* 장소명 + 메타 — 클릭 시 PlaceBottomSheet */}
+      <button
+        onClick={onClick}
+        className="w-full px-4 pt-4 pb-2 text-left active:bg-muted/30 transition-colors"
+      >
+        <p className="font-bold text-base leading-tight line-clamp-1">{place.nameEn}</p>
+        <div className="flex items-center gap-1.5 mt-1">
+          {place.rating != null && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Star className="size-3 fill-muted-foreground stroke-muted-foreground" />
+              {place.rating.toFixed(1)}
+            </span>
+          )}
+          {place.posts.length > 0 && (
+            <>
+              {place.rating != null && <span className="text-xs text-muted-foreground">·</span>}
+              <span className="text-xs text-muted-foreground">
+                {place.posts.length} post{place.posts.length !== 1 ? "s" : ""}
+              </span>
+            </>
+          )}
+        </div>
+      </button>
+
+      {/* 배너 이미지 정사각형 가로 슬라이드 */}
+      {(() => {
+        const thumbnails = place.posts.map((p) => p.imageUrl).filter(Boolean) as string[];
+        const banners = place.posts.flatMap((p) => p.images);
+        const allImages = [...thumbnails, ...banners];
+        if (allImages.length === 0) return null;
+        return (
+          <div className="flex gap-2 px-4 pb-4 overflow-x-auto scrollbar-hide">
+            {allImages.map((url, i) => (
+              <div key={i} className="size-[88px] shrink-0 rounded-xl overflow-hidden bg-muted relative">
+                <Image
+                  src={url}
+                  alt={place.nameEn}
+                  fill
+                  unoptimized
+                  className="object-cover"
+                  sizes="88px"
+                />
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
+
 // ─── 메인 컴포넌트 ─────────────────────────────────────────────────────────────
 
 const SHEET_TAB_ONLY_HEIGHT = 72;
@@ -148,6 +218,8 @@ export function MapPageClient({
   tagGroupConfigs,
   isLoggedIn,
   userInitial,
+  searchQuery,
+  searchedPlaces,
 }: Props) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -164,13 +236,19 @@ export function MapPageClient({
     router.replace(`?${params.toString()}`);
   }
 
+  function clearSearch() {
+    router.replace("/my-map");
+  }
+
   const [activeTab, setActiveTab] = useState<Tab>("places");
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
   const [selectedTagGroup, setSelectedTagGroup] = useState<string | null>(null);
-  const [sheetState, setSheetState] = useState<SheetState>(() =>
-    searchParams.get("place") ? "collapsed" : "peek"
-  );
+  const [sheetState, setSheetState] = useState<SheetState>(() => {
+    if (searchParams.get("place")) return "collapsed";
+    if (searchParams.get("q")) return "peek";
+    return "peek";
+  });
   const sheetRef = useRef<HTMLDivElement>(null);
 
   const savedPostIdsSet = useMemo(() => new Set(savedPostIdsArr), [savedPostIdsArr]);
@@ -204,7 +282,10 @@ export function MapPageClient({
     });
   }, [basePlaces, selectedTopicId, selectedTagId, selectedTagGroup]);
 
-  const selectedPlace = filteredPlaces.find((p) => p.id === selectedPlaceId) ?? null;
+  const isSearchMode = !!searchQuery && searchedPlaces !== null;
+  const displayPlaces = isSearchMode ? (searchedPlaces ?? []) : filteredPlaces;
+
+  const selectedPlace = displayPlaces.find((p) => p.id === selectedPlaceId) ?? null;
 
   function handleTabChange(tab: Tab) {
     setActiveTab(tab);
@@ -237,7 +318,7 @@ export function MapPageClient({
 
   function handlePlaceClose() {
     setSelectedPlaceId(null);
-    setSheetState("tab-only");
+    setSheetState(isSearchMode ? "peek" : "tab-only");
   }
 
   function cycleSheet() {
@@ -292,7 +373,7 @@ export function MapPageClient({
 
         {/* ── 지도 (전체 배경) ── */}
         <InteractiveMap
-          places={filteredPlaces}
+          places={displayPlaces}
           selectedPlaceId={selectedPlaceId}
           onMarkerClick={handleMarkerClick}
           onNearbyClick={() => setSheetState("collapsed")}
@@ -303,13 +384,32 @@ export function MapPageClient({
         <div className="absolute top-0 inset-x-0 z-40 pt-3">
           {/* 검색바 + 프로필 */}
           <div className="flex items-center gap-2 px-4 mb-1">
-            <Link
-              href="/search"
-              className="flex-1 flex items-center gap-2.5 bg-background rounded-full px-4 py-2.5 shadow-md"
-            >
-              <Search className="size-4 text-muted-foreground shrink-0" />
-              <span className="text-sm text-muted-foreground">Search places</span>
-            </Link>
+            {isSearchMode ? (
+              <div className="flex-1 flex items-center gap-2.5 bg-background rounded-full px-4 py-2.5 shadow-md">
+                <Search className="size-4 text-muted-foreground shrink-0" />
+                <Link
+                  href={`/search?q=${encodeURIComponent(searchQuery)}`}
+                  className="flex-1 text-sm truncate"
+                >
+                  {searchQuery}
+                </Link>
+                <button
+                  onClick={clearSearch}
+                  aria-label="검색 초기화"
+                  className="shrink-0"
+                >
+                  <X className="size-4 text-muted-foreground" />
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/search"
+                className="flex-1 flex items-center gap-2.5 bg-background rounded-full px-4 py-2.5 shadow-md"
+              >
+                <Search className="size-4 text-muted-foreground shrink-0" />
+                <span className="text-sm text-muted-foreground">Search places</span>
+              </Link>
+            )}
             <Link
               href={isLoggedIn ? "/profile" : "/login"}
               className="flex items-center justify-center shrink-0 shadow-md rounded-full"
@@ -326,8 +426,8 @@ export function MapPageClient({
             </Link>
           </div>
 
-          {/* 필터 행 — expanded 상태에서는 시트가 덮으므로 숨김 */}
-          {sheetState !== "expanded" && (
+          {/* 필터 행 — expanded 상태 또는 검색 모드에서는 숨김 */}
+          {!isSearchMode && sheetState !== "expanded" && (
             <>
               <MapTopicFilterRow
                 topics={topics}
@@ -385,41 +485,62 @@ export function MapPageClient({
               <div className="w-9 h-1 rounded-full bg-muted-foreground/30" />
             </button>
 
-            {/* 탭 바 — ExploreTabBar 스타일 */}
-            <div className="flex justify-center pb-2.5">
-              <div className="flex items-center rounded-full bg-muted p-1 gap-0.5">
-                {(["places", "my-maps"] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => handleTabChange(tab)}
-                    className={`px-5 py-1.5 rounded-full text-sm font-semibold transition-all ${
-                      activeTab === tab
-                        ? "bg-brand text-black shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    {tab === "places" ? "Places" : "My Maps"}
-                  </button>
-                ))}
+            {isSearchMode ? (
+              /* 검색 결과 헤더 */
+              <div className="px-4 pb-2 pt-1">
+                <p className="text-xs font-medium text-muted-foreground">
+                  {displayPlaces.length} result{displayPlaces.length !== 1 ? "s" : ""} for &ldquo;{searchQuery}&rdquo;
+                </p>
               </div>
-            </div>
+            ) : (
+              <>
+                {/* 탭 바 — ExploreTabBar 스타일 */}
+                <div className="flex justify-center pb-2.5">
+                  <div className="flex items-center rounded-full bg-muted p-1 gap-0.5">
+                    {(["places", "my-maps"] as const).map((tab) => (
+                      <button
+                        key={tab}
+                        onClick={() => handleTabChange(tab)}
+                        className={`px-5 py-1.5 rounded-full text-sm font-semibold transition-all ${
+                          activeTab === tab
+                            ? "bg-brand text-black shadow-sm"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {tab === "places" ? "Places" : "My Maps"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-            {/* 장소 수 */}
-            <div className="px-4 pb-2">
-              <p className="text-xs font-medium text-muted-foreground">
-                {filteredPlaces.length} places
-              </p>
-            </div>
+                {/* 장소 수 */}
+                <div className="px-4 pb-2">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    {filteredPlaces.length} places
+                  </p>
+                </div>
+              </>
+            )}
           </div>
 
           {/* 목록 */}
-          <div className="flex-1 overflow-y-auto divide-y divide-border/40">
-            {showLoginPrompt ? null : filteredPlaces.length === 0 ? (
+          <div className={`flex-1 overflow-y-auto ${isSearchMode ? "" : "divide-y divide-border/40"}`}>
+            {showLoginPrompt ? null : displayPlaces.length === 0 ? (
               <div className="flex items-center justify-center h-20 text-sm text-muted-foreground">
                 No places found.
               </div>
+            ) : isSearchMode ? (
+              displayPlaces.map((place) => (
+                <SearchResultItem
+                  key={place.id}
+                  place={place}
+                  tagGroupMap={tagGroupMap}
+                  isSelected={place.id === selectedPlaceId}
+                  onClick={() => handleListItemClick(place.id)}
+                />
+              ))
             ) : (
-              filteredPlaces.map((place) => (
+              displayPlaces.map((place) => (
                 <PlaceListItem
                   key={place.id}
                   place={place}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { Search, X, ChevronLeft, MapPin, ChevronRight } from "lucide-react";
 import { searchSuggestions, getPopularSearches, type Suggestion } from "./_actions/search-actions";
@@ -74,7 +74,8 @@ function SearchSkeleton() {
 
 export default function SearchPage() {
   const router = useRouter();
-  const [value, setValue] = useState("");
+  const searchParams = useSearchParams();
+  const [value, setValue] = useState(() => searchParams.get("q") ?? "");
   const [recent, setRecent] = useState<string[]>(() => getRecent());
   const [recentPosts, setRecentPosts] = useState<RecentPost[]>(() => getRecentPosts());
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -102,7 +103,7 @@ export default function SearchPage() {
 
   function navigateKeyword(text: string) {
     saveRecent(text);
-    router.push(`/explore?q=${encodeURIComponent(text)}`);
+    router.push(`/my-map?q=${encodeURIComponent(text)}`);
   }
 
   function navigatePost(title: string, slug: string, placeName?: string) {

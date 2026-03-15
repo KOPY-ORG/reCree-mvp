@@ -29,6 +29,7 @@ export type MapPost = {
   slug: string;
   titleEn: string;
   imageUrl: string | null;
+  images: string[];
   topics: MapPostTopic[];
   tags: {
     id: string;
@@ -86,9 +87,9 @@ async function fetchPostPlaceRows(where: object) {
           slug: true,
           titleEn: true,
           postImages: {
-            where: { isThumbnail: true },
-            select: { url: true },
-            take: 1,
+            where: { slotIndex: null },
+            orderBy: { sortOrder: "asc" },
+            select: { url: true, isThumbnail: true },
           },
           postTopics: {
             where: { isVisible: true },
@@ -168,11 +169,13 @@ function groupByPlace(rows: RawPostPlaceRow[]): MapPlace[] {
   for (const { place, post } of rows) {
     if (place.latitude === null || place.longitude === null) continue;
 
+    const thumbnailImg = post.postImages.find((img) => img.isThumbnail);
     const mapPost: MapPost = {
       id: post.id,
       slug: post.slug,
       titleEn: post.titleEn,
-      imageUrl: post.postImages[0]?.url ?? null,
+      imageUrl: thumbnailImg?.url ?? post.postImages[0]?.url ?? null,
+      images: post.postImages.filter((img) => !img.isThumbnail).map((img) => img.url),
       topics: post.postTopics.map((pt) => pt.topic),
       tags: post.postTags.map((pt) => pt.tag),
     };
@@ -202,6 +205,16 @@ function groupByPlace(rows: RawPostPlaceRow[]): MapPlace[] {
     }
   }
   return Array.from(map.values());
+}
+
+/** ID 목록으로 장소 데이터 조회 (검색 결과용) */
+export async function getMapPlacesByIds(ids: string[]): Promise<MapPlace[]> {
+  if (ids.length === 0) return [];
+  const rows = await fetchPostPlaceRows({
+    placeId: { in: ids },
+    post: { status: "PUBLISHED" },
+  });
+  return groupByPlace(rows);
 }
 
 /** PUBLISHED 포스트가 연결된 모든 장소 (lat/lng 있는 것만) */

@@ -5,12 +5,20 @@ import { getAllMapPlaces, getSavedMapPlaces } from "@/lib/map-queries";
 import { getLevel0TopicsDeep } from "@/lib/topic-queries";
 import { getTagGroupsWithTags } from "@/lib/filter-queries";
 import { getSavedPostIds } from "@/lib/post-queries";
+import { searchMapPlaces } from "./_actions/search-places";
 import { MapPageClient } from "./_components/MapPageClient";
 
-export default async function MyTripPage() {
+export default async function MyTripPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const { q } = await searchParams;
+  const query = typeof q === "string" ? q.trim() : "";
+
   const currentUser = await getCurrentUser();
 
-  const [allPlaces, savedPlaces, savedPostIds, topics, tagGroups, tagGroupConfigs] =
+  const [allPlaces, savedPlaces, savedPostIds, topics, tagGroups, tagGroupConfigs, searchedPlaces] =
     await Promise.all([
       getAllMapPlaces(),
       currentUser ? getSavedMapPlaces(currentUser.id) : Promise.resolve([]),
@@ -27,6 +35,7 @@ export default async function MyTripPage() {
           textColorHex: true,
         },
       }),
+      query ? searchMapPlaces(query) : Promise.resolve(null),
     ]);
 
   return (
@@ -40,6 +49,8 @@ export default async function MyTripPage() {
         tagGroupConfigs={tagGroupConfigs}
         isLoggedIn={!!currentUser}
         userInitial={currentUser?.email?.[0]?.toUpperCase() ?? null}
+        searchQuery={query}
+        searchedPlaces={searchedPlaces}
       />
     </Suspense>
   );
