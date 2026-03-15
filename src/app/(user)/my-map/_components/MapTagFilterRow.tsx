@@ -49,13 +49,13 @@ export function MapTagFilterRow({ tagGroups, selectedTagId, selectedTagGroup, on
 
   return (
     <>
-      <div className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pt-2 pb-2 [--pill-py:0.25rem]">
+      <div className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pt-1 pb-2 [--pill-py:0.375rem]">
         <button
           onClick={() => onSelectTag(null, null)}
-          className={`pill-badge shrink-0 transition-colors shadow-md ${
+          className={`pill-badge shrink-0 border transition-colors shadow-md ${
             !selectedTagId && !selectedTagGroup
-              ? "bg-foreground text-background"
-              : "bg-background text-muted-foreground hover:text-foreground"
+              ? "bg-foreground text-background border-foreground"
+              : "bg-background text-muted-foreground border-border hover:text-foreground"
           }`}
         >
           All
@@ -71,10 +71,10 @@ export function MapTagFilterRow({ tagGroups, selectedTagId, selectedTagGroup, on
             <button
               key={group.group}
               onClick={() => setOpenGroup(group.group)}
-              className={`pill-badge shrink-0 transition-colors shadow-md ${
+              className={`pill-badge shrink-0 border transition-colors shadow-md ${
                 isActive
-                  ? "bg-foreground text-background"
-                  : "bg-background text-muted-foreground hover:text-foreground"
+                  ? "bg-foreground text-background border-foreground"
+                  : "bg-background text-muted-foreground border-border hover:text-foreground"
               }`}
             >
               {label}

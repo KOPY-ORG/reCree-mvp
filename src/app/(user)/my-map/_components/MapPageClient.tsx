@@ -344,14 +344,16 @@ export function MapPageClient({
             </Link>
             <Link
               href={isLoggedIn ? "/profile" : "/login"}
-              className="flex items-center justify-center shrink-0"
+              className="flex items-center justify-center shrink-0 shadow-md rounded-full"
             >
               {userInitial ? (
-                <div className="w-7 h-7 rounded-full bg-brand flex items-center justify-center text-xs font-bold text-black">
+                <div className="w-10 h-10 rounded-full bg-brand flex items-center justify-center text-sm font-bold text-black">
                   {userInitial}
                 </div>
               ) : (
-                <User className="size-4 text-muted-foreground" />
+                <div className="w-10 h-10 rounded-full bg-background flex items-center justify-center">
+                  <User className="size-5 text-muted-foreground" />
+                </div>
               )}
             </Link>
           </div>

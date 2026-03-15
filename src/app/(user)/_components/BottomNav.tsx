@@ -19,7 +19,7 @@ export function BottomNav() {
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   return (
-    <nav className="shrink-0 h-16 bg-background border-t flex items-center z-40">
+    <nav className="shrink-0 h-16 bg-background border-t border-border/30 flex items-center z-40">
       {TABS.map(({ label, icon: Icon, href }) => {
         const active = isActive(href);
         return (

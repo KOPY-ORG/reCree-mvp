@@ -111,13 +111,13 @@ export function MapTopicFilterRow({ topics, selectedTopicId, onSelect }: Props) 
 
   return (
     <>
-      <div className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pt-2 [--pill-py:0.25rem]">
+      <div className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pt-2 [--pill-py:0.375rem]">
         <button
           onClick={() => onSelect(null)}
-          className={`pill-badge shrink-0 transition-colors shadow-md ${
+          className={`pill-badge shrink-0 border transition-colors shadow-md ${
             !selectedTopicId
-              ? "bg-foreground text-background"
-              : "bg-background text-muted-foreground hover:text-foreground"
+              ? "bg-foreground text-background border-foreground"
+              : "bg-background text-muted-foreground border-border hover:text-foreground"
           }`}
         >
           All
@@ -136,10 +136,10 @@ export function MapTopicFilterRow({ topics, selectedTopicId, onSelect }: Props) 
                   selectInGroup(topic.id, topic.id);
                 }
               }}
-              className={`pill-badge shrink-0 transition-colors shadow-md ${
+              className={`pill-badge shrink-0 border transition-colors shadow-md ${
                 isActive
-                  ? "bg-foreground text-background"
-                  : "bg-background text-muted-foreground hover:text-foreground"
+                  ? "bg-foreground text-background border-foreground"
+                  : "bg-background text-muted-foreground border-border hover:text-foreground"
               }`}
             >
               {label}
