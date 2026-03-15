@@ -30,6 +30,7 @@ function MapContent({
 }: Omit<Props, "className">) {
   const map = useMap();
 
+  // 초기 bounds 설정 (places 목록 변경 시)
   useEffect(() => {
     if (!map || places.length === 0) return;
     if (places.length === 1) {
@@ -45,6 +46,18 @@ function MapContent({
       // google.maps 미로드 시 무시
     }
   }, [map, places]);
+
+  // 장소 선택 시 해당 마커를 바텀시트 위 중앙에 위치
+  useEffect(() => {
+    if (!map || !selectedPlaceId) return;
+    const place = places.find((p) => p.id === selectedPlaceId);
+    if (!place) return;
+
+    map.panTo({ lat: place.latitude, lng: place.longitude });
+    // half 시트 높이(~50%)의 절반만큼 아래로 이동 → 마커가 시트 위 영역 중앙에 보임
+    const offsetY = Math.round((window.innerHeight - 64) * 0.25);
+    map.panBy(0, offsetY);
+  }, [map, selectedPlaceId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleNearby() {
     if (!map || !navigator.geolocation) return;

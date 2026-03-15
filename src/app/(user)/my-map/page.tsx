@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { getAllMapPlaces, getSavedMapPlaces } from "@/lib/map-queries";
@@ -29,15 +30,17 @@ export default async function MyTripPage() {
     ]);
 
   return (
-    <MapPageClient
-      allPlaces={allPlaces}
-      savedPlaces={savedPlaces}
-      savedPostIds={Array.from(savedPostIds)}
-      topics={topics}
-      tagGroups={tagGroups}
-      tagGroupConfigs={tagGroupConfigs}
-      isLoggedIn={!!currentUser}
-      userInitial={currentUser?.email?.[0]?.toUpperCase() ?? null}
-    />
+    <Suspense>
+      <MapPageClient
+        allPlaces={allPlaces}
+        savedPlaces={savedPlaces}
+        savedPostIds={Array.from(savedPostIds)}
+        topics={topics}
+        tagGroups={tagGroups}
+        tagGroupConfigs={tagGroupConfigs}
+        isLoggedIn={!!currentUser}
+        userInitial={currentUser?.email?.[0]?.toUpperCase() ?? null}
+      />
+    </Suspense>
   );
 }

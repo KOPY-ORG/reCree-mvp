@@ -1,15 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useSheetDrag } from "../_hooks/useSheetDrag";
+import { useToast } from "../../_hooks/useToast";
 import Image from "next/image";
 import Link from "next/link";
 import {
-  Check,
   ChevronDown,
   Clock,
-  Copy,
   ExternalLink,
-  MapPin,
   Phone,
   Star,
   X,
@@ -26,7 +25,6 @@ import { ScrapButton } from "../../_components/ScrapButton";
 
 type PlaceSheetState = "tab-only" | "half" | "full";
 
-const PLACE_TAB_ONLY_HEIGHT = 72;
 const PLACE_FULL_TOP_MARGIN = 12;
 
 interface Props {
@@ -102,17 +100,18 @@ function PostCard({
 
 export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: Props) {
   const [state, setState] = useState<PlaceSheetState>("half");
-  const [isDraggingState, setIsDraggingState] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
+  const { toast, showToast } = useToast();
 
   const sheetRef = useRef<HTMLDivElement>(null);
-  const dragStartY = useRef(0);
-  const dragStartHeight = useRef(0);
-  const isDragging = useRef(false);
-  const lastPointerY = useRef(0);
-  const lastPointerTime = useRef(0);
-  const dragVelocityY = useRef(0);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const minHeightRef = useRef(140);
+
+  useLayoutEffect(() => {
+    if (place && headerRef.current) {
+      minHeightRef.current = headerRef.current.offsetHeight;
+    }
+  });
 
   useEffect(() => {
     if (place) {
@@ -121,69 +120,25 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
     }
   }, [place?.id]);
 
-  function getSnapHeights(): [number, number, number] {
+  const PLACE_SHEET_STATES = ["tab-only", "half", "full"] as const;
+
+  function getSnapHeights() {
     const containerH = window.innerHeight - 64;
-    return [PLACE_TAB_ONLY_HEIGHT, Math.round(containerH * 0.5), containerH - PLACE_FULL_TOP_MARGIN];
+    return [minHeightRef.current, Math.round(containerH * 0.5), containerH - PLACE_FULL_TOP_MARGIN];
   }
 
-  function handleDragStart(e: React.PointerEvent) {
-    if (!sheetRef.current) return;
-    const currentH = sheetRef.current.getBoundingClientRect().height;
-    dragStartY.current = e.clientY;
-    dragStartHeight.current = currentH;
-    isDragging.current = true;
-    lastPointerY.current = e.clientY;
-    lastPointerTime.current = e.timeStamp;
-    dragVelocityY.current = 0;
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    setIsDraggingState(true);
-  }
-
-  function handleDragMove(e: React.PointerEvent) {
-    if (!isDragging.current || !sheetRef.current) return;
-    const newH = dragStartHeight.current - (e.clientY - dragStartY.current);
-    const containerH = window.innerHeight - 64;
-    const clampedH = Math.max(PLACE_TAB_ONLY_HEIGHT, Math.min(newH, containerH - PLACE_FULL_TOP_MARGIN));
-    sheetRef.current.style.height = `${clampedH}px`;
-
-    const dt = e.timeStamp - lastPointerTime.current;
-    if (dt > 0) {
-      dragVelocityY.current = (e.clientY - lastPointerY.current) / dt;
-    }
-    lastPointerY.current = e.clientY;
-    lastPointerTime.current = e.timeStamp;
-  }
-
-  function handleDragEnd() {
-    if (!isDragging.current) return;
-    isDragging.current = false;
-
-    const FLICK_THRESHOLD = 0.5;
-    const stateOrder: PlaceSheetState[] = ["tab-only", "half", "full"];
-
-    let nextState: PlaceSheetState;
-    if (dragVelocityY.current > FLICK_THRESHOLD) {
-      const cur = stateOrder.indexOf(state);
-      nextState = stateOrder[Math.max(0, cur - 1)];
-    } else if (dragVelocityY.current < -FLICK_THRESHOLD) {
-      const cur = stateOrder.indexOf(state);
-      nextState = stateOrder[Math.min(stateOrder.length - 1, cur + 1)];
-    } else {
-      const currentH = sheetRef.current?.getBoundingClientRect().height ?? 0;
-      const snapHeights = getSnapHeights();
-      const dists = snapHeights.map((h) => Math.abs(currentH - h));
-      const minIdx = dists.indexOf(Math.min(...dists));
-      nextState = stateOrder[minIdx];
-    }
-
-    setIsDraggingState(false);
-    setState(nextState);
-  }
+  const { isDragging: isDraggingState, dragHandlers } = useSheetDrag({
+    sheetRef,
+    stateOrder: PLACE_SHEET_STATES,
+    getSnapHeights,
+    currentState: state,
+    onStateChange: setState,
+  });
 
   const sheetStyle: React.CSSProperties = {
     height:
       state === "tab-only"
-        ? `${PLACE_TAB_ONLY_HEIGHT}px`
+        ? `${minHeightRef.current}px`
         : state === "half"
         ? "calc((100dvh - 64px) * 0.5)"
         : `calc(100dvh - 64px - ${PLACE_FULL_TOP_MARGIN}px)`,
@@ -191,9 +146,19 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
   };
 
   function copyToClipboard(text: string) {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+    } else {
+      const el = document.createElement("textarea");
+      el.value = text;
+      el.style.position = "fixed";
+      el.style.opacity = "0";
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+    }
+    showToast("Address copied");
   }
 
   if (!place) return null;
@@ -201,6 +166,12 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
   const hasExtraInfo = !!(place.phone || place.operatingHours?.length);
 
   return (
+    <>
+    {toast && (
+      <div className="fixed bottom-2 left-1/2 -translate-x-1/2 z-[200] px-4 py-2 rounded-full bg-black/50 text-white text-sm whitespace-nowrap shadow-lg pointer-events-none">
+        {toast.message}
+      </div>
+    )}
     <div
       ref={sheetRef}
       className="absolute inset-x-0 bottom-0 z-50 bg-background rounded-t-[2rem] flex flex-col shadow-[0_-8px_40px_rgba(0,0,0,0.18)] overflow-hidden"
@@ -208,11 +179,8 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
     >
       {/* 드래그 가능 상단 영역 */}
       <div
-        onPointerDown={handleDragStart}
-        onPointerMove={handleDragMove}
-        onPointerUp={handleDragEnd}
-        onPointerCancel={handleDragEnd}
-        style={{ touchAction: "none" }}
+        {...dragHandlers}
+        ref={headerRef}
         className="shrink-0 px-5 pb-4"
       >
         {/* 드래그 핸들 */}
@@ -224,25 +192,24 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
         <div className="flex items-start justify-between gap-2 mb-2">
           <p className="text-lg font-bold leading-tight">{place.nameEn}</p>
           <div className="flex items-center gap-1.5 shrink-0">
-            <button onClick={onClose} aria-label="Close">
-              <X className="size-5" />
+            <button
+              onClick={onClose}
+              aria-label="Close"
+              className="flex items-center justify-center w-6 h-6 rounded-full bg-muted"
+            >
+              <X className="size-3 text-muted-foreground" />
             </button>
           </div>
         </div>
 
         {/* 주소 + 복사 */}
         {place.addressEn && (
-          <div className="flex items-center gap-1.5 mb-2">
-            <MapPin className="size-3 shrink-0 text-muted-foreground" />
-            <p className="text-xs text-muted-foreground flex-1 leading-snug">{place.addressEn}</p>
-            <button onClick={() => copyToClipboard(place.addressEn!)} aria-label="Copy address">
-              {copied ? (
-                <Check className="size-3.5 text-brand" />
-              ) : (
-                <Copy className="size-3.5 text-muted-foreground" />
-              )}
-            </button>
-          </div>
+          <button
+            onClick={() => copyToClipboard(place.addressEn!)}
+            className="flex items-center gap-1.5 mb-2 text-left w-full active:opacity-60"
+          >
+            <p className="text-xs text-muted-foreground leading-snug">{place.addressEn}</p>
+          </button>
         )}
 
         {/* 평점 + 지도 링크 */}
@@ -358,5 +325,6 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
         )}
       </div>
     </div>
+    </>
   );
 }

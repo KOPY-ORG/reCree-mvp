@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useMemo, useRef } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useSheetDrag } from "../_hooks/useSheetDrag";
 import Image from "next/image";
 import Link from "next/link";
 import { Search, User, Star, AlignJustify } from "lucide-react";
@@ -147,21 +149,29 @@ export function MapPageClient({
   isLoggedIn,
   userInitial,
 }: Props) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const selectedPlaceId = searchParams.get("place");
+
+  function setSelectedPlaceId(id: string | null) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (id) {
+      params.set("place", id);
+    } else {
+      params.delete("place");
+    }
+    router.replace(`?${params.toString()}`);
+  }
+
   const [activeTab, setActiveTab] = useState<Tab>("places");
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
   const [selectedTagGroup, setSelectedTagGroup] = useState<string | null>(null);
-  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
-  const [sheetState, setSheetState] = useState<SheetState>("peek");
-  const [isDraggingState, setIsDraggingState] = useState(false);
-
+  const [sheetState, setSheetState] = useState<SheetState>(() =>
+    searchParams.get("place") ? "collapsed" : "peek"
+  );
   const sheetRef = useRef<HTMLDivElement>(null);
-  const dragStartY = useRef(0);
-  const dragStartHeight = useRef(0);
-  const isDragging = useRef(false);
-  const lastPointerY = useRef(0);
-  const lastPointerTime = useRef(0);
-  const dragVelocityY = useRef(0);
 
   const savedPostIdsSet = useMemo(() => new Set(savedPostIdsArr), [savedPostIdsArr]);
   const tagGroupMap: TagGroupColorMap = useMemo(
@@ -239,71 +249,23 @@ export function MapPageClient({
     });
   }
 
-  function getSnapHeights(): [number, number, number, number] {
+  const LIST_SHEET_STATES = ["collapsed", "tab-only", "peek", "expanded"] as const;
+
+  function getSnapHeights() {
     const containerH = window.innerHeight - 64;
-    const peekH = Math.round(containerH * 0.4);
-    return [0, SHEET_TAB_ONLY_HEIGHT, peekH, containerH - SHEET_EXPANDED_TOP_MARGIN];
+    return [0, SHEET_TAB_ONLY_HEIGHT, Math.round(containerH * 0.4), containerH - SHEET_EXPANDED_TOP_MARGIN];
   }
 
-  function handleDragStart(e: React.PointerEvent) {
-    if (!sheetRef.current) return;
-    const currentH = sheetRef.current.getBoundingClientRect().height;
-    dragStartY.current = e.clientY;
-    dragStartHeight.current = currentH;
-    isDragging.current = true;
-    lastPointerY.current = e.clientY;
-    lastPointerTime.current = e.timeStamp;
-    dragVelocityY.current = 0;
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    setIsDraggingState(true);
-  }
-
-  function handleDragMove(e: React.PointerEvent) {
-    if (!isDragging.current || !sheetRef.current) return;
-    const newH = dragStartHeight.current - (e.clientY - dragStartY.current);
-    const containerH = window.innerHeight - 64;
-    const clampedH = Math.max(0, Math.min(newH, containerH - 80));
-    sheetRef.current.style.height = `${clampedH}px`;
-
-    const dt = e.timeStamp - lastPointerTime.current;
-    if (dt > 0) {
-      dragVelocityY.current = (e.clientY - lastPointerY.current) / dt;
-    }
-    lastPointerY.current = e.clientY;
-    lastPointerTime.current = e.timeStamp;
-  }
-
-  function handleDragEnd() {
-    if (!isDragging.current) return;
-    isDragging.current = false;
-
-    const FLICK_THRESHOLD = 0.5;
-    const stateOrder: SheetState[] = ["collapsed", "tab-only", "peek", "expanded"];
-
-    let nextState: SheetState;
-    if (dragVelocityY.current > FLICK_THRESHOLD) {
-      // 아래 방향 플링 — 한 단계 내림
-      const cur = stateOrder.indexOf(sheetState);
-      nextState = stateOrder[Math.max(0, cur - 1)];
-    } else if (dragVelocityY.current < -FLICK_THRESHOLD) {
-      // 위 방향 플링 — 한 단계 올림
-      const cur = stateOrder.indexOf(sheetState);
-      nextState = stateOrder[Math.min(stateOrder.length - 1, cur + 1)];
-    } else {
-      // 현재 높이에서 가장 가까운 snap point
-      const currentH = sheetRef.current?.getBoundingClientRect().height ?? 0;
-      const snapHeights = getSnapHeights();
-      const dists = snapHeights.map((h) => Math.abs(currentH - h));
-      const minIdx = dists.indexOf(Math.min(...dists));
-      nextState = stateOrder[minIdx];
-    }
-
-    setIsDraggingState(false);
-    setSheetState(nextState);
-  }
+  const { isDragging: isDraggingState, dragHandlers, didDrag } = useSheetDrag({
+    sheetRef,
+    stateOrder: LIST_SHEET_STATES,
+    getSnapHeights,
+    currentState: sheetState,
+    onStateChange: setSheetState,
+  });
 
   function handleHandleClick() {
-    if (Math.abs(dragStartY.current - lastPointerY.current) > 8) return;
+    if (didDrag()) return;
     cycleSheet();
   }
 
@@ -411,11 +373,7 @@ export function MapPageClient({
         >
           {/* 드래그 가능 헤더 영역 */}
           <div
-            onPointerDown={handleDragStart}
-            onPointerMove={handleDragMove}
-            onPointerUp={handleDragEnd}
-            onPointerCancel={handleDragEnd}
-            style={{ touchAction: "none" }}
+            {...dragHandlers}
             className="shrink-0"
           >
             {/* 드래그 핸들 */}
