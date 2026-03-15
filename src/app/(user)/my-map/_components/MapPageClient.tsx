@@ -8,8 +8,6 @@ import Link from "next/link";
 import { Search, User, Star, AlignJustify, X, MapPin } from "lucide-react";
 import type { MapPlace } from "@/lib/map-queries";
 import type { TagGroupColorMap } from "@/lib/post-labels";
-import { labelBackground, resolveTagColors } from "@/lib/post-labels";
-import { LabelBadge } from "@/components/LabelBadge";
 import { MapTopicFilterRow } from "./MapTopicFilterRow";
 import { MapTagFilterRow } from "./MapTagFilterRow";
 import { InteractiveMap } from "./InteractiveMap";
@@ -64,92 +62,17 @@ function isTopicMatch(topic: TopicNode, targetId: string): boolean {
   return false;
 }
 
-// ─── 장소 리스트 아이템 (기본) ─────────────────────────────────────────────────
-
-function PlaceListItem({
-  place,
-  tagGroupMap,
-  isSelected,
-  onClick,
-}: {
-  place: MapPlace;
-  tagGroupMap: TagGroupColorMap;
-  isSelected: boolean;
-  onClick: () => void;
-}) {
-  const firstPost = place.posts[0];
-  const postCount = place.posts.length;
-
-  return (
-    <button
-      onClick={onClick}
-      className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors active:bg-muted/30 ${
-        isSelected ? "bg-muted/40" : ""
-      }`}
-    >
-      <div className="relative size-[72px] shrink-0 rounded-xl overflow-hidden bg-muted">
-        {firstPost?.imageUrl ? (
-          <Image
-            src={firstPost.imageUrl}
-            alt={place.nameEn}
-            fill
-            unoptimized
-            className="object-cover"
-            sizes="72px"
-          />
-        ) : (
-          <div className="w-full h-full bg-muted" />
-        )}
-      </div>
-
-      <div className="flex-1 min-w-0">
-        <p className="font-semibold text-sm line-clamp-1">{place.nameEn}</p>
-        <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
-          {postCount > 1 ? `${postCount} posts` : (firstPost?.titleEn ?? "")}
-        </p>
-        <div className="flex items-center gap-2 mt-1.5">
-          {place.rating != null && (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
-              <Star className="size-3 fill-muted-foreground stroke-muted-foreground" />
-              {place.rating.toFixed(1)}
-            </span>
-          )}
-          {firstPost?.tags[0] && (() => {
-            const tag = firstPost.tags[0];
-            const colors = resolveTagColors(tag, tagGroupMap.get(tag.group));
-            return (
-              <LabelBadge
-                text={tag.name}
-                background={labelBackground({ text: tag.name, ...colors })}
-                color={colors.textColorHex}
-                className="[--pill-fs:0.625rem]"
-              />
-            );
-          })()}
-        </div>
-      </div>
-
-      {isSelected && (
-        <div className="w-1.5 h-1.5 rounded-full bg-brand shrink-0" />
-      )}
-    </button>
-  );
-}
-
-// ─── 장소 리스트 아이템 (검색 결과) ────────────────────────────────────────────
+// ─── 장소 리스트 아이템 ────────────────────────────────────────────────────────
 
 function SearchResultItem({
   place,
-  tagGroupMap,
   isSelected,
   onClick,
 }: {
   place: MapPlace;
-  tagGroupMap: TagGroupColorMap;
   isSelected: boolean;
   onClick: () => void;
 }) {
-  const firstPost = place.posts[0];
 
   return (
     <div className={`border-b border-border/40 ${isSelected ? "bg-muted/40" : ""}`}>
@@ -546,27 +469,16 @@ export function MapPageClient({
           </div>
 
           {/* 목록 */}
-          <div className={`flex-1 overflow-y-auto ${isSearchMode ? "" : "divide-y divide-border/40"}`}>
+          <div className="flex-1 overflow-y-auto">
             {showLoginPrompt ? null : displayPlaces.length === 0 ? (
               <div className="flex items-center justify-center h-20 text-sm text-muted-foreground">
                 No places found.
               </div>
-            ) : isSearchMode ? (
+            ) : (
               displayPlaces.map((place) => (
                 <SearchResultItem
                   key={place.id}
                   place={place}
-                  tagGroupMap={tagGroupMap}
-                  isSelected={place.id === selectedPlaceId}
-                  onClick={() => handleListItemClick(place.id)}
-                />
-              ))
-            ) : (
-              displayPlaces.map((place) => (
-                <PlaceListItem
-                  key={place.id}
-                  place={place}
-                  tagGroupMap={tagGroupMap}
                   isSelected={place.id === selectedPlaceId}
                   onClick={() => handleListItemClick(place.id)}
                 />
