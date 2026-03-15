@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { Search, X, ChevronLeft, MapPin, ChevronRight } from "lucide-react";
 import { searchSuggestions, getPopularSearches, type Suggestion } from "./_actions/search-actions";
 import { SearchBar } from "../_components/SearchBar";
@@ -72,7 +72,7 @@ function SearchSkeleton() {
   );
 }
 
-export default function SearchPage() {
+function SearchPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [value, setValue] = useState(() => searchParams.get("q") ?? "");
@@ -297,5 +297,13 @@ export default function SearchPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense>
+      <SearchPageContent />
+    </Suspense>
   );
 }
