@@ -1,18 +1,27 @@
 // 지도 페이지용 장소 + 포스트 쿼리 — 서버 전용
 import { prisma } from "@/lib/prisma";
 
-export type MapPostTopic = {
+type TopicColorFields = {
+  colorHex: string | null;
+  colorHex2: string | null;
+  gradientDir: string;
+  gradientStop: number;
+  textColorHex: string | null;
+};
+
+export type MapPostTopic = TopicColorFields & {
   id: string;
+  nameEn: string;
   level: number;
-  parent?: {
+  parent?: (TopicColorFields & {
     id: string;
     level: number;
-    parent?: {
+    parent?: (TopicColorFields & {
       id: string;
       level: number;
-      parent?: { id: string; level: number } | null;
-    } | null;
-  } | null;
+      parent?: (TopicColorFields & { id: string; level: number }) | null;
+    }) | null;
+  }) | null;
 };
 
 export type MapPost = {
@@ -38,6 +47,13 @@ export type MapPlace = {
   latitude: number;
   longitude: number;
   rating: number | null;
+  addressKo: string | null;
+  addressEn: string | null;
+  googleMapsUrl: string | null;
+  naverMapsUrl: string | null;
+  imageUrl: string | null;
+  phone: string | null;
+  operatingHours: string[] | null;
   posts: MapPost[];
 };
 
@@ -55,6 +71,13 @@ async function fetchPostPlaceRows(where: object) {
           latitude: true,
           longitude: true,
           rating: true,
+          addressKo: true,
+          addressEn: true,
+          googleMapsUrl: true,
+          naverMapsUrl: true,
+          imageUrl: true,
+          phone: true,
+          operatingHours: true,
         },
       },
       post: {
@@ -74,16 +97,42 @@ async function fetchPostPlaceRows(where: object) {
               topic: {
                 select: {
                   id: true,
+                  nameEn: true,
                   level: true,
+                  colorHex: true,
+                  colorHex2: true,
+                  gradientDir: true,
+                  gradientStop: true,
+                  textColorHex: true,
                   parent: {
                     select: {
                       id: true,
                       level: true,
+                      colorHex: true,
+                      colorHex2: true,
+                      gradientDir: true,
+                      gradientStop: true,
+                      textColorHex: true,
                       parent: {
                         select: {
                           id: true,
                           level: true,
-                          parent: { select: { id: true, level: true } },
+                          colorHex: true,
+                          colorHex2: true,
+                          gradientDir: true,
+                          gradientStop: true,
+                          textColorHex: true,
+                          parent: {
+                            select: {
+                              id: true,
+                              level: true,
+                              colorHex: true,
+                              colorHex2: true,
+                              gradientDir: true,
+                              gradientStop: true,
+                              textColorHex: true,
+                            },
+                          },
                         },
                       },
                     },
@@ -141,6 +190,13 @@ function groupByPlace(rows: RawPostPlaceRow[]): MapPlace[] {
         latitude: place.latitude,
         longitude: place.longitude,
         rating: place.rating,
+        addressKo: place.addressKo,
+        addressEn: place.addressEn,
+        googleMapsUrl: place.googleMapsUrl,
+        naverMapsUrl: place.naverMapsUrl,
+        imageUrl: place.imageUrl,
+        phone: place.phone,
+        operatingHours: place.operatingHours as string[] | null,
         posts: [mapPost],
       });
     }

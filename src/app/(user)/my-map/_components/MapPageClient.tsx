@@ -4,7 +4,7 @@ import { useState, useMemo, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Search, User, Star, AlignJustify } from "lucide-react";
-import type { MapPlace, MapPostTopic } from "@/lib/map-queries";
+import type { MapPlace } from "@/lib/map-queries";
 import type { TagGroupColorMap } from "@/lib/post-labels";
 import { labelBackground, resolveTagColors } from "@/lib/post-labels";
 import { LabelBadge } from "@/components/LabelBadge";
@@ -53,7 +53,8 @@ interface Props {
 
 // ─── 헬퍼 ─────────────────────────────────────────────────────────────────────
 
-function isTopicMatch(topic: MapPostTopic, targetId: string): boolean {
+type TopicNode = { id: string; parent?: TopicNode | null };
+function isTopicMatch(topic: TopicNode, targetId: string): boolean {
   if (topic.id === targetId) return true;
   if (topic.parent) return isTopicMatch(topic.parent, targetId);
   return false;
