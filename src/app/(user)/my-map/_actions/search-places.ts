@@ -23,6 +23,9 @@ export async function searchMapPlaces(q: string): Promise<MapPlace[]> {
                 { nameKo: { contains: word, mode: "insensitive" } },
                 { city: { contains: word, mode: "insensitive" } },
                 { addressEn: { contains: word, mode: "insensitive" } },
+                { placeTypes: { has: word } },
+                { area: { nameKo: { contains: word, mode: "insensitive" } } },
+                { area: { parent: { nameKo: { contains: word, mode: "insensitive" } } } },
                 {
                   postPlaces: {
                     some: {

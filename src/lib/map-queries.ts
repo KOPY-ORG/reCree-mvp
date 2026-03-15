@@ -55,6 +55,8 @@ export type MapPlace = {
   imageUrl: string | null;
   phone: string | null;
   operatingHours: string[] | null;
+  area: { id: string; nameKo: string; level: number; parent: { nameKo: string } | null } | null;
+  placeImages: { url: string; isThumbnail: boolean; sortOrder: number }[];
   posts: MapPost[];
 };
 
@@ -79,6 +81,18 @@ async function fetchPostPlaceRows(where: object) {
           imageUrl: true,
           phone: true,
           operatingHours: true,
+          area: {
+            select: {
+              id: true,
+              nameKo: true,
+              level: true,
+              parent: { select: { nameKo: true } },
+            },
+          },
+          placeImages: {
+            orderBy: { sortOrder: "asc" },
+            select: { url: true, isThumbnail: true, sortOrder: true },
+          },
         },
       },
       post: {
@@ -200,6 +214,8 @@ function groupByPlace(rows: RawPostPlaceRow[]): MapPlace[] {
         imageUrl: place.imageUrl,
         phone: place.phone,
         operatingHours: place.operatingHours as string[] | null,
+        area: place.area ?? null,
+        placeImages: place.placeImages,
         posts: [mapPost],
       });
     }

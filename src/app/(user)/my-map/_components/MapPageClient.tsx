@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useSheetDrag } from "../_hooks/useSheetDrag";
 import Image from "next/image";
 import Link from "next/link";
-import { Search, User, Star, AlignJustify, X } from "lucide-react";
+import { Search, User, Star, AlignJustify, X, MapPin } from "lucide-react";
 import type { MapPlace } from "@/lib/map-queries";
 import type { TagGroupColorMap } from "@/lib/post-labels";
 import { labelBackground, resolveTagColors } from "@/lib/post-labels";
@@ -159,7 +159,7 @@ function SearchResultItem({
         className="w-full px-4 pt-4 pb-2 text-left active:bg-muted/30 transition-colors"
       >
         <p className="font-bold text-base leading-tight line-clamp-1">{place.nameEn}</p>
-        <div className="flex items-center gap-1.5 mt-1">
+        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
           {place.rating != null && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground">
               <Star className="size-3 fill-muted-foreground stroke-muted-foreground" />
@@ -174,14 +174,24 @@ function SearchResultItem({
               </span>
             </>
           )}
+          {place.area && (
+            <>
+              <span className="text-xs text-muted-foreground">·</span>
+              <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
+                <MapPin className="size-2.5" />
+                {place.area.nameKo}
+              </span>
+            </>
+          )}
         </div>
       </button>
 
       {/* 배너 이미지 정사각형 가로 슬라이드 */}
       {(() => {
+        const placeImgs = place.placeImages.map((img) => img.url);
         const thumbnails = place.posts.map((p) => p.imageUrl).filter(Boolean) as string[];
         const banners = place.posts.flatMap((p) => p.images);
-        const allImages = [...thumbnails, ...banners];
+        const allImages = [...placeImgs, ...thumbnails, ...banners];
         if (allImages.length === 0) return null;
         return (
           <div className="flex gap-2 px-4 pb-4 overflow-x-auto scrollbar-hide">

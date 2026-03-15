@@ -25,6 +25,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import dynamic from "next/dynamic";
 
 const MapPreview = dynamic(
@@ -106,6 +107,7 @@ export type PlaceForForm = {
   longitude: number | null;
   phone: string | null;
   imageUrl: string | null;
+  placeImages: { url: string; isThumbnail: boolean }[];
   rating: number | null;
   status: string;
   operatingHours: unknown;
@@ -150,6 +152,7 @@ export type PostInitialData = {
     placeLongitude?: number | null;
     placePhone?: string | null;
     placeImageUrl?: string | null;
+    placeImages?: { url: string; isThumbnail: boolean }[];
     placeRating?: number | null;
     placeStatus?: string;
     placeOperatingHours?: unknown;
@@ -239,6 +242,7 @@ export function PostForm({
       longitude: pp.placeLongitude ?? null,
       phone: pp.placePhone ?? null,
       imageUrl: pp.placeImageUrl ?? null,
+      placeImages: pp.placeImages ?? [],
       rating: pp.placeRating ?? null,
       status: pp.placeStatus ?? "OPEN",
       operatingHours: pp.placeOperatingHours ?? null,
@@ -498,7 +502,6 @@ export function PostForm({
 
     if (finalStatus === "PUBLISHED") {
       const missing: string[] = [];
-      if (postTopics.length === 0) missing.push("토픽 1개 이상");
       if (!images.some((img) => img.isThumbnail)) missing.push("썸네일 이미지");
       const visibleCount =
         postTopics.filter((t) => t.isVisible).length + postTags.filter((t) => t.isVisible).length;
@@ -781,6 +784,17 @@ export function PostForm({
                           </div>
                         </div>
 
+                        {/* 장소 이미지 */}
+                        {place.placeImages.length > 0 && (
+                          <div className="flex gap-2 overflow-x-auto pb-0.5">
+                            {place.placeImages.map((img, i) => (
+                              <div key={i} className="relative size-20 shrink-0 overflow-hidden rounded-md border bg-muted">
+                                <Image src={img.url} alt="" fill unoptimized className="object-cover" sizes="80px" />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
                         {/* 지도 */}
                         {place.latitude && place.longitude ? (
                           <div className="overflow-hidden rounded-lg border">
@@ -912,6 +926,7 @@ export function PostForm({
                   {activeTab === "images" && (
                     <PostImageSection
                       postId={postId}
+                      placeId={placeEntries[0]?.place.id ?? null}
                       images={images}
                       onChange={setImages}
                       sources={sources}

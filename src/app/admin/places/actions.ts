@@ -10,8 +10,8 @@ export type PlaceFormData = {
   nameEn: string;
   addressKo: string;
   addressEn: string;
-  country: string;
-  city: string;
+  areaId: string | null;
+  placeTypes: string[];
   latitude: number | null;
   longitude: number | null;
   googlePlaceId: string | null;
@@ -51,8 +51,8 @@ export async function createPlace(
         nameEn: data.nameEn || null,
         addressKo: data.addressKo || null,
         addressEn: data.addressEn || null,
-        country: data.country,
-        city: data.city || null,
+        areaId: data.areaId || null,
+        placeTypes: data.placeTypes,
         latitude: data.latitude,
         longitude: data.longitude,
         googlePlaceId: data.googlePlaceId || null,
@@ -85,8 +85,8 @@ export async function updatePlace(
         nameEn: data.nameEn || null,
         addressKo: data.addressKo || null,
         addressEn: data.addressEn || null,
-        country: data.country,
-        city: data.city || null,
+        areaId: data.areaId || null,
+        placeTypes: data.placeTypes,
         latitude: data.latitude,
         longitude: data.longitude,
         googlePlaceId: data.googlePlaceId || null,
@@ -104,5 +104,91 @@ export async function updatePlace(
     return {};
   } catch {
     return { error: "장소를 수정하는 중 오류가 발생했습니다." };
+  }
+}
+
+// ─── PlaceImage 액션 (edit 페이지 전용) ────────────────────────────────────────
+
+export async function addPlaceImage(
+  placeId: string,
+  data: { url: string; caption?: string },
+): Promise<{ error?: string; id?: string }> {
+  try {
+    if (!data.url.trim()) return { error: "이미지 URL을 입력해주세요." };
+    const maxOrder = await prisma.placeImage.aggregate({
+      where: { placeId },
+      _max: { sortOrder: true },
+    });
+    const isFirst = (maxOrder._max.sortOrder === null);
+    const img = await prisma.placeImage.create({
+      data: {
+        placeId,
+        url: data.url.trim(),
+        caption: data.caption?.trim() || null,
+        sortOrder: (maxOrder._max.sortOrder ?? -1) + 1,
+        isThumbnail: isFirst,
+      },
+    });
+    revalidatePath(`/admin/places/${placeId}/edit`);
+    return { id: img.id };
+  } catch {
+    return { error: "이미지를 추가하는 중 오류가 발생했습니다." };
+  }
+}
+
+export async function deletePlaceImage(
+  imageId: string,
+  placeId: string,
+): Promise<{ error?: string }> {
+  try {
+    const img = await prisma.placeImage.findUnique({ where: { id: imageId } });
+    await prisma.placeImage.delete({ where: { id: imageId } });
+    // 삭제된 것이 썸네일이었다면 첫 번째 남은 이미지를 썸네일로 지정
+    if (img?.isThumbnail) {
+      const first = await prisma.placeImage.findFirst({
+        where: { placeId },
+        orderBy: { sortOrder: "asc" },
+      });
+      if (first) {
+        await prisma.placeImage.update({ where: { id: first.id }, data: { isThumbnail: true } });
+      }
+    }
+    revalidatePath(`/admin/places/${placeId}/edit`);
+    return {};
+  } catch {
+    return { error: "이미지를 삭제하는 중 오류가 발생했습니다." };
+  }
+}
+
+export async function setPlaceImageThumbnail(
+  placeId: string,
+  imageId: string,
+): Promise<{ error?: string }> {
+  try {
+    await prisma.$transaction([
+      prisma.placeImage.updateMany({ where: { placeId }, data: { isThumbnail: false } }),
+      prisma.placeImage.update({ where: { id: imageId }, data: { isThumbnail: true } }),
+    ]);
+    revalidatePath(`/admin/places/${placeId}/edit`);
+    return {};
+  } catch {
+    return { error: "썸네일을 변경하는 중 오류가 발생했습니다." };
+  }
+}
+
+export async function updatePlaceImageCaption(
+  imageId: string,
+  placeId: string,
+  caption: string,
+): Promise<{ error?: string }> {
+  try {
+    await prisma.placeImage.update({
+      where: { id: imageId },
+      data: { caption: caption.trim() || null },
+    });
+    revalidatePath(`/admin/places/${placeId}/edit`);
+    return {};
+  } catch {
+    return { error: "캡션을 수정하는 중 오류가 발생했습니다." };
   }
 }
