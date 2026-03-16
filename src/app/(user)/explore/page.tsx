@@ -13,6 +13,7 @@ import { TopicFilterRow } from "./_components/TopicFilterRow";
 import { TagFilterRow } from "./_components/TagFilterRow";
 import { ExploreTabBar } from "./_components/ExploreTabBar";
 import { ExploreSearchActiveBar } from "./_components/ExploreSearchActiveBar";
+import { HallGrid } from "./_components/HallGrid";
 
 // ─── 서브 컴포넌트 ────────────────────────────────────────────────────────────
 
@@ -72,6 +73,7 @@ function RecreeshotInlineSection({
   shots: {
     id: string;
     imageUrl: string;
+    referencePhotoUrl: string | null;
     matchScore: number | null;
     showBadge: boolean;
   }[];
@@ -90,7 +92,7 @@ function RecreeshotInlineSection({
       </div>
       <div className="flex gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory">
         {shots.map((shot) => (
-          <div key={shot.id} className="snap-start shrink-0 w-[90px]">
+          <Link key={shot.id} href={`/explore/hall/${shot.id}`} className="snap-start shrink-0 w-[90px]">
             <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-muted">
               <Image
                 src={shot.imageUrl}
@@ -105,7 +107,7 @@ function RecreeshotInlineSection({
                 </span>
               )}
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </div>
@@ -147,7 +149,7 @@ export default async function ExplorePage({
       prisma.reCreeshot.findMany({
         where: { status: "ACTIVE" },
         orderBy: { createdAt: "desc" },
-        select: { id: true, imageUrl: true, matchScore: true, showBadge: true },
+        select: { id: true, imageUrl: true, referencePhotoUrl: true, matchScore: true, showBadge: true },
       }),
       getSavedPostIds(currentUser?.id ?? null),
     ]);
@@ -221,33 +223,7 @@ export default async function ExplorePage({
       {/* Hall 탭 */}
       {tab === "hall" && (
         <div className="px-4 py-4">
-          {recreeshots.length === 0 ? (
-            <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
-              아직 리크리샷이 없습니다.
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-2">
-              {recreeshots.map((shot) => (
-                <div
-                  key={shot.id}
-                  className="relative aspect-3/4 rounded-lg overflow-hidden bg-muted"
-                >
-                  <Image
-                    src={shot.imageUrl}
-                    alt="recreeshot"
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 672px) 50vw, 336px"
-                  />
-                  {shot.matchScore != null && shot.showBadge && (
-                    <span className="absolute top-2 right-2 bg-brand text-black text-xs font-bold px-1.5 py-0.5 rounded-full">
-                      {Math.round(shot.matchScore)}%
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+          <HallGrid shots={recreeshots} />
         </div>
       )}
     </div>
