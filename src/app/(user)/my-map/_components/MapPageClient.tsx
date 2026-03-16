@@ -5,11 +5,10 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useSheetDrag } from "../_hooks/useSheetDrag";
 import Image from "next/image";
 import Link from "next/link";
-import { Search, User, Star, AlignJustify, X } from "lucide-react";
+import { Search, User, Star, AlignJustify, X, MapPin } from "lucide-react";
+import { CloseButton } from "./CloseButton";
 import type { MapPlace } from "@/lib/map-queries";
 import type { TagGroupColorMap } from "@/lib/post-labels";
-import { labelBackground, resolveTagColors } from "@/lib/post-labels";
-import { LabelBadge } from "@/components/LabelBadge";
 import { MapTopicFilterRow } from "./MapTopicFilterRow";
 import { MapTagFilterRow } from "./MapTagFilterRow";
 import { InteractiveMap } from "./InteractiveMap";
@@ -64,102 +63,27 @@ function isTopicMatch(topic: TopicNode, targetId: string): boolean {
   return false;
 }
 
-// ─── 장소 리스트 아이템 (기본) ─────────────────────────────────────────────────
-
-function PlaceListItem({
-  place,
-  tagGroupMap,
-  isSelected,
-  onClick,
-}: {
-  place: MapPlace;
-  tagGroupMap: TagGroupColorMap;
-  isSelected: boolean;
-  onClick: () => void;
-}) {
-  const firstPost = place.posts[0];
-  const postCount = place.posts.length;
-
-  return (
-    <button
-      onClick={onClick}
-      className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors active:bg-muted/30 ${
-        isSelected ? "bg-muted/40" : ""
-      }`}
-    >
-      <div className="relative size-[72px] shrink-0 rounded-xl overflow-hidden bg-muted">
-        {firstPost?.imageUrl ? (
-          <Image
-            src={firstPost.imageUrl}
-            alt={place.nameEn}
-            fill
-            unoptimized
-            className="object-cover"
-            sizes="72px"
-          />
-        ) : (
-          <div className="w-full h-full bg-muted" />
-        )}
-      </div>
-
-      <div className="flex-1 min-w-0">
-        <p className="font-semibold text-sm line-clamp-1">{place.nameEn}</p>
-        <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
-          {postCount > 1 ? `${postCount} posts` : (firstPost?.titleEn ?? "")}
-        </p>
-        <div className="flex items-center gap-2 mt-1.5">
-          {place.rating != null && (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
-              <Star className="size-3 fill-muted-foreground stroke-muted-foreground" />
-              {place.rating.toFixed(1)}
-            </span>
-          )}
-          {firstPost?.tags[0] && (() => {
-            const tag = firstPost.tags[0];
-            const colors = resolveTagColors(tag, tagGroupMap.get(tag.group));
-            return (
-              <LabelBadge
-                text={tag.name}
-                background={labelBackground({ text: tag.name, ...colors })}
-                color={colors.textColorHex}
-                className="[--pill-fs:0.625rem]"
-              />
-            );
-          })()}
-        </div>
-      </div>
-
-      {isSelected && (
-        <div className="w-1.5 h-1.5 rounded-full bg-brand shrink-0" />
-      )}
-    </button>
-  );
-}
-
-// ─── 장소 리스트 아이템 (검색 결과) ────────────────────────────────────────────
+// ─── 장소 리스트 아이템 ────────────────────────────────────────────────────────
 
 function SearchResultItem({
   place,
-  tagGroupMap,
   isSelected,
   onClick,
 }: {
   place: MapPlace;
-  tagGroupMap: TagGroupColorMap;
   isSelected: boolean;
   onClick: () => void;
 }) {
-  const firstPost = place.posts[0];
 
   return (
     <div className={`border-b border-border/40 ${isSelected ? "bg-muted/40" : ""}`}>
       {/* 장소명 + 메타 — 클릭 시 PlaceBottomSheet */}
       <button
         onClick={onClick}
-        className="w-full px-4 pt-4 pb-2 text-left active:bg-muted/30 transition-colors"
+        className="w-full px-5 pt-4 pb-2 text-left active:bg-muted/30 transition-colors"
       >
         <p className="font-bold text-base leading-tight line-clamp-1">{place.nameEn}</p>
-        <div className="flex items-center gap-1.5 mt-1">
+        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
           {place.rating != null && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground">
               <Star className="size-3 fill-muted-foreground stroke-muted-foreground" />
@@ -174,19 +98,39 @@ function SearchResultItem({
               </span>
             </>
           )}
+          {place.area && (
+            <>
+              <span className="text-xs text-muted-foreground">·</span>
+              <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
+                <MapPin className="size-2.5" />
+                {place.area.nameEn ?? place.area.nameKo}
+              </span>
+            </>
+          )}
         </div>
       </button>
 
-      {/* 배너 이미지 정사각형 가로 슬라이드 */}
+      {/* 이미지 가로 슬라이드: 썸네일 → 장소 이미지 → 배너, 중복 제거 */}
       {(() => {
+        const seen = new Set<string>();
+        const dedup = (url: string) => {
+          if (seen.has(url)) return false;
+          seen.add(url);
+          return true;
+        };
         const thumbnails = place.posts.map((p) => p.imageUrl).filter(Boolean) as string[];
+        const placeImgs = place.placeImages.map((img) => img.url);
         const banners = place.posts.flatMap((p) => p.images);
-        const allImages = [...thumbnails, ...banners];
+        const allImages = [
+          ...thumbnails.filter(dedup),
+          ...placeImgs.filter(dedup),
+          ...banners.filter(dedup),
+        ];
         if (allImages.length === 0) return null;
         return (
-          <div className="flex gap-2 px-4 pb-4 overflow-x-auto scrollbar-hide">
+          <div className="flex gap-2.5 px-5 pb-4 overflow-x-auto scrollbar-hide">
             {allImages.map((url, i) => (
-              <div key={i} className="size-[88px] shrink-0 rounded-xl overflow-hidden bg-muted relative">
+              <div key={i} className="size-[100px] shrink-0 rounded-xl overflow-hidden bg-muted relative">
                 <Image
                   src={url}
                   alt={place.nameEn}
@@ -244,11 +188,9 @@ export function MapPageClient({
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
   const [selectedTagGroup, setSelectedTagGroup] = useState<string | null>(null);
-  const [sheetState, setSheetState] = useState<SheetState>(() => {
-    if (searchParams.get("place")) return "collapsed";
-    if (searchParams.get("q")) return "peek";
-    return "peek";
-  });
+  const [sheetState, setSheetState] = useState<SheetState>(
+    searchParams.get("place") ? "collapsed" : "peek"
+  );
   const sheetRef = useRef<HTMLDivElement>(null);
 
   const savedPostIdsSet = useMemo(() => new Set(savedPostIdsArr), [savedPostIdsArr]);
@@ -375,8 +317,9 @@ export function MapPageClient({
         <InteractiveMap
           places={displayPlaces}
           selectedPlaceId={selectedPlaceId}
+          highlightedIds={isSearchMode ? new Set(displayPlaces.map((p) => p.id)) : undefined}
+          boundsKey={isSearchMode ? searchQuery : undefined}
           onMarkerClick={handleMarkerClick}
-          onNearbyClick={() => setSheetState("collapsed")}
           className="absolute inset-0"
         />
 
@@ -487,10 +430,14 @@ export function MapPageClient({
 
             {isSearchMode ? (
               /* 검색 결과 헤더 */
-              <div className="px-4 pb-2 pt-1">
-                <p className="text-xs font-medium text-muted-foreground">
-                  {displayPlaces.length} result{displayPlaces.length !== 1 ? "s" : ""} for &ldquo;{searchQuery}&rdquo;
-                </p>
+              <div className="flex items-center justify-between px-5 pb-3 pt-1">
+                <div>
+                  <p className="text-xl font-bold leading-tight">{searchQuery}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {displayPlaces.length} result{displayPlaces.length !== 1 ? "s" : ""}
+                  </p>
+                </div>
+                <CloseButton onClick={clearSearch} label="검색 초기화" />
               </div>
             ) : (
               <>
@@ -514,7 +461,7 @@ export function MapPageClient({
                 </div>
 
                 {/* 장소 수 */}
-                <div className="px-4 pb-2">
+                <div className="px-5 pb-2">
                   <p className="text-xs font-medium text-muted-foreground">
                     {filteredPlaces.length} places
                   </p>
@@ -524,27 +471,16 @@ export function MapPageClient({
           </div>
 
           {/* 목록 */}
-          <div className={`flex-1 overflow-y-auto ${isSearchMode ? "" : "divide-y divide-border/40"}`}>
+          <div className="flex-1 overflow-y-auto">
             {showLoginPrompt ? null : displayPlaces.length === 0 ? (
               <div className="flex items-center justify-center h-20 text-sm text-muted-foreground">
                 No places found.
               </div>
-            ) : isSearchMode ? (
+            ) : (
               displayPlaces.map((place) => (
                 <SearchResultItem
                   key={place.id}
                   place={place}
-                  tagGroupMap={tagGroupMap}
-                  isSelected={place.id === selectedPlaceId}
-                  onClick={() => handleListItemClick(place.id)}
-                />
-              ))
-            ) : (
-              displayPlaces.map((place) => (
-                <PlaceListItem
-                  key={place.id}
-                  place={place}
-                  tagGroupMap={tagGroupMap}
                   isSelected={place.id === selectedPlaceId}
                   onClick={() => handleListItemClick(place.id)}
                 />

@@ -55,6 +55,8 @@ export type MapPlace = {
   imageUrl: string | null;
   phone: string | null;
   operatingHours: string[] | null;
+  area: { id: string; nameKo: string; nameEn: string | null; level: number; parent: { nameKo: string; nameEn: string | null } | null } | null;
+  placeImages: { url: string; isThumbnail: boolean; sortOrder: number }[];
   posts: MapPost[];
 };
 
@@ -79,6 +81,19 @@ async function fetchPostPlaceRows(where: object) {
           imageUrl: true,
           phone: true,
           operatingHours: true,
+          area: {
+            select: {
+              id: true,
+              nameKo: true,
+              nameEn: true,
+              level: true,
+              parent: { select: { nameKo: true, nameEn: true } },
+            },
+          },
+          placeImages: {
+            orderBy: { sortOrder: "asc" },
+            select: { url: true, isThumbnail: true, sortOrder: true },
+          },
         },
       },
       post: {
@@ -200,6 +215,8 @@ function groupByPlace(rows: RawPostPlaceRow[]): MapPlace[] {
         imageUrl: place.imageUrl,
         phone: place.phone,
         operatingHours: place.operatingHours as string[] | null,
+        area: place.area ?? null,
+        placeImages: place.placeImages,
         posts: [mapPost],
       });
     }
@@ -207,14 +224,76 @@ function groupByPlace(rows: RawPostPlaceRow[]): MapPlace[] {
   return Array.from(map.values());
 }
 
-/** ID 목록으로 장소 데이터 조회 (검색 결과용) */
-export async function getMapPlacesByIds(ids: string[]): Promise<MapPlace[]> {
+/** 포스트 없는 장소도 포함하는 검색용 조회 */
+export async function getMapPlacesByIdsWithFallback(ids: string[]): Promise<MapPlace[]> {
   if (ids.length === 0) return [];
+
+  // 1. 포스트 연결된 장소 (기존 방식)
   const rows = await fetchPostPlaceRows({
     placeId: { in: ids },
     post: { status: "PUBLISHED" },
   });
-  return groupByPlace(rows);
+  const placesWithPosts = groupByPlace(rows);
+  const coveredIds = new Set(placesWithPosts.map((p) => p.id));
+
+  // 2. 포스트 없는 장소 직접 조회
+  const missingIds = ids.filter((id) => !coveredIds.has(id));
+  if (missingIds.length === 0) return placesWithPosts;
+
+  const rawPlaces = await prisma.place.findMany({
+    where: { id: { in: missingIds } },
+    select: {
+      id: true,
+      nameEn: true,
+      nameKo: true,
+      latitude: true,
+      longitude: true,
+      rating: true,
+      addressKo: true,
+      addressEn: true,
+      googleMapsUrl: true,
+      naverMapsUrl: true,
+      imageUrl: true,
+      phone: true,
+      operatingHours: true,
+      area: {
+        select: {
+          id: true,
+          nameKo: true,
+          nameEn: true,
+          level: true,
+          parent: { select: { nameKo: true, nameEn: true } },
+        },
+      },
+      placeImages: {
+        orderBy: { sortOrder: "asc" },
+        select: { url: true, isThumbnail: true, sortOrder: true },
+      },
+    },
+  });
+
+  const placesWithoutPosts: MapPlace[] = rawPlaces
+    .filter((p) => p.latitude !== null && p.longitude !== null)
+    .map((p) => ({
+      id: p.id,
+      nameEn: p.nameEn ?? p.nameKo ?? "",
+      nameKo: p.nameKo,
+      latitude: p.latitude!,
+      longitude: p.longitude!,
+      rating: p.rating,
+      addressKo: p.addressKo,
+      addressEn: p.addressEn,
+      googleMapsUrl: p.googleMapsUrl,
+      naverMapsUrl: p.naverMapsUrl,
+      imageUrl: p.imageUrl,
+      phone: p.phone,
+      operatingHours: p.operatingHours as string[] | null,
+      area: p.area ?? null,
+      placeImages: p.placeImages,
+      posts: [],
+    }));
+
+  return [...placesWithPosts, ...placesWithoutPosts];
 }
 
 /** PUBLISHED 포스트가 연결된 모든 장소 (lat/lng 있는 것만) */

@@ -81,7 +81,7 @@ export async function checkPostSlug(
 
 export async function searchPlaces(keyword: string) {
   if (!keyword.trim()) return [];
-  return prisma.place.findMany({
+  const rows = await prisma.place.findMany({
     where: {
       OR: [
         { nameKo: { contains: keyword, mode: "insensitive" } },
@@ -104,10 +104,28 @@ export async function searchPlaces(keyword: string) {
       googleMapsUrl: true,
       naverMapsUrl: true,
       gettingThere: true,
+      placeImages: {
+        orderBy: { sortOrder: "asc" },
+        select: { url: true, isThumbnail: true },
+      },
     },
     orderBy: { createdAt: "desc" },
     take: 10,
   });
+  return rows;
+}
+
+// ─── 장소 이미지 조회 ────────────────────────────────────────────────────────────
+
+export async function getPlaceImages(
+  placeId: string,
+): Promise<{ id: string; url: string; isThumbnail: boolean; caption: string | null }[]> {
+  const imgs = await prisma.placeImage.findMany({
+    where: { placeId },
+    orderBy: { sortOrder: "asc" },
+    select: { id: true, url: true, isThumbnail: true, caption: true },
+  });
+  return imgs;
 }
 
 // ─── 장소 상세 조회 ──────────────────────────────────────────────────────────────
@@ -131,6 +149,10 @@ export async function getPlaceDetail(id: string) {
       naverMapsUrl: true,
       status: true,
       gettingThere: true,
+      placeImages: {
+        orderBy: { sortOrder: "asc" },
+        select: { url: true, isThumbnail: true },
+      },
     },
   });
 }
@@ -367,7 +389,6 @@ export async function publishPost(
     const missing: string[] = [];
     if (!post.titleKo?.trim()) missing.push("한국어 제목");
     if (!post.titleEn?.trim()) missing.push("영어 제목");
-    if (post.postTopics.length === 0) missing.push("토픽 1개 이상");
     if (!post.postImages.some((img) => img.isThumbnail)) missing.push("썸네일 이미지");
     const visibleCount =
       post.postTopics.filter((t) => t.isVisible).length +
@@ -439,6 +460,10 @@ export async function getPostEditData(id: string) {
                 googleMapsUrl: true,
                 naverMapsUrl: true,
                 gettingThere: true,
+                placeImages: {
+                  orderBy: { sortOrder: "asc" },
+                  select: { url: true, isThumbnail: true },
+                },
               },
             },
           },
@@ -583,6 +608,7 @@ export async function getPostEditData(id: string) {
             placeLongitude: firstPlace.place.longitude,
             placePhone: firstPlace.place.phone,
             placeImageUrl: firstPlace.place.imageUrl,
+            placeImages: firstPlace.place.placeImages,
             placeRating: firstPlace.place.rating,
             placeStatus: firstPlace.place.status,
             placeOperatingHours: firstPlace.place.operatingHours,

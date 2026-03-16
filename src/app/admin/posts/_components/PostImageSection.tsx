@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { toast } from "sonner";
-import { Upload, Link as LinkIcon, X, GripVertical, ImageIcon, Crosshair } from "lucide-react";
+import { Upload, Link as LinkIcon, X, GripVertical, ImageIcon, Crosshair, MapPin } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -32,7 +32,10 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import type { PostImageInput, PostSourceInput } from "../_actions/post-actions";
+import { getPlaceImages } from "../_actions/post-actions";
 import { ImageFocalPointDialog } from "./ImageFocalPointDialog";
+
+type PlaceImageItem = { id: string; url: string; isThumbnail: boolean; caption: string | null };
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_SIZE = 5 * 1024 * 1024;
@@ -217,17 +220,24 @@ function LinkSelector({
 
 interface Props {
   postId?: string;
+  placeId?: string | null;
   images: PostImageInput[];
   onChange: (images: PostImageInput[]) => void;
   sources: PostSourceInput[];
 }
 
-export function PostImageSection({ postId, images, onChange, sources }: Props) {
+export function PostImageSection({ postId, placeId, images, onChange, sources }: Props) {
   const bannerImages   = images.filter((img) => img.imageType === "BANNER");
   const originalImage  = images.find((img) => img.imageType === "ORIGINAL") ?? null;
 
   const [bannerUploading, setBannerUploading] = useState(false);
   const [originalMode, setOriginalMode] = useState<OriginalMode>("idle");
+  const [placeImages, setPlaceImages] = useState<PlaceImageItem[]>([]);
+
+  useEffect(() => {
+    if (!placeId) { setPlaceImages([]); return; }
+    getPlaceImages(placeId).then(setPlaceImages);
+  }, [placeId]);
   const [urlInput, setUrlInput] = useState("");
   const [focalDialog, setFocalDialog] = useState<{
     url: string;
@@ -375,6 +385,57 @@ export function PostImageSection({ postId, images, onChange, sources }: Props) {
           )}
         </div>
         <p className="text-[11px] text-muted-foreground">드래그로 순서 변경 · 클릭 시 썸네일 지정</p>
+
+        {/* 장소 사진에서 가져오기 */}
+        {placeImages.length > 0 && (
+          <div className="space-y-1.5 pt-1">
+            <p className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+              <MapPin className="h-3 w-3" />
+              장소 사진에서 가져오기
+            </p>
+            <div className="flex gap-2 flex-wrap">
+              {placeImages.map((img) => {
+                const alreadyAdded = bannerImages.some((b) => b.url === img.url);
+                return (
+                  <button
+                    key={img.id}
+                    type="button"
+                    disabled={alreadyAdded || bannerImages.length >= MAX_BANNER}
+                    onClick={() => {
+                      const newBanners = [
+                        ...bannerImages,
+                        {
+                          imageType: "BANNER" as const,
+                          imageSource: "URL" as const,
+                          url: img.url,
+                          isThumbnail: false,
+                          sortOrder: bannerImages.length,
+                        },
+                      ];
+                      replaceImages(newBanners, originalImage);
+                    }}
+                    title={img.caption ?? undefined}
+                    className={cn(
+                      "relative w-20 aspect-[3/2] rounded-md overflow-hidden border-2 shrink-0 transition-all",
+                      alreadyAdded
+                        ? "border-brand opacity-50 cursor-default"
+                        : bannerImages.length >= MAX_BANNER
+                        ? "opacity-30 cursor-not-allowed border-transparent"
+                        : "border-transparent hover:border-zinc-400 cursor-pointer",
+                    )}
+                  >
+                    <img src={img.url} alt={img.caption ?? ""} className="w-full h-full object-cover" />
+                    {alreadyAdded && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                        <span className="text-white text-[9px] font-bold">추가됨</span>
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ─ 소스 이미지 (1장) ─────────────────────────────────────────────────── */}

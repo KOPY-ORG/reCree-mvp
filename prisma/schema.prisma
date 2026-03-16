@@ -212,6 +212,42 @@ model PostSource {
   @@index([postId])
 }
 
+model PlaceType {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String   @unique   // 영문 key: "cafe", "restaurant", "photo_spot"
+  nameKo    String             // 한글: "카페", "레스토랑", "포토스팟"
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model PlaceImage {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  placeId     String   @db.Uuid
+  url         String
+  isThumbnail Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  caption     String?
+  createdAt   DateTime @default(now())
+
+  place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
+}
+
+model Area {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nameKo    String
+  nameEn    String?
+  level     Int      @default(0)   // 0=도시, 1=구역
+  parentId  String?  @db.Uuid
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  parent   Area?   @relation("AreaHierarchy", fields: [parentId], references: [id])
+  children Area[]  @relation("AreaHierarchy")
+  places   Place[]
+}
+
 model Place {
   id             String      @id @default(uuid()) @db.Uuid
   nameKo         String
@@ -226,21 +262,24 @@ model Place {
   naverMapsUrl   String?
   kakaoMapsUrl   String?
   gettingThere   String?    // 교통편 안내 텍스트
-  placeTypes     String[]   @default([])  // 장소 유형 (예: ["카페", "포토스팟"])
+  placeTypes     String[]   @default([])  // 장소 유형 key 배열 (예: ["cafe", "photo_spot"])
   phone          String?
   operatingHours Json?
   rating         Float?    // Google Maps 평점
-  imageUrl       String?
+  imageUrl       String?   // fallback용 단일 이미지 URL
   source         PlaceSource @default(ADMIN)
   isVerified     Boolean     @default(false)
   status         PlaceStatus @default(OPEN)
   country        String      @default("KR")
   city           String?
+  areaId         String?     @db.Uuid
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
+  area         Area?        @relation(fields: [areaId], references: [id])
   postPlaces   PostPlace[]
   reCreeshots  ReCreeshot[]
+  placeImages  PlaceImage[]
 }
 
 model ReCreeshot {

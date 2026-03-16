@@ -14,6 +14,8 @@ import {
   Users,
   LogOut,
   TrendingUp,
+  Layers,
+  Map,
 } from "lucide-react";
 import { signOut } from "@/lib/actions/auth";
 
@@ -25,6 +27,8 @@ const CONTENT_MENUS = [
 
 const TAXONOMY_MENUS = [
   { label: "분류 관리", icon: Tag, href: "/admin/categories" },
+  { label: "장소 유형", icon: Layers, href: "/admin/place-types" },
+  { label: "지역", icon: Map, href: "/admin/areas" },
 ] as const;
 
 const TOOLS_MENUS = [

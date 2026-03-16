@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { deletePlace } from "../actions";
 import type { PlaceStatus, PlaceSource } from "@prisma/client";
+import { STATUS_LABELS, STATUS_COLORS } from "../_constants";
 
 export type PlaceRow = {
   id: string;
@@ -48,17 +49,6 @@ interface Props {
   isFiltered: boolean;
 }
 
-const STATUS_LABELS: Record<PlaceStatus, string> = {
-  OPEN: "영업중",
-  CLOSED_TEMP: "임시휴업",
-  CLOSED_PERMANENT: "폐업",
-};
-
-const STATUS_COLORS: Record<PlaceStatus, string> = {
-  OPEN: "bg-green-100 text-green-700",
-  CLOSED_TEMP: "bg-amber-100 text-amber-700",
-  CLOSED_PERMANENT: "bg-red-100 text-red-600",
-};
 
 function formatDate(date: Date): string {
   const d = new Date(date);

@@ -11,8 +11,8 @@ import {
   ExternalLink,
   Phone,
   Star,
-  X,
 } from "lucide-react";
+import { CloseButton } from "./CloseButton";
 import { LabelBadge } from "@/components/LabelBadge";
 import {
   labelBackground,
@@ -181,7 +181,7 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
       <div
         {...dragHandlers}
         ref={headerRef}
-        className="shrink-0 px-5 pb-4"
+        className="shrink-0 px-5 pb-3"
       >
         {/* 드래그 핸들 */}
         <div className="flex justify-center pt-3 pb-2">
@@ -192,13 +192,7 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
         <div className="flex items-start justify-between gap-2 mb-2">
           <p className="text-lg font-bold leading-tight">{place.nameEn}</p>
           <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              onClick={onClose}
-              aria-label="Close"
-              className="flex items-center justify-center w-6 h-6 rounded-full bg-muted"
-            >
-              <X className="size-3 text-muted-foreground" />
-            </button>
+            <CloseButton onClick={onClose} />
           </div>
         </div>
 
@@ -247,18 +241,24 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
 
       {/* 스크롤 영역 */}
       <div className="flex-1 overflow-y-auto">
-        {/* 이미지 */}
-        {place.imageUrl && (
-          <div className="relative w-full aspect-video">
-            <Image
-              src={place.imageUrl}
-              alt={place.nameEn}
-              fill
-              unoptimized
-              className="object-cover"
-            />
-          </div>
-        )}
+        {/* 장소 이미지 슬라이더 */}
+        {(place.placeImages.length > 0 || place.imageUrl) && (() => {
+          const urls = place.placeImages.length > 0
+            ? place.placeImages.map((img) => img.url)
+            : [place.imageUrl!];
+          return (
+            <div className="flex gap-2.5 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-3 [scroll-padding-left:20px]">
+              {urls.map((url, i) => (
+                <div
+                  key={i}
+                  className={`relative aspect-[3/2] w-[40%] shrink-0 snap-start rounded-xl overflow-hidden bg-muted ${i === 0 ? "ml-5" : ""} ${i === urls.length - 1 ? "mr-5" : ""}`}
+                >
+                  <Image src={url} alt="" fill unoptimized className="object-cover" sizes="40vw" />
+                </div>
+              ))}
+            </div>
+          );
+        })()}
 
         {/* More info 토글 */}
         {hasExtraInfo && (
