@@ -15,9 +15,9 @@ export function ExploreTabBar() {
   }
 
   return (
-    <div className="fixed bottom-16 left-0 right-0 z-30 flex justify-center pb-3 pointer-events-none">
-      <div className="pointer-events-auto flex items-center gap-2">
-        <div className="flex items-center rounded-full bg-background shadow-[0_1px_4px_rgba(0,0,0,0.1)] p-1 gap-1 opacity-90">
+    <div className="fixed bottom-16 left-0 right-0 z-30 pb-3 pointer-events-none">
+      <div className="relative flex justify-center items-center">
+        <div className="pointer-events-auto flex items-center rounded-full bg-background shadow-[0_1px_4px_rgba(0,0,0,0.1)] p-1 gap-1 opacity-90">
           {(["posts", "hall"] as const).map((t) => (
             <button
               key={t}
@@ -35,7 +35,8 @@ export function ExploreTabBar() {
         {tab === "hall" && (
           <button
             onClick={() => router.push("/explore/hall/new")}
-            className="size-9 rounded-full bg-brand text-black flex items-center justify-center shadow-[0_1px_4px_rgba(0,0,0,0.15)]"
+            className="pointer-events-auto absolute right-4 size-9 rounded-full text-black flex items-center justify-center shadow-[0_1px_4px_rgba(0,0,0,0.15)] opacity-90"
+            style={{ background: "linear-gradient(135deg, var(--color-brand) 0%, white 150%)" }}
           >
             <Plus className="size-5" />
           </button>
