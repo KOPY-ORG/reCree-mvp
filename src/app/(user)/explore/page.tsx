@@ -8,6 +8,7 @@ import { getLevel0TopicsDeep } from "@/lib/topic-queries";
 import { type TagGroupColorMap } from "@/lib/post-labels";
 import { getCurrentUser } from "@/lib/auth";
 import { ScrapButton } from "../_components/ScrapButton";
+import { ReCreeshotImage } from "@/components/recreeshot-image";
 import { PostBadges } from "../_components/PostCard";
 import { TopicFilterRow } from "./_components/TopicFilterRow";
 import { TagFilterRow } from "./_components/TagFilterRow";
@@ -93,20 +94,18 @@ function RecreeshotInlineSection({
       <div className="flex gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory">
         {shots.map((shot) => (
           <Link key={shot.id} href={`/explore/hall/${shot.id}`} className="snap-start shrink-0 w-[90px]">
-            <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-muted">
-              <Image
-                src={shot.imageUrl}
-                alt="recreeshot"
-                fill
-                className="object-cover"
-                sizes="90px"
-              />
-              {shot.matchScore != null && shot.showBadge && (
-                <span className="absolute top-1.5 right-1.5 bg-brand text-black text-[10px] font-bold px-1 py-0.5 rounded-full leading-none">
-                  {Math.round(shot.matchScore)}%
-                </span>
-              )}
-            </div>
+            <ReCreeshotImage
+              shotUrl={shot.imageUrl}
+              referenceUrl={shot.referencePhotoUrl}
+              matchScore={shot.matchScore}
+              showBadge={shot.showBadge}
+              referencePosition="top-left"
+              badgePosition="top-right"
+              showMatchLabel={false}
+              rounded={false}
+              className="aspect-[3/4] rounded-lg"
+              sizes="90px"
+            />
           </Link>
         ))}
       </div>

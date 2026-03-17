@@ -1,29 +1,44 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Image from "next/image";
-import { MapPin, Check, X, Search, ImageIcon, ChevronDown } from "lucide-react";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { MapPin, Check, X, Search, ImageIcon, ChevronDown, ChevronUp } from "lucide-react";
+import { ReCreeshotImage } from "@/components/recreeshot-image";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { LabelBadge } from "@/components/LabelBadge";
+import { labelBackground, badgeRingStyle, resolveTopicColors, resolveTagColors, computeTopicEffectiveColors, DEFAULT_COLOR, DEFAULT_TEXT } from "@/lib/post-labels";
 import { searchPlaces, getPostsByPlace } from "@/app/(user)/_actions/recreeshot-actions";
 
-interface Tag {
+interface TagItem {
   id: string;
   name: string;
   group: string;
   colorHex: string | null;
+  colorHex2: string | null;
   textColorHex: string | null;
+}
+
+interface TagGroup {
+  group: string;
+  nameEn: string;
+  colorHex: string;
+  colorHex2: string | null;
+  gradientDir: string;
+  gradientStop: number;
+  textColorHex: string;
+  tags: TagItem[];
 }
 
 interface Topic {
   id: string;
   nameEn: string;
   colorHex: string | null;
+  colorHex2: string | null;
+  gradientDir: string;
+  gradientStop: number;
   textColorHex: string | null;
+  level: number;
+  parentId: string | null;
 }
 
 interface PlaceResult {
@@ -44,7 +59,7 @@ interface PostResult {
 interface Props {
   referencePreviewUrl: string | null;
   shotPreviewUrl: string;
-  tags: Tag[];
+  tagGroups: TagGroup[];
   topics: Topic[];
   previewScore: number | null;
   showBadge: boolean;
@@ -63,15 +78,45 @@ interface Props {
   isSubmitting: boolean;
 }
 
+// ── Topic tree types ──────────────────────────────────────────────────────────
+
+type L3Topic = Topic & { children: never[] };
+type L2Topic = Topic & { children: L3Topic[] };
+type L1Topic = Topic & { children: L2Topic[] };
+type L0Topic = Topic & { children: L1Topic[] };
+
+function buildTopicTree(flat: Topic[]): L0Topic[] {
+  const map = new Map<string, L0Topic | L1Topic | L2Topic | L3Topic>();
+  for (const t of flat) map.set(t.id, { ...t, children: [] } as L0Topic);
+  const roots: L0Topic[] = [];
+  for (const t of flat) {
+    if (t.parentId === null) {
+      roots.push(map.get(t.id) as L0Topic);
+    } else {
+      const parent = map.get(t.parentId) as L0Topic | undefined;
+      if (parent) (parent.children as Topic[]).push(map.get(t.id)!);
+    }
+  }
+  return roots;
+}
+
+function getAllDescendantIds(node: { id: string; children?: { id: string; children?: unknown[] }[] }): string[] {
+  const ids = [node.id];
+  for (const child of node.children ?? []) ids.push(...getAllDescendantIds(child as typeof node));
+  return ids;
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
 export function UploadStep2({
   referencePreviewUrl,
   shotPreviewUrl,
-  tags,
+  tagGroups,
   topics,
   previewScore,
   showBadge,
   onShowBadgeChange,
-  onBack,
+  onBack: _onBack,
   onShare,
   isSubmitting,
 }: Props) {
@@ -79,7 +124,7 @@ export function UploadStep2({
   const [tips, setTips] = useState("");
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([]);
-  const [topicSearch, setTopicSearch] = useState("");
+  const [submitted, setSubmitted] = useState(false);
 
   // 장소 검색
   const [locationSheetOpen, setLocationSheetOpen] = useState(false);
@@ -92,17 +137,19 @@ export function UploadStep2({
   const [linkedPosts, setLinkedPosts] = useState<PostResult[]>([]);
   const [linkedPostId, setLinkedPostId] = useState<string | undefined>(undefined);
 
-  // 태그 시트
-  const [tagsSheetOpen, setTagsSheetOpen] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  // TYPE 바텀시트
+  const [typeSheetOpen, setTypeSheetOpen] = useState(false);
+
+  // THEME 바텀시트
+  const [openTopicL0Id, setOpenTopicL0Id] = useState<string | null>(null);
+  const [topicL1Id, setTopicL1Id] = useState<string | null>(null);
+  const [topicL2Id, setTopicL2Id] = useState<string | null>(null);
 
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ── 장소 검색 디바운스 ───────────────────────────────────────────────────────
   useEffect(() => {
-    if (!locationQuery.trim()) {
-      setPlaceResults([]);
-      return;
-    }
+    if (!locationQuery.trim()) { setPlaceResults([]); return; }
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     searchTimerRef.current = setTimeout(async () => {
       setIsSearching(true);
@@ -112,12 +159,26 @@ export function UploadStep2({
     }, 400);
   }, [locationQuery]);
 
+  // ── 데이터 구조 ─────────────────────────────────────────────────────────────
+  const topicTree = useMemo(() => buildTopicTree(topics), [topics]);
+
+  // 토픽 effective color map (상속 포함)
+  const topicColorMap = useMemo(() => computeTopicEffectiveColors(topics), [topics]);
+
+  // ── 파생 상태 ───────────────────────────────────────────────────────────────
+  const openL0 = openTopicL0Id ? (topicTree.find(t => t.id === openTopicL0Id) ?? null) : null;
+  const resolvedL1Id = topicL1Id ?? openL0?.children[0]?.id ?? null;
+  const activeL1 = openL0?.children.find(c => c.id === resolvedL1Id) ?? null;
+  const activeL2 = topicL2Id ? (activeL1?.children.find(c => c.id === topicL2Id) ?? null) : null;
+
+  const selectedTagCount = selectedTagIds.length + selectedTopicIds.length;
+
+  // ── 핸들러 ──────────────────────────────────────────────────────────────────
   async function handleSelectPlace(place: PlaceResult) {
     setSelectedPlace(place);
     setLocationSheetOpen(false);
     setLocationQuery("");
     setLinkedPostId(undefined);
-
     const posts = await getPostsByPlace(place.id);
     setLinkedPosts(posts);
   }
@@ -130,63 +191,64 @@ export function UploadStep2({
 
   function handleSelectPost(post: PostResult) {
     if (linkedPostId === post.id) {
-      // 선택 해제 시 자동 연결된 태그/토픽도 초기화
       setLinkedPostId(undefined);
       setSelectedTagIds([]);
       setSelectedTopicIds([]);
     } else {
       setLinkedPostId(post.id);
-      // 포스트에 연결된 태그/토픽 자동 선택
       setSelectedTagIds(post.tagIds);
       setSelectedTopicIds(post.topicIds);
     }
   }
 
   function toggleTag(id: string) {
-    setSelectedTagIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
+    setSelectedTagIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   }
 
   function toggleTopic(id: string) {
-    setSelectedTopicIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
+    setSelectedTopicIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   }
 
-  const filteredTopics = topicSearch
-    ? topics.filter((t) => t.nameEn.toLowerCase().includes(topicSearch.toLowerCase()))
-    : topics;
+  function openTopicSheet(l0Id: string) {
+    const l0 = topicTree.find(t => t.id === l0Id);
+    if (!l0) return;
+    setOpenTopicL0Id(l0Id);
+    setTopicL1Id(l0.children[0]?.id ?? null);
+    setTopicL2Id(null);
+  }
 
-  const selectedTagCount = selectedTagIds.length + selectedTopicIds.length;
+  // ── 토픽 색상 헬퍼 ───────────────────────────────────────────────────────────
+  function resolveColor(node: Topic, ...parents: (Topic | null | undefined)[]) {
+    const colorNode = {
+      colorHex: node.colorHex,
+      colorHex2: node.colorHex2,
+      gradientDir: node.gradientDir,
+      gradientStop: node.gradientStop,
+      textColorHex: node.textColorHex,
+      parent: parents.reduceRight<object | null>((acc, p) =>
+        p ? { colorHex: p.colorHex, colorHex2: p.colorHex2, gradientDir: p.gradientDir, gradientStop: p.gradientStop, textColorHex: p.textColorHex, parent: acc } : acc,
+        null
+      ),
+    };
+    return resolveTopicColors(colorNode);
+  }
 
+  // ── 렌더링 ──────────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col flex-1">
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
 
         {/* 사진 프리뷰 */}
-        <div className="relative mx-auto h-[50dvh] aspect-[3/4] rounded-2xl overflow-hidden bg-muted">
-          <Image src={shotPreviewUrl} alt="shot" fill className="object-cover" sizes="100vw" />
-          {referencePreviewUrl && (
-            <div
-              className="absolute top-3 left-3 w-[18%] aspect-[3/4] rounded-xl overflow-hidden"
-              style={{ boxShadow: "0 0 0 1.5px white, 0 0 6px 2px rgba(255,255,255,0.2)" }}
-            >
-              <Image src={referencePreviewUrl} alt="original" fill className="object-cover" sizes="25vw" />
-            </div>
-          )}
-          {previewScore !== null && showBadge && (
-            <div
-              className="absolute top-3 right-3 text-black text-xs font-bold px-2.5 py-1 rounded-full"
-              style={{
-                background: "linear-gradient(to right, #C8FF09, white 150%)",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-              }}
-            >
-              {previewScore}% Match
-            </div>
-          )}
-        </div>
+        <ReCreeshotImage
+          shotUrl={shotPreviewUrl}
+          referenceUrl={referencePreviewUrl}
+          matchScore={previewScore}
+          showBadge={showBadge}
+          referencePosition="top-left"
+          badgePosition="top-right"
+          className="mx-auto h-[50dvh] aspect-[3/4]"
+          sizes="100vw"
+        />
 
         {/* 배지 표시 카드 */}
         {previewScore !== null && (
@@ -197,31 +259,21 @@ export function UploadStep2({
               showBadge ? "border-brand bg-brand/5" : "border-border"
             }`}
           >
-            {/* 점수 원형 뱃지 */}
             <div
               className={`flex-shrink-0 flex items-center justify-center size-11 rounded-full text-xs font-bold transition-all ${
                 showBadge ? "text-black" : "bg-muted text-muted-foreground"
               }`}
-              style={
-                showBadge
-                  ? { background: "linear-gradient(135deg, #C8FF09, #e8ffa0)" }
-                  : undefined
-              }
+              style={showBadge ? { background: "linear-gradient(135deg, #C8FF09, #e8ffa0)" } : undefined}
             >
-              {previewScore}%
+              {Math.round(previewScore)}%
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold leading-tight">Show Score Badge</p>
-              <p className="text-xs text-muted-foreground mt-0.5 leading-tight">
-                Display your match score on your photo
-              </p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-tight">Display your match score on your photo</p>
             </div>
-            {/* 체크 버튼 */}
-            <div
-              className={`flex-shrink-0 size-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                showBadge ? "bg-brand border-brand" : "border-border"
-              }`}
-            >
+            <div className={`flex-shrink-0 size-6 rounded-full border-2 flex items-center justify-center transition-all ${
+              showBadge ? "bg-brand border-brand" : "border-border"
+            }`}>
               {showBadge && <Check className="size-3.5 text-black" />}
             </div>
           </button>
@@ -231,9 +283,7 @@ export function UploadStep2({
         {selectedPlace ? (
           <div className="flex items-center gap-2 border border-brand rounded-xl px-3 py-2.5">
             <MapPin className="size-4 text-muted-foreground shrink-0" />
-            <span className="flex-1 text-sm">
-              {selectedPlace.nameEn ?? selectedPlace.nameKo}
-            </span>
+            <span className="flex-1 text-sm">{selectedPlace.nameEn ?? selectedPlace.nameKo}</span>
             <button type="button" onClick={clearPlace} className="text-muted-foreground p-0.5">
               <X className="size-4" />
             </button>
@@ -252,7 +302,7 @@ export function UploadStep2({
           </button>
         )}
 
-        {/* Related posts — 썸네일 카드 */}
+        {/* Related posts */}
         {linkedPosts.length > 0 && (
           <div className="space-y-2">
             <p className="text-xs font-semibold text-muted-foreground px-0.5">Related post</p>
@@ -269,25 +319,16 @@ export function UploadStep2({
                       selected ? "border-brand bg-brand/5" : "border-border/50"
                     }`}
                   >
-                    {/* 썸네일 */}
                     <div className="relative flex-shrink-0 w-16 h-16 bg-muted">
                       {post.thumbnailUrl ? (
-                        <Image
-                          src={post.thumbnailUrl}
-                          alt={title}
-                          fill
-                          className="object-cover"
-                          sizes="64px"
-                        />
+                        <Image src={post.thumbnailUrl} alt={title} fill className="object-cover" sizes="64px" />
                       ) : (
                         <div className="flex items-center justify-center w-full h-full">
                           <ImageIcon className="size-4 text-muted-foreground/40" />
                         </div>
                       )}
                     </div>
-                    {/* 제목 */}
                     <p className="flex-1 text-xs font-medium line-clamp-2 leading-snug py-2 pr-1">{title}</p>
-                    {/* 체크 */}
                     <div className={`flex-shrink-0 size-5 rounded-full border-2 flex items-center justify-center mr-3 transition-all ${
                       selected ? "bg-brand border-brand" : "border-border"
                     }`}>
@@ -324,61 +365,83 @@ export function UploadStep2({
           <p className="text-xs text-muted-foreground text-right">{tips.length}/300</p>
         </div>
 
-        {/* Tags 버튼 */}
-        <div>
-          <button
-            type="button"
-            onClick={() => setTagsSheetOpen(true)}
-            className={`flex items-center gap-1.5 rounded-xl px-3 py-2.5 text-sm font-medium w-full justify-between transition-all ${
-              selectedTagCount > 0
-                ? "border border-brand"
-                : submitted
-                ? "border border-dashed border-red-300"
-                : "border border-border"
-            }`}
-          >
-            <span className={selectedTagCount > 0 ? "text-foreground" : "text-muted-foreground"}>
-              {selectedTagCount > 0 ? `${selectedTagCount} tag${selectedTagCount > 1 ? "s" : ""} selected` : "Add tags"}
-            </span>
-            <div className="flex items-center gap-2">
-              {selectedTagCount === 0 && submitted && (
-                <span className="text-[10px] font-semibold text-red-400 uppercase tracking-wide">Required</span>
-              )}
-              <ChevronDown className="size-4 text-muted-foreground" />
-            </div>
-          </button>
+        {/* 선택된 태그/토픽 미리보기 */}
+        {selectedTagCount > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {selectedTagIds.map((id) => {
+              const groupData = tagGroups.find(g => g.tags.some(t => t.id === id));
+              const tag = groupData?.tags.find(t => t.id === id);
+              if (!tag || !groupData) return null;
+              const resolved = resolveTagColors(tag, groupData);
+              return (
+                <span
+                  key={id}
+                  className="pill-badge [--pill-py:0.2rem] text-xs"
+                  style={{ background: labelBackground({ text: "", ...resolved }), color: resolved.textColorHex }}
+                >
+                  {tag.name}
+                </span>
+              );
+            })}
+            {selectedTopicIds.map((id) => {
+              const colors = topicColorMap.get(id);
+              const topic = topics.find(t => t.id === id);
+              if (!topic || !colors) return null;
+              const bg = colors.hex2
+                ? `linear-gradient(${colors.dir}, ${colors.hex}, ${colors.hex2} ${colors.stop}%)`
+                : colors.hex;
+              return (
+                <span
+                  key={id}
+                  className="pill-badge [--pill-py:0.2rem] text-xs"
+                  style={{ background: bg, color: colors.textHex }}
+                >
+                  {topic.nameEn}
+                </span>
+              );
+            })}
+          </div>
+        )}
 
-          {/* 선택된 태그 프리뷰 */}
-          {selectedTagCount > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-2">
-              {selectedTagIds.map((id) => {
-                const tag = tags.find((t) => t.id === id);
-                if (!tag) return null;
-                return (
-                  <span
-                    key={id}
-                    className="text-xs px-2.5 py-1 rounded-full font-medium"
-                    style={{ backgroundColor: tag.colorHex ?? "#C8FF09", color: tag.textColorHex ?? "#000" }}
-                  >
-                    {tag.name}
-                  </span>
-                );
-              })}
-              {selectedTopicIds.map((id) => {
-                const topic = topics.find((t) => t.id === id);
-                if (!topic) return null;
-                return (
-                  <span
-                    key={id}
-                    className="text-xs px-2.5 py-1 rounded-full font-medium"
-                    style={{ backgroundColor: topic.colorHex ?? "#C8FF09", color: topic.textColorHex ?? "#000" }}
-                  >
-                    {topic.nameEn}
-                  </span>
-                );
-              })}
-            </div>
+        {/* Type + Theme 한 행 */}
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-0.5 [--pill-py:0.25rem]">
+          {/* Type 버튼 */}
+          {tagGroups.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setTypeSheetOpen(true)}
+              className={`pill-badge shrink-0 border transition-colors ${
+                selectedTagIds.length > 0
+                  ? "bg-foreground text-background border-foreground"
+                  : submitted && selectedTagCount === 0
+                  ? "border-dashed border-red-300 text-muted-foreground"
+                  : "border-border text-muted-foreground"
+              }`}
+            >
+              Type
+              <ChevronDown className="size-3 shrink-0 opacity-50" />
+            </button>
           )}
+
+          {/* L0 토픽 버튼들 */}
+          {topicTree.map((l0) => {
+            const isActive = getAllDescendantIds(l0).some(id => selectedTopicIds.includes(id));
+            return (
+              <button
+                key={l0.id}
+                type="button"
+                onClick={() => openTopicSheet(l0.id)}
+                className={`pill-badge shrink-0 border transition-colors ${
+                  isActive
+                    ? "bg-foreground text-background border-foreground"
+                    : "border-border text-muted-foreground"
+                }`}
+              >
+                {l0.nameEn}
+                <ChevronDown className="size-3 shrink-0 opacity-50" />
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -399,12 +462,12 @@ export function UploadStep2({
             setSubmitted(true);
             if (!selectedPlace || selectedTagCount === 0) return;
             onShare({
-              locationName: selectedPlace?.nameEn ?? selectedPlace?.nameKo ?? "",
+              locationName: selectedPlace.nameEn ?? selectedPlace.nameKo ?? "",
               story,
               tips,
               tagIds: selectedTagIds,
               topicIds: selectedTopicIds,
-              placeId: selectedPlace?.id,
+              placeId: selectedPlace.id,
               linkedPostId,
               showBadge,
             });
@@ -419,9 +482,7 @@ export function UploadStep2({
       {/* 장소 검색 바텀시트 */}
       <Sheet open={locationSheetOpen} onOpenChange={setLocationSheetOpen}>
         <SheetContent side="bottom" className="h-[75vh] flex flex-col px-5 pb-8">
-          <SheetHeader className="pb-2">
-            <SheetTitle>Search location</SheetTitle>
-          </SheetHeader>
+          <SheetTitle className="text-base font-bold pt-1">Search location</SheetTitle>
           <div className="flex items-center gap-2 border border-border rounded-xl px-3 py-2.5">
             <Search className="size-4 text-muted-foreground shrink-0" />
             <input
@@ -439,9 +500,7 @@ export function UploadStep2({
             )}
           </div>
           <div className="flex-1 overflow-y-auto mt-1">
-            {isSearching && (
-              <p className="text-sm text-muted-foreground text-center py-6">Searching...</p>
-            )}
+            {isSearching && <p className="text-sm text-muted-foreground text-center py-6">Searching...</p>}
             {!isSearching && placeResults.length === 0 && locationQuery.trim() && (
               <p className="text-sm text-muted-foreground text-center py-6">No places found</p>
             )}
@@ -462,91 +521,191 @@ export function UploadStep2({
         </SheetContent>
       </Sheet>
 
-      {/* Tags 바텀시트 */}
-      <Sheet open={tagsSheetOpen} onOpenChange={setTagsSheetOpen}>
-        <SheetContent side="bottom" className="h-[75vh] flex flex-col px-5 pb-8">
-          <SheetHeader className="pb-2">
-            <SheetTitle>Add tags</SheetTitle>
-          </SheetHeader>
-          <div className="flex-1 overflow-y-auto space-y-5">
-            {/* 카테고리 섹션 */}
-            {tags.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground mb-2.5 uppercase tracking-wide">Type</p>
+      {/* TYPE — 단일 바텀시트 (그룹별 탭) */}
+      <Sheet open={typeSheetOpen} onOpenChange={setTypeSheetOpen}>
+        <SheetContent
+          side="bottom"
+          showCloseButton={false}
+          className="rounded-t-2xl max-h-[70vh] p-0 flex flex-col gap-0"
+        >
+          <SheetTitle className="sr-only">Type</SheetTitle>
+
+          <div className="flex justify-center pt-3 pb-1 shrink-0">
+            <div className="w-9 h-1 rounded-full bg-muted-foreground/25" />
+          </div>
+
+          <div className="px-5 pt-1 pb-3 shrink-0">
+            <p className="text-base font-bold">Type</p>
+          </div>
+
+          {/* 전체 태그 스크롤 목록 (그룹 헤더 + 칩) */}
+          <div className="flex-1 overflow-y-auto px-4 pt-2 pb-6 space-y-5 [--pill-py:0.3rem]">
+            {tagGroups.map((group) => (
+              <div key={group.group}>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{group.nameEn}</p>
                 <div className="flex flex-wrap gap-2">
-                  {tags.map((tag) => {
-                    const selected = selectedTagIds.includes(tag.id);
+                  {group.tags.map((tag) => {
+                    const isActive = selectedTagIds.includes(tag.id);
+                    const resolved = resolveTagColors(tag, group);
+                    const bg = labelBackground({ text: "", ...resolved });
+                    const fg = resolved.textColorHex;
                     return (
-                      <button
+                      <LabelBadge
                         key={tag.id}
-                        type="button"
+                        as="button"
+                        text={tag.name}
+                        background={isActive ? bg : DEFAULT_COLOR}
+                        color={isActive ? fg : DEFAULT_TEXT}
+                        className="shrink-0 transition-all active:opacity-70"
+                        style={badgeRingStyle(resolved.colorHex, isActive)}
                         onClick={() => toggleTag(tag.id)}
-                        className="flex items-center gap-1 text-sm px-3 py-1.5 rounded-full border font-medium transition-all"
-                        style={
-                          selected
-                            ? {
-                                backgroundColor: tag.colorHex ?? "#C8FF09",
-                                color: tag.textColorHex ?? "#000",
-                                borderColor: "transparent",
-                              }
-                            : { borderColor: "#d1d5db", color: "#374151" }
-                        }
                       >
-                        {selected && <Check className="size-3.5" />}
-                        {tag.name}
-                      </button>
+                        {isActive && <Check className="size-3" />}
+                      </LabelBadge>
                     );
                   })}
                 </div>
               </div>
-            )}
+            ))}
+          </div>
 
-            {/* 토픽 섹션 */}
-            {topics.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground mb-2.5 uppercase tracking-wide">Theme</p>
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  value={topicSearch}
-                  onChange={(e) => setTopicSearch(e.target.value)}
-                  className="w-full text-sm border border-border rounded-xl px-3 py-2 mb-3 bg-transparent outline-none placeholder:text-muted-foreground"
-                />
+          <div className="px-4 pb-6 pt-3 shrink-0">
+            <button
+              type="button"
+              onClick={() => setTypeSheetOpen(false)}
+              className="w-full py-3 rounded-full font-semibold text-sm bg-brand text-black"
+            >
+              Done
+            </button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* THEME — 토픽 바텀시트 */}
+      <Sheet open={!!openTopicL0Id} onOpenChange={(v) => { if (!v) { setOpenTopicL0Id(null); setTopicL1Id(null); setTopicL2Id(null); } }}>
+        <SheetContent
+          side="bottom"
+          showCloseButton={false}
+          className="rounded-t-2xl max-h-[80vh] p-0 flex flex-col gap-0"
+        >
+          <SheetTitle className="sr-only">{openL0?.nameEn}</SheetTitle>
+
+          <div className="flex justify-center pt-3 pb-1 shrink-0">
+            <div className="w-9 h-1 rounded-full bg-muted-foreground/25" />
+          </div>
+
+          <div className="px-5 pt-1 pb-3 shrink-0">
+            <p className="text-base font-bold">{openL0?.nameEn}</p>
+          </div>
+
+          {/* L1 탭 행 */}
+          {openL0 && openL0.children.length > 0 && (
+            <div className="flex overflow-x-auto scrollbar-hide border-b border-border shrink-0">
+              {openL0.children.map((l1) => {
+                const isActive = l1.id === resolvedL1Id;
+                const accentColor = l1.colorHex ?? openL0.colorHex ?? "#000000";
+                return (
+                  <button
+                    key={l1.id}
+                    type="button"
+                    onClick={() => { setTopicL1Id(l1.id); setTopicL2Id(null); }}
+                    className="shrink-0 px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap active:opacity-70"
+                    style={{
+                      color: isActive ? accentColor : undefined,
+                      borderBottomColor: isActive ? accentColor : "transparent",
+                    }}
+                  >
+                    <span className={isActive ? "" : "text-muted-foreground"}>{l1.nameEn}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* L2 칩 + L3 패널 */}
+          <div className="flex-1 overflow-y-auto">
+            {activeL1 && (
+              <div className="px-4 pt-4 pb-6 space-y-4 [--pill-py:0.3rem]">
                 <div className="flex flex-wrap gap-2">
-                  {filteredTopics.map((topic) => {
-                    const selected = selectedTopicIds.includes(topic.id);
+                  {activeL1.children.map((l2) => {
+                    const isExpanded = topicL2Id === l2.id;
+                    const isSelected = selectedTopicIds.includes(l2.id);
+                    const highlight = isExpanded || isSelected;
+                    const l2Colors = resolveColor(l2, activeL1, openL0);
+                    const hasL3 = l2.children.length > 0;
+
                     return (
-                      <button
-                        key={topic.id}
-                        type="button"
-                        onClick={() => toggleTopic(topic.id)}
-                        className="flex items-center gap-1 text-sm px-3 py-1.5 rounded-full border font-medium transition-all"
-                        style={
-                          selected
-                            ? {
-                                backgroundColor: topic.colorHex ?? "#C8FF09",
-                                color: topic.textColorHex ?? "#000",
-                                borderColor: "transparent",
-                              }
-                            : { borderColor: "#d1d5db", color: "#374151" }
-                        }
+                      <LabelBadge
+                        key={l2.id}
+                        as="button"
+                        text={l2.nameEn}
+                        background={labelBackground({ text: "", ...l2Colors })}
+                        color={l2Colors.textColorHex}
+                        className="shrink-0 transition-all active:opacity-70"
+                        style={badgeRingStyle(l2.colorHex ?? activeL1.colorHex ?? openL0?.colorHex ?? null, highlight)}
+                        onClick={() => {
+                          if (hasL3) {
+                            setTopicL2Id(isExpanded ? null : l2.id);
+                          } else {
+                            toggleTopic(l2.id);
+                          }
+                        }}
                       >
-                        {selected && <Check className="size-3.5" />}
-                        {topic.nameEn}
-                      </button>
+                        {!hasL3 && isSelected && <Check className="size-3" />}
+                        {hasL3 && (isExpanded
+                          ? <ChevronUp className="size-3.5 opacity-70" />
+                          : <ChevronDown className="size-3.5 opacity-70" />
+                        )}
+                      </LabelBadge>
                     );
                   })}
                 </div>
+
+                {/* L3 패널 */}
+                {activeL2 && activeL2.children.length > 0 && (
+                  <div className="rounded-2xl bg-muted/60 p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ background: resolveColor(activeL2, activeL1, openL0).colorHex }}
+                      />
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        {activeL2.nameEn}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {activeL2.children.map((l3) => {
+                        const isSelected = selectedTopicIds.includes(l3.id);
+                        const l3Colors = resolveColor(l3, activeL2, activeL1, openL0);
+                        return (
+                          <LabelBadge
+                            key={l3.id}
+                            as="button"
+                            text={l3.nameEn}
+                            background={labelBackground({ text: "", ...l3Colors })}
+                            color={l3Colors.textColorHex}
+                            className="shrink-0 transition-all active:opacity-70"
+                            style={badgeRingStyle(l3.colorHex ?? activeL2.colorHex ?? activeL1?.colorHex ?? openL0?.colorHex ?? null, isSelected)}
+                            onClick={() => toggleTopic(l3.id)}
+                          >
+                            {isSelected && <Check className="size-3" />}
+                          </LabelBadge>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
-          <div className="pt-4 border-t border-border/50">
+
+          <div className="px-4 pb-6 pt-3 shrink-0">
             <button
               type="button"
-              onClick={() => setTagsSheetOpen(false)}
+              onClick={() => { setOpenTopicL0Id(null); setTopicL1Id(null); setTopicL2Id(null); }}
               className="w-full py-3 rounded-full font-semibold text-sm bg-brand text-black"
             >
-              Done ({selectedTagCount})
+              Done
             </button>
           </div>
         </SheetContent>

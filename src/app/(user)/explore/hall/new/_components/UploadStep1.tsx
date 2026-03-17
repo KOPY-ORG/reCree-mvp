@@ -154,7 +154,7 @@ export function UploadStep1({
         <div className="flex items-center gap-3 px-1">
           <div className="flex-shrink-0 size-16 rounded-full bg-black flex items-center justify-center shadow-md">
             <span className="text-xl font-black tracking-tight leading-none" style={{ color: "#C8FF09" }}>
-              {previewScore}%
+              {Math.round(previewScore)}%
             </span>
           </div>
           <div className="min-w-0">

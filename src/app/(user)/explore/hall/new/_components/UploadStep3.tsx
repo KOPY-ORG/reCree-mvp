@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Download, Zap, CheckCircle2 } from "lucide-react";
-import Image from "next/image";
+import { ReCreeshotImage } from "@/components/recreeshot-image";
 
 interface Props {
   shotPreviewUrl: string;
@@ -56,10 +56,23 @@ export function UploadStep3({
         const thumbW = W * 0.18;
         const thumbH = thumbW * (4 / 3);
         const thumbX = W * 0.03;
-        const thumbY = W * 0.03;
+        const thumbY = W * 0.03; // 좌상단
         // rounded-xl = 12px on ~54px element(미리보기) → 비율 약 22%
         const thumbR = Math.round(thumbW * 0.22);
 
+        // frosted glass 효과: clip 안에서 main shot을 blur로 그리기
+        ctx.save();
+        roundedRect(ctx, thumbX, thumbY, thumbW, thumbH, thumbR);
+        ctx.clip();
+        ctx.filter = "blur(12px)";
+        ctx.drawImage(shotImg, 0, 0, W, H); // 전체 그리되 clip으로 해당 영역만 표시
+        ctx.filter = "none";
+        // 반투명 흰색 레이어
+        ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+        ctx.fillRect(thumbX, thumbY, thumbW, thumbH);
+        ctx.restore();
+
+        // original 이미지 그리기
         ctx.save();
         roundedRect(ctx, thumbX, thumbY, thumbW, thumbH, thumbR);
         ctx.clip();
@@ -77,9 +90,9 @@ export function UploadStep3({
         ctx.restore();
       }
 
-      // 배지 (우상단)
+      // 배지 (우하단)
       if (showBadge && matchScore !== null) {
-        const badgeText = `${matchScore}% Match`;
+        const badgeText = `${Math.round(matchScore)}% Match`;
         const fontSize = 32;
         const badgePadX = 28;
         const badgePadY = 12;
@@ -88,7 +101,7 @@ export function UploadStep3({
         const badgeW = textW + badgePadX * 2;
         const badgeH = fontSize + badgePadY * 2;
         const badgeX = W - badgeW - W * 0.03;
-        const badgeY = W * 0.03;
+        const badgeY = W * 0.03; // 우상단
 
         // 그라데이션 (미리보기와 동일: 좌→우 brand→white)
         const grad = ctx.createLinearGradient(badgeX, 0, badgeX + badgeW * 1.5, 0);
@@ -100,7 +113,7 @@ export function UploadStep3({
         ctx.shadowBlur = 12;
         ctx.shadowOffsetY = 3;
         ctx.fillStyle = grad;
-        roundedRect(ctx, badgeX, badgeY, badgeW, badgeH, badgeH / 2);
+        roundedRect(ctx, badgeX, badgeY, badgeW, badgeH, 9999);
         ctx.fill();
         ctx.restore();
 
@@ -159,35 +172,21 @@ export function UploadStep3({
       )}
 
       {/* 이미지 — Step 1/2와 동일한 비율·스타일 */}
-      <div className="relative mx-auto h-[50dvh] aspect-[3/4] rounded-2xl overflow-hidden bg-muted shadow-md">
-        <Image src={shotPreviewUrl} alt="your recreeshot" fill className="object-cover" sizes="100vw" />
-
-        {/* original 썸네일 오버레이 */}
-        {referencePreviewUrl && (
-          <div
-            className="absolute top-3 left-3 w-[18%] aspect-[3/4] rounded-xl overflow-hidden"
-            style={{ boxShadow: "0 0 0 1.5px white, 0 0 6px 2px rgba(255,255,255,0.2)" }}
-          >
-            <Image src={referencePreviewUrl} alt="original" fill className="object-cover" sizes="20vw" />
-          </div>
-        )}
-
-        {/* 배지 오버레이 */}
-        {showBadge && matchScore !== null && (
-          <div
-            className="absolute top-3 right-3 text-black text-xs font-bold px-2.5 py-1 rounded-full"
-            style={{
-              background: "linear-gradient(to right, #C8FF09, white 150%)",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-            }}
-          >
-            {matchScore}% Match
-          </div>
-        )}
+      <div className="relative mx-auto h-[50dvh] aspect-[3/4] shadow-md">
+        <ReCreeshotImage
+          shotUrl={shotPreviewUrl}
+          referenceUrl={referencePreviewUrl}
+          matchScore={matchScore}
+          showBadge={showBadge}
+          referencePosition="top-left"
+          badgePosition="top-right"
+          className="w-full h-full"
+          sizes="100vw"
+        />
 
         {/* 합성 중 로딩 오버레이 */}
         {isComposing && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+          <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-2xl z-10">
             <div className="relative flex items-center justify-center">
               <span className="absolute inline-flex size-16 rounded-full bg-brand/40 animate-ping" />
               <span className="relative inline-flex size-10 rounded-full bg-brand/80 items-center justify-center">
@@ -252,6 +251,7 @@ function roundedRect(
   h: number,
   r: number
 ) {
+  r = Math.min(r, w / 2, h / 2); // CSS처럼 클램핑
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.lineTo(x + w - r, y);

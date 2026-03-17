@@ -5,6 +5,7 @@ import { ChevronLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { HallDetailClient } from "./_components/HallDetailClient";
+import { ReCreeshotImage } from "@/components/recreeshot-image";
 
 export default async function HallDetailPage({
   params,
@@ -51,46 +52,25 @@ export default async function HallDetailPage({
     <div className="max-w-2xl mx-auto pb-20">
 
       {/* 메인 이미지 + 오버레이 헤더 */}
-      <div className="relative aspect-[3/4] bg-muted">
-        <Image
-          src={shot.imageUrl}
-          alt="recreeshot"
-          fill
-          className="object-cover"
+      <div className="relative aspect-[3/4]">
+        <ReCreeshotImage
+          shotUrl={shot.imageUrl}
+          referenceUrl={shot.referencePhotoUrl}
+          matchScore={shot.matchScore}
+          showBadge={shot.showBadge}
+          rounded={false}
+          className="w-full h-full"
           sizes="(max-width: 672px) 100vw, 672px"
           priority
         />
 
         {/* 뒤로가기 버튼 오버레이 (좌상단) */}
-        <div className="absolute top-0 left-0 right-0 flex items-center px-2 pt-3 pb-8 bg-gradient-to-b from-black/40 to-transparent">
+        <div className="absolute top-0 left-0 right-0 flex items-center px-2 pt-3 pb-8 bg-gradient-to-b from-black/40 to-transparent z-10">
           <Link href="/explore?tab=hall" className="p-2 rounded-full">
             <ChevronLeft className="size-5 text-white" />
           </Link>
         </div>
-
-        {/* 원본 사진 오버레이 (좌하단) */}
-        {shot.referencePhotoUrl && (
-          <div className="absolute bottom-3 left-3 size-16 rounded-lg overflow-hidden border-2 border-white shadow-md">
-            <Image
-              src={shot.referencePhotoUrl}
-              alt="original"
-              fill
-              className="object-cover"
-              sizes="64px"
-            />
-          </div>
-        )}
       </div>
-
-      {/* 점수 배지 — 이미지 바로 아래 */}
-      {shot.matchScore != null && shot.showBadge && (
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
-          <span className="bg-brand text-black text-sm font-bold px-3 py-1 rounded-full">
-            {Math.round(shot.matchScore)}% match
-          </span>
-          <span className="text-xs text-muted-foreground">AI similarity score</span>
-        </div>
-      )}
 
       {/* 콘텐츠 */}
       <div className="px-4 py-4 space-y-4">

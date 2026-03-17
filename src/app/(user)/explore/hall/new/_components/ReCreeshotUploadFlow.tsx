@@ -12,23 +12,40 @@ import { UploadStep1 } from "./UploadStep1";
 import { UploadStep2 } from "./UploadStep2";
 import { UploadStep3 } from "./UploadStep3";
 
-interface Tag {
+interface TagItem {
   id: string;
   name: string;
   group: string;
   colorHex: string | null;
+  colorHex2: string | null;
   textColorHex: string | null;
+}
+
+interface TagGroup {
+  group: string;
+  nameEn: string;
+  colorHex: string;
+  colorHex2: string | null;
+  gradientDir: string;
+  gradientStop: number;
+  textColorHex: string;
+  tags: TagItem[];
 }
 
 interface Topic {
   id: string;
   nameEn: string;
   colorHex: string | null;
+  colorHex2: string | null;
+  gradientDir: string;
+  gradientStop: number;
   textColorHex: string | null;
+  level: number;
+  parentId: string | null;
 }
 
 interface Props {
-  tags: Tag[];
+  tagGroups: TagGroup[];
   topics: Topic[];
   userId: string;
 }
@@ -57,7 +74,7 @@ type State = {
   showLeaveDialog: boolean;
 };
 
-export function ReCreeshotUploadFlow({ tags, topics, userId }: Props) {
+export function ReCreeshotUploadFlow({ tagGroups, topics, userId }: Props) {
   const router = useRouter();
   const [state, setState] = useState<State>({
     step: 1,
@@ -344,7 +361,7 @@ export function ReCreeshotUploadFlow({ tags, topics, userId }: Props) {
           <UploadStep2
             referencePreviewUrl={state.referencePreviewUrl}
             shotPreviewUrl={state.shotPreviewUrl}
-            tags={tags}
+            tagGroups={tagGroups}
             topics={topics}
             previewScore={state.previewScore}
             showBadge={state.showBadge}
