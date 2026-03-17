@@ -11,6 +11,7 @@ import {
 import { UploadStep1 } from "./UploadStep1";
 import { UploadStep2 } from "./UploadStep2";
 import { UploadStep3 } from "./UploadStep3";
+import { ImageCropOverlay } from "./ImageCropOverlay";
 
 interface TagItem {
   id: string;
@@ -76,6 +77,7 @@ type State = {
 
 export function ReCreeshotUploadFlow({ tagGroups, topics, userId }: Props) {
   const router = useRouter();
+  const [pendingCrop, setPendingCrop] = useState<{ file: File; type: "shot" | "reference" } | null>(null);
   const [state, setState] = useState<State>({
     step: 1,
     referenceFile: null,
@@ -112,23 +114,22 @@ export function ReCreeshotUploadFlow({ tagGroups, topics, userId }: Props) {
   }, [hasUnsavedUpload]);
 
   function handleReferenceChange(file: File) {
-    setState((s) => ({
-      ...s,
-      referenceFile: file,
-      referencePreviewUrl: URL.createObjectURL(file),
-      previewScore: null,
-      scoringDone: false,
-    }));
+    setPendingCrop({ file, type: "reference" });
   }
 
   function handleShotChange(file: File) {
-    setState((s) => ({
-      ...s,
-      shotFile: file,
-      shotPreviewUrl: URL.createObjectURL(file),
-      previewScore: null,
-      scoringDone: false,
-    }));
+    setPendingCrop({ file, type: "shot" });
+  }
+
+  function handleCropConfirm(croppedFile: File) {
+    if (!pendingCrop) return;
+    const url = URL.createObjectURL(croppedFile);
+    if (pendingCrop.type === "shot") {
+      setState((s) => ({ ...s, shotFile: croppedFile, shotPreviewUrl: url, previewScore: null, scoringDone: false }));
+    } else {
+      setState((s) => ({ ...s, referenceFile: croppedFile, referencePreviewUrl: url, previewScore: null, scoringDone: false }));
+    }
+    setPendingCrop(null);
   }
 
   function handleReferenceRemove() {
@@ -383,6 +384,15 @@ export function ReCreeshotUploadFlow({ tagGroups, topics, userId }: Props) {
           matchScore={state.matchScore}
           showBadge={state.showBadge}
           createdId={state.createdId}
+        />
+      )}
+
+      {/* 크롭 오버레이 */}
+      {pendingCrop && (
+        <ImageCropOverlay
+          file={pendingCrop.file}
+          onConfirm={handleCropConfirm}
+          onClose={() => setPendingCrop(null)}
         />
       )}
 

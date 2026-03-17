@@ -5,6 +5,7 @@ import { ChevronLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { HallDetailClient } from "./_components/HallDetailClient";
+import { HallDetailMenuButton } from "./_components/HallDetailMenuButton";
 import { ReCreeshotImage } from "@/components/recreeshot-image";
 
 export default async function HallDetailPage({
@@ -64,11 +65,17 @@ export default async function HallDetailPage({
           priority
         />
 
-        {/* 뒤로가기 버튼 오버레이 (좌상단) */}
-        <div className="absolute top-0 left-0 right-0 flex items-center px-2 pt-3 pb-8 bg-gradient-to-b from-black/40 to-transparent z-10">
+        {/* 헤더 오버레이 (뒤로가기 + 메뉴) */}
+        <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-2 pt-3 pb-8 bg-gradient-to-b from-black/40 to-transparent z-10">
           <Link href="/explore?tab=hall" className="p-2 rounded-full">
             <ChevronLeft className="size-5 text-white" />
           </Link>
+          <HallDetailMenuButton
+            imageUrl={shot.imageUrl}
+            referencePhotoUrl={shot.referencePhotoUrl}
+            matchScore={shot.matchScore}
+            showBadge={shot.showBadge}
+          />
         </div>
       </div>
 

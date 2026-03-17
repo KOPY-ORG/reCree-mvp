@@ -52,7 +52,7 @@ export function UploadStep3({
         const thumbX = W * 0.03;
         const thumbY = W * 0.03; // 좌상단
         // rounded-xl = 12px on ~54px element(미리보기) → 비율 약 22%
-        const thumbR = Math.round(thumbW * 0.22);
+        const thumbR = Math.round(thumbW * 0.12);
 
         // frosted glass 효과: clip 안에서 main shot을 blur로 그리기
         ctx.save();
@@ -60,14 +60,23 @@ export function UploadStep3({
         ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
         ctx.clip();
         ctx.filter = "blur(12px)";
-        ctx.drawImage(shotImg, 0, 0, W, H); // 전체 그리되 clip으로 해당 영역만 표시
+        ctx.drawImage(shotImg, 0, 0, W, H);
         ctx.filter = "none";
-        // 반투명 흰색 레이어
         ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
         ctx.fillRect(thumbX, thumbY, thumbW, thumbH);
         ctx.restore();
 
-        // original 이미지 그리기
+        // 흰색 글로우 레이어 — 이미지 그리기 전에 테두리 바깥에만
+        ctx.save();
+        ctx.filter = "blur(8px)";
+        ctx.fillStyle = "rgba(255,255,255,0.5)";
+        ctx.beginPath();
+        ctx.roundRect(thumbX - 2, thumbY - 2, thumbW + 4, thumbH + 4, thumbR + 2);
+        ctx.fill();
+        ctx.filter = "none";
+        ctx.restore();
+
+        // original 이미지 그리기 (글로우 위에)
         ctx.save();
         ctx.beginPath();
         ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
@@ -75,12 +84,10 @@ export function UploadStep3({
         ctx.drawImage(refImg, thumbX, thumbY, thumbW, thumbH);
         ctx.restore();
 
-        // 흰색 글로우 테두리 (미리보기와 동일)
+        // 흰색 테두리
         ctx.save();
-        ctx.strokeStyle = "rgba(255,255,255,0.9)";
+        ctx.strokeStyle = "#ffffff";
         ctx.lineWidth = 3;
-        ctx.shadowColor = "rgba(255,255,255,0.6)";
-        ctx.shadowBlur = 30;
         ctx.beginPath();
         ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
         ctx.stroke();
@@ -124,6 +131,21 @@ export function UploadStep3({
         ctx.fillText(badgeText, badgeX + badgePadX, textY);
         ctx.restore();
       }
+
+      // 워터마크 (우하단)
+      ctx.save();
+      ctx.font = `600 28px 'Noto Sans', sans-serif`;
+      ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
+      ctx.textBaseline = "alphabetic";
+      ctx.shadowColor = "rgba(0, 0, 0, 0.75)";
+      ctx.shadowBlur = 8;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 2;
+      const watermarkText = "reCree";
+      const watermarkX = W - ctx.measureText(watermarkText).width - W * 0.03;
+      const watermarkY = H - W * 0.03;
+      ctx.fillText(watermarkText, watermarkX, watermarkY);
+      ctx.restore();
 
       canvas.toBlob((blob) => {
         if (!blob) return;
@@ -182,6 +204,11 @@ export function UploadStep3({
           className="w-full h-full"
           sizes="100vw"
         />
+
+        {/* 워터마크 */}
+        <p className="absolute bottom-2 right-2.5 z-10 text-white/75 text-[11px] font-semibold drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)] pointer-events-none select-none" style={{ fontFamily: "'Noto Sans', sans-serif" }}>
+          reCree
+        </p>
 
         {/* 합성 중 로딩 오버레이 */}
         {isComposing && (

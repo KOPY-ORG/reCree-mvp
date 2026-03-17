@@ -40,9 +40,11 @@ export function ReCreeshotImage({
     width: "22%",
     aspectRatio: "3/4",
     overflow: "hidden",
-    borderRadius: "15%",
+    borderRadius: "8%",
     backdropFilter: "blur(4px)",
-    boxShadow: "0 0 0 1.5px white, 0 0 6px 2px rgba(255,255,255,0.2)",
+    outline: "1px solid white",
+    outlineOffset: "0px",
+    boxShadow: "0 0 18px 6px rgba(255,255,255,0.7)",
     ...(referencePosition === "top-left"
       ? { top: 8, left: 8 }
       : { bottom: 8, left: 8 }),

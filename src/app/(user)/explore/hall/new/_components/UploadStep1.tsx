@@ -61,7 +61,7 @@ export function UploadStep1({
     buttonAction = onNext;
     buttonDisabled = isLoading;
   } else if (!scoringDone) {
-    buttonLabel = isScoringPreview ? "Analyzing..." : "Check your match score";
+    buttonLabel = isScoringPreview ? "Analyzing..." : "Reveal my score";
     buttonAction = onCheckScore;
     buttonDisabled = isLoading;
   } else {
@@ -109,8 +109,7 @@ export function UploadStep1({
           <button
             type="button"
             onClick={() => refInputRef.current?.click()}
-            style={referencePreviewUrl ? { boxShadow: "0 0 0 1.5px white, 0 0 6px 2px rgba(255,255,255,0.2)" } : undefined}
-            className={`relative w-full h-full flex flex-col items-center justify-center gap-1 rounded-xl overflow-hidden ${referencePreviewUrl ? "" : "border-2 border-dashed border-border bg-background/80 backdrop-blur-sm"}`}
+            className={`relative w-full h-full flex flex-col items-center justify-center gap-1 rounded-lg overflow-hidden ${referencePreviewUrl ? "" : "border-2 border-dashed border-border bg-background/80 backdrop-blur-sm"}`}
           >
             {referencePreviewUrl ? (
               <Image src={referencePreviewUrl} alt="original" fill className="object-cover" />

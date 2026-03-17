@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import Image from "next/image";
-import { MapPin, Check, X, Search, ImageIcon, ChevronDown, ChevronUp } from "lucide-react";
+import { MapPin, Check, X, Search, ImageIcon, Tag, Plus } from "lucide-react";
 import { ReCreeshotImage } from "@/components/recreeshot-image";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { LabelBadge } from "@/components/LabelBadge";
-import { labelBackground, badgeRingStyle, resolveTopicColors, resolveTagColors, computeTopicEffectiveColors, DEFAULT_COLOR, DEFAULT_TEXT } from "@/lib/post-labels";
+import { labelBackground, badgeRingStyle, resolveTagColors, computeTopicEffectiveColors, DEFAULT_COLOR, DEFAULT_TEXT } from "@/lib/post-labels";
 import { searchPlaces, getPopularPlaces, getPostsByPlace } from "@/app/(user)/_actions/recreeshot-actions";
 import { AddPlaceOverlay } from "./AddPlaceOverlay";
 
@@ -148,10 +148,9 @@ export function UploadStep2({
   // TYPE 바텀시트
   const [typeSheetOpen, setTypeSheetOpen] = useState(false);
 
-  // THEME 바텀시트
-  const [openTopicL0Id, setOpenTopicL0Id] = useState<string | null>(null);
-  const [topicL1Id, setTopicL1Id] = useState<string | null>(null);
-  const [topicL2Id, setTopicL2Id] = useState<string | null>(null);
+  // THEME 탭 (Tag 시트 내)
+  const [activeThemeL0Id, setActiveThemeL0Id] = useState<string | null>(null);
+  const [themeSearchQuery, setThemeSearchQuery] = useState("");
 
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -180,11 +179,35 @@ export function UploadStep2({
   // 토픽 effective color map (상속 포함)
   const topicColorMap = useMemo(() => computeTopicEffectiveColors(topics), [topics]);
 
-  // ── 파생 상태 ───────────────────────────────────────────────────────────────
-  const openL0 = openTopicL0Id ? (topicTree.find(t => t.id === openTopicL0Id) ?? null) : null;
-  const resolvedL1Id = topicL1Id ?? openL0?.children[0]?.id ?? null;
-  const activeL1 = openL0?.children.find(c => c.id === resolvedL1Id) ?? null;
-  const activeL2 = topicL2Id ? (activeL1?.children.find(c => c.id === topicL2Id) ?? null) : null;
+  // Tag 시트 열릴 때 첫 번째 L0 자동 선택
+  useEffect(() => {
+    if (typeSheetOpen && topicTree.length > 0 && !activeThemeL0Id) {
+      setActiveThemeL0Id(topicTree[0].id);
+    }
+  }, [typeSheetOpen, topicTree, activeThemeL0Id]);
+
+  // 현재 활성 L0의 하위 토픽 중 L2+ (L1 카테고리 제외, 플랫)
+  const activeThemeTopics = useMemo(() => {
+    const resolvedL0Id = activeThemeL0Id ?? topicTree[0]?.id;
+    if (!resolvedL0Id) return [];
+    const l0 = topicTree.find(t => t.id === resolvedL0Id);
+    if (!l0) return [];
+    const allIds = new Set(getAllDescendantIds(l0).filter(id => id !== resolvedL0Id));
+    // L1 (Boy Group, Girl Group 등 분류 레벨) 제외 → level >= 2만 표시
+    return topics.filter(t => allIds.has(t.id) && t.level >= 2);
+  }, [activeThemeL0Id, topicTree, topics]);
+
+  const filteredThemeTopics = useMemo(() => {
+    if (!themeSearchQuery.trim()) return activeThemeTopics;
+    const q = themeSearchQuery.toLowerCase();
+    return activeThemeTopics.filter(t => t.nameEn.toLowerCase().includes(q));
+  }, [activeThemeTopics, themeSearchQuery]);
+
+  // 활성 L0가 K-POP이면 선택 전에도 색상 표시
+  const themeAlwaysColor = useMemo(() => {
+    const resolvedL0Id = activeThemeL0Id ?? topicTree[0]?.id;
+    return topicTree.find(t => t.id === resolvedL0Id)?.nameEn === "K-POP";
+  }, [activeThemeL0Id, topicTree]);
 
   const selectedTagCount = selectedTagIds.length + selectedTopicIds.length;
 
@@ -223,30 +246,6 @@ export function UploadStep2({
 
   function toggleTopic(id: string) {
     setSelectedTopicIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-  }
-
-  function openTopicSheet(l0Id: string) {
-    const l0 = topicTree.find(t => t.id === l0Id);
-    if (!l0) return;
-    setOpenTopicL0Id(l0Id);
-    setTopicL1Id(l0.children[0]?.id ?? null);
-    setTopicL2Id(null);
-  }
-
-  // ── 토픽 색상 헬퍼 ───────────────────────────────────────────────────────────
-  function resolveColor(node: Topic, ...parents: (Topic | null | undefined)[]) {
-    const colorNode = {
-      colorHex: node.colorHex,
-      colorHex2: node.colorHex2,
-      gradientDir: node.gradientDir,
-      gradientStop: node.gradientStop,
-      textColorHex: node.textColorHex,
-      parent: parents.reduceRight<object | null>((acc, p) =>
-        p ? { colorHex: p.colorHex, colorHex2: p.colorHex2, gradientDir: p.gradientDir, gradientStop: p.gradientStop, textColorHex: p.textColorHex, parent: acc } : acc,
-        null
-      ),
-    };
-    return resolveTopicColors(colorNode);
   }
 
   // ── 렌더링 ──────────────────────────────────────────────────────────────────
@@ -312,7 +311,7 @@ export function UploadStep2({
           >
             <MapPin className="size-4 text-muted-foreground shrink-0" />
             <div className="flex-1 flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Add location</span>
+              <span className="text-sm text-muted-foreground">Where did you take this?</span>
               {submitted && <span className="text-[10px] font-semibold text-red-400 uppercase tracking-wide">Required</span>}
             </div>
           </button>
@@ -331,8 +330,8 @@ export function UploadStep2({
                     key={post.id}
                     type="button"
                     onClick={() => handleSelectPost(post)}
-                    className={`flex items-center gap-3 w-full rounded-xl border-2 overflow-hidden transition-all text-left ${
-                      selected ? "border-brand bg-brand/5" : "border-border/50"
+                    className={`flex items-center gap-3 w-full rounded-xl border overflow-hidden transition-all text-left ${
+                      selected ? "border-brand bg-brand/5" : "border-border"
                     }`}
                   >
                     <div className="relative flex-shrink-0 w-16 h-16 bg-muted">
@@ -360,7 +359,7 @@ export function UploadStep2({
         {/* 스토리 */}
         <div className="border border-border rounded-xl px-3 pt-3 pb-2">
           <textarea
-            placeholder="Tell us about your recreation!"
+            placeholder="Share the story behind this shot!"
             value={story}
             onChange={(e) => setStory(e.target.value.slice(0, 300))}
             rows={4}
@@ -372,7 +371,7 @@ export function UploadStep2({
         {/* 팁 */}
         <div className="border border-border rounded-xl px-3 pt-3 pb-2">
           <textarea
-            placeholder="Tips (floor, seat number, best time...)"
+            placeholder="Tips (best time to visit, hidden tips...)"
             value={tips}
             onChange={(e) => setTips(e.target.value.slice(0, 300))}
             rows={3}
@@ -381,89 +380,80 @@ export function UploadStep2({
           <p className="text-xs text-muted-foreground text-right">{tips.length}/300</p>
         </div>
 
-        {/* 선택된 태그/토픽 미리보기 */}
-        {selectedTagCount > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {selectedTagIds.map((id) => {
-              const groupData = tagGroups.find(g => g.tags.some(t => t.id === id));
-              const tag = groupData?.tags.find(t => t.id === id);
-              if (!tag || !groupData) return null;
-              const resolved = resolveTagColors(tag, groupData);
-              return (
-                <span
-                  key={id}
-                  className="pill-badge [--pill-py:0.25rem] text-xs"
-                  style={{ background: labelBackground({ text: "", ...resolved }), color: resolved.textColorHex }}
-                >
-                  {tag.name}
-                  <button type="button" onClick={() => toggleTag(id)} className="opacity-60 hover:opacity-100 -mr-0.5">
-                    <X className="size-3" />
-                  </button>
-                </span>
-              );
-            })}
-            {selectedTopicIds.map((id) => {
-              const colors = topicColorMap.get(id);
-              const topic = topics.find(t => t.id === id);
-              if (!topic || !colors) return null;
-              const bg = colors.hex2
-                ? `linear-gradient(${colors.dir}, ${colors.hex}, ${colors.hex2} ${colors.stop}%)`
-                : colors.hex;
-              return (
-                <span
-                  key={id}
-                  className="pill-badge [--pill-py:0.25rem] text-xs"
-                  style={{ background: bg, color: colors.textHex }}
-                >
-                  {topic.nameEn}
-                  <button type="button" onClick={() => toggleTopic(id)} className="opacity-60 hover:opacity-100 -mr-0.5">
-                    <X className="size-3" />
-                  </button>
-                </span>
-              );
-            })}
-          </div>
-        )}
+        {/* Tag 필드 */}
+        <div className={`rounded-xl border [--pill-py:0.25rem] ${
+          submitted && selectedTagCount === 0 ? "border-dashed border-red-300" : "border-border"
+        }`}>
+          {/* 헤더 행 */}
+          <button
+            type="button"
+            onClick={() => setTypeSheetOpen(true)}
+            className="flex items-center justify-between w-full px-3 py-2.5"
+          >
+            <div className="flex items-center gap-2">
+              <Tag className="size-4 text-muted-foreground shrink-0" />
+              <span className="text-sm text-muted-foreground">Tag</span>
+              {submitted && selectedTagCount === 0 && (
+                <span className="text-[10px] font-semibold text-red-400 uppercase tracking-wide">Required</span>
+              )}
+            </div>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Plus className="size-3.5" />
+              <span>Add</span>
+            </div>
+          </button>
 
-        {/* Type + Theme 한 행 */}
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-0.5 [--pill-py:0.25rem]">
-          {/* Type 버튼 */}
-          {tagGroups.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setTypeSheetOpen(true)}
-              className={`pill-badge shrink-0 border transition-colors ${
-                selectedTagIds.length > 0
-                  ? "bg-foreground text-background border-foreground"
-                  : submitted && selectedTagCount === 0
-                  ? "border-dashed border-red-300 text-muted-foreground"
-                  : "border-border text-muted-foreground"
-              }`}
-            >
-              Type
-              <ChevronDown className="size-3 shrink-0 opacity-50" />
-            </button>
+          {/* 선택된 뱃지 */}
+          {selectedTagCount > 0 && (
+            <div className="px-3 pb-2.5 flex flex-wrap gap-1.5">
+              {selectedTagIds.map((id) => {
+                const groupData = tagGroups.find(g => g.tags.some(t => t.id === id));
+                const tag = groupData?.tags.find(t => t.id === id);
+                if (!tag || !groupData) return null;
+                const resolved = resolveTagColors(tag, groupData);
+                return (
+                  <span
+                    key={id}
+                    className="pill-badge text-xs"
+                    style={{ background: labelBackground({ text: "", ...resolved }), color: resolved.textColorHex }}
+                  >
+                    {tag.name}
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); toggleTag(id); }}
+                      className="opacity-60 hover:opacity-100 -mr-0.5"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </span>
+                );
+              })}
+              {selectedTopicIds.map((id) => {
+                const colors = topicColorMap.get(id);
+                const topic = topics.find(t => t.id === id);
+                if (!topic || !colors) return null;
+                const bg = colors.hex2
+                  ? `linear-gradient(${colors.dir}, ${colors.hex}, ${colors.hex2} ${colors.stop}%)`
+                  : colors.hex;
+                return (
+                  <span
+                    key={id}
+                    className="pill-badge text-xs"
+                    style={{ background: bg, color: colors.textHex }}
+                  >
+                    {topic.nameEn}
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); toggleTopic(id); }}
+                      className="opacity-60 hover:opacity-100 -mr-0.5"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </span>
+                );
+              })}
+            </div>
           )}
-
-          {/* L0 토픽 버튼들 */}
-          {topicTree.map((l0) => {
-            const isActive = getAllDescendantIds(l0).some(id => selectedTopicIds.includes(id));
-            return (
-              <button
-                key={l0.id}
-                type="button"
-                onClick={() => openTopicSheet(l0.id)}
-                className={`pill-badge shrink-0 border transition-colors ${
-                  isActive
-                    ? "bg-foreground text-background border-foreground"
-                    : "border-border text-muted-foreground"
-                }`}
-              >
-                {l0.nameEn}
-                <ChevronDown className="size-3 shrink-0 opacity-50" />
-              </button>
-            );
-          })}
         </div>
       </div>
 
@@ -596,23 +586,69 @@ export function UploadStep2({
       </Sheet>
 
       {/* TYPE — 단일 바텀시트 (그룹별 탭) */}
-      <Sheet open={typeSheetOpen} onOpenChange={setTypeSheetOpen}>
+      <Sheet open={typeSheetOpen} onOpenChange={(v) => { setTypeSheetOpen(v); if (!v) setThemeSearchQuery(""); }}>
         <SheetContent
           side="bottom"
           showCloseButton={false}
-          className="rounded-t-2xl max-h-[70vh] p-0 flex flex-col gap-0"
+          className="rounded-t-2xl max-h-[90vh] p-0 flex flex-col gap-0"
         >
-          <SheetTitle className="sr-only">Type</SheetTitle>
+          <SheetTitle className="sr-only">Tag</SheetTitle>
 
           <div className="flex justify-center pt-3 pb-1 shrink-0">
             <div className="w-9 h-1 rounded-full bg-muted-foreground/25" />
           </div>
 
           <div className="px-5 pt-1 pb-3 shrink-0">
-            <p className="text-base font-bold">Type</p>
+            <p className="text-base font-bold">Tag</p>
           </div>
 
-          {/* 전체 태그 스크롤 목록 (그룹 헤더 + 칩) */}
+          {/* 선택된 태그/토픽 요약 */}
+          {selectedTagCount > 0 && (
+            <div className="px-4 pb-3 shrink-0">
+              <div className="flex flex-wrap gap-1.5 [--pill-py:0.25rem]">
+                {selectedTagIds.map((id) => {
+                  const groupData = tagGroups.find(g => g.tags.some(t => t.id === id));
+                  const tag = groupData?.tags.find(t => t.id === id);
+                  if (!tag || !groupData) return null;
+                  const resolved = resolveTagColors(tag, groupData);
+                  return (
+                    <span
+                      key={id}
+                      className="pill-badge text-xs"
+                      style={{ background: labelBackground({ text: "", ...resolved }), color: resolved.textColorHex }}
+                    >
+                      {tag.name}
+                      <button type="button" onClick={() => toggleTag(id)} className="opacity-60 hover:opacity-100 -mr-0.5">
+                        <X className="size-3" />
+                      </button>
+                    </span>
+                  );
+                })}
+                {selectedTopicIds.map((id) => {
+                  const colors = topicColorMap.get(id);
+                  const topic = topics.find(t => t.id === id);
+                  if (!topic || !colors) return null;
+                  const bg = colors.hex2
+                    ? `linear-gradient(${colors.dir}, ${colors.hex}, ${colors.hex2} ${colors.stop}%)`
+                    : colors.hex;
+                  return (
+                    <span
+                      key={id}
+                      className="pill-badge text-xs"
+                      style={{ background: bg, color: colors.textHex }}
+                    >
+                      {topic.nameEn}
+                      <button type="button" onClick={() => toggleTopic(id)} className="opacity-60 hover:opacity-100 -mr-0.5">
+                        <X className="size-3" />
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 전체 태그 + 토픽 스크롤 목록 */}
           <div className="flex-1 overflow-y-auto px-4 pt-2 pb-6 space-y-5 [--pill-py:0.3rem]">
             {tagGroups.map((group) => (
               <div key={group.group}>
@@ -634,141 +670,84 @@ export function UploadStep2({
                         style={badgeRingStyle(resolved.colorHex, isActive)}
                         onClick={() => toggleTag(tag.id)}
                       >
-                        {isActive && <Check className="size-3" />}
                       </LabelBadge>
                     );
                   })}
                 </div>
               </div>
             ))}
-          </div>
 
-          <div className="px-4 pb-6 pt-3 shrink-0">
-            <button
-              type="button"
-              onClick={() => setTypeSheetOpen(false)}
-              className="w-full py-3 rounded-full font-semibold text-sm bg-brand text-black"
-            >
-              Done
-            </button>
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      {/* THEME — 토픽 바텀시트 */}
-      <Sheet open={!!openTopicL0Id} onOpenChange={(v) => { if (!v) { setOpenTopicL0Id(null); setTopicL1Id(null); setTopicL2Id(null); } }}>
-        <SheetContent
-          side="bottom"
-          showCloseButton={false}
-          className="rounded-t-2xl max-h-[80vh] p-0 flex flex-col gap-0"
-        >
-          <SheetTitle className="sr-only">{openL0?.nameEn}</SheetTitle>
-
-          <div className="flex justify-center pt-3 pb-1 shrink-0">
-            <div className="w-9 h-1 rounded-full bg-muted-foreground/25" />
-          </div>
-
-          <div className="px-5 pt-1 pb-3 shrink-0">
-            <p className="text-base font-bold">{openL0?.nameEn}</p>
-          </div>
-
-          {/* L1 탭 행 */}
-          {openL0 && openL0.children.length > 0 && (
-            <div className="flex overflow-x-auto scrollbar-hide border-b border-border shrink-0">
-              {openL0.children.map((l1) => {
-                const isActive = l1.id === resolvedL1Id;
-                const accentColor = l1.colorHex ?? openL0.colorHex ?? "#000000";
-                return (
-                  <button
-                    key={l1.id}
-                    type="button"
-                    onClick={() => { setTopicL1Id(l1.id); setTopicL2Id(null); }}
-                    className="shrink-0 px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap active:opacity-70"
-                    style={{
-                      color: isActive ? accentColor : undefined,
-                      borderBottomColor: isActive ? accentColor : "transparent",
-                    }}
-                  >
-                    <span className={isActive ? "" : "text-muted-foreground"}>{l1.nameEn}</span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {/* L2 칩 + L3 패널 */}
-          <div className="flex-1 overflow-y-auto">
-            {activeL1 && (
-              <div className="px-4 pt-4 pb-6 space-y-4 [--pill-py:0.3rem]">
-                <div className="flex flex-wrap gap-2">
-                  {activeL1.children.map((l2) => {
-                    const isExpanded = topicL2Id === l2.id;
-                    const isSelected = selectedTopicIds.includes(l2.id);
-                    const highlight = isExpanded || isSelected;
-                    const l2Colors = resolveColor(l2, activeL1, openL0);
-                    const hasL3 = l2.children.length > 0;
-
+            {/* Theme (Topics) — L0 탭 + 검색 + 플랫 뱃지 */}
+            {topicTree.length > 0 && (
+              <div>
+                {/* L0 탭바 (세그먼트 컨트롤) */}
+                <div className="flex bg-muted rounded-xl p-1 mb-3">
+                  {topicTree.map((l0) => {
+                    const isActive = (activeThemeL0Id ?? topicTree[0]?.id) === l0.id;
+                    const hasSelected = getAllDescendantIds(l0).some(id => selectedTopicIds.includes(id));
                     return (
-                      <LabelBadge
-                        key={l2.id}
-                        as="button"
-                        text={l2.nameEn}
-                        background={labelBackground({ text: "", ...l2Colors })}
-                        color={l2Colors.textColorHex}
-                        className="shrink-0 transition-all active:opacity-70"
-                        style={badgeRingStyle(l2.colorHex ?? activeL1.colorHex ?? openL0?.colorHex ?? null, highlight)}
-                        onClick={() => {
-                          if (hasL3) {
-                            setTopicL2Id(isExpanded ? null : l2.id);
-                          } else {
-                            toggleTopic(l2.id);
-                          }
-                        }}
+                      <button
+                        key={l0.id}
+                        type="button"
+                        onClick={() => { setActiveThemeL0Id(l0.id); setThemeSearchQuery(""); }}
+                        className={`flex-1 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                          isActive
+                            ? "bg-background text-foreground shadow-sm"
+                            : hasSelected
+                            ? "text-foreground"
+                            : "text-muted-foreground"
+                        }`}
                       >
-                        {!hasL3 && isSelected && <Check className="size-3" />}
-                        {hasL3 && (isExpanded
-                          ? <ChevronUp className="size-3.5 opacity-70" />
-                          : <ChevronDown className="size-3.5 opacity-70" />
-                        )}
-                      </LabelBadge>
+                        {l0.nameEn}
+                      </button>
                     );
                   })}
                 </div>
 
-                {/* L3 패널 */}
-                {activeL2 && activeL2.children.length > 0 && (
-                  <div className="rounded-2xl bg-muted/60 p-4 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="w-2 h-2 rounded-full shrink-0"
-                        style={{ background: resolveColor(activeL2, activeL1, openL0).colorHex }}
-                      />
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                        {activeL2.nameEn}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {activeL2.children.map((l3) => {
-                        const isSelected = selectedTopicIds.includes(l3.id);
-                        const l3Colors = resolveColor(l3, activeL2, activeL1, openL0);
-                        return (
-                          <LabelBadge
-                            key={l3.id}
-                            as="button"
-                            text={l3.nameEn}
-                            background={labelBackground({ text: "", ...l3Colors })}
-                            color={l3Colors.textColorHex}
-                            className="shrink-0 transition-all active:opacity-70"
-                            style={badgeRingStyle(l3.colorHex ?? activeL2.colorHex ?? activeL1?.colorHex ?? openL0?.colorHex ?? null, isSelected)}
-                            onClick={() => toggleTopic(l3.id)}
-                          >
-                            {isSelected && <Check className="size-3" />}
-                          </LabelBadge>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+                {/* 검색바 */}
+                <div className="flex items-center gap-2 bg-muted/50 border border-border/60 rounded-xl px-3 py-2 mb-3">
+                  <Search className="size-3.5 text-muted-foreground shrink-0" />
+                  <input
+                    type="text"
+                    placeholder={`Search in ${topicTree.find(t => t.id === (activeThemeL0Id ?? topicTree[0]?.id))?.nameEn ?? ""}...`}
+                    value={themeSearchQuery}
+                    onChange={(e) => setThemeSearchQuery(e.target.value)}
+                    className="flex-1 text-sm bg-transparent outline-none placeholder:text-muted-foreground"
+                  />
+                  {themeSearchQuery && (
+                    <button type="button" onClick={() => setThemeSearchQuery("")}>
+                      <X className="size-3.5 text-muted-foreground" />
+                    </button>
+                  )}
+                </div>
+
+                {/* 플랫 토픽 뱃지 */}
+                <div className="flex flex-wrap gap-x-2 gap-y-3">
+                  {filteredThemeTopics.map((topic) => {
+                    const colors = topicColorMap.get(topic.id);
+                    const isSelected = selectedTopicIds.includes(topic.id);
+                    const bg = colors?.hex2
+                      ? `linear-gradient(${colors.dir}, ${colors.hex}, ${colors.hex2} ${colors.stop}%)`
+                      : (colors?.hex ?? DEFAULT_COLOR);
+                    const fg = colors?.textHex ?? DEFAULT_TEXT;
+                    return (
+                      <LabelBadge
+                        key={topic.id}
+                        as="button"
+                        text={topic.nameEn}
+                        background={themeAlwaysColor || isSelected ? bg : DEFAULT_COLOR}
+                        color={themeAlwaysColor || isSelected ? fg : DEFAULT_TEXT}
+                        className="shrink-0 transition-all active:opacity-70"
+                        style={badgeRingStyle(colors?.hex ?? null, isSelected)}
+                        onClick={() => toggleTopic(topic.id)}
+                      >
+                      </LabelBadge>
+                    );
+                  })}
+                  {filteredThemeTopics.length === 0 && (
+                    <p className="text-sm text-muted-foreground py-2">No results</p>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -776,7 +755,7 @@ export function UploadStep2({
           <div className="px-4 pb-6 pt-3 shrink-0">
             <button
               type="button"
-              onClick={() => { setOpenTopicL0Id(null); setTopicL1Id(null); setTopicL2Id(null); }}
+              onClick={() => setTypeSheetOpen(false)}
               className="w-full py-3 rounded-full font-semibold text-sm bg-brand text-black"
             >
               Done
