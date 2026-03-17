@@ -132,7 +132,7 @@ export function InteractiveMap({ places, selectedPlaceId, highlightedIds, bounds
 
   return (
     <div className={`overflow-hidden ${className ?? ""}`}>
-      <APIProvider apiKey={API_KEY}>
+      <APIProvider apiKey={API_KEY} language="en">
         <MapContent
           places={places}
           selectedPlaceId={selectedPlaceId}

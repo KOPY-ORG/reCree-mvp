@@ -327,7 +327,7 @@ export function PlaceSearchDialog({
         <DialogHeader>
           <DialogTitle>위치 검색</DialogTitle>
         </DialogHeader>
-        <APIProvider apiKey={API_KEY}>
+        <APIProvider apiKey={API_KEY} language="en">
           <PlaceSearchContent
             onSelect={onSelect}
             onClose={() => onOpenChange(false)}

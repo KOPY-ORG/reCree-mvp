@@ -20,20 +20,111 @@ export async function previewMatchScore(
   }
 }
 
+// ─── createPlaceFromGoogleMaps ────────────────────────────────────────────────
+
+export async function createPlaceFromGoogleMaps(data: {
+  nameKo: string;
+  nameEn: string;
+  addressKo: string;
+  addressEn: string;
+  lat: number;
+  lng: number;
+  googlePlaceId: string;
+  googleMapsUrl: string;
+  phone?: string;
+}): Promise<{ id: string; nameKo: string; nameEn: string | null; addressEn: string | null; city: string | null; imageUrl: string | null } | { error: string }> {
+  try {
+    // 이미 등록된 장소면 그대로 반환
+    const existing = await prisma.place.findUnique({
+      where: { googlePlaceId: data.googlePlaceId },
+      select: PLACE_SELECT,
+    });
+    if (existing) return existing;
+
+    const place = await prisma.place.create({
+      data: {
+        nameKo: data.nameKo,
+        nameEn: data.nameEn,
+        addressKo: data.addressKo,
+        addressEn: data.addressEn,
+        latitude: data.lat,
+        longitude: data.lng,
+        googlePlaceId: data.googlePlaceId,
+        googleMapsUrl: data.googleMapsUrl,
+        phone: data.phone,
+        source: "USER",
+        isVerified: false,
+      },
+      select: PLACE_SELECT,
+    });
+    return normalizePlaces([place])[0];
+  } catch (e) {
+    console.error(e);
+    return { error: "장소 등록에 실패했습니다." };
+  }
+}
+
 // ─── searchPlaces ─────────────────────────────────────────────────────────────
+
+const PLACE_SELECT = {
+  id: true,
+  nameKo: true,
+  nameEn: true,
+  addressEn: true,
+  city: true,
+  imageUrl: true,
+  placeImages: {
+    where: { isThumbnail: true },
+    select: { url: true },
+    take: 1,
+  },
+} as const;
+
+type PlaceRow = {
+  id: string;
+  nameKo: string;
+  nameEn: string | null;
+  addressEn: string | null;
+  city: string | null;
+  imageUrl: string | null;
+  placeImages: { url: string }[];
+};
+
+function normalizePlaces(places: PlaceRow[]): { id: string; nameKo: string; nameEn: string | null; addressEn: string | null; city: string | null; imageUrl: string | null }[] {
+  return places.map(({ placeImages, imageUrl, ...rest }) => ({
+    ...rest,
+    imageUrl: placeImages[0]?.url ?? imageUrl,
+  }));
+}
+
+export async function getPopularPlaces() {
+  try {
+    const places = await prisma.place.findMany({
+      where: { isVerified: true },
+      orderBy: { createdAt: "desc" },
+      select: PLACE_SELECT,
+      take: 20,
+    });
+    return normalizePlaces(places);
+  } catch (e) {
+    console.error(e);
+    return [];
+  }
+}
 
 export async function searchPlaces(query: string) {
   try {
-    return await prisma.place.findMany({
+    const places = await prisma.place.findMany({
       where: {
         OR: [
           { nameKo: { contains: query, mode: "insensitive" } },
           { nameEn: { contains: query, mode: "insensitive" } },
         ],
       },
-      select: { id: true, nameKo: true, nameEn: true },
-      take: 10,
+      select: PLACE_SELECT,
+      take: 15,
     });
+    return normalizePlaces(places);
   } catch (e) {
     console.error(e);
     return [];

@@ -7,7 +7,8 @@ import { ReCreeshotImage } from "@/components/recreeshot-image";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { LabelBadge } from "@/components/LabelBadge";
 import { labelBackground, badgeRingStyle, resolveTopicColors, resolveTagColors, computeTopicEffectiveColors, DEFAULT_COLOR, DEFAULT_TEXT } from "@/lib/post-labels";
-import { searchPlaces, getPostsByPlace } from "@/app/(user)/_actions/recreeshot-actions";
+import { searchPlaces, getPopularPlaces, getPostsByPlace } from "@/app/(user)/_actions/recreeshot-actions";
+import { AddPlaceOverlay } from "./AddPlaceOverlay";
 
 interface TagItem {
   id: string;
@@ -45,6 +46,9 @@ interface PlaceResult {
   id: string;
   nameKo: string | null;
   nameEn: string | null;
+  addressEn: string | null;
+  city: string | null;
+  imageUrl: string | null;
 }
 
 interface PostResult {
@@ -129,6 +133,7 @@ export function UploadStep2({
   // 장소 검색
   const [locationSheetOpen, setLocationSheetOpen] = useState(false);
   const [locationQuery, setLocationQuery] = useState("");
+  const [popularPlaces, setPopularPlaces] = useState<PlaceResult[]>([]);
   const [placeResults, setPlaceResults] = useState<PlaceResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState<PlaceResult | null>(null);
@@ -136,6 +141,9 @@ export function UploadStep2({
   // 포스트 연결
   const [linkedPosts, setLinkedPosts] = useState<PostResult[]>([]);
   const [linkedPostId, setLinkedPostId] = useState<string | undefined>(undefined);
+
+  // 구글맵 장소 추가 오버레이
+  const [addPlaceOverlay, setAddPlaceOverlay] = useState(false);
 
   // TYPE 바텀시트
   const [typeSheetOpen, setTypeSheetOpen] = useState(false);
@@ -146,6 +154,13 @@ export function UploadStep2({
   const [topicL2Id, setTopicL2Id] = useState<string | null>(null);
 
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── 시트 열릴 때 인기 장소 로드 ────────────────────────────────────────────
+  useEffect(() => {
+    if (!locationSheetOpen) return;
+    if (popularPlaces.length > 0) return;
+    getPopularPlaces().then(setPopularPlaces);
+  }, [locationSheetOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── 장소 검색 디바운스 ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -179,6 +194,7 @@ export function UploadStep2({
     setLocationSheetOpen(false);
     setLocationQuery("");
     setLinkedPostId(undefined);
+    setLinkedPosts([]);
     const posts = await getPostsByPlace(place.id);
     setLinkedPosts(posts);
   }
@@ -376,10 +392,13 @@ export function UploadStep2({
               return (
                 <span
                   key={id}
-                  className="pill-badge [--pill-py:0.2rem] text-xs"
+                  className="pill-badge [--pill-py:0.25rem] text-xs"
                   style={{ background: labelBackground({ text: "", ...resolved }), color: resolved.textColorHex }}
                 >
                   {tag.name}
+                  <button type="button" onClick={() => toggleTag(id)} className="opacity-60 hover:opacity-100 -mr-0.5">
+                    <X className="size-3" />
+                  </button>
                 </span>
               );
             })}
@@ -393,10 +412,13 @@ export function UploadStep2({
               return (
                 <span
                   key={id}
-                  className="pill-badge [--pill-py:0.2rem] text-xs"
+                  className="pill-badge [--pill-py:0.25rem] text-xs"
                   style={{ background: bg, color: colors.textHex }}
                 >
                   {topic.nameEn}
+                  <button type="button" onClick={() => toggleTopic(id)} className="opacity-60 hover:opacity-100 -mr-0.5">
+                    <X className="size-3" />
+                  </button>
                 </span>
               );
             })}
@@ -480,43 +502,95 @@ export function UploadStep2({
       </div>
 
       {/* 장소 검색 바텀시트 */}
-      <Sheet open={locationSheetOpen} onOpenChange={setLocationSheetOpen}>
-        <SheetContent side="bottom" className="h-[75vh] flex flex-col px-5 pb-8">
-          <SheetTitle className="text-base font-bold pt-1">Search location</SheetTitle>
-          <div className="flex items-center gap-2 border border-border rounded-xl px-3 py-2.5">
-            <Search className="size-4 text-muted-foreground shrink-0" />
-            <input
-              type="text"
-              placeholder="Search places..."
-              value={locationQuery}
-              onChange={(e) => setLocationQuery(e.target.value)}
-              autoFocus
-              className="flex-1 text-sm bg-transparent outline-none placeholder:text-muted-foreground"
-            />
-            {locationQuery && (
-              <button type="button" onClick={() => setLocationQuery("")}>
-                <X className="size-4 text-muted-foreground" />
-              </button>
-            )}
+      <Sheet open={locationSheetOpen} onOpenChange={(v) => { setLocationSheetOpen(v); if (!v) setLocationQuery(""); }}>
+        <SheetContent
+          side="bottom"
+          showCloseButton={false}
+          className="rounded-t-2xl max-h-[85vh] p-0 flex flex-col gap-0"
+        >
+          <SheetTitle className="sr-only">Search location</SheetTitle>
+
+          <div className="flex justify-center pt-3 pb-1 shrink-0">
+            <div className="w-9 h-1 rounded-full bg-muted-foreground/25" />
           </div>
-          <div className="flex-1 overflow-y-auto mt-1">
-            {isSearching && <p className="text-sm text-muted-foreground text-center py-6">Searching...</p>}
-            {!isSearching && placeResults.length === 0 && locationQuery.trim() && (
-              <p className="text-sm text-muted-foreground text-center py-6">No places found</p>
+
+          <div className="px-5 pt-1 pb-3 shrink-0">
+            <p className="text-base font-bold">Location</p>
+          </div>
+
+          {/* 검색창 */}
+          <div className="px-4 pb-3 shrink-0">
+            <div className="flex items-center gap-2 bg-muted/50 rounded-2xl px-3.5 py-2.5">
+              <Search className="size-4 text-muted-foreground shrink-0" />
+              <input
+                type="text"
+                placeholder="Search places..."
+                value={locationQuery}
+                onChange={(e) => setLocationQuery(e.target.value)}
+                className="flex-1 text-sm bg-transparent outline-none placeholder:text-muted-foreground"
+              />
+              {locationQuery && (
+                <button type="button" onClick={() => setLocationQuery("")}>
+                  <X className="size-3.5 text-muted-foreground" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* 장소 목록 */}
+          <div className="flex-1 overflow-y-auto px-4 pb-6">
+            {isSearching && (
+              <p className="text-sm text-muted-foreground text-center py-8">Searching...</p>
             )}
-            {!isSearching && placeResults.length === 0 && !locationQuery.trim() && (
-              <p className="text-sm text-muted-foreground text-center py-6">Type to search for a place</p>
+
+            {/* 검색 결과 */}
+            {!isSearching && locationQuery.trim() && (
+              <>
+                {placeResults.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">No places found</p>
+                ) : (
+                  <div className="space-y-1">
+                    {placeResults.map((place) => (
+                      <PlaceRow key={place.id} place={place} onSelect={handleSelectPlace} />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
-            {placeResults.map((place) => (
+
+            {/* 기본 목록 (검색 전) */}
+            {!isSearching && !locationQuery.trim() && (
+              <>
+                {popularPlaces.length > 0 && (
+                  <>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Our places</p>
+                    <div className="space-y-1">
+                      {popularPlaces.map((place) => (
+                        <PlaceRow key={place.id} place={place} onSelect={handleSelectPlace} />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+
+            {/* 구글맵으로 직접 등록 */}
+            <div className="mt-6 rounded-2xl border border-border/60 px-4 py-4 space-y-3">
+              <div className="space-y-1">
+                <p className="text-sm font-semibold">Can&apos;t find your place?</p>
+                <p className="text-xs text-muted-foreground leading-snug">
+                  Search directly on Google Maps and add it to our service.
+                </p>
+              </div>
               <button
-                key={place.id}
                 type="button"
-                onClick={() => handleSelectPlace(place)}
-                className="w-full text-left px-2 py-3 rounded-xl hover:bg-muted/50 transition-colors border-b border-border/30 last:border-0"
+                onClick={() => { setLocationSheetOpen(false); setAddPlaceOverlay(true); }}
+                className="flex items-center gap-2 w-full py-2.5 px-3.5 rounded-xl bg-muted/60 text-sm font-medium"
               >
-                <p className="text-sm font-medium">{place.nameEn ?? place.nameKo}</p>
+                <MapPin className="size-4 text-muted-foreground shrink-0" />
+                Search on Google Maps
               </button>
-            ))}
+            </div>
           </div>
         </SheetContent>
       </Sheet>
@@ -710,6 +784,56 @@ export function UploadStep2({
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* 구글맵 장소 추가 오버레이 */}
+      {addPlaceOverlay && (
+        <AddPlaceOverlay
+          onSelect={async (place) => {
+            setAddPlaceOverlay(false);
+            await handleSelectPlace(place);
+          }}
+          onClose={() => { setAddPlaceOverlay(false); setLocationSheetOpen(true); }}
+        />
+      )}
     </div>
+  );
+}
+
+// ── 장소 행 컴포넌트 ──────────────────────────────────────────────────────────
+
+function PlaceRow({
+  place,
+  onSelect,
+}: {
+  place: PlaceResult;
+  onSelect: (place: PlaceResult) => void;
+}) {
+  const name = place.nameEn ?? place.nameKo ?? "";
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(place)}
+      className="flex items-center gap-3 w-full text-left px-2 py-2.5 rounded-xl hover:bg-muted/50 active:bg-muted transition-colors"
+    >
+      {/* 썸네일 */}
+      <div className="relative flex-shrink-0 size-11 rounded-xl overflow-hidden bg-muted">
+        {place.imageUrl ? (
+          <Image src={place.imageUrl} alt={name} fill className="object-cover" sizes="44px" />
+        ) : (
+          <div className="flex items-center justify-center w-full h-full">
+            <MapPin className="size-4 text-muted-foreground/40" />
+          </div>
+        )}
+      </div>
+      {/* 텍스트 */}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium truncate">{name}</p>
+        {(place.addressEn ?? place.city) && (
+          <p className="text-xs text-muted-foreground truncate mt-0.5">
+            {place.addressEn ?? place.city}
+          </p>
+        )}
+      </div>
+    </button>
   );
 }
