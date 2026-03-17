@@ -86,6 +86,7 @@ export type PlaceInitialData = {
   googleMapsUrl: string | null;
   naverMapsUrl: string | null;
   kakaoMapsUrl: string | null;
+  streetViewUrl: string | null;
   phone: string | null;
   operatingHours: string[] | null;
   gettingThere: string | null;
@@ -188,6 +189,9 @@ export function PlaceForm({
   const [kakaoMapsUrl, setKakaoMapsUrl] = useState(
     initialData?.kakaoMapsUrl ?? "",
   );
+  const [streetViewUrl, setStreetViewUrl] = useState(
+    initialData?.streetViewUrl ?? "",
+  );
   const [googleSearchDone, setGoogleSearchDone] = useState(
     !!initialData?.googlePlaceId,
   );
@@ -284,6 +288,7 @@ export function PlaceForm({
       googleMapsUrl: googleMapsUrl.trim() || null,
       naverMapsUrl: naverMapsUrl.trim() || null,
       kakaoMapsUrl: kakaoMapsUrl.trim() || null,
+      streetViewUrl: streetViewUrl.trim() || null,
       phone: phone.trim(),
       operatingHours: operatingHours.filter((l) => l.trim()).length
         ? operatingHours.filter((l) => l.trim())
@@ -592,26 +597,42 @@ export function PlaceForm({
                         </Button>
                       </div>
                     ) : (
-                      <div className="rounded-lg border bg-muted/30 px-4 py-3 space-y-1.5">
-                        {addressKo && (
-                          <div className="flex items-start gap-2">
-                            <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                            <p className="text-sm font-medium">{addressKo}</p>
-                          </div>
-                        )}
-                        {addressEn && (
-                          <div className="flex items-start gap-2">
-                            <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/40" />
-                            <p className="text-sm text-muted-foreground">
-                              {addressEn}
-                            </p>
-                          </div>
-                        )}
+                      <div className="space-y-2">
                         {latitude !== null && longitude !== null && (
-                          <p className="pl-5 text-xs text-muted-foreground/60">
-                            {latitude.toFixed(6)}, {longitude.toFixed(6)}
-                          </p>
+                          <div className="overflow-hidden rounded-lg border">
+                            <MapPreview
+                              key={`search-map-${latitude}-${longitude}`}
+                              lat={latitude}
+                              lng={longitude}
+                              zoom={15}
+                              height={220}
+                            />
+                          </div>
                         )}
+                        <div className="rounded-lg border bg-muted/30 px-4 py-3 space-y-1.5">
+                          {addressKo && (
+                            <div className="flex items-start gap-2">
+                              <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                              <p className="text-sm font-medium">{addressKo}</p>
+                            </div>
+                          )}
+                          {addressEn && (
+                            <div className="flex items-start gap-2">
+                              <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/40" />
+                              <p className="text-sm text-muted-foreground">
+                                {addressEn}
+                              </p>
+                            </div>
+                          )}
+                          {latitude !== null && longitude !== null && (
+                            <p className={`text-xs text-muted-foreground/60 ${addressKo || addressEn ? "pl-5" : ""}`}>
+                              {latitude.toFixed(6)}, {longitude.toFixed(6)}
+                            </p>
+                          )}
+                          {!addressKo && !addressEn && latitude === null && (
+                            <p className="text-sm text-muted-foreground">위치 정보가 없습니다.</p>
+                          )}
+                        </div>
                       </div>
                     )}
                   </CardContent>
@@ -705,6 +726,29 @@ export function PlaceForm({
                             }
                             placeholder="126.9780"
                           />
+                        </div>
+                      </div>
+
+                      {/* Street View URL */}
+                      <div className="space-y-1.5">
+                        <Label htmlFor="streetViewUrl" className="text-xs text-muted-foreground">
+                          Street View URL
+                        </Label>
+                        <div className="flex gap-1.5">
+                          <Input
+                            id="streetViewUrl"
+                            value={streetViewUrl}
+                            onChange={(e) => setStreetViewUrl(e.target.value)}
+                            placeholder="https://maps.app.goo.gl/..."
+                            className="text-xs"
+                          />
+                          {streetViewUrl && (
+                            <a href={streetViewUrl} target="_blank" rel="noopener noreferrer">
+                              <Button type="button" variant="ghost" size="icon" className="h-10 w-10 shrink-0">
+                                <ExternalLink className="h-4 w-4" />
+                              </Button>
+                            </a>
+                          )}
                         </div>
                       </div>
                     </div>

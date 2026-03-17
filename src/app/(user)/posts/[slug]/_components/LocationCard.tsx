@@ -10,12 +10,13 @@ interface Props {
   latitude: number | null;
   longitude: number | null;
   googleMapsUrl: string | null;
+  streetViewUrl: string | null;
   phone: string | null;
   operatingHours: string[] | null;
   gettingThere: string | null;
 }
 
-export function LocationCard({ nameEn, nameKo, addressEn, latitude, longitude, googleMapsUrl, phone, operatingHours, gettingThere }: Props) {
+export function LocationCard({ nameEn, nameKo, addressEn, latitude, longitude, googleMapsUrl, streetViewUrl, phone, operatingHours, gettingThere }: Props) {
   const displayName = nameEn ?? nameKo;
 
   const embedUrl = latitude && longitude
@@ -56,7 +57,7 @@ export function LocationCard({ nameEn, nameKo, addressEn, latitude, longitude, g
       )}
 
       {/* 버튼 */}
-      {(googleMapsUrl || naverMapsUrl) && (
+      {(googleMapsUrl || naverMapsUrl || streetViewUrl) && (
         <div className="flex gap-2 px-4 py-3">
           {googleMapsUrl && (
             <a
@@ -78,6 +79,17 @@ export function LocationCard({ nameEn, nameKo, addressEn, latitude, longitude, g
             >
               <ExternalLink className="h-4 w-4" strokeWidth={1.5} />
               Naver Maps
+            </a>
+          )}
+          {streetViewUrl && (
+            <a
+              href={streetViewUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-secondary text-sm font-medium text-foreground hover:bg-secondary transition-colors"
+            >
+              <ExternalLink className="h-4 w-4" strokeWidth={1.5} />
+              Street View
             </a>
           )}
         </div>

@@ -18,6 +18,7 @@ export type PlaceFormData = {
   googleMapsUrl: string | null;
   naverMapsUrl: string | null;
   kakaoMapsUrl: string | null;
+  streetViewUrl: string | null;
   phone: string;
   operatingHours: string[] | null;
   gettingThere: string | null;
@@ -59,6 +60,7 @@ export async function createPlace(
         googleMapsUrl: data.googleMapsUrl || null,
         naverMapsUrl: data.naverMapsUrl || null,
         kakaoMapsUrl: data.kakaoMapsUrl || null,
+        streetViewUrl: data.streetViewUrl || null,
         phone: data.phone || null,
         operatingHours: data.operatingHours?.length ? data.operatingHours : Prisma.DbNull,
         gettingThere: data.gettingThere || null,
@@ -93,6 +95,7 @@ export async function updatePlace(
         googleMapsUrl: data.googleMapsUrl || null,
         naverMapsUrl: data.naverMapsUrl || null,
         kakaoMapsUrl: data.kakaoMapsUrl || null,
+        streetViewUrl: data.streetViewUrl || null,
         phone: data.phone || null,
         operatingHours: data.operatingHours?.length ? data.operatingHours : Prisma.DbNull,
         gettingThere: data.gettingThere || null,
@@ -104,6 +107,61 @@ export async function updatePlace(
     return {};
   } catch {
     return { error: "장소를 수정하는 중 오류가 발생했습니다." };
+  }
+}
+
+// ─── 구글 맵 좌표 링크 분석 ────────────────────────────────────────────────────
+
+export async function resolveCoordinateLink(url: string): Promise<{
+  lat: number;
+  lng: number;
+  googleMapsUrl: string;
+} | { error: string }> {
+  if (!url.trim()) return { error: "URL을 입력해주세요." };
+
+  try {
+    let workingUrl = url.trim();
+
+    // 단축 URL 확장 (HEAD는 일부 서버에서 최종 URL 미반환 → GET 사용)
+    if (workingUrl.includes("maps.app.goo.gl") || workingUrl.includes("goo.gl/maps")) {
+      const res = await fetch(workingUrl, {
+        redirect: "follow",
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; reCree/1.0)" },
+        signal: AbortSignal.timeout(5000),
+      });
+      workingUrl = res.url;
+    }
+
+    // 스트릿뷰 URL 감지 (좌표 링크로 쓰면 안됨)
+    if (workingUrl.includes("/@/data=") || /\/@-?\d+\.\d+,-?\d+\.\d+,[\d.]+a[,/]/.test(workingUrl)) {
+      return { error: "스트릿뷰 URL은 좌표 링크로 사용할 수 없습니다. Street View URL 필드를 사용해주세요." };
+    }
+
+    // !3d lat !4d lng 패턴 (data 파라미터)
+    const dataMatch = workingUrl.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+    if (dataMatch) {
+      const lat = parseFloat(dataMatch[1]);
+      const lng = parseFloat(dataMatch[2]);
+      return { lat, lng, googleMapsUrl: `https://www.google.com/maps/@${lat},${lng},17z` };
+    }
+
+    // @lat,lng 패턴
+    const atMatch = workingUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+    if (atMatch) {
+      const lat = parseFloat(atMatch[1]);
+      const lng = parseFloat(atMatch[2]);
+      return { lat, lng, googleMapsUrl: `https://www.google.com/maps/@${lat},${lng},17z` };
+    }
+
+    // 공식 장소 URL: 좌표가 있으면 추출, 없으면 안내
+    const placeMatch = workingUrl.match(/\/place\/([^/?]+)/);
+    if (placeMatch?.[1]) {
+      return { error: "공식 등록 장소 URL입니다. '구글 장소 검색' 버튼을 사용해주세요." };
+    }
+
+    return { error: "좌표를 추출할 수 없습니다. 구글 맵에서 '지도 위 우클릭 → 이 곳에 대한 정보' 후 좌표 URL을 복사해주세요." };
+  } catch {
+    return { error: "URL 분석 중 오류가 발생했습니다." };
   }
 }
 

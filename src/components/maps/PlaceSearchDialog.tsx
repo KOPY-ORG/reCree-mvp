@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { resolveCoordinateLink } from "@/app/admin/places/actions";
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 const MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID ?? "DEMO_MAP_ID";
@@ -44,6 +45,19 @@ export interface PlaceSearchDialogProps {
   onSelect: (place: PlaceSelectResult) => void;
 }
 
+// ─── URL 감지 헬퍼 ────────────────────────────────────────────────────────────
+
+function looksLikeUrl(s: string): boolean {
+  return /^https?:\/\//.test(s) || s.startsWith("maps.app.goo.gl");
+}
+
+function extractPlaceNameFromUrl(url: string): string | null {
+  const match = url.match(/\/place\/([^/@?#]+)/);
+  if (!match?.[1]) return null;
+  const name = decodeURIComponent(match[1].replace(/\+/g, " ")).trim();
+  return name || null;
+}
+
 // ─── 내부 검색 패널 (APIProvider 컨텍스트 필요) ───────────────────────────────
 
 function PlaceSearchContent({
@@ -60,6 +74,11 @@ function PlaceSearchContent({
   const [isSearching, setIsSearching] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
+
+  // URL 모드 전용 상태
+  const [coordResult, setCoordResult] = useState<{ lat: number; lng: number; googleMapsUrl: string } | null>(null);
+  const [urlError, setUrlError] = useState<string | null>(null);
+  const [isResolvingUrl, setIsResolvingUrl] = useState(false);
 
   const doSearch = useCallback(
     async (input: string) => {
@@ -95,17 +114,82 @@ function PlaceSearchContent({
     [placesLib],
   );
 
-  // 검색어 디바운스 600ms
   useEffect(() => {
-    const timer = setTimeout(() => doSearch(query), 600);
-    return () => clearTimeout(timer);
+    const input = query.trim();
+    if (!input) {
+      setResults([]);
+      setCoordResult(null);
+      setUrlError(null);
+      setSelectedIndex(null);
+      return;
+    }
+
+    if (looksLikeUrl(input)) {
+      // URL 모드: 텍스트 검색 결과 초기화
+      setResults([]);
+      setSelectedIndex(null);
+      const timer = setTimeout(async () => {
+        setIsResolvingUrl(true);
+        setCoordResult(null);
+        setUrlError(null);
+        try {
+          const result = await resolveCoordinateLink(input);
+          if ("error" in result) {
+            if (result.error.includes("공식 등록 장소")) {
+              // 공식 장소 URL → 장소명 추출 후 텍스트 검색
+              const placeName = extractPlaceNameFromUrl(input);
+              if (placeName) {
+                await doSearch(placeName);
+              } else {
+                setUrlError("장소명을 URL에서 추출할 수 없습니다. 장소명으로 직접 검색해주세요.");
+              }
+            } else {
+              setUrlError(result.error);
+            }
+          } else {
+            setCoordResult(result);
+          }
+        } finally {
+          setIsResolvingUrl(false);
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    } else {
+      // 텍스트 검색 모드
+      setCoordResult(null);
+      setUrlError(null);
+      const timer = setTimeout(() => doSearch(input), 600);
+      return () => clearTimeout(timer);
+    }
   }, [query, doSearch]);
 
   const selected = selectedIndex !== null ? (results[selectedIndex] as any) : null;
   const selectedLat = selected?.location?.lat();
   const selectedLng = selected?.location?.lng();
 
+  // 지도 미리보기 좌표: 좌표 결과 우선
+  const displayLat = coordResult ? coordResult.lat : selectedLat;
+  const displayLng = coordResult ? coordResult.lng : selectedLng;
+
   const handleConfirm = async () => {
+    // 좌표 URL 모드
+    if (coordResult) {
+      onSelect({
+        name: "",
+        address: "",
+        nameEn: "",
+        addressEn: "",
+        phone: "",
+        operatingHours: [],
+        googleMapsUrl: coordResult.googleMapsUrl,
+        lat: coordResult.lat,
+        lng: coordResult.lng,
+        googlePlaceId: "",
+      });
+      onClose();
+      return;
+    }
+
     if (!selected) return;
     const placeId = selected.id;
     setIsConfirming(true);
@@ -160,6 +244,9 @@ function PlaceSearchContent({
     }
   };
 
+  const isBusy = isSearching || isResolvingUrl;
+  const canConfirm = coordResult !== null || selected !== null;
+
   return (
     <div className="flex flex-col gap-4">
       {/* 검색 입력 */}
@@ -168,13 +255,13 @@ function PlaceSearchContent({
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="장소명, 주소로 검색..."
+          placeholder="장소명, 주소 또는 구글 맵 URL 입력..."
           className="pl-9 pr-9"
           autoFocus
           autoComplete="off"
         />
         <div className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4">
-          {isSearching ? (
+          {isBusy ? (
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           ) : query ? (
             <button
@@ -182,6 +269,8 @@ function PlaceSearchContent({
               onClick={() => {
                 setQuery("");
                 setResults([]);
+                setCoordResult(null);
+                setUrlError(null);
                 setSelectedIndex(null);
               }}
               className="text-muted-foreground hover:text-foreground transition-colors"
@@ -196,11 +285,30 @@ function PlaceSearchContent({
       <div className="grid grid-cols-[2fr_3fr] gap-3 h-[440px]">
         {/* 왼쪽: 결과 리스트 */}
         <div className="border rounded-lg overflow-y-auto">
-          {results.length === 0 ? (
+          {coordResult ? (
+            /* 좌표 결과 */
+            <div className="flex h-full items-center justify-center p-6">
+              <div className="text-center space-y-2">
+                <MapPin className="mx-auto h-8 w-8 text-brand" />
+                <p className="text-sm font-medium">좌표 위치</p>
+                <p className="text-xs text-muted-foreground font-mono">
+                  {coordResult.lat.toFixed(6)}, {coordResult.lng.toFixed(6)}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Google Place ID 없이 등록됩니다
+                </p>
+              </div>
+            </div>
+          ) : urlError ? (
+            /* URL 오류 */
+            <div className="flex h-full items-center justify-center p-6 text-center">
+              <p className="text-sm text-destructive">{urlError}</p>
+            </div>
+          ) : results.length === 0 ? (
             <div className="flex h-full items-center justify-center p-6 text-center text-sm text-muted-foreground">
               {query.trim()
-                ? "검색 결과가 없습니다."
-                : "장소명이나 주소로\n검색하세요."}
+                ? isBusy ? "검색 중..." : "검색 결과가 없습니다."
+                : "장소명, 주소 또는\n구글 맵 URL을 입력하세요."}
             </div>
           ) : (
             <ul>
@@ -238,10 +346,10 @@ function PlaceSearchContent({
 
         {/* 오른쪽: 지도 미리보기 */}
         <div className="overflow-hidden rounded-lg border">
-          {selected && selectedLat !== undefined && selectedLng !== undefined ? (
+          {displayLat !== undefined && displayLng !== undefined ? (
             <Map
-              key={`${selectedLat}-${selectedLng}`}
-              center={{ lat: selectedLat, lng: selectedLng }}
+              key={`${displayLat}-${displayLng}`}
+              center={{ lat: displayLat, lng: displayLng }}
               zoom={15}
               mapId={MAP_ID}
               gestureHandling="none"
@@ -249,7 +357,7 @@ function PlaceSearchContent({
               style={{ width: "100%", height: "100%" }}
             >
               <AdvancedMarker
-                position={{ lat: selectedLat, lng: selectedLng }}
+                position={{ lat: displayLat, lng: displayLng }}
               />
             </Map>
           ) : (
@@ -265,7 +373,14 @@ function PlaceSearchContent({
       {/* 하단: 선택 정보 + 버튼 */}
       <div className="flex items-center justify-between gap-4 border-t pt-3">
         <div className="min-w-0 flex-1">
-          {selected ? (
+          {coordResult ? (
+            <div className="space-y-0.5">
+              <p className="text-sm font-semibold">좌표 위치</p>
+              <p className="text-xs text-muted-foreground font-mono">
+                {coordResult.lat.toFixed(6)}, {coordResult.lng.toFixed(6)}
+              </p>
+            </div>
+          ) : selected ? (
             <div className="space-y-0.5">
               <p className="truncate text-sm font-semibold">
                 {selected.displayName}
@@ -295,7 +410,7 @@ function PlaceSearchContent({
             type="button"
             size="sm"
             onClick={handleConfirm}
-            disabled={!selected || isConfirming}
+            disabled={!canConfirm || isConfirming}
           >
             {isConfirming ? (
               <>
