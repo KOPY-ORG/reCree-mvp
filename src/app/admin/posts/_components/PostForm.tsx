@@ -176,6 +176,7 @@ interface PostFormProps {
   tagGroups: TagGroupItem[];
   onSuccess?: () => void;
   isEmbedded?: boolean;
+  returnUrl?: string;
 }
 
 // ─── 상수 ──────────────────────────────────────────────────────────────────────
@@ -183,8 +184,8 @@ interface PostFormProps {
 const TABS = [
   { id: "place", label: "장소" },
   { id: "insight", label: "Spot Insight" },
-  { id: "taxonomy", label: "분류/태그" },
   { id: "content", label: "본문" },
+  { id: "taxonomy", label: "분류/태그" },
   { id: "source", label: "출처" },
   { id: "images", label: "이미지" },
 ] as const;
@@ -222,6 +223,7 @@ export function PostForm({
   tagGroups,
   onSuccess,
   isEmbedded,
+  returnUrl = "/admin/posts",
 }: PostFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -511,25 +513,21 @@ export function PostForm({
 
     startTransition(async () => {
       const data = buildFormData(finalStatus);
+      const redirectTarget = onSuccess ? undefined : returnUrl;
       let result: { error?: string };
       if (isEdit && postId) {
         const { updatePost } = await import("../_actions/post-actions");
-        result = await updatePost(postId, data);
+        result = await updatePost(postId, data, redirectTarget);
       } else {
         const { createPost } = await import("../_actions/post-actions");
-        const res = await createPost(data);
-        result = res;
+        result = await createPost(data, redirectTarget);
       }
 
       if (result.error) {
         toast.error(result.error);
       } else {
         toast.success(isEdit ? "포스트가 수정되었습니다." : "포스트가 저장되었습니다.");
-        if (onSuccess) {
-          onSuccess();
-        } else {
-          router.push("/admin/posts");
-        }
+        if (onSuccess) onSuccess();
       }
     });
   };
@@ -574,7 +572,7 @@ export function PostForm({
               </button>
             ) : (
               <Link
-                href="/admin/posts"
+                href={returnUrl}
                 className="flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-muted"
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -601,7 +599,7 @@ export function PostForm({
               </Button>
             ) : (
               <Button variant="outline" size="sm" asChild>
-                <Link href="/admin/posts">취소</Link>
+                <Link href={returnUrl}>취소</Link>
               </Button>
             )}
 

@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { deletePost, publishPost, unpublishPost } from "../_actions/post-actions";
 import type { PostStatus } from "@prisma/client";
+import { STATUS_LABELS, STATUS_COLORS } from "../_constants";
 
 export type PostRow = {
   id: string;
@@ -65,24 +66,16 @@ export type PostRow = {
 interface Props {
   posts: PostRow[];
   isFiltered: boolean;
+  currentPage?: number;
 }
 
-const STATUS_LABELS: Record<PostStatus, string> = {
-  DRAFT: "임시저장",
-  PUBLISHED: "발행됨",
-};
-
-const STATUS_COLORS: Record<PostStatus, string> = {
-  DRAFT: "bg-amber-100 text-amber-700",
-  PUBLISHED: "bg-green-100 text-green-700",
-};
 
 function formatDate(date: Date): string {
   const d = new Date(date);
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
 }
 
-export function PostsTable({ posts, isFiltered }: Props) {
+export function PostsTable({ posts, isFiltered, currentPage = 1 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -269,7 +262,7 @@ export function PostsTable({ posts, isFiltered }: Props) {
                         size="icon"
                         className="h-8 w-8"
                         onClick={() =>
-                          router.push(`/admin/posts/${post.id}/edit`)
+                          router.push(`/admin/posts/${post.id}/edit${currentPage > 1 ? `?page=${currentPage}` : ""}`)
                         }
                       >
                         <Pencil className="h-3.5 w-3.5" />

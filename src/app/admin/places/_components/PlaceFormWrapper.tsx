@@ -12,6 +12,7 @@ interface CreateProps {
   mode: "create";
   allPlaceTypes?: PlaceTypeOption[];
   allAreas?: AreaOption[];
+  returnUrl?: string;
 }
 
 // ─── 수정 모드 ──────────────────────────────────────────────────────────────────
@@ -23,22 +24,23 @@ interface EditProps {
   initialPlaceImages?: PlaceImageData[];
   allPlaceTypes?: PlaceTypeOption[];
   allAreas?: AreaOption[];
+  returnUrl?: string;
 }
 
 type PlaceFormWrapperProps = CreateProps | EditProps;
 
 export function PlaceFormWrapper(props: PlaceFormWrapperProps) {
+  const returnUrl = props.returnUrl;
   const handleSubmit = useCallback(
     async (data: PlaceFormData) => {
       if (props.mode === "create") {
-        const result = await createPlace(data);
-        return result;
+        return createPlace(data, returnUrl);
       } else {
-        return updatePlace(props.placeId, data);
+        return updatePlace(props.placeId, data, returnUrl);
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [props.mode, props.mode === "edit" ? props.placeId : null],
+    [props.mode, props.mode === "edit" ? props.placeId : null, returnUrl],
   );
 
   return (
@@ -49,6 +51,7 @@ export function PlaceFormWrapper(props: PlaceFormWrapperProps) {
       allAreas={props.allAreas ?? []}
       onSubmit={handleSubmit}
       submitLabel={props.mode === "create" ? "장소 등록" : "수정 완료"}
+      returnUrl={props.returnUrl}
     />
   );
 }

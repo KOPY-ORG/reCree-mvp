@@ -169,7 +169,7 @@ export default async function PostsPage({
 
       <PostsFilters currentSearch={search} currentStatus={status} />
 
-      <PostsTable posts={postsWithResolvedColors} isFiltered={isFiltered} />
+      <PostsTable posts={postsWithResolvedColors} isFiltered={isFiltered} currentPage={page} />
       <PlacesPagination
         totalCount={totalCount}
         currentPage={page}

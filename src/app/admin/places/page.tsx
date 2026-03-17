@@ -141,7 +141,7 @@ export default async function PlacesPage({
       />
 
       {/* 테이블 (빈 상태도 헤더는 항상 표시) */}
-      <PlacesTable places={processedPlaces} isFiltered={isFiltered} />
+      <PlacesTable places={processedPlaces} isFiltered={isFiltered} currentPage={page} />
       <PlacesPagination
         totalCount={totalCount}
         currentPage={page}

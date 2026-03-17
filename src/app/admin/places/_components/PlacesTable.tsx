@@ -47,6 +47,7 @@ export type PlaceRow = {
 interface Props {
   places: PlaceRow[];
   isFiltered: boolean;
+  currentPage?: number;
 }
 
 
@@ -55,7 +56,7 @@ function formatDate(date: Date): string {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
 }
 
-export function PlacesTable({ places, isFiltered }: Props) {
+export function PlacesTable({ places, isFiltered, currentPage = 1 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -212,7 +213,7 @@ export function PlacesTable({ places, isFiltered }: Props) {
                         size="icon"
                         className="h-8 w-8"
                         onClick={() =>
-                          router.push(`/admin/places/${place.id}/edit`)
+                          router.push(`/admin/places/${place.id}/edit${currentPage > 1 ? `?page=${currentPage}` : ""}`)
                         }
                       >
                         <Pencil className="h-3.5 w-3.5" />

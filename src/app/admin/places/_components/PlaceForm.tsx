@@ -114,6 +114,7 @@ interface PlaceFormProps {
   allAreas?: AreaOption[];
   onSubmit: (data: PlaceFormData) => Promise<{ error?: string; id?: string }>;
   submitLabel: string;
+  returnUrl?: string;
 }
 
 // ─── 상수 / 업로드 유틸 ────────────────────────────────────────────────────────
@@ -153,6 +154,7 @@ export function PlaceForm({
   allAreas = [],
   onSubmit,
   submitLabel,
+  returnUrl = "/admin/places",
 }: PlaceFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -348,7 +350,6 @@ export function PlaceForm({
       }
 
       toast.success(isEdit ? "장소가 수정되었습니다." : "장소가 등록되었습니다.");
-      router.push("/admin/places");
     });
   };
 
@@ -531,7 +532,7 @@ export function PlaceForm({
           <div className="flex h-14 items-center justify-between px-6">
             <div className="flex items-center gap-3">
               <Link
-                href="/admin/places"
+                href={returnUrl}
                 className="flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-muted"
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -540,7 +541,7 @@ export function PlaceForm({
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" asChild>
-                <Link href="/admin/places">취소</Link>
+                <Link href={returnUrl}>취소</Link>
               </Button>
               <Button type="submit" size="sm" disabled={isPending || isUploading}>
                 {(isPending || isUploading) && (

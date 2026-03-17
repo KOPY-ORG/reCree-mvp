@@ -2,8 +2,10 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { Prisma } from "@prisma/client";
 import type { PlaceStatus } from "@prisma/client";
+import { resolveGoogleMapsUrl } from "@/lib/google-maps-url";
 
 export type PlaceFormData = {
   nameKo: string;
@@ -37,14 +39,17 @@ export async function deletePlace(id: string): Promise<{ error?: string }> {
     await prisma.place.delete({ where: { id } });
     revalidatePath("/admin/places");
     return {};
-  } catch {
+  } catch (e) {
+    console.error("장소 삭제 오류:", e);
     return { error: "장소를 삭제하는 중 오류가 발생했습니다." };
   }
 }
 
 export async function createPlace(
   data: PlaceFormData,
+  returnUrl?: string,
 ): Promise<{ error?: string; id?: string }> {
+  let newId: string | undefined;
   try {
     const place = await prisma.place.create({
       data: {
@@ -68,16 +73,19 @@ export async function createPlace(
         isVerified: data.isVerified,
       },
     });
-    revalidatePath("/admin/places");
-    return { id: place.id };
-  } catch {
+    newId = place.id;
+  } catch (e) {
+    console.error("장소 생성 오류:", e);
     return { error: "장소를 생성하는 중 오류가 발생했습니다." };
   }
+  if (returnUrl) redirect(returnUrl);
+  return { id: newId };
 }
 
 export async function updatePlace(
   id: string,
   data: PlaceFormData,
+  returnUrl?: string,
 ): Promise<{ error?: string }> {
   try {
     await prisma.place.update({
@@ -103,11 +111,12 @@ export async function updatePlace(
         isVerified: data.isVerified,
       },
     });
-    revalidatePath("/admin/places");
-    return {};
-  } catch {
+  } catch (e) {
+    console.error("장소 수정 오류:", e);
     return { error: "장소를 수정하는 중 오류가 발생했습니다." };
   }
+  if (returnUrl) redirect(returnUrl);
+  return {};
 }
 
 // ─── 구글 맵 좌표 링크 분석 ────────────────────────────────────────────────────
@@ -120,42 +129,19 @@ export async function resolveCoordinateLink(url: string): Promise<{
   if (!url.trim()) return { error: "URL을 입력해주세요." };
 
   try {
-    let workingUrl = url.trim();
+    const resolved = await resolveGoogleMapsUrl(url.trim());
 
-    // 단축 URL 확장 (HEAD는 일부 서버에서 최종 URL 미반환 → GET 사용)
-    if (workingUrl.includes("maps.app.goo.gl") || workingUrl.includes("goo.gl/maps")) {
-      const res = await fetch(workingUrl, {
-        redirect: "follow",
-        headers: { "User-Agent": "Mozilla/5.0 (compatible; reCree/1.0)" },
-        signal: AbortSignal.timeout(5000),
-      });
-      workingUrl = res.url;
+    if (resolved?.type === "coord") {
+      return {
+        lat: resolved.lat,
+        lng: resolved.lng,
+        googleMapsUrl: `https://www.google.com/maps/@${resolved.lat},${resolved.lng},17z`,
+      };
     }
-
-    // 스트릿뷰 URL 감지 (좌표 링크로 쓰면 안됨)
-    if (workingUrl.includes("/@/data=") || /\/@-?\d+\.\d+,-?\d+\.\d+,[\d.]+a[,/]/.test(workingUrl)) {
+    if (resolved?.type === "streetview") {
       return { error: "스트릿뷰 URL은 좌표 링크로 사용할 수 없습니다. Street View URL 필드를 사용해주세요." };
     }
-
-    // !3d lat !4d lng 패턴 (data 파라미터)
-    const dataMatch = workingUrl.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
-    if (dataMatch) {
-      const lat = parseFloat(dataMatch[1]);
-      const lng = parseFloat(dataMatch[2]);
-      return { lat, lng, googleMapsUrl: `https://www.google.com/maps/@${lat},${lng},17z` };
-    }
-
-    // @lat,lng 패턴
-    const atMatch = workingUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
-    if (atMatch) {
-      const lat = parseFloat(atMatch[1]);
-      const lng = parseFloat(atMatch[2]);
-      return { lat, lng, googleMapsUrl: `https://www.google.com/maps/@${lat},${lng},17z` };
-    }
-
-    // 공식 장소 URL: 좌표가 있으면 추출, 없으면 안내
-    const placeMatch = workingUrl.match(/\/place\/([^/?]+)/);
-    if (placeMatch?.[1]) {
+    if (resolved?.type === "place") {
       return { error: "공식 등록 장소 URL입니다. '구글 장소 검색' 버튼을 사용해주세요." };
     }
 
@@ -189,7 +175,8 @@ export async function addPlaceImage(
     });
     revalidatePath(`/admin/places/${placeId}/edit`);
     return { id: img.id };
-  } catch {
+  } catch (e) {
+    console.error("이미지 추가 오류:", e);
     return { error: "이미지를 추가하는 중 오류가 발생했습니다." };
   }
 }
@@ -213,7 +200,8 @@ export async function deletePlaceImage(
     }
     revalidatePath(`/admin/places/${placeId}/edit`);
     return {};
-  } catch {
+  } catch (e) {
+    console.error("이미지 삭제 오류:", e);
     return { error: "이미지를 삭제하는 중 오류가 발생했습니다." };
   }
 }
@@ -229,7 +217,8 @@ export async function setPlaceImageThumbnail(
     ]);
     revalidatePath(`/admin/places/${placeId}/edit`);
     return {};
-  } catch {
+  } catch (e) {
+    console.error("썸네일 변경 오류:", e);
     return { error: "썸네일을 변경하는 중 오류가 발생했습니다." };
   }
 }
@@ -246,7 +235,8 @@ export async function updatePlaceImageCaption(
     });
     revalidatePath(`/admin/places/${placeId}/edit`);
     return {};
-  } catch {
+  } catch (e) {
+    console.error("캡션 수정 오류:", e);
     return { error: "캡션을 수정하는 중 오류가 발생했습니다." };
   }
 }

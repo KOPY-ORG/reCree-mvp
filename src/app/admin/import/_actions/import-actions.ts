@@ -3,6 +3,7 @@
 import Papa from "papaparse";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { expandGoogleMapsShortUrl, resolveGoogleMapsUrl } from "@/lib/google-maps-url";
 
 function detectPlatform(url: string): string | null {
   try {
@@ -139,68 +140,8 @@ async function getExistingPlaces(): Promise<{
   };
 }
 
-// ─── Google Maps 링크 분석 ─────────────────────────────────────────────────────
-// - /place/이름/ 있음  → type "place"  → Places API 호출
-// - 스트릿뷰 URL       → type "streetview" → 안전망 (수집자 실수 방지)
-// - 좌표만 있는 URL    → type "coord"  → 좌표 추출
-
-type ResolvedGoogleMapsLink =
-  | { type: "place" }
-  | { type: "coord"; lat: number; lng: number }
-  | { type: "streetview"; lat: number; lng: number }
-  | null;
-
-async function expandShortUrl(url: string): Promise<string> {
-  if (!url || (!url.includes("maps.app.goo.gl") && !url.includes("goo.gl/maps"))) return url;
-  try {
-    const res = await fetch(url, {
-      redirect: "follow",
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; reCree/1.0)" },
-      signal: AbortSignal.timeout(5000),
-    });
-    return res.url || url;
-  } catch {
-    return url;
-  }
-}
-
-async function resolveGoogleMapsLink(url: string): Promise<ResolvedGoogleMapsLink> {
-  if (!url) return null;
-  try {
-    // 이미 expandShortUrl로 확장된 URL을 받지만, 혹시 모를 경우 대비
-    let workingUrl = url;
-    if (url.includes("maps.app.goo.gl") || url.includes("goo.gl/maps")) {
-      workingUrl = await expandShortUrl(url);
-    }
-
-    // 스트릿뷰: @/data= 패턴이거나 zoom이 숫자a 형태
-    if (workingUrl.includes("/@/data=") || /\/@-?\d+\.\d+,-?\d+\.\d+,[\d.]+a[,/]/.test(workingUrl)) {
-      const svMatch = workingUrl.match(/\/@(-?\d+\.\d+),(-?\d+\.\d+)/);
-      return { type: "streetview", lat: svMatch ? parseFloat(svMatch[1]) : 0, lng: svMatch ? parseFloat(svMatch[2]) : 0 };
-    }
-
-    // 공식 장소: place name이 있고 DMS 좌표 형식(우클릭 좌표 링크)이 아닐 때만
-    const placeMatch = workingUrl.match(/\/place\/([^/?]+)/);
-    if (placeMatch?.[1]) {
-      const name = decodeURIComponent(placeMatch[1].replace(/\+/g, " ")).trim();
-      // DMS 좌표 이름 예: "37°38'50.4"N 127°02'36.0"E" → 우클릭으로 생성된 좌표 링크
-      const isDmsCoord = /\d+[°º]/.test(name);
-      if (name && !isDmsCoord) return { type: "place" };
-    }
-
-    // 좌표 (data 파라미터) — DMS 좌표 링크도 여기서 처리됨
-    const dataMatch = workingUrl.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
-    if (dataMatch) return { type: "coord", lat: parseFloat(dataMatch[1]), lng: parseFloat(dataMatch[2]) };
-
-    // 좌표 (@lat,lng)
-    const atMatch = workingUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
-    if (atMatch) return { type: "coord", lat: parseFloat(atMatch[1]), lng: parseFloat(atMatch[2]) };
-
-    return null;
-  } catch {
-    return null;
-  }
-}
+// ─── Google Maps 링크 분석 → @/lib/google-maps-url.ts ────────────────────────
+// expandGoogleMapsShortUrl, resolveGoogleMapsUrl 을 공유 lib에서 import
 
 // ─── Street View URL에서 panoid 추출 ───────────────────────────────────────────
 
@@ -244,16 +185,7 @@ async function getCoordinatesFromPanoid(panoid: string): Promise<{ lat: number; 
 async function resolveCoordsFromStreetViewUrl(url: string): Promise<{ lat: number; lng: number } | null> {
   if (!url) return null;
 
-  let workingUrl = url;
-  // 단축 URL 확장
-  if (url.includes("maps.app.goo.gl") || url.includes("goo.gl/maps")) {
-    try {
-      const res = await fetch(url, { redirect: "follow", headers: { "User-Agent": "Mozilla/5.0 (compatible; reCree/1.0)" }, signal: AbortSignal.timeout(5000) });
-      workingUrl = res.url;
-    } catch {
-      return null;
-    }
-  }
+  const workingUrl = await expandGoogleMapsShortUrl(url);
 
   // panoid → Street View Metadata API
   const panoid = extractPanoid(workingUrl);
@@ -304,7 +236,7 @@ export async function fetchSheetPreview(): Promise<{
     const r = filtered[idx];
     const googleMapsLinkRaw = (r["google_maps_link"] ?? "").trim();
     // 단축 URL 먼저 확장 → byUrl 매칭 정확도 향상
-    const googleMapsLink = await expandShortUrl(googleMapsLinkRaw);
+    const googleMapsLink = await expandGoogleMapsShortUrl(googleMapsLinkRaw);
     const streetViewUrlInSheet = (r["street_view_url"] ?? "").trim();
     const placeName = (r["place_name"] ?? "").trim();
 
@@ -498,7 +430,7 @@ export async function importSheetRows(rowIds: string[]): Promise<{
   for (const r of filtered) {
     const googleMapsLinkRaw = (r["google_maps_link"] ?? "").trim();
     // 단축 URL을 먼저 확장해야 DB 조회 매칭이 정확함
-    const googleMapsLink = await expandShortUrl(googleMapsLinkRaw);
+    const googleMapsLink = await expandGoogleMapsShortUrl(googleMapsLinkRaw);
     const streetViewUrlFromCol = (r["street_view_url"] ?? "").trim() || null;
     const placeName = (r["place_name"] ?? "").trim();
     const title = (r["title"] ?? "").trim();
@@ -519,7 +451,7 @@ export async function importSheetRows(rowIds: string[]): Promise<{
       let detectedStreetViewFromMapsLink: string | null = null; // 수집자 실수로 스트릿뷰가 들어온 경우
 
       if (!existingPlaceRecord && googleMapsLink) {
-        const resolved = await resolveGoogleMapsLink(googleMapsLink);
+        const resolved = await resolveGoogleMapsUrl(googleMapsLink);
         if (resolved?.type === "place") {
           placeInfo = await searchPlaceInfo(placeName, googleMapsLink);
         } else if (resolved?.type === "coord") {
@@ -617,12 +549,9 @@ export async function importSheetRows(rowIds: string[]): Promise<{
           // 기존 장소에 위경도가 없으면 URL에서 직접 추출해서 업데이트 (API 호출 없음)
           const needsCoords = !existingPlaceRecord.latitude || !existingPlaceRecord.longitude;
           if (needsCoords && googleMapsLink) {
-            const dataMatch = googleMapsLink.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
-            const atMatch = !dataMatch ? googleMapsLink.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/) : null;
-            const lat = dataMatch ? parseFloat(dataMatch[1]) : atMatch ? parseFloat(atMatch[1]) : null;
-            const lng = dataMatch ? parseFloat(dataMatch[2]) : atMatch ? parseFloat(atMatch[2]) : null;
-            if (lat && lng) {
-              await tx.place.update({ where: { id: placeId }, data: { latitude: lat, longitude: lng } });
+            const resolvedCoords = await resolveGoogleMapsUrl(googleMapsLink);
+            if (resolvedCoords?.type === "coord") {
+              await tx.place.update({ where: { id: placeId }, data: { latitude: resolvedCoords.lat, longitude: resolvedCoords.lng } });
             }
           }
         } else if (placeInfo?.googlePlaceId) {
