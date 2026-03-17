@@ -40,15 +40,9 @@ export function UploadStep3({
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
-      // 메인 shot — rounded-2xl에 맞게 클립 후 그리기
-      // 미리보기 컨테이너 ~300px 기준 rounded-2xl(16px) → 비율 약 5%
-      const mainR = Math.round(W * 0.05);
+      // 메인 shot — 직사각형 (라운드 없음)
       const shotImg = await loadImage(shotPreviewUrl);
-      ctx.save();
-      roundedRect(ctx, 0, 0, W, H, mainR);
-      ctx.clip();
       ctx.drawImage(shotImg, 0, 0, W, H);
-      ctx.restore();
 
       // original 썸네일 (좌상단, 18% 너비, 미리보기와 동일 비율)
       if (referencePreviewUrl) {
@@ -62,7 +56,8 @@ export function UploadStep3({
 
         // frosted glass 효과: clip 안에서 main shot을 blur로 그리기
         ctx.save();
-        roundedRect(ctx, thumbX, thumbY, thumbW, thumbH, thumbR);
+        ctx.beginPath();
+        ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
         ctx.clip();
         ctx.filter = "blur(12px)";
         ctx.drawImage(shotImg, 0, 0, W, H); // 전체 그리되 clip으로 해당 영역만 표시
@@ -74,7 +69,8 @@ export function UploadStep3({
 
         // original 이미지 그리기
         ctx.save();
-        roundedRect(ctx, thumbX, thumbY, thumbW, thumbH, thumbR);
+        ctx.beginPath();
+        ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
         ctx.clip();
         ctx.drawImage(refImg, thumbX, thumbY, thumbW, thumbH);
         ctx.restore();
@@ -83,9 +79,10 @@ export function UploadStep3({
         ctx.save();
         ctx.strokeStyle = "rgba(255,255,255,0.9)";
         ctx.lineWidth = 3;
-        ctx.shadowColor = "rgba(255,255,255,0.3)";
-        ctx.shadowBlur = 16;
-        roundedRect(ctx, thumbX, thumbY, thumbW, thumbH, thumbR);
+        ctx.shadowColor = "rgba(255,255,255,0.6)";
+        ctx.shadowBlur = 30;
+        ctx.beginPath();
+        ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
         ctx.stroke();
         ctx.restore();
       }
@@ -95,7 +92,7 @@ export function UploadStep3({
         const badgeText = `${Math.round(matchScore)}% Match`;
         const fontSize = 32;
         const badgePadX = 28;
-        const badgePadY = 12;
+        const badgePadY = 20;
         ctx.font = `700 ${fontSize}px -apple-system, Helvetica Neue, sans-serif`;
         const textW = ctx.measureText(badgeText).width;
         const badgeW = textW + badgePadX * 2;
@@ -113,7 +110,8 @@ export function UploadStep3({
         ctx.shadowBlur = 12;
         ctx.shadowOffsetY = 3;
         ctx.fillStyle = grad;
-        roundedRect(ctx, badgeX, badgeY, badgeW, badgeH, 9999);
+        ctx.beginPath();
+        ctx.roundRect(badgeX, badgeY, badgeW, badgeH, badgeH / 2);
         ctx.fill();
         ctx.restore();
 
@@ -180,6 +178,7 @@ export function UploadStep3({
           showBadge={showBadge}
           referencePosition="top-left"
           badgePosition="top-right"
+          rounded={false}
           className="w-full h-full"
           sizes="100vw"
         />
@@ -241,26 +240,4 @@ function loadImage(src: string): Promise<HTMLImageElement> {
     img.onerror = reject;
     img.src = src;
   });
-}
-
-function roundedRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number
-) {
-  r = Math.min(r, w / 2, h / 2); // CSS처럼 클램핑
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
 }
