@@ -48,13 +48,32 @@ export async function getPostsByPlace(placeId: string) {
       where: { placeId },
       include: {
         post: {
-          select: { id: true, titleEn: true, titleKo: true, status: true },
+          select: {
+            id: true,
+            titleEn: true,
+            titleKo: true,
+            status: true,
+            postImages: {
+              where: { isThumbnail: true },
+              select: { url: true },
+              take: 1,
+            },
+            postTopics: { select: { topicId: true } },
+            postTags: { select: { tagId: true } },
+          },
         },
       },
     });
     return rows
       .filter((r) => r.post.status === "PUBLISHED")
-      .map((r) => ({ id: r.post.id, titleEn: r.post.titleEn, titleKo: r.post.titleKo }));
+      .map((r) => ({
+        id: r.post.id,
+        titleEn: r.post.titleEn,
+        titleKo: r.post.titleKo,
+        thumbnailUrl: r.post.postImages[0]?.url ?? null,
+        topicIds: r.post.postTopics.map((t) => t.topicId),
+        tagIds: r.post.postTags.map((t) => t.tagId),
+      }));
   } catch (e) {
     console.error(e);
     return [];

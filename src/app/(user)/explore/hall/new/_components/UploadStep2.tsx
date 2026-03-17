@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { MapPin, ChevronUp, ChevronDown, Check, X, Search } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
+import { MapPin, Check, X, Search, ImageIcon, ChevronDown } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -37,6 +36,9 @@ interface PostResult {
   id: string;
   titleEn: string | null;
   titleKo: string | null;
+  thumbnailUrl: string | null;
+  topicIds: string[];
+  tagIds: string[];
 }
 
 interface Props {
@@ -78,7 +80,6 @@ export function UploadStep2({
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([]);
   const [topicSearch, setTopicSearch] = useState("");
-  const [sectionOpen, setSectionOpen] = useState(false);
 
   // 장소 검색
   const [locationSheetOpen, setLocationSheetOpen] = useState(false);
@@ -91,8 +92,9 @@ export function UploadStep2({
   const [linkedPosts, setLinkedPosts] = useState<PostResult[]>([]);
   const [linkedPostId, setLinkedPostId] = useState<string | undefined>(undefined);
 
-  // 카테고리/토픽 시트
-  const [categorySheetOpen, setCategorySheetOpen] = useState(false);
+  // 태그 시트
+  const [tagsSheetOpen, setTagsSheetOpen] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -126,6 +128,20 @@ export function UploadStep2({
     setLinkedPostId(undefined);
   }
 
+  function handleSelectPost(post: PostResult) {
+    if (linkedPostId === post.id) {
+      // 선택 해제 시 자동 연결된 태그/토픽도 초기화
+      setLinkedPostId(undefined);
+      setSelectedTagIds([]);
+      setSelectedTopicIds([]);
+    } else {
+      setLinkedPostId(post.id);
+      // 포스트에 연결된 태그/토픽 자동 선택
+      setSelectedTagIds(post.tagIds);
+      setSelectedTopicIds(post.topicIds);
+    }
+  }
+
   function toggleTag(id: string) {
     setSelectedTagIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
@@ -142,10 +158,7 @@ export function UploadStep2({
     ? topics.filter((t) => t.nameEn.toLowerCase().includes(topicSearch.toLowerCase()))
     : topics;
 
-  const categoryLabel =
-    selectedTagIds.length > 0
-      ? tags.find((t) => t.id === selectedTagIds[0])?.name ?? "Category & Topic"
-      : "Category & Topic";
+  const selectedTagCount = selectedTagIds.length + selectedTopicIds.length;
 
   return (
     <div className="flex flex-col flex-1">
@@ -155,37 +168,73 @@ export function UploadStep2({
         <div className="relative mx-auto h-[50dvh] aspect-[3/4] rounded-2xl overflow-hidden bg-muted">
           <Image src={shotPreviewUrl} alt="shot" fill className="object-cover" sizes="100vw" />
           {referencePreviewUrl && (
-            <div className="absolute top-3 left-3 w-[18%] aspect-[3/4] rounded-xl overflow-hidden border border-white shadow-md">
+            <div
+              className="absolute top-3 left-3 w-[18%] aspect-[3/4] rounded-xl overflow-hidden"
+              style={{ boxShadow: "0 0 0 1.5px white, 0 0 6px 2px rgba(255,255,255,0.2)" }}
+            >
               <Image src={referencePreviewUrl} alt="original" fill className="object-cover" sizes="25vw" />
             </div>
           )}
-          {/* 배지 프리뷰 */}
           {previewScore !== null && showBadge && (
-            <div className="absolute top-3 right-3 bg-brand text-black text-xs font-bold px-2.5 py-1 rounded-full shadow">
+            <div
+              className="absolute top-3 right-3 text-black text-xs font-bold px-2.5 py-1 rounded-full"
+              style={{
+                background: "linear-gradient(to right, #C8FF09, white 150%)",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+              }}
+            >
               {previewScore}% Match
             </div>
           )}
         </div>
 
-        {/* 배지 표시 여부 토글 */}
+        {/* 배지 표시 카드 */}
         {previewScore !== null && (
-          <div className="flex items-center justify-between border border-border rounded-xl px-3 py-2.5">
-            <span className="text-sm font-medium">Show match score badge</span>
-            <Switch
-              checked={showBadge}
-              onCheckedChange={onShowBadgeChange}
-            />
-          </div>
+          <button
+            type="button"
+            onClick={() => onShowBadgeChange(!showBadge)}
+            className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border transition-all text-left ${
+              showBadge ? "border-brand bg-brand/5" : "border-border"
+            }`}
+          >
+            {/* 점수 원형 뱃지 */}
+            <div
+              className={`flex-shrink-0 flex items-center justify-center size-11 rounded-full text-xs font-bold transition-all ${
+                showBadge ? "text-black" : "bg-muted text-muted-foreground"
+              }`}
+              style={
+                showBadge
+                  ? { background: "linear-gradient(135deg, #C8FF09, #e8ffa0)" }
+                  : undefined
+              }
+            >
+              {previewScore}%
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold leading-tight">Show Score Badge</p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-tight">
+                Display your match score on your photo
+              </p>
+            </div>
+            {/* 체크 버튼 */}
+            <div
+              className={`flex-shrink-0 size-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                showBadge ? "bg-brand border-brand" : "border-border"
+              }`}
+            >
+              {showBadge && <Check className="size-3.5 text-black" />}
+            </div>
+          </button>
         )}
 
         {/* 장소 연결 */}
         {selectedPlace ? (
-          <div className="flex items-center gap-2 border border-border rounded-xl px-3 py-2.5">
+          <div className="flex items-center gap-2 border border-brand rounded-xl px-3 py-2.5">
             <MapPin className="size-4 text-muted-foreground shrink-0" />
             <span className="flex-1 text-sm">
-              {selectedPlace.nameKo ?? selectedPlace.nameEn}
+              {selectedPlace.nameEn ?? selectedPlace.nameKo}
             </span>
-            <button type="button" onClick={clearPlace} className="text-muted-foreground">
+            <button type="button" onClick={clearPlace} className="text-muted-foreground p-0.5">
               <X className="size-4" />
             </button>
           </div>
@@ -193,34 +242,57 @@ export function UploadStep2({
           <button
             type="button"
             onClick={() => setLocationSheetOpen(true)}
-            className="flex items-center gap-2 border border-border rounded-xl px-3 py-2.5 w-full text-left"
+            className={`flex items-center gap-2 rounded-xl px-3 py-2.5 w-full text-left ${submitted ? "border border-dashed border-red-300" : "border border-border"}`}
           >
             <MapPin className="size-4 text-muted-foreground shrink-0" />
-            <span className="text-sm text-muted-foreground">Add location</span>
+            <div className="flex-1 flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Add location</span>
+              {submitted && <span className="text-[10px] font-semibold text-red-400 uppercase tracking-wide">Required</span>}
+            </div>
           </button>
         )}
 
-        {/* 연결된 포스트 목록 */}
+        {/* Related posts — 썸네일 카드 */}
         {linkedPosts.length > 0 && (
-          <div className="space-y-1.5">
-            <p className="text-xs font-semibold text-muted-foreground px-1">Related post</p>
-            <div className="flex flex-wrap gap-1.5">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground px-0.5">Related post</p>
+            <div className="space-y-2">
               {linkedPosts.map((post) => {
                 const selected = linkedPostId === post.id;
+                const title = post.titleEn ?? post.titleKo ?? "";
                 return (
                   <button
                     key={post.id}
                     type="button"
-                    onClick={() => setLinkedPostId(selected ? undefined : post.id)}
-                    className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border font-medium transition-all"
-                    style={
-                      selected
-                        ? { backgroundColor: "#C8FF09", color: "#000", borderColor: "transparent" }
-                        : { borderColor: "#d1d5db", color: "#374151" }
-                    }
+                    onClick={() => handleSelectPost(post)}
+                    className={`flex items-center gap-3 w-full rounded-xl border-2 overflow-hidden transition-all text-left ${
+                      selected ? "border-brand bg-brand/5" : "border-border/50"
+                    }`}
                   >
-                    {selected && <Check className="size-3" />}
-                    {post.titleEn ?? post.titleKo}
+                    {/* 썸네일 */}
+                    <div className="relative flex-shrink-0 w-16 h-16 bg-muted">
+                      {post.thumbnailUrl ? (
+                        <Image
+                          src={post.thumbnailUrl}
+                          alt={title}
+                          fill
+                          className="object-cover"
+                          sizes="64px"
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center w-full h-full">
+                          <ImageIcon className="size-4 text-muted-foreground/40" />
+                        </div>
+                      )}
+                    </div>
+                    {/* 제목 */}
+                    <p className="flex-1 text-xs font-medium line-clamp-2 leading-snug py-2 pr-1">{title}</p>
+                    {/* 체크 */}
+                    <div className={`flex-shrink-0 size-5 rounded-full border-2 flex items-center justify-center mr-3 transition-all ${
+                      selected ? "bg-brand border-brand" : "border-border"
+                    }`}>
+                      {selected && <Check className="size-3 text-black" />}
+                    </div>
                   </button>
                 );
               })}
@@ -252,19 +324,32 @@ export function UploadStep2({
           <p className="text-xs text-muted-foreground text-right">{tips.length}/300</p>
         </div>
 
-        {/* Category & Topic 토글 버튼 */}
+        {/* Tags 버튼 */}
         <div>
           <button
             type="button"
-            onClick={() => setCategorySheetOpen(true)}
-            className="flex items-center gap-1.5 border border-border rounded-xl px-3 py-2 text-sm font-medium"
+            onClick={() => setTagsSheetOpen(true)}
+            className={`flex items-center gap-1.5 rounded-xl px-3 py-2.5 text-sm font-medium w-full justify-between transition-all ${
+              selectedTagCount > 0
+                ? "border border-brand"
+                : submitted
+                ? "border border-dashed border-red-300"
+                : "border border-border"
+            }`}
           >
-            <span>{categoryLabel}</span>
-            <ChevronDown className="size-4" />
+            <span className={selectedTagCount > 0 ? "text-foreground" : "text-muted-foreground"}>
+              {selectedTagCount > 0 ? `${selectedTagCount} tag${selectedTagCount > 1 ? "s" : ""} selected` : "Add tags"}
+            </span>
+            <div className="flex items-center gap-2">
+              {selectedTagCount === 0 && submitted && (
+                <span className="text-[10px] font-semibold text-red-400 uppercase tracking-wide">Required</span>
+              )}
+              <ChevronDown className="size-4 text-muted-foreground" />
+            </div>
           </button>
 
-          {/* 선택된 태그/토픽 미리보기 */}
-          {(selectedTagIds.length > 0 || selectedTopicIds.length > 0) && (
+          {/* 선택된 태그 프리뷰 */}
+          {selectedTagCount > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-2">
               {selectedTagIds.map((id) => {
                 const tag = tags.find((t) => t.id === id);
@@ -298,12 +383,23 @@ export function UploadStep2({
       </div>
 
       {/* Share 버튼 */}
-      <div className="px-4 py-3 border-t border-border/50 shrink-0">
+      <div className="px-4 py-3 shrink-0 space-y-2">
+        {submitted && (!selectedPlace || selectedTagCount === 0) && (
+          <p className="text-xs text-center text-muted-foreground">
+            {!selectedPlace && selectedTagCount === 0
+              ? "Add a location and at least 1 tag to share"
+              : !selectedPlace
+              ? "Add a location to share"
+              : "Add at least 1 tag to share"}
+          </p>
+        )}
         <button
           type="button"
-          onClick={() =>
+          onClick={() => {
+            setSubmitted(true);
+            if (!selectedPlace || selectedTagCount === 0) return;
             onShare({
-              locationName: selectedPlace?.nameKo ?? selectedPlace?.nameEn ?? "",
+              locationName: selectedPlace?.nameEn ?? selectedPlace?.nameKo ?? "",
               story,
               tips,
               tagIds: selectedTagIds,
@@ -311,8 +407,8 @@ export function UploadStep2({
               placeId: selectedPlace?.id,
               linkedPostId,
               showBadge,
-            })
-          }
+            });
+          }}
           disabled={isSubmitting}
           className="w-full py-3 rounded-full font-semibold text-sm bg-brand text-black disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
         >
@@ -322,11 +418,11 @@ export function UploadStep2({
 
       {/* 장소 검색 바텀시트 */}
       <Sheet open={locationSheetOpen} onOpenChange={setLocationSheetOpen}>
-        <SheetContent side="bottom" className="h-[70vh] flex flex-col">
-          <SheetHeader>
+        <SheetContent side="bottom" className="h-[75vh] flex flex-col px-5 pb-8">
+          <SheetHeader className="pb-2">
             <SheetTitle>Search location</SheetTitle>
           </SheetHeader>
-          <div className="flex items-center gap-2 border border-border rounded-xl px-3 py-2 mt-2">
+          <div className="flex items-center gap-2 border border-border rounded-xl px-3 py-2.5">
             <Search className="size-4 text-muted-foreground shrink-0" />
             <input
               type="text"
@@ -336,43 +432,48 @@ export function UploadStep2({
               autoFocus
               className="flex-1 text-sm bg-transparent outline-none placeholder:text-muted-foreground"
             />
+            {locationQuery && (
+              <button type="button" onClick={() => setLocationQuery("")}>
+                <X className="size-4 text-muted-foreground" />
+              </button>
+            )}
           </div>
-          <div className="flex-1 overflow-y-auto mt-2 space-y-1">
+          <div className="flex-1 overflow-y-auto mt-1">
             {isSearching && (
-              <p className="text-sm text-muted-foreground text-center py-4">Searching...</p>
+              <p className="text-sm text-muted-foreground text-center py-6">Searching...</p>
             )}
             {!isSearching && placeResults.length === 0 && locationQuery.trim() && (
-              <p className="text-sm text-muted-foreground text-center py-4">No places found</p>
+              <p className="text-sm text-muted-foreground text-center py-6">No places found</p>
+            )}
+            {!isSearching && placeResults.length === 0 && !locationQuery.trim() && (
+              <p className="text-sm text-muted-foreground text-center py-6">Type to search for a place</p>
             )}
             {placeResults.map((place) => (
               <button
                 key={place.id}
                 type="button"
                 onClick={() => handleSelectPlace(place)}
-                className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-muted/50 transition-colors"
+                className="w-full text-left px-2 py-3 rounded-xl hover:bg-muted/50 transition-colors border-b border-border/30 last:border-0"
               >
-                <p className="text-sm font-medium">{place.nameKo ?? place.nameEn}</p>
-                {place.nameKo && place.nameEn && (
-                  <p className="text-xs text-muted-foreground">{place.nameEn}</p>
-                )}
+                <p className="text-sm font-medium">{place.nameEn ?? place.nameKo}</p>
               </button>
             ))}
           </div>
         </SheetContent>
       </Sheet>
 
-      {/* Category & Topic 바텀시트 */}
-      <Sheet open={categorySheetOpen} onOpenChange={setCategorySheetOpen}>
-        <SheetContent side="bottom" className="h-[70vh] flex flex-col">
-          <SheetHeader>
-            <SheetTitle>Category & Topic</SheetTitle>
+      {/* Tags 바텀시트 */}
+      <Sheet open={tagsSheetOpen} onOpenChange={setTagsSheetOpen}>
+        <SheetContent side="bottom" className="h-[75vh] flex flex-col px-5 pb-8">
+          <SheetHeader className="pb-2">
+            <SheetTitle>Add tags</SheetTitle>
           </SheetHeader>
-          <div className="flex-1 overflow-y-auto mt-2 space-y-4">
-            {/* 태그 */}
+          <div className="flex-1 overflow-y-auto space-y-5">
+            {/* 카테고리 섹션 */}
             {tags.length > 0 && (
               <div>
-                <p className="text-xs font-semibold text-muted-foreground mb-2">Category</p>
-                <div className="flex flex-wrap gap-1.5">
+                <p className="text-xs font-semibold text-muted-foreground mb-2.5 uppercase tracking-wide">Type</p>
+                <div className="flex flex-wrap gap-2">
                   {tags.map((tag) => {
                     const selected = selectedTagIds.includes(tag.id);
                     return (
@@ -380,7 +481,7 @@ export function UploadStep2({
                         key={tag.id}
                         type="button"
                         onClick={() => toggleTag(tag.id)}
-                        className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border font-medium transition-all"
+                        className="flex items-center gap-1 text-sm px-3 py-1.5 rounded-full border font-medium transition-all"
                         style={
                           selected
                             ? {
@@ -391,7 +492,7 @@ export function UploadStep2({
                             : { borderColor: "#d1d5db", color: "#374151" }
                         }
                       >
-                        {selected && <Check className="size-3" />}
+                        {selected && <Check className="size-3.5" />}
                         {tag.name}
                       </button>
                     );
@@ -400,18 +501,18 @@ export function UploadStep2({
               </div>
             )}
 
-            {/* 토픽 */}
+            {/* 토픽 섹션 */}
             {topics.length > 0 && (
               <div>
-                <p className="text-xs font-semibold text-muted-foreground mb-2">Topic</p>
+                <p className="text-xs font-semibold text-muted-foreground mb-2.5 uppercase tracking-wide">Theme</p>
                 <input
                   type="text"
-                  placeholder="Search topics..."
+                  placeholder="Search..."
                   value={topicSearch}
                   onChange={(e) => setTopicSearch(e.target.value)}
-                  className="w-full text-sm border border-border rounded-lg px-3 py-1.5 mb-2 bg-transparent outline-none placeholder:text-muted-foreground"
+                  className="w-full text-sm border border-border rounded-xl px-3 py-2 mb-3 bg-transparent outline-none placeholder:text-muted-foreground"
                 />
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-2">
                   {filteredTopics.map((topic) => {
                     const selected = selectedTopicIds.includes(topic.id);
                     return (
@@ -419,7 +520,7 @@ export function UploadStep2({
                         key={topic.id}
                         type="button"
                         onClick={() => toggleTopic(topic.id)}
-                        className="text-xs px-2.5 py-1 rounded-full border font-medium transition-all"
+                        className="flex items-center gap-1 text-sm px-3 py-1.5 rounded-full border font-medium transition-all"
                         style={
                           selected
                             ? {
@@ -430,6 +531,7 @@ export function UploadStep2({
                             : { borderColor: "#d1d5db", color: "#374151" }
                         }
                       >
+                        {selected && <Check className="size-3.5" />}
                         {topic.nameEn}
                       </button>
                     );
@@ -438,13 +540,13 @@ export function UploadStep2({
               </div>
             )}
           </div>
-          <div className="pt-3 border-t border-border/50">
+          <div className="pt-4 border-t border-border/50">
             <button
               type="button"
-              onClick={() => setCategorySheetOpen(false)}
+              onClick={() => setTagsSheetOpen(false)}
               className="w-full py-3 rounded-full font-semibold text-sm bg-brand text-black"
             >
-              Done
+              Done ({selectedTagCount})
             </button>
           </div>
         </SheetContent>

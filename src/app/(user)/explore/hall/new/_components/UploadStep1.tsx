@@ -2,13 +2,15 @@
 
 import { useRef } from "react";
 import Image from "next/image";
-import { Camera } from "lucide-react";
+import { Camera, X } from "lucide-react";
 
 interface Props {
   referencePreviewUrl: string | null;
   shotPreviewUrl: string | null;
   onReferenceChange: (file: File) => void;
   onShotChange: (file: File) => void;
+  onReferenceRemove: () => void;
+  onShotRemove: () => void;
   previewScore: number | null;
   isScoringPreview: boolean;
   scoringDone: boolean;
@@ -17,11 +19,21 @@ interface Props {
   isUploading: boolean;
 }
 
+function getScoreMessage(score: number): { headline: string; sub: string } {
+  if (score >= 90) return { headline: "Incredible!", sub: "You nailed the recreation perfectly." };
+  if (score >= 80) return { headline: "Amazing match!", sub: "You've got a great eye for detail." };
+  if (score >= 70) return { headline: "Nice work!", sub: "Really close to the original shot." };
+  if (score >= 50) return { headline: "Good try!", sub: "A solid recreation — keep it up." };
+  return { headline: "Keep going!", sub: "Every attempt gets you closer." };
+}
+
 export function UploadStep1({
   referencePreviewUrl,
   shotPreviewUrl,
   onReferenceChange,
   onShotChange,
+  onReferenceRemove,
+  onShotRemove,
   previewScore,
   isScoringPreview,
   scoringDone,
@@ -32,7 +44,6 @@ export function UploadStep1({
   const refInputRef = useRef<HTMLInputElement>(null);
   const shotInputRef = useRef<HTMLInputElement>(null);
 
-  // 버튼 상태 결정
   const hasShot = !!shotPreviewUrl;
   const hasReference = !!referencePreviewUrl;
   const isLoading = isUploading || isScoringPreview;
@@ -59,6 +70,8 @@ export function UploadStep1({
     buttonDisabled = false;
   }
 
+  const scoreMessage = scoringDone && previewScore !== null ? getScoreMessage(previewScore) : null;
+
   return (
     <div className="flex flex-col h-[calc(100dvh-3rem)] px-4 py-4 gap-3">
       {/* 메인 shot 영역 */}
@@ -80,30 +93,53 @@ export function UploadStep1({
           )}
         </button>
 
-        {/* Original 사진 — 좌상단 오버레이 */}
-        <button
-          type="button"
-          onClick={() => refInputRef.current?.click()}
-          className={`absolute top-3 left-3 z-10 flex flex-col items-center justify-center gap-1 rounded-xl w-[18%] aspect-[3/4] overflow-hidden ${referencePreviewUrl ? "border border-white" : "border-2 border-dashed border-border bg-background/80 backdrop-blur-sm"}`}
-        >
-          {referencePreviewUrl ? (
-            <Image src={referencePreviewUrl} alt="original" fill className="object-cover" />
-          ) : (
-            <>
-              <Camera className="size-5 text-muted-foreground" />
-              <p className="text-[10px] text-muted-foreground leading-tight text-center">
-                Original<br />(Optional)
-              </p>
-            </>
+        {/* 리크리샷 X 버튼 */}
+        {shotPreviewUrl && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onShotRemove(); if (shotInputRef.current) shotInputRef.current.value = ""; }}
+            className="absolute top-2 right-2 z-20 size-5 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center"
+          >
+            <X className="size-3 text-white" />
+          </button>
+        )}
+
+        {/* Original 사진 — 좌상단 오버레이 (X 버튼 포함) */}
+        <div className="absolute top-3 left-3 z-10 w-[18%] aspect-[3/4]">
+          <button
+            type="button"
+            onClick={() => refInputRef.current?.click()}
+            style={referencePreviewUrl ? { boxShadow: "0 0 0 1.5px white, 0 0 6px 2px rgba(255,255,255,0.2)" } : undefined}
+            className={`relative w-full h-full flex flex-col items-center justify-center gap-1 rounded-xl overflow-hidden ${referencePreviewUrl ? "" : "border-2 border-dashed border-border bg-background/80 backdrop-blur-sm"}`}
+          >
+            {referencePreviewUrl ? (
+              <Image src={referencePreviewUrl} alt="original" fill className="object-cover" />
+            ) : (
+              <>
+                <Camera className="size-5 text-muted-foreground" />
+                <p className="text-[10px] text-muted-foreground leading-tight text-center">
+                  Original<br />(Optional)
+                </p>
+              </>
+            )}
+          </button>
+          {referencePreviewUrl && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onReferenceRemove(); if (refInputRef.current) refInputRef.current.value = ""; }}
+              className="absolute top-1 right-1 z-20 size-4 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center"
+            >
+              <X className="size-3 text-white" />
+            </button>
           )}
-        </button>
+        </div>
 
         {/* 채점 중 로딩 오버레이 */}
         {isScoringPreview && (
           <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/30 z-20">
             <div className="relative flex items-center justify-center">
               <span className="absolute inline-flex size-24 rounded-full bg-brand/40 animate-ping" />
-              <span className="relative inline-flex size-16 rounded-full bg-brand/80 items-center justify-center">
+              <span className="relative inline-flex size-16 rounded-full items-center justify-center" style={{ background: "linear-gradient(135deg, #C8FF09, #ffffff 150%)" }}>
                 <span className="text-black text-xs font-bold text-center leading-tight">
                   AI<br />Scoring
                 </span>
@@ -111,14 +147,22 @@ export function UploadStep1({
             </div>
           </div>
         )}
-
-        {/* 점수 배지 오버레이 */}
-        {scoringDone && previewScore !== null && !isScoringPreview && (
-          <div className="absolute top-3 right-3 z-20 bg-brand text-black text-xs font-bold px-2.5 py-1 rounded-full shadow">
-            {previewScore}% Match
-          </div>
-        )}
       </div>
+
+      {/* 점수 결과 영역 */}
+      {scoreMessage && previewScore !== null && (
+        <div className="flex items-center gap-3 px-1">
+          <div className="flex-shrink-0 size-16 rounded-full bg-black flex items-center justify-center shadow-md">
+            <span className="text-xl font-black tracking-tight leading-none" style={{ color: "#C8FF09" }}>
+              {previewScore}%
+            </span>
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-bold leading-tight">{scoreMessage.headline}</p>
+            <p className="text-xs text-muted-foreground leading-tight mt-0.5">{scoreMessage.sub}</p>
+          </div>
+        </div>
+      )}
 
       <input
         ref={refInputRef}
@@ -128,6 +172,7 @@ export function UploadStep1({
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) onReferenceChange(file);
+          e.target.value = "";
         }}
       />
       <input
@@ -138,6 +183,7 @@ export function UploadStep1({
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) onShotChange(file);
+          e.target.value = "";
         }}
       />
 

@@ -114,6 +114,26 @@ export function ReCreeshotUploadFlow({ tags, topics, userId }: Props) {
     }));
   }
 
+  function handleReferenceRemove() {
+    setState((s) => ({
+      ...s,
+      referenceFile: null,
+      referencePreviewUrl: null,
+      previewScore: null,
+      scoringDone: false,
+    }));
+  }
+
+  function handleShotRemove() {
+    setState((s) => ({
+      ...s,
+      shotFile: null,
+      shotPreviewUrl: null,
+      previewScore: null,
+      scoringDone: false,
+    }));
+  }
+
   async function uploadToSupabase(file: File): Promise<{ url: string; path: string }> {
     const supabase = createClient();
     const ext = file.name.split(".").pop() ?? "jpg";
@@ -280,16 +300,17 @@ export function ReCreeshotUploadFlow({ tags, topics, userId }: Props) {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      {/* 공통 앱 헤더 */}
       <header className="app-header">
         <div className="relative h-12 flex items-center px-2">
-          <button
-            type="button"
-            onClick={handleBack}
-            className="flex items-center justify-center size-8"
-          >
-            <ChevronLeft className="size-5" />
-          </button>
+          {state.step !== 3 && (
+            <button
+              type="button"
+              onClick={handleBack}
+              className="flex items-center justify-center size-8"
+            >
+              <ChevronLeft className="size-5" />
+            </button>
+          )}
           <span className="absolute left-1/2 -translate-x-1/2 font-bold text-base tracking-tight">
             reCree
           </span>
@@ -303,6 +324,8 @@ export function ReCreeshotUploadFlow({ tags, topics, userId }: Props) {
             shotPreviewUrl={state.shotPreviewUrl}
             onReferenceChange={handleReferenceChange}
             onShotChange={handleShotChange}
+            onReferenceRemove={handleReferenceRemove}
+            onShotRemove={handleShotRemove}
             previewScore={state.previewScore}
             isScoringPreview={state.isScoringPreview}
             scoringDone={state.scoringDone}
@@ -351,9 +374,9 @@ export function ReCreeshotUploadFlow({ tags, topics, userId }: Props) {
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-4 pb-8">
           <div className="w-full max-w-sm bg-background rounded-2xl overflow-hidden">
             <div className="px-5 pt-6 pb-4 text-center space-y-1.5">
-              <p className="font-bold text-base">나가시겠습니까?</p>
+              <p className="font-bold text-base">Leave this page?</p>
               <p className="text-sm text-muted-foreground">
-                업로드한 이미지가 삭제되고<br />저장되지 않습니다.
+                Your uploaded images will be deleted<br />and your progress won&apos;t be saved.
               </p>
             </div>
             <div className="border-t border-border/50">
@@ -362,14 +385,14 @@ export function ReCreeshotUploadFlow({ tags, topics, userId }: Props) {
                 onClick={confirmLeave}
                 className="w-full py-3.5 text-sm font-semibold text-red-500 border-b border-border/50"
               >
-                나가기
+                Leave
               </button>
               <button
                 type="button"
                 onClick={() => setState((s) => ({ ...s, showLeaveDialog: false }))}
                 className="w-full py-3.5 text-sm font-semibold"
               >
-                계속 작성하기
+                Keep editing
               </button>
             </div>
           </div>

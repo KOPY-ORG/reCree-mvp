@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Download, Share2, ArrowRight } from "lucide-react";
+import { Download, Zap, CheckCircle2 } from "lucide-react";
+import Image from "next/image";
 
 interface Props {
   shotPreviewUrl: string;
@@ -30,37 +31,48 @@ export function UploadStep3({
       const canvas = canvasRef.current;
       if (!canvas) return;
 
-      const SIZE = 1080;
-      canvas.width = SIZE;
-      canvas.height = SIZE * (4 / 3);
+      // 미리보기와 동일한 비율로 캔버스 생성 (패딩 없음)
+      const W = 1080;
+      const H = W * (4 / 3);
+      canvas.width = W;
+      canvas.height = H;
+
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
-      // 메인 shot 이미지 로드
+      // 메인 shot — rounded-2xl에 맞게 클립 후 그리기
+      // 미리보기 컨테이너 ~300px 기준 rounded-2xl(16px) → 비율 약 5%
+      const mainR = Math.round(W * 0.05);
       const shotImg = await loadImage(shotPreviewUrl);
-      ctx.drawImage(shotImg, 0, 0, canvas.width, canvas.height);
+      ctx.save();
+      roundedRect(ctx, 0, 0, W, H, mainR);
+      ctx.clip();
+      ctx.drawImage(shotImg, 0, 0, W, H);
+      ctx.restore();
 
-      // original 썸네일 (좌상단, 25% 너비, 동일 비율)
+      // original 썸네일 (좌상단, 18% 너비, 미리보기와 동일 비율)
       if (referencePreviewUrl) {
         const refImg = await loadImage(referencePreviewUrl);
-        const thumbW = canvas.width * 0.25;
+        const thumbW = W * 0.18;
         const thumbH = thumbW * (4 / 3);
-        const thumbX = canvas.width * 0.03;
-        const thumbY = canvas.width * 0.03;
-        const radius = 16;
+        const thumbX = W * 0.03;
+        const thumbY = W * 0.03;
+        // rounded-xl = 12px on ~54px element(미리보기) → 비율 약 22%
+        const thumbR = Math.round(thumbW * 0.22);
 
-        // 둥근 클리핑
         ctx.save();
-        roundedRect(ctx, thumbX, thumbY, thumbW, thumbH, radius);
+        roundedRect(ctx, thumbX, thumbY, thumbW, thumbH, thumbR);
         ctx.clip();
         ctx.drawImage(refImg, thumbX, thumbY, thumbW, thumbH);
         ctx.restore();
 
-        // 흰색 테두리
+        // 흰색 글로우 테두리 (미리보기와 동일)
         ctx.save();
-        ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 4;
-        roundedRect(ctx, thumbX, thumbY, thumbW, thumbH, radius);
+        ctx.strokeStyle = "rgba(255,255,255,0.9)";
+        ctx.lineWidth = 3;
+        ctx.shadowColor = "rgba(255,255,255,0.3)";
+        ctx.shadowBlur = 16;
+        roundedRect(ctx, thumbX, thumbY, thumbW, thumbH, thumbR);
         ctx.stroke();
         ctx.restore();
       }
@@ -68,27 +80,40 @@ export function UploadStep3({
       // 배지 (우상단)
       if (showBadge && matchScore !== null) {
         const badgeText = `${matchScore}% Match`;
-        const badgePadX = 20;
+        const fontSize = 32;
+        const badgePadX = 28;
         const badgePadY = 12;
-        const fontSize = 28;
-        ctx.font = `bold ${fontSize}px sans-serif`;
-        const textWidth = ctx.measureText(badgeText).width;
-        const badgeW = textWidth + badgePadX * 2;
+        ctx.font = `700 ${fontSize}px -apple-system, Helvetica Neue, sans-serif`;
+        const textW = ctx.measureText(badgeText).width;
+        const badgeW = textW + badgePadX * 2;
         const badgeH = fontSize + badgePadY * 2;
-        const badgeX = canvas.width - badgeW - canvas.width * 0.03;
-        const badgeY = canvas.width * 0.03;
+        const badgeX = W - badgeW - W * 0.03;
+        const badgeY = W * 0.03;
+
+        // 그라데이션 (미리보기와 동일: 좌→우 brand→white)
+        const grad = ctx.createLinearGradient(badgeX, 0, badgeX + badgeW * 1.5, 0);
+        grad.addColorStop(0, "#C8FF09");
+        grad.addColorStop(1, "#ffffff");
 
         ctx.save();
-        ctx.fillStyle = "#C8FF09";
+        ctx.shadowColor = "rgba(0,0,0,0.15)";
+        ctx.shadowBlur = 12;
+        ctx.shadowOffsetY = 3;
+        ctx.fillStyle = grad;
         roundedRect(ctx, badgeX, badgeY, badgeW, badgeH, badgeH / 2);
         ctx.fill();
+        ctx.restore();
+
+        // 텍스트 — alphabetic baseline으로 정확한 수직 중앙 정렬
+        ctx.save();
         ctx.fillStyle = "#000000";
-        ctx.textBaseline = "middle";
-        ctx.fillText(badgeText, badgeX + badgePadX, badgeY + badgeH / 2);
+        ctx.font = `700 ${fontSize}px -apple-system, Helvetica Neue, sans-serif`;
+        ctx.textBaseline = "alphabetic";
+        const textY = badgeY + badgePadY + fontSize * 0.82;
+        ctx.fillText(badgeText, badgeX + badgePadX, textY);
         ctx.restore();
       }
 
-      // blob → URL + File
       canvas.toBlob((blob) => {
         if (!blob) return;
         const url = URL.createObjectURL(blob);
@@ -106,7 +131,7 @@ export function UploadStep3({
     if (!compositeFile) return;
     try {
       if (navigator.share && navigator.canShare({ files: [compositeFile] })) {
-        await navigator.share({ files: [compositeFile], title: "My reCreeshot" });
+        await navigator.share({ files: [compositeFile], title: "My recreeshot" });
       } else if (compositeUrl) {
         const a = document.createElement("a");
         a.href = compositeUrl;
@@ -118,67 +143,91 @@ export function UploadStep3({
     }
   }
 
-  function handleDone() {
-    router.push(`/explore/hall/${createdId}`);
-  }
-
   return (
-    <div className="flex flex-col flex-1 bg-black">
-      {/* 합성 이미지 표시 */}
-      <div className="flex-1 relative flex items-center justify-center overflow-hidden">
-        <canvas ref={canvasRef} className="hidden" />
-        {isComposing ? (
-          <div className="flex items-center justify-center size-full">
+    <div className="flex flex-col flex-1 px-4 py-4 bg-background">
+      <canvas ref={canvasRef} className="hidden" />
+
+      {/* 완료 표시 */}
+      {!isComposing && (
+        <div className="flex items-center gap-2.5 mb-3">
+          <CheckCircle2 className="size-5 shrink-0 drop-shadow-[0_1px_1px_rgba(0,0,0,0.08)]" style={{ color: "#C8FF09" }} />
+          <div>
+            <p className="text-sm font-bold leading-tight">Your recreeshot is live!</p>
+            <p className="text-xs text-muted-foreground">Save or share it with your friends</p>
+          </div>
+        </div>
+      )}
+
+      {/* 이미지 — Step 1/2와 동일한 비율·스타일 */}
+      <div className="relative mx-auto h-[50dvh] aspect-[3/4] rounded-2xl overflow-hidden bg-muted shadow-md">
+        <Image src={shotPreviewUrl} alt="your recreeshot" fill className="object-cover" sizes="100vw" />
+
+        {/* original 썸네일 오버레이 */}
+        {referencePreviewUrl && (
+          <div
+            className="absolute top-3 left-3 w-[18%] aspect-[3/4] rounded-xl overflow-hidden"
+            style={{ boxShadow: "0 0 0 1.5px white, 0 0 6px 2px rgba(255,255,255,0.2)" }}
+          >
+            <Image src={referencePreviewUrl} alt="original" fill className="object-cover" sizes="20vw" />
+          </div>
+        )}
+
+        {/* 배지 오버레이 */}
+        {showBadge && matchScore !== null && (
+          <div
+            className="absolute top-3 right-3 text-black text-xs font-bold px-2.5 py-1 rounded-full"
+            style={{
+              background: "linear-gradient(to right, #C8FF09, white 150%)",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+            }}
+          >
+            {matchScore}% Match
+          </div>
+        )}
+
+        {/* 합성 중 로딩 오버레이 */}
+        {isComposing && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/20">
             <div className="relative flex items-center justify-center">
-              <span className="absolute inline-flex size-24 rounded-full bg-brand/40 animate-ping" />
-              <span className="relative inline-flex size-16 rounded-full bg-brand/80 items-center justify-center">
-                <span className="text-black text-xs font-bold text-center leading-tight">
-                  Creating<br />image
+              <span className="absolute inline-flex size-16 rounded-full bg-brand/40 animate-ping" />
+              <span className="relative inline-flex size-10 rounded-full bg-brand/80 items-center justify-center">
+                <span className="text-black text-[10px] font-bold text-center leading-tight">
+                  Ready
                 </span>
               </span>
             </div>
           </div>
-        ) : compositeUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={compositeUrl}
-            alt="composite"
-            className="w-full h-full object-contain"
-          />
-        ) : null}
+        )}
       </div>
 
       {/* 하단 버튼 */}
-      <div className="px-4 py-4 space-y-2 bg-black">
+      <div className="mt-4 space-y-2">
+        {!isComposing && compositeUrl && (
+          <a
+            href={compositeUrl}
+            download="recreeshot.jpg"
+            className="flex items-center justify-center gap-2 w-full py-3 rounded-full font-semibold text-sm border border-border"
+          >
+            <Download className="size-4" />
+            Save image
+          </a>
+        )}
         {!isComposing && (
-          <>
-            {compositeUrl && (
-              <a
-                href={compositeUrl}
-                download="recreeshot.jpg"
-                className="flex items-center justify-center gap-2 w-full py-3 rounded-full font-semibold text-sm bg-white text-black"
-              >
-                <Download className="size-4" />
-                Save image
-              </a>
-            )}
-            <button
-              type="button"
-              onClick={handleShare}
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-full font-semibold text-sm bg-brand text-black"
-            >
-              <Share2 className="size-4" />
-              Share
-            </button>
-          </>
+          <button
+            type="button"
+            onClick={handleShare}
+            className="flex items-center justify-center gap-2 w-full py-3 rounded-full font-semibold text-sm bg-brand text-black"
+          >
+            <Zap className="size-4" />
+            Flex it
+          </button>
         )}
         <button
           type="button"
-          onClick={handleDone}
-          className="flex items-center justify-center gap-2 w-full py-3 rounded-full font-semibold text-sm text-white/70"
+          onClick={() => router.push(`/explore/hall/${createdId}`)}
+          className="flex items-center justify-center w-full py-3 rounded-full font-semibold text-sm text-muted-foreground"
         >
           {isComposing ? "Skip" : "Done"}
-          <ArrowRight className="size-4" />
         </button>
       </div>
     </div>
@@ -187,7 +236,7 @@ export function UploadStep3({
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
-    const img = new Image();
+    const img = new window.Image();
     img.crossOrigin = "anonymous";
     img.onload = () => resolve(img);
     img.onerror = reject;
