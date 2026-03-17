@@ -24,6 +24,7 @@
   --color-brand-foreground: var(--brand-foreground);
   --color-brand-sub: var(--brand-sub);
   --color-brand-sub2: var(--brand-sub2);
+  --color-brand-sub3: var(--brand-sub3);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -69,6 +70,7 @@
   --palette-brand:      #C8FF09;
   --palette-brand-sub:  #D0FF6C;
   --palette-brand-sub2: #E7FFB3;
+  --palette-brand-sub3: #F9FFE3;
   --palette-black:      #000000;
   --palette-gray-900:   #3F3D3D;
   --palette-gray-700:   #737373;
@@ -80,6 +82,7 @@
   --brand:              var(--palette-brand);
   --brand-sub:          var(--palette-brand-sub);
   --brand-sub2:         var(--palette-brand-sub2);
+  --brand-sub3:         var(--palette-brand-sub3);
   --brand-foreground:   var(--palette-black);
 
   /* ── Semantic (shadcn/ui) ───────── */

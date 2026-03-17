@@ -15,6 +15,7 @@ export function ConditionalHeader({
   const pathname = usePathname();
 
   if (pathname.startsWith("/posts/")) return null;
+  if (pathname.startsWith("/explore/hall/")) return null;
   if (NO_HEADER_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"))) return null;
   if (EXPLORE_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"))) return <>{exploreHeader}</>;
   return <>{header}</>;

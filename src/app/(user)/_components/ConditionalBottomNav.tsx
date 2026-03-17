@@ -5,6 +5,10 @@ import { BottomNav } from "./BottomNav";
 
 export function ConditionalBottomNav() {
   const pathname = usePathname();
-  if (pathname === "/search") return null;
+  if (
+    pathname === "/search" ||
+    pathname === "/explore/hall/new" ||
+    pathname.endsWith("/edit")
+  ) return null;
   return <BottomNav />;
 }

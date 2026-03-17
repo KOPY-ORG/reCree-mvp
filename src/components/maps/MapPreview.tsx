@@ -64,7 +64,7 @@ export function MapPreview({
       style={{ height }}
       className={`w-full overflow-hidden rounded-lg border ${className ?? ""}`}
     >
-      <APIProvider apiKey={API_KEY}>
+      <APIProvider apiKey={API_KEY} language="en">
         <MapPreviewContent lat={lat} lng={lng} zoom={zoom} />
       </APIProvider>
     </div>
