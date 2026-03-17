@@ -356,3 +356,47 @@ export async function toggleReCreeshotSave(
     return { saved: true };
   }
 }
+
+// ─── deleteReCreeshot ────────────────────────────────────────────────────────
+
+export async function deleteReCreeshot(id: string): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "unauthenticated" };
+
+  const shot = await prisma.reCreeshot.findUnique({ where: { id }, select: { userId: true } });
+  if (!shot) return { error: "not found" };
+  if (shot.userId !== user.id) return { error: "forbidden" };
+
+  await prisma.reCreeshot.update({
+    where: { id },
+    data: { status: "DELETED" },
+  });
+
+  revalidatePath("/explore");
+  return {};
+}
+
+export async function updateReCreeshot(
+  id: string,
+  data: { story?: string; tips?: string }
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "unauthenticated" };
+
+  const shot = await prisma.reCreeshot.findUnique({ where: { id }, select: { userId: true } });
+  if (!shot) return { error: "not found" };
+  if (shot.userId !== user.id) return { error: "forbidden" };
+
+  await prisma.reCreeshot.update({
+    where: { id },
+    data: {
+      story: data.story || null,
+      tips: data.tips || null,
+    },
+  });
+
+  revalidatePath(`/explore/hall/${id}`);
+  return {};
+}

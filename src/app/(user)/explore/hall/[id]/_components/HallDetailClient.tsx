@@ -83,7 +83,9 @@ export function HallDetailClient({
             strokeWidth={1.5}
             style={liked ? { fill: "#ef4444", stroke: "#ef4444" } : undefined}
           />
-          <span className="text-sm text-muted-foreground">{likeCount}</span>
+          {likeCount > 0 && (
+            <span className="text-sm text-muted-foreground">{likeCount}</span>
+          )}
         </button>
 
         <button
