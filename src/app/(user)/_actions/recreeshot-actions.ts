@@ -5,11 +5,71 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { calculateMatchScore } from "@/lib/gemini";
 
+// ─── previewMatchScore ───────────────────────────────────────────────────────
+
+export async function previewMatchScore(
+  referenceUrl: string,
+  shotUrl: string
+): Promise<{ score: number } | { error: string }> {
+  try {
+    const score = await calculateMatchScore(referenceUrl, shotUrl);
+    return { score };
+  } catch (e) {
+    console.error(e);
+    return { error: "점수 계산 실패" };
+  }
+}
+
+// ─── searchPlaces ─────────────────────────────────────────────────────────────
+
+export async function searchPlaces(query: string) {
+  try {
+    return await prisma.place.findMany({
+      where: {
+        OR: [
+          { nameKo: { contains: query, mode: "insensitive" } },
+          { nameEn: { contains: query, mode: "insensitive" } },
+        ],
+      },
+      select: { id: true, nameKo: true, nameEn: true },
+      take: 10,
+    });
+  } catch (e) {
+    console.error(e);
+    return [];
+  }
+}
+
+// ─── getPostsByPlace ──────────────────────────────────────────────────────────
+
+export async function getPostsByPlace(placeId: string) {
+  try {
+    const rows = await prisma.postPlace.findMany({
+      where: { placeId },
+      include: {
+        post: {
+          select: { id: true, titleEn: true, titleKo: true, status: true },
+        },
+      },
+    });
+    return rows
+      .filter((r) => r.post.status === "PUBLISHED")
+      .map((r) => ({ id: r.post.id, titleEn: r.post.titleEn, titleKo: r.post.titleKo }));
+  } catch (e) {
+    console.error(e);
+    return [];
+  }
+}
+
 // ─── createReCreeshot ────────────────────────────────────────────────────────
 
 interface CreateReCreeshotData {
   imageUrl: string;
   referencePhotoUrl?: string;
+  matchScore?: number;
+  showBadge?: boolean;
+  placeId?: string;
+  linkedPostId?: string;
   locationName?: string;
   story?: string;
   tips?: string;
@@ -33,6 +93,10 @@ export async function createReCreeshot(
         userId: user.id,
         imageUrl: data.imageUrl,
         referencePhotoUrl: data.referencePhotoUrl ?? null,
+        matchScore: data.matchScore ?? null,
+        showBadge: data.showBadge ?? false,
+        placeId: data.placeId ?? null,
+        linkedPostId: data.linkedPostId ?? null,
         locationName: data.locationName ?? null,
         story: data.story ?? null,
         tips: data.tips ?? null,
