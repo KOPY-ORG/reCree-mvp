@@ -133,6 +133,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
               latitude: true,
               longitude: true,
               googleMapsUrl: true,
+              naverMapsUrl: true,
               streetViewUrl: true,
               phone: true,
               operatingHours: true,
@@ -296,10 +297,10 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
           latitude={spotInsight.place.latitude ? Number(spotInsight.place.latitude) : null}
           longitude={spotInsight.place.longitude ? Number(spotInsight.place.longitude) : null}
           googleMapsUrl={spotInsight.place.googleMapsUrl}
+          naverMapsUrl={spotInsight.place.naverMapsUrl ?? null}
           streetViewUrl={spotInsight.place.streetViewUrl ?? null}
           phone={spotInsight.place.phone ?? null}
           operatingHours={(spotInsight.place.operatingHours as string[] | null) ?? null}
-          gettingThere={spotInsight.place.gettingThere ?? null}
         />
       )}
 

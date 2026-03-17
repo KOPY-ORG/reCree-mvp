@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MapPin, ExternalLink, ChevronDown, ChevronUp, Clock, Phone, Train } from "lucide-react";
+import { MapPin, ExternalLink, ChevronDown, ChevronUp, Clock, Phone } from "lucide-react";
 
 interface Props {
   nameEn: string | null;
@@ -10,24 +10,20 @@ interface Props {
   latitude: number | null;
   longitude: number | null;
   googleMapsUrl: string | null;
+  naverMapsUrl: string | null;
   streetViewUrl: string | null;
   phone: string | null;
   operatingHours: string[] | null;
-  gettingThere: string | null;
 }
 
-export function LocationCard({ nameEn, nameKo, addressEn, latitude, longitude, googleMapsUrl, streetViewUrl, phone, operatingHours, gettingThere }: Props) {
+export function LocationCard({ nameEn, nameKo, addressEn, latitude, longitude, googleMapsUrl, naverMapsUrl, streetViewUrl, phone, operatingHours }: Props) {
   const displayName = nameEn ?? nameKo;
 
   const embedUrl = latitude && longitude
     ? `https://maps.google.com/maps?q=${latitude},${longitude}&z=15&output=embed`
     : null;
 
-  const naverMapsUrl = nameKo
-    ? `https://map.naver.com/v5/search/${encodeURIComponent(nameKo)}`
-    : null;
-
-  const hasExtra = !!(phone || operatingHours?.length || gettingThere);
+  const hasExtra = !!(phone || operatingHours?.length);
   const [open, setOpen] = useState(false);
 
   return (
@@ -123,12 +119,6 @@ export function LocationCard({ nameEn, nameKo, addressEn, latitude, longitude, g
             <div className="flex items-center gap-2">
               <Phone className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={1.5} />
               <a href={`tel:${phone}`} className="text-xs text-gray-900 hover:underline">{phone}</a>
-            </div>
-          )}
-          {gettingThere && (
-            <div className="flex gap-2">
-              <Train className="h-4 w-4 shrink-0 mt-0.5 text-muted-foreground" strokeWidth={1.5} />
-              <p className="text-xs text-gray-900">{gettingThere}</p>
             </div>
           )}
         </div>
