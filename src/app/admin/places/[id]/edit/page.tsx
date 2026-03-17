@@ -4,10 +4,13 @@ import { PlaceFormWrapper } from "../../_components/PlaceFormWrapper";
 
 interface Props {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ page?: string }>;
 }
 
-export default async function EditPlacePage({ params }: Props) {
+export default async function EditPlacePage({ params, searchParams }: Props) {
   const { id } = await params;
+  const { page } = await searchParams;
+  const returnUrl = page && Number(page) > 1 ? `/admin/places?page=${page}` : "/admin/places";
 
   const [place, allPlaceTypes, allAreas] = await Promise.all([
     prisma.place.findUnique({
@@ -26,6 +29,7 @@ export default async function EditPlacePage({ params }: Props) {
         googleMapsUrl: true,
         naverMapsUrl: true,
         kakaoMapsUrl: true,
+        streetViewUrl: true,
         phone: true,
         operatingHours: true,
         gettingThere: true,
@@ -60,6 +64,7 @@ export default async function EditPlacePage({ params }: Props) {
     <PlaceFormWrapper
       mode="edit"
       placeId={place.id}
+      returnUrl={returnUrl}
       initialData={{
         ...place,
         operatingHours: (place.operatingHours as string[] | null) ?? null,

@@ -263,6 +263,7 @@ model Place {
   naverMapsUrl   String?
   kakaoMapsUrl   String?
   gettingThere   String?    // 교통편 안내 텍스트
+  streetViewUrl  String?    // Google Street View URL
   placeTypes     String[]   @default([])  // 장소 유형 key 배열 (예: ["cafe", "photo_spot"])
   phone          String?
   operatingHours Json?

@@ -3,6 +3,7 @@
 import Papa from "papaparse";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { expandGoogleMapsShortUrl, resolveGoogleMapsUrl } from "@/lib/google-maps-url";
 
 function detectPlatform(url: string): string | null {
   try {
@@ -26,10 +27,11 @@ function detectPlatform(url: string): string | null {
 // ─── 타입 ──────────────────────────────────────────────────────────────────────
 
 export type SheetRow = {
-  rowId: string;          // 중복 체크용 식별자 (google_maps_link 기반)
+  rowId: string;
   placeName: string;
   title: string;
   googleMapsLink: string;
+  streetViewUrl: string;
   category: string;
   genre: string;
   artistWork: string;
@@ -49,15 +51,15 @@ export type SheetRow = {
   sourcePostDate: string;
   closeOrNot: string;
   gettingThere: string;
-  bannerImages: string;           // 원본 문자열 (importNote 저장용)
+  bannerImages: string;
   recreeshotOriginalImage: string;
   collectedBy: string;
   collectedAt: string;
   status: string;
   reviewStatus: string;
-  isExistingPlace: boolean;       // DB에 동일 googleMapsUrl의 Place가 존재하는지
-  existingPlaceId: string | null; // 기존 Place ID (재사용용)
-  isAlreadyImported: boolean;     // 이 행의 sourceUrl로 이미 Post가 임포트됐는지
+  isExistingPlace: boolean;
+  existingPlaceId: string | null;
+  isAlreadyImported: boolean;
 };
 
 type RawRow = Record<string, string>;
@@ -81,9 +83,6 @@ async function fetchSheetCsv(): Promise<RawRow[]> {
   }
 
   const csv = await res.text();
-
-  // 시트 1행은 카테고리 그룹 행(관리·검토, 장소, 토픽...)이므로 제거하고
-  // 2행을 실제 헤더로 사용
   const lines = csv.split("\n");
   const csvWithoutGroupRow = lines.slice(1).join("\n");
 
@@ -97,39 +96,109 @@ async function fetchSheetCsv(): Promise<RawRow[]> {
   return result.data;
 }
 
-// ─── 이미 임포트된 (googleMapsUrl, sourceUrl) 쌍 집합 조회 ──────────────────────
-// 같은 출처 URL이라도 장소가 다르면 별개 포스트이므로 쌍으로 비교
+// ─── 이미 임포트된 (placeId, sourceUrl) 쌍 집합 조회 ─────────────────────────────
 
 async function getImportedPostKeys(): Promise<Set<string>> {
   const posts = await prisma.post.findMany({
     select: {
       postSources: { select: { url: true } },
-      postPlaces: { select: { place: { select: { googleMapsUrl: true } } } },
+      postPlaces: { select: { placeId: true } },
     },
   });
   const keys = new Set<string>();
   for (const post of posts) {
-    const googleMapsUrl = post.postPlaces[0]?.place.googleMapsUrl;
-    if (!googleMapsUrl) continue;
+    const placeId = post.postPlaces[0]?.placeId;
+    if (!placeId) continue;
     for (const { url } of post.postSources) {
-      if (url) keys.add(`${googleMapsUrl}::${url}`);
+      if (url) keys.add(`${placeId}::${url}`);
     }
   }
   return keys;
 }
 
-// ─── 기존 Place googleMapsUrl → id 맵 조회 ────────────────────────────────────
+// ─── 기존 Place 조회 ───────────────────────────────────────────────────────────
 
-async function getExistingPlaces(): Promise<Map<string, string>> {
+async function getExistingPlaces(): Promise<{
+  byUrl: Map<string, string>;
+  byGoogleId: Map<string, string>;
+  byStreetViewUrl: Map<string, string>;
+}> {
   const places = await prisma.place.findMany({
-    where: { googleMapsUrl: { not: null } },
-    select: { id: true, googleMapsUrl: true },
+    where: {
+      OR: [
+        { googleMapsUrl: { not: null } },
+        { googlePlaceId: { not: null } },
+        { streetViewUrl: { not: null } },
+      ],
+    },
+    select: { id: true, googleMapsUrl: true, googlePlaceId: true, streetViewUrl: true },
   });
-  return new Map(
-    places
-      .filter((p) => p.googleMapsUrl)
-      .map((p) => [p.googleMapsUrl!, p.id])
-  );
+  return {
+    byUrl: new Map(places.filter((p) => p.googleMapsUrl).map((p) => [p.googleMapsUrl!, p.id])),
+    byGoogleId: new Map(places.filter((p) => p.googlePlaceId).map((p) => [p.googlePlaceId!, p.id])),
+    byStreetViewUrl: new Map(places.filter((p) => p.streetViewUrl).map((p) => [p.streetViewUrl!, p.id])),
+  };
+}
+
+// ─── Google Maps 링크 분석 → @/lib/google-maps-url.ts ────────────────────────
+// expandGoogleMapsShortUrl, resolveGoogleMapsUrl 을 공유 lib에서 import
+
+// ─── Street View URL에서 panoid 추출 ───────────────────────────────────────────
+
+function extractPanoid(url: string): string | null {
+  try {
+    // URL 디코딩 후 panoid= 파라미터 추출
+    const decoded = decodeURIComponent(url);
+    const match = decoded.match(/panoid=([a-zA-Z0-9_\-]+)/);
+    if (match) return match[1];
+
+    // data 파라미터 안의 !1s 값 (스트릿뷰 pano ID)
+    const dataMatch = url.match(/!1s([a-zA-Z0-9_\-]{10,})/);
+    if (dataMatch) return dataMatch[1];
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// ─── panoid로 위경도 조회 (Street View Metadata API) ──────────────────────────
+
+async function getCoordinatesFromPanoid(panoid: string): Promise<{ lat: number; lng: number } | null> {
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  if (!apiKey) return null;
+  try {
+    const res = await fetch(
+      `https://maps.googleapis.com/maps/api/streetview/metadata?pano=${panoid}&key=${apiKey}`
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.status !== "OK" || !data.location) return null;
+    return { lat: data.location.lat, lng: data.location.lng };
+  } catch {
+    return null;
+  }
+}
+
+// ─── Street View URL에서 위경도 추출 ──────────────────────────────────────────
+
+async function resolveCoordsFromStreetViewUrl(url: string): Promise<{ lat: number; lng: number } | null> {
+  if (!url) return null;
+
+  const workingUrl = await expandGoogleMapsShortUrl(url);
+
+  // panoid → Street View Metadata API
+  const panoid = extractPanoid(workingUrl);
+  if (panoid) {
+    const coords = await getCoordinatesFromPanoid(panoid);
+    if (coords) return coords;
+  }
+
+  // 직접 URL에 좌표가 있는 경우 fallback
+  const atMatch = workingUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (atMatch) return { lat: parseFloat(atMatch[1]), lng: parseFloat(atMatch[2]) };
+
+  return null;
 }
 
 // ─── 시트 미리보기 ─────────────────────────────────────────────────────────────
@@ -150,7 +219,6 @@ export async function fetchSheetPreview(): Promise<{
     };
   }
 
-  // status=완료 AND review_status=채택 필터
   const filtered = rawRows.filter((r) => {
     const status = (r["status"] ?? "").trim();
     const review = (r["review_status"] ?? "").trim();
@@ -164,29 +232,45 @@ export async function fetchSheetPreview(): Promise<{
 
   const rows: SheetRow[] = [];
 
-  filtered.forEach((r, idx) => {
-    const googleMapsLink = (r["google_maps_link"] ?? "").trim();
+  for (let idx = 0; idx < filtered.length; idx++) {
+    const r = filtered[idx];
+    const googleMapsLinkRaw = (r["google_maps_link"] ?? "").trim();
+    // 단축 URL 먼저 확장 → byUrl 매칭 정확도 향상
+    const googleMapsLink = await expandGoogleMapsShortUrl(googleMapsLinkRaw);
+    const streetViewUrlInSheet = (r["street_view_url"] ?? "").trim();
     const placeName = (r["place_name"] ?? "").trim();
 
-    // 필수 필드 검증
     if (!placeName) {
       errors.push(`행 ${idx + 2}: place_name 누락`);
     }
 
-    const existingPlaceId = googleMapsLink
-      ? (existingPlaces.get(googleMapsLink) ?? null)
-      : null;
+    // 기존 Place 조회:
+    // 1순위: google_maps_link (확장 URL) → byUrl
+    // 2순위: street_view_url → byStreetViewUrl (google_maps_link 없는 좌표 전용 장소)
+    let existingPlaceId = googleMapsLink
+      ? (existingPlaces.byUrl.get(googleMapsLink) ?? null)
+      : streetViewUrlInSheet
+        ? (existingPlaces.byStreetViewUrl.get(streetViewUrlInSheet) ?? null)
+        : null;
+    // URL로 못 찾은 경우: 공식 장소 URL이면 Places API로 googlePlaceId 조회 후 byGoogleId 체크
+    if (!existingPlaceId && googleMapsLink && googleMapsLink.includes("/place/")) {
+      const previewPlaceInfo = await searchPlaceInfo(placeName, googleMapsLink);
+      if (previewPlaceInfo?.googlePlaceId) {
+        existingPlaceId = existingPlaces.byGoogleId.get(previewPlaceInfo.googlePlaceId) ?? null;
+      }
+    }
     const isExistingPlace = existingPlaceId !== null;
 
     const srcUrl = (r["source_url"] ?? "").trim();
     const srcUrls = srcUrl ? srcUrl.split(",").map((u) => u.trim()).filter(Boolean) : [];
-    const isAlreadyImported = !!googleMapsLink && srcUrls.some((u) => importedPostKeys.has(`${googleMapsLink}::${u}`));
+    const isAlreadyImported = !!existingPlaceId && srcUrls.some((u) => importedPostKeys.has(`${existingPlaceId}::${u}`));
 
     rows.push({
-      rowId: googleMapsLink ? `${googleMapsLink}::${idx}` : `row-${idx}`,
+      rowId: googleMapsLinkRaw ? `${googleMapsLinkRaw}::${idx}` : streetViewUrlInSheet ? `${streetViewUrlInSheet}::${idx}` : `row-${idx}`,
       placeName,
       title: (r["title"] ?? "").trim(),
-      googleMapsLink,
+      googleMapsLink: googleMapsLinkRaw,
+      streetViewUrl: streetViewUrlInSheet,
       category: (r["category"] ?? "").trim(),
       genre: (r["genre"] ?? "").trim(),
       artistWork: (r["artist_work"] ?? "").trim(),
@@ -216,7 +300,7 @@ export async function fetchSheetPreview(): Promise<{
       existingPlaceId,
       isAlreadyImported,
     });
-  });
+  }
 
   return { rows, errors };
 }
@@ -243,13 +327,11 @@ async function searchPlaceInfo(
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   if (!apiKey) return null;
 
-  // 1순위: 시트의 place_name (수동 입력, 신뢰도 높음)
-  // 2순위: URL에서 추출한 이름 (full URL일 때만 가능, 단축 URL은 매칭 안됨)
   let textQuery = placeName;
   if (!textQuery) {
-    const placeMatch = mapsUrl.match(/place\/([^/]+)/);
+    const placeMatch = mapsUrl.match(/\/place\/([^/?]+)/);
     if (placeMatch) {
-      textQuery = decodeURIComponent(placeMatch[1].replace(/\+/g, " "));
+      textQuery = decodeURIComponent(placeMatch[1].replace(/\+/g, " ")).trim();
     }
   }
   if (!textQuery) return null;
@@ -308,7 +390,6 @@ export async function importSheetRows(rowIds: string[]): Promise<{
   const errors: string[] = [];
   let imported = 0;
 
-  // 선택된 rowId에 해당하는 행을 시트에서 다시 조회
   let rawRows: RawRow[];
   try {
     rawRows = await fetchSheetCsv();
@@ -319,7 +400,6 @@ export async function importSheetRows(rowIds: string[]): Promise<{
     };
   }
 
-  // fetchSheetPreview와 동일한 필터 적용 후 rowId(url::idx)로 매칭
   const qualified = rawRows.filter((r) => {
     const status = (r["status"] ?? "").trim();
     const review = (r["review_status"] ?? "").trim();
@@ -328,11 +408,15 @@ export async function importSheetRows(rowIds: string[]): Promise<{
 
   const filtered = qualified.filter((r, idx) => {
     const googleMapsLink = (r["google_maps_link"] ?? "").trim();
-    const rowId = googleMapsLink ? `${googleMapsLink}::${idx}` : `row-${idx}`;
+    const streetViewUrlInSheet = (r["street_view_url"] ?? "").trim();
+    const rowId = googleMapsLink
+      ? `${googleMapsLink}::${idx}`
+      : streetViewUrlInSheet
+        ? `${streetViewUrlInSheet}::${idx}`
+        : `row-${idx}`;
     return rowIds.includes(rowId);
   });
 
-  // source_type 매핑 테이블
   const srcTypeMap: Record<string, string> = {
     instagram: "INSTAGRAM",
     youtube: "YOUTUBE",
@@ -344,64 +428,93 @@ export async function importSheetRows(rowIds: string[]): Promise<{
   };
 
   for (const r of filtered) {
-    const googleMapsLink = (r["google_maps_link"] ?? "").trim();
+    const googleMapsLinkRaw = (r["google_maps_link"] ?? "").trim();
+    // 단축 URL을 먼저 확장해야 DB 조회 매칭이 정확함
+    const googleMapsLink = await expandGoogleMapsShortUrl(googleMapsLinkRaw);
+    const streetViewUrlFromCol = (r["street_view_url"] ?? "").trim() || null;
     const placeName = (r["place_name"] ?? "").trim();
     const title = (r["title"] ?? "").trim();
 
     try {
-      // 기존 Place 선조회 (트랜잭션 밖에서 한 번만)
-      const existingPlaceRecord = googleMapsLink
+      // 기존 Place 선조회
+      let existingPlaceRecord = googleMapsLink
         ? await prisma.place.findFirst({ where: { googleMapsUrl: googleMapsLink } })
         : null;
+      // google_maps_link 없는 경우 street_view_url로 조회
+      if (!existingPlaceRecord && streetViewUrlFromCol) {
+        existingPlaceRecord = await prisma.place.findFirst({ where: { streetViewUrl: streetViewUrlFromCol } });
+      }
 
-      // 기존 Place가 있으면 Places API 호출 불필요
-      const placeInfo = existingPlaceRecord
-        ? null
-        : await searchPlaceInfo(placeName, googleMapsLink);
+      // ── google_maps_link 분석 ──────────────────────────────────────────────
+      let placeInfo: PlacesApiResult | null = null;
+      let coordFromMapsLink: { lat: number; lng: number } | null = null;
+      let detectedStreetViewFromMapsLink: string | null = null; // 수집자 실수로 스트릿뷰가 들어온 경우
 
-      // slug 생성: 영문 장소명 + 랜덤 6자
+      if (!existingPlaceRecord && googleMapsLink) {
+        const resolved = await resolveGoogleMapsUrl(googleMapsLink);
+        if (resolved?.type === "place") {
+          placeInfo = await searchPlaceInfo(placeName, googleMapsLink);
+        } else if (resolved?.type === "coord") {
+          coordFromMapsLink = { lat: resolved.lat, lng: resolved.lng };
+        } else if (resolved?.type === "streetview") {
+          // 안전망: 스트릿뷰 URL이 잘못 들어온 경우 → streetViewUrl로 이동
+          coordFromMapsLink = resolved.lat ? { lat: resolved.lat, lng: resolved.lng } : null;
+          detectedStreetViewFromMapsLink = googleMapsLink;
+        }
+      }
+
+      // ── street_view_url 처리: panoid → 위경도 ─────────────────────────────
+      // google_maps_link에 좌표가 없을 때 street_view_url로 위경도 보완
+      let coordFromStreetView: { lat: number; lng: number } | null = null;
+      const finalStreetViewUrl = streetViewUrlFromCol ?? detectedStreetViewFromMapsLink;
+
+      if (!existingPlaceRecord && finalStreetViewUrl && !placeInfo && !coordFromMapsLink) {
+        coordFromStreetView = await resolveCoordsFromStreetViewUrl(finalStreetViewUrl);
+      }
+
+      // 최종 좌표: Places API > google_maps_link > street_view_url
+      const finalCoords = placeInfo
+        ? { lat: placeInfo.lat, lng: placeInfo.lng }
+        : coordFromMapsLink ?? coordFromStreetView ?? null;
+
+      // google_maps_link가 없고 street_view_url에서 좌표를 얻은 경우
+      // → /@lat,lng,17z 형태의 좌표 링크 자동 생성
+      const generatedMapsUrl = !googleMapsLink && finalCoords
+        ? `https://www.google.com/maps/@${finalCoords.lat},${finalCoords.lng},17z`
+        : null;
+
+      // 실제 저장할 googleMapsUrl:
+      // - 스트릿뷰가 잘못 들어왔으면 null (스트릿뷰 URL을 맵 버튼에 쓰면 안됨)
+      // - 아니면 원본 google_maps_link 또는 자동 생성 URL
+      const isStreetViewMisplaced = !!detectedStreetViewFromMapsLink;
+      const googleMapsUrlToStore = isStreetViewMisplaced
+        ? generatedMapsUrl
+        : (googleMapsLink || generatedMapsUrl || null);
+
+      // slug 생성
       const baseName = placeInfo?.nameEn
-        ? placeInfo.nameEn
-            .toLowerCase()
-            .replace(/[^a-z0-9\s]/g, "")
-            .trim()
-            .replace(/\s+/g, "-")
-        : placeName
-            .toLowerCase()
-            .replace(/[^a-z0-9\s]/g, "")
-            .trim()
-            .replace(/\s+/g, "-") || "place";
+        ? placeInfo.nameEn.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim().replace(/\s+/g, "-")
+        : placeName.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim().replace(/\s+/g, "-") || "place";
 
-      const randomSuffix = Math.random().toString(36).slice(2, 8);
-      const slug = `${baseName}-${randomSuffix}`;
+      const slug = `${baseName}-${Math.random().toString(36).slice(2, 8)}`;
 
-      // vibe 배열 파싱 (쉼표, 중국식 쉼표, / 구분자 지원)
       const vibeRaw = (r["vibe"] ?? "").trim();
-      const vibeArr = vibeRaw
-        ? vibeRaw.split(/[,，/]/).map((v) => v.trim()).filter(Boolean)
-        : [];
+      const vibeArr = vibeRaw ? vibeRaw.split(/[,，/]/).map((v) => v.trim()).filter(Boolean) : [];
 
-      // placeTypes 파싱 (map_pin_icon)
       const mapPinIconRaw = (r["map_pin_icon"] ?? "").trim();
-      const placeTypes = mapPinIconRaw
-        ? mapPinIconRaw.split(/[,，]/).map((t) => t.trim()).filter(Boolean)
-        : [];
+      const placeTypes = mapPinIconRaw ? mapPinIconRaw.split(/[,，]/).map((t) => t.trim()).filter(Boolean) : [];
 
-      // close_or_not → PlaceStatus
       const closeOrNotRaw = (r["close_or_not"] ?? "").trim();
       const placeStatus = closeOrNotRaw === "폐업" ? "CLOSED_PERMANENT" : "OPEN";
 
-      // source_type 매핑
       const srcTypeRaw = (r["source_type"] ?? "").trim().toLowerCase();
       const mappedSrcType = srcTypeMap[srcTypeRaw] ?? (srcTypeRaw ? "OTHER" : null);
 
-      // banner_images 파싱 (쉼표 또는 줄바꿈 구분자)
       const bannerImagesRaw = (r["banner_image"] ?? "").trim();
       const bannerImages = bannerImagesRaw
         ? bannerImagesRaw.split(/[,\n]/).map((u) => u.trim()).filter(Boolean)
         : [];
 
-      // importNote: 원본 보존 목적
       const importNote = JSON.stringify({
         category: (r["category"] ?? "").trim(),
         genre: (r["genre"] ?? "").trim(),
@@ -425,37 +538,64 @@ export async function importSheetRows(rowIds: string[]): Promise<{
       const referenceUrlVal = (r["reference_url"] ?? "").trim() || null;
       const sourcePostDateVal = (r["source_post_date"] ?? "").trim() || null;
 
-      // 콤마로 구분된 URL 분리
-      const srcUrls = srcUrl
-        ? srcUrl.split(",").map((u) => u.trim()).filter(Boolean)
-        : [];
-      const refUrls = referenceUrlVal
-        ? referenceUrlVal.split(",").map((u) => u.trim()).filter(Boolean)
-        : [];
+      const srcUrls = srcUrl ? srcUrl.split(",").map((u) => u.trim()).filter(Boolean) : [];
+      const refUrls = referenceUrlVal ? referenceUrlVal.split(",").map((u) => u.trim()).filter(Boolean) : [];
 
       await prisma.$transaction(async (tx) => {
         let placeId: string;
 
         if (existingPlaceRecord) {
-          // 기존 Place 재사용
           placeId = existingPlaceRecord.id;
+          // 기존 장소에 위경도가 없으면 URL에서 직접 추출해서 업데이트 (API 호출 없음)
+          const needsCoords = !existingPlaceRecord.latitude || !existingPlaceRecord.longitude;
+          if (needsCoords && googleMapsLink) {
+            const resolvedCoords = await resolveGoogleMapsUrl(googleMapsLink);
+            if (resolvedCoords?.type === "coord") {
+              await tx.place.update({ where: { id: placeId }, data: { latitude: resolvedCoords.lat, longitude: resolvedCoords.lng } });
+            }
+          }
+        } else if (placeInfo?.googlePlaceId) {
+          const byGoogleId = await tx.place.findUnique({ where: { googlePlaceId: placeInfo.googlePlaceId } });
+          if (byGoogleId) {
+            placeId = byGoogleId.id;
+          } else {
+            const place = await tx.place.create({
+              data: {
+                nameKo: placeInfo.nameKo || placeName || "미상",
+                nameEn: placeInfo.nameEn || null,
+                addressKo: placeInfo.addressKo || null,
+                addressEn: placeInfo.addressEn || null,
+                latitude: placeInfo.lat || null,
+                longitude: placeInfo.lng || null,
+                googlePlaceId: placeInfo.googlePlaceId || null,
+                googleMapsUrl: googleMapsUrlToStore,
+                phone: placeInfo.phone || null,
+                operatingHours: placeInfo.operatingHours ? (placeInfo.operatingHours as object) : undefined,
+                rating: placeInfo.rating ?? null,
+                gettingThere: (r["getting_there"] ?? "").trim() || null,
+                streetViewUrl: finalStreetViewUrl,
+                placeTypes,
+                status: placeStatus,
+                source: "ADMIN",
+                isVerified: false,
+              },
+            });
+            placeId = place.id;
+          }
         } else {
+          // 좌표 기반 장소 (비공식 장소, 스트릿뷰 URL 기반 등)
           const place = await tx.place.create({
             data: {
-              nameKo: placeInfo?.nameKo || placeName || "미상",
-              nameEn: placeInfo?.nameEn || null,
-              addressKo: placeInfo?.addressKo || null,
-              addressEn: placeInfo?.addressEn || null,
-              latitude: placeInfo?.lat || null,
-              longitude: placeInfo?.lng || null,
-              googlePlaceId: placeInfo?.googlePlaceId || null,
-              googleMapsUrl: googleMapsLink || null,
-              phone: placeInfo?.phone || null,
-              operatingHours: placeInfo?.operatingHours
-                ? (placeInfo.operatingHours as object)
-                : undefined,
-              rating: placeInfo?.rating ?? null,
+              nameKo: placeName || "미상",
+              nameEn: null,
+              addressKo: null,
+              addressEn: null,
+              latitude: finalCoords?.lat ?? null,
+              longitude: finalCoords?.lng ?? null,
+              googlePlaceId: null,
+              googleMapsUrl: googleMapsUrlToStore,
               gettingThere: (r["getting_there"] ?? "").trim() || null,
+              streetViewUrl: finalStreetViewUrl,
               placeTypes,
               status: placeStatus,
               source: "ADMIN",

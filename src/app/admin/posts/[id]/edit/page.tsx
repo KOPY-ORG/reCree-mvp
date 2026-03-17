@@ -4,10 +4,13 @@ import { PostForm } from "../../_components/PostForm";
 
 interface Props {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ page?: string }>;
 }
 
-export default async function EditPostPage({ params }: Props) {
+export default async function EditPostPage({ params, searchParams }: Props) {
   const { id } = await params;
+  const { page } = await searchParams;
+  const returnUrl = page && Number(page) > 1 ? `/admin/posts?page=${page}` : "/admin/posts";
 
   const [post, allTagsRaw, tagGroupConfigs, allTopics] = await Promise.all([
     prisma.post.findUnique({
@@ -202,6 +205,7 @@ export default async function EditPostPage({ params }: Props) {
       allTags={allTags}
       allTopics={allTopics}
       tagGroups={tagGroups}
+      returnUrl={returnUrl}
     />
   );
 }

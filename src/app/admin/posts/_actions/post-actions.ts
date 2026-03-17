@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import type { PostStatus, SourceType } from "@prisma/client";
 
 // ─── 타입 정의 ─────────────────────────────────────────────────────────────────
@@ -161,7 +162,9 @@ export async function getPlaceDetail(id: string) {
 
 export async function createPost(
   data: PostFormData,
+  returnUrl?: string,
 ): Promise<{ error?: string; id?: string }> {
+  let newId: string | undefined;
   try {
     const user = await getCurrentUser();
 
@@ -241,14 +244,15 @@ export async function createPost(
       },
     });
 
-    revalidatePath("/admin/posts");
+    newId = post.id;
     revalidatePath("/");
     revalidatePath("/explore");
-    return { id: post.id };
   } catch (e) {
     console.error(e);
     return { error: "포스트를 생성하는 중 오류가 발생했습니다." };
   }
+  if (returnUrl) redirect(returnUrl);
+  return { id: newId };
 }
 
 // ─── 포스트 수정 ────────────────────────────────────────────────────────────────
@@ -256,6 +260,7 @@ export async function createPost(
 export async function updatePost(
   id: string,
   data: PostFormData,
+  returnUrl?: string,
 ): Promise<{ error?: string }> {
   try {
     await prisma.$transaction(async (tx) => {
@@ -342,15 +347,14 @@ export async function updatePost(
       });
     });
 
-    revalidatePath("/admin/posts");
-    revalidatePath(`/admin/posts/${id}/edit`);
     revalidatePath("/");
     revalidatePath("/explore");
-    return {};
   } catch (e) {
     console.error(e);
     return { error: "포스트를 수정하는 중 오류가 발생했습니다." };
   }
+  if (returnUrl) redirect(returnUrl);
+  return {};
 }
 
 // ─── 포스트 삭제 ────────────────────────────────────────────────────────────────
