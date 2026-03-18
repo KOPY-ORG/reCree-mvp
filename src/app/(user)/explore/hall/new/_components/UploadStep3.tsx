@@ -229,7 +229,6 @@ export function UploadStep3({
               showBadge={showBadge}
               referencePosition="top-left"
               badgePosition="top-right"
-              rounded={false}
               className="w-full h-full"
               sizes="100vw"
             />

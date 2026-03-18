@@ -14,6 +14,7 @@ import { TagFilterRow } from "./_components/TagFilterRow";
 import { ExploreTabBar } from "./_components/ExploreTabBar";
 import { ExploreSearchActiveBar } from "./_components/ExploreSearchActiveBar";
 import { HallGrid } from "./_components/HallGrid";
+import { ReCreeshotImage } from "@/components/recreeshot-image";
 
 // ─── 서브 컴포넌트 ────────────────────────────────────────────────────────────
 
@@ -86,22 +87,18 @@ function RecreeshotInlineSection({
       </div>
       <div className="flex gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory">
         {shots.map((shot) => (
-          <Link key={shot.id} href={`/explore/hall/${shot.id}`} className="relative snap-start shrink-0 w-[90px] aspect-[4/5] block overflow-hidden bg-muted" style={{ borderRadius: "7%" }}>
-            <img
-              src={shot.imageUrl}
-              alt="recreeshot"
-              className="w-full h-full object-cover"
+          <Link key={shot.id} href={`/explore/hall/${shot.id}`} className="snap-start shrink-0 w-[90px] block">
+            <ReCreeshotImage
+              shotUrl={shot.imageUrl}
+              referenceUrl={shot.referencePhotoUrl}
+              matchScore={shot.matchScore}
+              showBadge={shot.showBadge}
+              referencePosition="top-left"
+              badgePosition="top-right"
+              variant="thumb-sm"
+              className="aspect-[4/5]"
+              sizes="90px"
             />
-            {shot.referencePhotoUrl && (
-              <div className="absolute rounded-[10%] overflow-hidden" style={{ top: "4%", left: "4%", width: "22%", aspectRatio: "4/5", outline: "1px solid rgba(255,255,255,0.9)", boxShadow: "0 0 8px 4px rgba(255,255,255,0.6)" }}>
-                <img src={shot.referencePhotoUrl} alt="" className="w-full h-full object-cover" />
-              </div>
-            )}
-            {shot.showBadge && shot.matchScore !== null && (
-              <div className="absolute top-1 right-1 text-black text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none" style={{ background: "linear-gradient(to right, #C8FF09, #ffffff 150%)", boxShadow: "0 1px 3px rgba(0,0,0,0.15)" }}>
-                {Math.round(shot.matchScore)}%
-              </div>
-            )}
           </Link>
         ))}
       </div>

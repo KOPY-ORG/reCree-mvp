@@ -13,6 +13,7 @@ import { PostCard } from "./_components/PostCard";
 import { SearchBar } from "./_components/SearchBar";
 import { GuideVideoCard } from "./_components/GuideVideoCard";
 import { getCurrentUser } from "@/lib/auth";
+import { ReCreeshotImage } from "@/components/recreeshot-image";
 
 // ─── 가로 스크롤 섹션 ────────────────────────────────────────────────────────
 
@@ -275,22 +276,18 @@ export default async function HomePage() {
                 </div>
               )}
               {data.items.map((shot) => (
-                <Link key={shot.id} href={`/explore/hall/${shot.id}`} className="relative shrink-0 w-[120px] aspect-[4/5] block overflow-hidden bg-muted" style={{ borderRadius: "7%" }}>
-                  <img
-                    src={shot.imageUrl}
-                    alt="recreeshot"
-                    className="w-full h-full object-cover"
+                <Link key={shot.id} href={`/explore/hall/${shot.id}`} className="shrink-0 w-[120px] block">
+                  <ReCreeshotImage
+                    shotUrl={shot.imageUrl}
+                    referenceUrl={shot.referencePhotoUrl}
+                    matchScore={shot.matchScore}
+                    showBadge={shot.showBadge}
+                    referencePosition="top-left"
+                    badgePosition="top-right"
+                    variant="thumb-sm"
+                    className="aspect-[4/5]"
+                    sizes="120px"
                   />
-                  {shot.referencePhotoUrl && (
-                    <div className="absolute rounded-[10%] overflow-hidden" style={{ top: "4%", left: "4%", width: "22%", aspectRatio: "4/5", outline: "1px solid rgba(255,255,255,0.9)", boxShadow: "0 0 8px 4px rgba(255,255,255,0.6)" }}>
-                      <img src={shot.referencePhotoUrl} alt="" className="w-full h-full object-cover" />
-                    </div>
-                  )}
-                  {shot.showBadge && shot.matchScore !== null && (
-                    <div className="absolute top-1 right-1 text-black text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none" style={{ background: "linear-gradient(to right, #C8FF09, #ffffff 150%)", boxShadow: "0 1px 3px rgba(0,0,0,0.15)" }}>
-                      {Math.round(shot.matchScore)}%
-                    </div>
-                  )}
                 </Link>
               ))}
             </HScrollSection>
