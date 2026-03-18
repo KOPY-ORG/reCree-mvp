@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { User, Search } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
-import { LanguageSelector } from "./LanguageSelector";
+// import { LanguageSelector } from "./LanguageSelector";
 
 const NAV_LINKS = [
   { label: "Home", href: "/" },
@@ -47,7 +47,7 @@ export async function AppHeader() {
           </Link>
 
           {/* 다국어 선택 */}
-          <LanguageSelector />
+          {/* <LanguageSelector /> */}
 
           {/* 프로필 / 로그인 */}
           <Link
