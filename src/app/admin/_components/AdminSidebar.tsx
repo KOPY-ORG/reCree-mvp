@@ -17,6 +17,7 @@ import {
   Layers,
   Map,
   Video,
+  Flag,
 } from "lucide-react";
 import { signOut } from "@/lib/actions/auth";
 
@@ -41,6 +42,10 @@ const CURATION_MENUS = [
   { label: "recreeshot 관리", icon: Camera, href: "/admin/recreeshots" },
   { label: "가이드 영상", icon: Video, href: "/admin/guide-video" },
   { label: "인기 검색어", icon: TrendingUp, href: "/admin/popular-searches" },
+] as const;
+
+const MODERATION_MENUS = [
+  { label: "포스트 신고 관리", icon: Flag, href: "/admin/reports" },
 ] as const;
 
 const COMING_SOON_MENUS = [
@@ -123,6 +128,25 @@ export function AdminSidebar({ userEmail, userInitial }: AdminSidebarProps) {
         <SectionLabel label="Curation" />
         <div className="space-y-0.5">
           {CURATION_MENUS.map(({ label, icon: Icon, href }) => (
+            <Link
+              key={href}
+              href={href}
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                isActive(href)
+                  ? "bg-brand text-brand-foreground"
+                  : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+              }`}
+            >
+              <Icon className="size-4 shrink-0" />
+              {label}
+            </Link>
+          ))}
+        </div>
+
+        {/* MODERATION 섹션 */}
+        <SectionLabel label="Moderation" />
+        <div className="space-y-0.5">
+          {MODERATION_MENUS.map(({ label, icon: Icon, href }) => (
             <Link
               key={href}
               href={href}

@@ -5,23 +5,26 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, MoreVertical, Download, Pencil, Trash2, Flag } from "lucide-react";
 import { toast } from "sonner";
 import { deleteReCreeshot } from "@/app/(user)/_actions/recreeshot-actions";
+import { ReportDialog } from "@/components/ReportDialog";
 
 interface Props {
   id: string;
   isOwner: boolean;
+  isLoggedIn: boolean;
   imageUrl: string;
   referencePhotoUrl: string | null;
   matchScore: number | null;
   showBadge: boolean;
 }
 
-export function HallDetailTopSection({ id, isOwner, imageUrl, referencePhotoUrl, matchScore, showBadge }: Props) {
+export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, referencePhotoUrl, matchScore, showBadge }: Props) {
   const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [compositeUrl, setCompositeUrl] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
 
   useEffect(() => {
     let objectUrl: string | null = null;
@@ -156,12 +159,22 @@ export function HallDetailTopSection({ id, isOwner, imageUrl, referencePhotoUrl,
 
   function handleReport() {
     setMenuOpen(false);
-    toast.success("Report submitted. Thank you.");
+    if (!isLoggedIn) {
+      toast.error("Please sign in to report content.");
+      return;
+    }
+    setReportOpen(true);
   }
 
   return (
     <>
       <canvas ref={canvasRef} className="hidden" />
+
+      <ReportDialog
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        reCreeshotId={id}
+      />
 
       {/* 삭제 확인 다이얼로그 */}
       {showDeleteConfirm && (
@@ -212,31 +225,31 @@ export function HallDetailTopSection({ id, isOwner, imageUrl, referencePhotoUrl,
           {menuOpen && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-              <div className="absolute top-10 right-0 z-20 bg-white/80 backdrop-blur-md rounded-xl shadow-lg overflow-hidden min-w-[160px]">
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  className="flex items-center gap-2 w-full px-3.5 py-2.5 text-xs font-medium text-gray-800 hover:bg-gray-50 transition-colors border-b border-gray-100"
-                >
-                  <Download className="size-3.5 shrink-0" />
-                  Download
-                </button>
+              <div className="absolute top-10 right-0 z-20 bg-white/80 backdrop-blur-md rounded-xl shadow-md overflow-hidden min-w-[160px]">
                 {isOwner ? (
                   <>
                     <button
                       type="button"
-                      onClick={() => { setMenuOpen(false); router.push(`/explore/hall/${id}/edit`); }}
-                      className="flex items-center gap-2 w-full px-3.5 py-2.5 text-xs font-medium text-gray-800 hover:bg-gray-50 transition-colors border-b border-gray-100"
+                      onClick={handleSave}
+                      className="flex items-center gap-2 w-full px-4 py-3 text-sm font-medium text-gray-800 hover:bg-gray-50 transition-colors border-b border-gray-100"
                     >
-                      <Pencil className="size-3.5 shrink-0" />
+                      <Download className="size-4 shrink-0" />
+                      Download
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setMenuOpen(false); router.push(`/explore/hall/${id}/edit`); }}
+                      className="flex items-center gap-2 w-full px-4 py-3 text-sm font-medium text-gray-800 hover:bg-gray-50 transition-colors border-b border-gray-100"
+                    >
+                      <Pencil className="size-4 shrink-0" />
                       Edit
                     </button>
                     <button
                       type="button"
                       onClick={() => { setMenuOpen(false); setShowDeleteConfirm(true); }}
-                      className="flex items-center gap-2 w-full px-3.5 py-2.5 text-xs font-medium text-red-500 hover:bg-gray-50 transition-colors"
+                      className="flex items-center gap-2 w-full px-4 py-3 text-sm font-medium text-red-500 hover:bg-gray-50 transition-colors"
                     >
-                      <Trash2 className="size-3.5 shrink-0" />
+                      <Trash2 className="size-4 shrink-0" />
                       Delete
                     </button>
                   </>
@@ -244,9 +257,9 @@ export function HallDetailTopSection({ id, isOwner, imageUrl, referencePhotoUrl,
                   <button
                     type="button"
                     onClick={handleReport}
-                    className="flex items-center gap-2 w-full px-3.5 py-2.5 text-xs font-medium text-gray-800 hover:bg-gray-50 transition-colors"
+                    className="flex items-center gap-2 w-full px-4 py-3 text-sm font-medium text-gray-800 hover:bg-gray-50 transition-colors"
                   >
-                    <Flag className="size-3.5 shrink-0" />
+                    <Flag className="size-4 shrink-0" />
                     Report
                   </button>
                 )}

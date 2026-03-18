@@ -196,7 +196,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
 
   return (
     <article className="pb-8 max-w-2xl mx-auto">
-      {!isPreview && <PostDetailHeader />}
+      {!isPreview && <PostDetailHeader postId={post.id} isLoggedIn={!!currentUser} />}
       {isPreview && (
         <div className="bg-amber-100 text-amber-800 text-xs text-center py-2 font-medium">
           미리보기 모드 — 실제 발행 전 상태입니다

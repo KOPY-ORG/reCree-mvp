@@ -51,8 +51,8 @@ export default async function HallDetailPage({
 
   if (!shot || shot.status === "DELETED") notFound();
 
-  // 숨김 처리된 리크리샷 안내 페이지
-  if (shot.status === "HIDDEN") {
+  // 숨김 처리된 리크리샷 안내 페이지 (직접 숨김 또는 신고로 인한 숨김)
+  if (shot.status === "HIDDEN" || shot.status === "REPORT_HIDDEN") {
     return (
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center h-12 px-2 bg-white border-b border-gray-100">
@@ -65,8 +65,12 @@ export default async function HallDetailPage({
             <EyeOff className="size-6 text-muted-foreground" />
           </div>
           <div className="space-y-1.5">
-            <p className="font-semibold text-base">관리자에 의해 숨김 처리된 리크리샷입니다.</p>
-            <p className="text-sm text-muted-foreground">이 콘텐츠는 현재 표시되지 않습니다.</p>
+            <p className="font-semibold text-base">This content is not available.</p>
+            <p className="text-sm text-muted-foreground">
+              {shot.status === "REPORT_HIDDEN"
+                ? "This recreeshot has been removed after a review."
+                : "This recreeshot has been hidden by an administrator."}
+            </p>
           </div>
         </div>
       </div>
@@ -100,6 +104,7 @@ export default async function HallDetailPage({
       <HallDetailTopSection
         id={id}
         isOwner={isOwner}
+        isLoggedIn={!!currentUser}
         imageUrl={shot.imageUrl}
         referencePhotoUrl={shot.referencePhotoUrl}
         matchScore={shot.matchScore}

@@ -34,7 +34,8 @@ enum PlaceStatus {
 enum ReCreeshotStatus {
   ACTIVE
   REPORTED
-  HIDDEN
+  HIDDEN        // 관리자가 직접 숨김
+  REPORT_HIDDEN // 신고 처리로 인한 숨김
   DELETED
 }
 
@@ -70,6 +71,21 @@ enum ContentType {
   RECREESHOT
 }
 
+enum ReportReason {
+  SPAM
+  INAPPROPRIATE
+  HARASSMENT
+  FALSE_INFORMATION
+  COPYRIGHT
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING    // 미처리
+  DISMISSED  // 기각
+  RESOLVED   // 처리완료
+}
+
 // ─── Models ───────────────────────────────────────────────────────────────────
 
 model User {
@@ -87,6 +103,7 @@ model User {
   reCreeshots     ReCreeshot[]
   saves           Save[]
   reCreeshotLikes ReCreeshotLike[]
+  reports         Report[]
 }
 
 model Topic {
@@ -175,6 +192,7 @@ model Post {
   postImages  PostImage[]
   postSources PostSource[]
   homeBanners HomeBanner[]
+  reports     Report[]
 }
 
 model PostImage {
@@ -310,6 +328,7 @@ model ReCreeshot {
   reCreeshotTopics ReCreeshotTopic[]
   reCreeshotTags   ReCreeshotTag[]
   reCreeshotLikes  ReCreeshotLike[]
+  reports          Report[]
 }
 
 // ─── M:N 조인 테이블 ──────────────────────────────────────────────────────────
@@ -431,6 +450,26 @@ model CuratedSection {
 
   filterTopic Topic? @relation("FilterTopic", fields: [filterTopicId], references: [id])
   filterTag   Tag?   @relation("FilterTag", fields: [filterTagId], references: [id])
+}
+
+model Report {
+  id           String       @id @default(uuid()) @db.Uuid
+  reason       ReportReason
+  description  String?
+  status       ReportStatus @default(PENDING)
+  reporterId   String       @db.Uuid
+  postId       String?      @db.Uuid
+  reCreeshotId String?      @db.Uuid
+  createdAt    DateTime     @default(now())
+  resolvedAt   DateTime?
+
+  reporter   User        @relation(fields: [reporterId], references: [id])
+  post       Post?       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  reCreeshot ReCreeshot? @relation(fields: [reCreeshotId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([reCreeshotId])
+  @@index([status])
 }
 
 model PopularSearch {

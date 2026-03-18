@@ -1,7 +1,7 @@
 import type { PostStatus } from "@prisma/client";
 
 export const STATUS_LABELS: Record<PostStatus, string> = {
-  DRAFT: "임시저장",
+  DRAFT: "비공개",
   PUBLISHED: "발행됨",
 };
 
