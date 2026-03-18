@@ -20,7 +20,6 @@ export default async function ProfileEditPage() {
         <h1 className="text-base font-bold">Edit Profile</h1>
       </div>
       <ProfileEditForm
-        userId={user.id}
         email={user.email}
         nickname={user.nickname}
         bio={user.bio}

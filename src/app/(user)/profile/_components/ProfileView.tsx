@@ -118,16 +118,17 @@ export function ProfileView({
       {/* 리크리샷 그리드 */}
       {recreeshots.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-2 py-16 text-muted-foreground">
-          <p className="text-sm font-medium">No reCreeshots yet</p>
+          <p className="text-sm font-medium">No recreeshots yet</p>
           <Link
             href="/explore/hall/new"
             className="text-xs underline underline-offset-2"
           >
-            Share your first reCreeshot
+            Share your first recreeshot
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-px bg-border/30">
+        <div className="px-2 bg-background">
+        <div className="grid grid-cols-2 gap-2 bg-background">
           {recreeshots.map((shot) => (
             <button
               key={shot.id}
@@ -148,6 +149,7 @@ export function ProfileView({
               />
             </button>
           ))}
+        </div>
         </div>
       )}
 

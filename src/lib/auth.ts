@@ -16,5 +16,12 @@ export async function getCurrentUser(): Promise<User | null> {
 
   if (!user) return null;
 
-  return prisma.user.findUnique({ where: { id: user.id } });
+  const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+
+  if (!dbUser) {
+    await supabase.auth.signOut();
+    return null;
+  }
+
+  return dbUser;
 }
