@@ -96,6 +96,9 @@ importers:
       '@types/google.maps':
         specifier: ^3.58.1
         version: 3.58.1
+      '@types/hast':
+        specifier: ^3.0.4
+        version: 3.0.4
       '@types/node':
         specifier: ^20
         version: 20.19.33
@@ -135,6 +138,9 @@ importers:
       typescript:
         specifier: ^5
         version: 5.9.3
+      unist-util-visit:
+        specifier: ^5.1.0
+        version: 5.1.0
 
 packages:
 

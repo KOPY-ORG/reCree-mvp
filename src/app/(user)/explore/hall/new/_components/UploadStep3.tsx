@@ -47,7 +47,9 @@ export function UploadStep3({
       if (!ctx) return;
 
       const shotImg = await loadImage(shotPreviewUrl);
-      ctx.drawImage(shotImg, 0, 0, W, H);
+      // object-cover 방식: 비율 유지하며 캔버스를 채움 (찌부 방지)
+      const { sx, sy, sw, sh } = coverRect(shotImg.naturalWidth, shotImg.naturalHeight, W, H);
+      ctx.drawImage(shotImg, sx, sy, sw, sh, 0, 0, W, H);
 
       if (referencePreviewUrl) {
         const refImg = await loadImage(referencePreviewUrl);
@@ -73,7 +75,7 @@ export function UploadStep3({
         ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
         ctx.clip();
         ctx.filter = "blur(12px)";
-        ctx.drawImage(shotImg, 0, 0, W, H);
+        ctx.drawImage(shotImg, sx, sy, sw, sh, 0, 0, W, H);
         ctx.filter = "none";
         ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
         ctx.fillRect(thumbX, thumbY, thumbW, thumbH);
@@ -152,7 +154,7 @@ export function UploadStep3({
 
         // DB 저장용 클린 버전 (메인 샷 + 워터마크만, CSS overlay로 배지·소스이미지 표시)
         ctx.clearRect(0, 0, W, H);
-        ctx.drawImage(shotImg, 0, 0, W, H);
+        ctx.drawImage(shotImg, sx, sy, sw, sh, 0, 0, W, H);
         ctx.save();
         ctx.font = `600 28px 'Noto Sans', sans-serif`;
         ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
@@ -291,6 +293,21 @@ export function UploadStep3({
       </div>
     </div>
   );
+}
+
+/** object-cover 방식으로 소스 이미지를 캔버스에 그리기 위한 소스 rect 계산 */
+function coverRect(natW: number, natH: number, canvasW: number, canvasH: number) {
+  const imgAspect = natW / natH;
+  const canvasAspect = canvasW / canvasH;
+  let sx = 0, sy = 0, sw = natW, sh = natH;
+  if (imgAspect > canvasAspect) {
+    sw = Math.round(natH * canvasAspect);
+    sx = Math.round((natW - sw) / 2);
+  } else {
+    sh = Math.round(natW / canvasAspect);
+    sy = Math.round((natH - sh) / 2);
+  }
+  return { sx, sy, sw, sh };
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
