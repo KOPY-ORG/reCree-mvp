@@ -29,6 +29,7 @@ export function BannerCarousel({ images, children }: Props) {
   // 현재 트랙 인덱스 (초기: 1 = 첫 번째 실제 이미지)
   const [pos, setPos] = useState(single ? 0 : 1);
   const [animated, setAnimated] = useState(true);
+  const [transitioning, setTransitioning] = useState(false);
   const [loadedMap, setLoadedMap] = useState<Record<string, boolean>>({});
   const [errorMap, setErrorMap] = useState<Record<string, boolean>>({});
   const touchStartX = useRef<number | null>(null);
@@ -39,16 +40,19 @@ export function BannerCarousel({ images, children }: Props) {
   function goTo(nextPos: number, withAnim = true) {
     setAnimated(withAnim);
     setPos(nextPos);
+    if (withAnim) setTransitioning(true);
+    else setTransitioning(false);
   }
 
-  function next() { goTo(pos + 1); }
-  function prev() { goTo(pos - 1); }
+  function next() { if (!transitioning) goTo(pos + 1); }
+  function prev() { if (!transitioning) goTo(pos - 1); }
 
   // 트랜지션 끝 후 클론에서 실제 위치로 순간 이동
   function onTransitionEnd() {
     if (!single) {
       if (pos === 0) goTo(total, false);
       else if (pos === total + 1) goTo(1, false);
+      else setTransitioning(false);
     }
   }
 
@@ -59,8 +63,10 @@ export function BannerCarousel({ images, children }: Props) {
   const onTouchEnd = (e: React.TouchEvent) => {
     if (touchStartX.current === null) return;
     const delta = e.changedTouches[0].clientX - touchStartX.current;
-    if (delta < -50) next();
-    else if (delta > 50) prev();
+    if (!transitioning) {
+      if (delta < -50) next();
+      else if (delta > 50) prev();
+    }
     touchStartX.current = null;
   };
 
@@ -147,7 +153,7 @@ export function BannerCarousel({ images, children }: Props) {
             <button
               key={i}
               type="button"
-              onClick={() => goTo(i + 1)}
+              onClick={() => { if (!transitioning) goTo(i + 1); }}
               className={`rounded-full transition-all duration-200 ${
                 i === dotIndex ? "w-3 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/50"
               }`}
