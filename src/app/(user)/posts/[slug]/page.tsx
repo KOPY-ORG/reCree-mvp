@@ -11,6 +11,7 @@ import { OriginalSourceCards } from "./_components/OriginalSourceCards";
 import { SourceSection } from "./_components/SourceSection";
 import { PostMetaBar } from "./_components/PostMetaBar";
 import { getCurrentUser } from "@/lib/auth";
+import { PostReCreeshotSection } from "./_components/PostReCreeshotSection";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -150,6 +151,21 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
   ]);
 
   if (!post || (!isPreview && post.status !== "PUBLISHED")) notFound();
+
+  const reCreeshorts = await prisma.reCreeshot.findMany({
+    where: { linkedPostId: post.id, status: "ACTIVE" },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+    select: {
+      id: true,
+      imageUrl: true,
+      referencePhotoUrl: true,
+      matchScore: true,
+      showBadge: true,
+      tips: true,
+      user: { select: { nickname: true } },
+    },
+  });
 
   const bannerImages = post.postImages.filter((img) => img.imageType === "BANNER");
   const originalImages = post.postImages.filter((img) => img.imageType === "ORIGINAL");
@@ -316,6 +332,13 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
           </div>
         </div>
       )}
+
+      {/* How others reCree'd + Tips */}
+      <PostReCreeshotSection
+        postId={post.id}
+        shots={reCreeshorts}
+        originalImageUrl={originalImages[0]?.url ?? null}
+      />
 
       {/* From the Source */}
       <SourceSection sources={post.postSources} />
