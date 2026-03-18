@@ -193,7 +193,7 @@ export function ReCreeshotUploadFlow({ tagGroups, topics, userId, prefillPostId,
   // 이탈 확인 → 고아 파일 정리 후 이동
   async function confirmLeave() {
     await deleteOrphanedFiles();
-    router.push("/explore?tab=hall");
+    router.back();
   }
 
   function handleBack() {
@@ -211,7 +211,7 @@ export function ReCreeshotUploadFlow({ tagGroups, topics, userId, prefillPostId,
     if (hasUnsavedUpload) {
       setState((s) => ({ ...s, showLeaveDialog: true }));
     } else {
-      router.push("/explore?tab=hall");
+      router.back();
     }
   }
 

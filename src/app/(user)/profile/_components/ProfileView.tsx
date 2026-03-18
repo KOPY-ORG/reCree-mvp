@@ -12,6 +12,7 @@ import {
   Pencil,
   LogOut,
   Trash2,
+  Plus,
 } from "lucide-react";
 import { ReCreeshotImage } from "@/components/recreeshot-image";
 import { deleteAccount } from "../_actions/profile-actions";
@@ -77,9 +78,9 @@ export function ProfileView({
       </header>
 
       {/* 프로필 정보 */}
-      <div className="px-4 pt-4 pb-20">
+      <div className="px-4 pt-4">
         {/* 아바타 + 통계 */}
-        <div className="flex items-center gap-6 mb-6">
+        <div className="flex items-center justify-between mb-6">
           <div className="size-24 rounded-full bg-brand flex items-center justify-center text-black text-3xl font-bold shrink-0 overflow-hidden">
             {profileImageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -92,14 +93,24 @@ export function ProfileView({
               initial
             )}
           </div>
-          <div className="flex flex-col items-center">
-            <span className="font-bold text-lg">{recreeshots.length}</span>
-            <span className="text-xs text-muted-foreground">recreeshots</span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <span className="font-bold text-lg">{recreeshots.length}</span>
+              <span className="text-xs text-muted-foreground">recreeshots</span>
+            </div>
+            <Link
+              href="/explore/hall/new"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-black text-xs font-medium"
+              style={{ background: "var(--color-brand-sub3)" }}
+            >
+              <Plus className="size-3.5" />
+              add recreeshot
+            </Link>
           </div>
         </div>
         {/* 닉네임 + edit profile */}
         <div className="flex items-center justify-between gap-2 mb-3">
-          <p className="font-semibold text-base truncate">{displayName}</p>
+          <p className="font-semibold text-xl truncate">{displayName}</p>
           <Link
             href="/profile/edit"
             className="shrink-0 text-xs font-medium text-muted-foreground underline underline-offset-2"
@@ -113,6 +124,24 @@ export function ProfileView({
             {bio}
           </p>
         )}
+
+        {/* 단축 버튼 */}
+        <div className="flex gap-2 my-6">
+          <Link
+            href="/my-map?tab=my-maps"
+            className="flex flex-1 items-center justify-center gap-2 py-2 rounded-full bg-muted text-sm font-medium"
+          >
+            <MapPin className="size-4" />
+            My Maps
+          </Link>
+          <Link
+            href="/saved"
+            className="flex flex-1 items-center justify-center gap-2 py-2 rounded-full bg-muted text-sm font-medium"
+          >
+            <Bookmark className="size-4" />
+            Saved
+          </Link>
+        </div>
       </div>
 
       {/* 리크리샷 그리드 */}
@@ -174,19 +203,6 @@ export function ProfileView({
             </div>
 
             <div className="flex-1 overflow-y-auto py-2">
-              <DrawerItem
-                icon={<MapPin className="size-4" />}
-                label="My Maps"
-                href="/my-map?tab=my-maps"
-                onClick={() => setDrawerOpen(false)}
-              />
-              <DrawerItem
-                icon={<Bookmark className="size-4" />}
-                label="Saved"
-                href="/saved"
-                onClick={() => setDrawerOpen(false)}
-              />
-
               <DrawerSection label="ACCOUNT" />
               <DrawerItem
                 icon={<Pencil className="size-4" />}
