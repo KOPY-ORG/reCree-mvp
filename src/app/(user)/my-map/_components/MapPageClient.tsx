@@ -52,6 +52,7 @@ interface Props {
   userInitial: string | null;
   searchQuery: string;
   searchedPlaces: MapPlace[] | null;
+  initialTab?: Tab;
 }
 
 // ─── 헬퍼 ─────────────────────────────────────────────────────────────────────
@@ -164,6 +165,7 @@ export function MapPageClient({
   userInitial,
   searchQuery,
   searchedPlaces,
+  initialTab = "places",
 }: Props) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -184,7 +186,7 @@ export function MapPageClient({
     router.replace("/my-map");
   }
 
-  const [activeTab, setActiveTab] = useState<Tab>("places");
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
   const [selectedTagGroup, setSelectedTagGroup] = useState<string | null>(null);

@@ -13,8 +13,9 @@ export default async function MyTripPage({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const { q } = await searchParams;
+  const { q, tab } = await searchParams;
   const query = typeof q === "string" ? q.trim() : "";
+  const initialTab = tab === "my-maps" ? "my-maps" : "places";
 
   const currentUser = await getCurrentUser();
 
@@ -51,6 +52,7 @@ export default async function MyTripPage({
         userInitial={currentUser?.email?.[0]?.toUpperCase() ?? null}
         searchQuery={query}
         searchedPlaces={searchedPlaces}
+        initialTab={initialTab}
       />
     </Suspense>
   );

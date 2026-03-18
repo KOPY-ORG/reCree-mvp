@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { MoreVertical, Download, Pencil, Trash2, Flag } from "lucide-react";
-import { toast } from "sonner";
+import { showToast, showError } from "@/lib/toast";
 import { deleteReCreeshot } from "@/app/(user)/_actions/recreeshot-actions";
 
 interface Props {
@@ -296,7 +296,7 @@ export function HallDetailMenuButton({ id, isOwner, imageUrl, referencePhotoUrl,
     setIsDeleting(true);
     const result = await deleteReCreeshot(id);
     if (result.error) {
-      toast.error("Failed to delete. Please try again.");
+      showError("Failed to delete. Please try again.");
       setIsDeleting(false);
       return;
     }
@@ -305,7 +305,7 @@ export function HallDetailMenuButton({ id, isOwner, imageUrl, referencePhotoUrl,
 
   function handleReport() {
     setOpen(false);
-    toast.success("Report submitted. Thank you.");
+    showToast("Report submitted. Thank you.");
   }
 
   return (
