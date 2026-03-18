@@ -46,11 +46,11 @@ const CURATION_MENUS = [
 
 const MODERATION_MENUS = [
   { label: "포스트 신고 관리", icon: Flag, href: "/admin/reports" },
+  { label: "사용자 관리", icon: Users, href: "/admin/users" },
 ] as const;
 
 const COMING_SOON_MENUS = [
   { label: "검수", icon: ClipboardCheck, phase: "Phase 3" },
-  { label: "사용자 관리", icon: Users, phase: "Phase 3" },
 ] as const;
 
 interface AdminSidebarProps {

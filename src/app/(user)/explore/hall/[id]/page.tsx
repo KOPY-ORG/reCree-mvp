@@ -19,7 +19,7 @@ export default async function HallDetailPage({
   const shot = await prisma.reCreeshot.findUnique({
     where: { id },
     include: {
-      user: { select: { id: true, nickname: true, profileImageUrl: true } },
+      user: { select: { id: true, email: true, nickname: true, profileImageUrl: true } },
       reCreeshotTopics: {
         include: {
           topic: {
@@ -116,7 +116,7 @@ export default async function HallDetailPage({
         {/* 사용자 정보 + 날짜 + 액션 버튼 */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="size-8 rounded-full bg-muted overflow-hidden flex items-center justify-center shrink-0">
+            <div className="size-8 rounded-full bg-brand overflow-hidden flex items-center justify-center shrink-0">
               {shot.user.profileImageUrl ? (
                 <Image
                   src={shot.user.profileImageUrl}
@@ -126,8 +126,8 @@ export default async function HallDetailPage({
                   className="object-cover w-full h-full"
                 />
               ) : (
-                <span className="text-xs font-bold text-muted-foreground">
-                  {(shot.user.nickname ?? "A")[0].toUpperCase()}
+                <span className="text-xs font-bold text-black">
+                  {shot.user.email[0].toUpperCase()}
                 </span>
               )}
             </div>

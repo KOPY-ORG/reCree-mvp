@@ -26,14 +26,19 @@ export async function GET(request: NextRequest) {
     create: {
       id: user.id,
       email: user.email!,
-      nickname: user.user_metadata?.full_name ?? null,
-      profileImageUrl: user.user_metadata?.avatar_url ?? null,
     },
     update: {
       email: user.email!,
-      nickname: user.user_metadata?.full_name ?? null,
-      profileImageUrl: user.user_metadata?.avatar_url ?? null,
     },
+  });
+
+  // 기존에 저장된 Google 프로필 사진 URL 제거 (직접 업로드한 사진은 유지)
+  await prisma.user.updateMany({
+    where: {
+      id: user.id,
+      profileImageUrl: { contains: "googleusercontent.com" },
+    },
+    data: { profileImageUrl: null },
   });
 
   return NextResponse.redirect(`${origin}${next}`);

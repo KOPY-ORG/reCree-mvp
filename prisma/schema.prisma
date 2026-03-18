@@ -323,7 +323,7 @@ model ReCreeshot {
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
-  user            User              @relation(fields: [userId], references: [id])
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   place           Place?            @relation(fields: [placeId], references: [id])
   reCreeshotTopics ReCreeshotTopic[]
   reCreeshotTags   ReCreeshotTag[]
@@ -463,7 +463,7 @@ model Report {
   createdAt    DateTime     @default(now())
   resolvedAt   DateTime?
 
-  reporter   User        @relation(fields: [reporterId], references: [id])
+  reporter   User        @relation(fields: [reporterId], references: [id], onDelete: Cascade)
   post       Post?       @relation(fields: [postId], references: [id], onDelete: Cascade)
   reCreeshot ReCreeshot? @relation(fields: [reCreeshotId], references: [id], onDelete: Cascade)
 

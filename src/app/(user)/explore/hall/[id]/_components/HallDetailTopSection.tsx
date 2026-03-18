@@ -3,7 +3,7 @@
 import { useRef, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, MoreVertical, Download, Pencil, Trash2, Flag } from "lucide-react";
-import { toast } from "sonner";
+import { showError } from "@/lib/toast";
 import { deleteReCreeshot } from "@/app/(user)/_actions/recreeshot-actions";
 import { ReportDialog } from "@/components/ReportDialog";
 
@@ -150,7 +150,7 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
     setIsDeleting(true);
     const result = await deleteReCreeshot(id);
     if (result.error) {
-      toast.error("Failed to delete. Please try again.");
+      showError("Failed to delete. Please try again.");
       setIsDeleting(false);
       return;
     }
@@ -160,7 +160,7 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
   function handleReport() {
     setMenuOpen(false);
     if (!isLoggedIn) {
-      toast.error("Please sign in to report content.");
+      showError("Please sign in to report content.");
       return;
     }
     setReportOpen(true);

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { User, Search } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
-import { LanguageSelector } from "./LanguageSelector";
+// import { LanguageSelector } from "./LanguageSelector";
 
 const NAV_LINKS = [
   { label: "Home", href: "/" },
@@ -47,16 +47,25 @@ export async function AppHeader() {
           </Link>
 
           {/* 다국어 선택 */}
-          <LanguageSelector />
+          {/* <LanguageSelector /> */}
 
           {/* 프로필 / 로그인 */}
           <Link
             href={user ? "/profile" : "/login"}
             className="text-foreground hover:text-muted-foreground transition-colors"
           >
-            {initial ? (
-              <div className="size-7 rounded-full bg-brand flex items-center justify-center text-xs font-semibold text-black">
-                {initial}
+            {user ? (
+              <div className="size-7 rounded-full bg-brand flex items-center justify-center text-xs font-semibold text-black overflow-hidden">
+                {user.profileImageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={user.profileImageUrl}
+                    alt="Profile"
+                    className="size-7 object-cover"
+                  />
+                ) : (
+                  initial
+                )}
               </div>
             ) : (
               <User className="size-5 text-muted-foreground" />
