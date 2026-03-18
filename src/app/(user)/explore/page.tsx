@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getSavedPostIds, type PostItem } from "@/lib/post-queries";
 import { getFilteredPosts, getTagGroupsWithTags } from "@/lib/filter-queries";
 import { getLevel0TopicsDeep } from "@/lib/topic-queries";
-import { type TagGroupColorMap } from "@/lib/post-labels";
+import { type TagGroupColorMap, resolveTopicColors, resolveTagColors, labelBackground } from "@/lib/post-labels";
 import { getCurrentUser } from "@/lib/auth";
 import { ScrapButton } from "../_components/ScrapButton";
 import { PostBadges } from "../_components/PostCard";
@@ -143,7 +143,40 @@ export default async function ExplorePage({
       prisma.reCreeshot.findMany({
         where: { status: "ACTIVE" },
         orderBy: { createdAt: "desc" },
-        select: { id: true, imageUrl: true, matchScore: true, showBadge: true, referencePhotoUrl: true },
+        select: {
+          id: true,
+          imageUrl: true,
+          matchScore: true,
+          showBadge: true,
+          referencePhotoUrl: true,
+          reCreeshotTopics: {
+            take: 1,
+            orderBy: { createdAt: "asc" },
+            select: {
+              topic: {
+                select: {
+                  nameEn: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true,
+                  parent: {
+                    select: {
+                      colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true,
+                      parent: {
+                        select: {
+                          colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true,
+                          parent: { select: { colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true } },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          reCreeshotTags: {
+            take: 1,
+            orderBy: { createdAt: "asc" },
+            select: { tag: { select: { name: true, group: true, colorHex: true, colorHex2: true, textColorHex: true } } },
+          },
+        },
       }),
       getSavedPostIds(currentUser?.id ?? null),
     ]);
@@ -157,15 +190,30 @@ export default async function ExplorePage({
 
   const hasFilter = !!(q || topicIds.length || tagIds.length || tagGroup);
 
+  const hallShots = recreeshots.map((shot) => {
+    const topicLabels = shot.reCreeshotTopics.map((t) => {
+      const resolved = resolveTopicColors(t.topic);
+      return { text: t.topic.nameEn, background: labelBackground({ text: t.topic.nameEn, ...resolved }), color: resolved.textColorHex };
+    });
+    const tagLabels = shot.reCreeshotTags.map((t) => {
+      const resolved = resolveTagColors(t.tag, tagGroupMap.get(t.tag.group));
+      return { text: t.tag.name, background: labelBackground({ text: t.tag.name, ...resolved }), color: resolved.textColorHex };
+    });
+    const labels = [...topicLabels, ...tagLabels].slice(0, 2);
+    return { id: shot.id, imageUrl: shot.imageUrl, matchScore: shot.matchScore, showBadge: shot.showBadge, referencePhotoUrl: shot.referencePhotoUrl, labels };
+  });
+
   return (
     <div className="max-w-2xl mx-auto pb-14">
 
-      {/* 필터 영역 */}
-      <div className="border-b border-border/50">
-        {q && <ExploreSearchActiveBar q={q} />}
-        <TopicFilterRow topics={level0Topics} />
-        <TagFilterRow tagGroups={tagGroups} />
-      </div>
+      {/* 필터 영역 (Posts 탭에서만) */}
+      {tab !== "hall" && (
+        <div className="border-b border-border/50">
+          {q && <ExploreSearchActiveBar q={q} />}
+          <TopicFilterRow topics={level0Topics} />
+          <TagFilterRow tagGroups={tagGroups} />
+        </div>
+      )}
 
       {/* 탭 바 (sticky top-14 = AppHeader 높이) */}
       <ExploreTabBar />
@@ -175,7 +223,7 @@ export default async function ExplorePage({
         <div className="px-4">
           {posts.length === 0 ? (
             <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
-              {hasFilter ? "No posts found." : "아직 포스트가 없습니다."}
+              Coming soon!
             </div>
           ) : hasFilter ? (
             posts.map((post) => (
@@ -217,7 +265,7 @@ export default async function ExplorePage({
       {/* Hall 탭 */}
       {tab === "hall" && (
         <div className="px-4 py-4">
-          <HallGrid shots={recreeshots} guideVideo={guideVideo} />
+          <HallGrid shots={hallShots} guideVideo={guideVideo} />
         </div>
       )}
     </div>

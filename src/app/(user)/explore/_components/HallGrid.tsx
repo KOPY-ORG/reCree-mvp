@@ -2,12 +2,19 @@ import Link from "next/link";
 import { GuideVideoCard } from "../../_components/GuideVideoCard";
 import { ReCreeshotImage } from "@/components/recreeshot-image";
 
+interface LabelItem {
+  text: string;
+  background: string;
+  color: string;
+}
+
 interface HallShot {
   id: string;
   imageUrl: string;
   matchScore: number | null;
   showBadge: boolean;
   referencePhotoUrl: string | null;
+  labels: LabelItem[];
 }
 
 interface GuideVideoItem {
@@ -41,7 +48,7 @@ export function HallGrid({ shots, guideVideo }: Props) {
         />
       )}
       {shots.map((shot) => (
-        <Link key={shot.id} href={`/explore/hall/${shot.id}`} className="block">
+        <Link key={shot.id} href={`/explore/hall/${shot.id}`} className="block relative">
           <ReCreeshotImage
             shotUrl={shot.imageUrl}
             referenceUrl={shot.referencePhotoUrl}
@@ -53,6 +60,23 @@ export function HallGrid({ shots, guideVideo }: Props) {
             className="w-full aspect-[4/5]"
             sizes="50vw"
           />
+          {shot.labels.length > 0 && (
+            <div className="absolute bottom-2 left-2 flex flex-col gap-1 items-start">
+              {shot.labels.map((label, i) => (
+                <span
+                  key={i}
+                  className="text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none max-w-[90px] truncate"
+                  style={{
+                    background: label.background,
+                    color: label.color,
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.15)",
+                  }}
+                >
+                  {label.text}
+                </span>
+              ))}
+            </div>
+          )}
         </Link>
       ))}
     </div>

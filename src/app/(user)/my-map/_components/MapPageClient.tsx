@@ -333,7 +333,7 @@ export function MapPageClient({
               <div className="flex-1 flex items-center gap-2.5 bg-background rounded-full px-4 py-2.5 shadow-md">
                 <Search className="size-4 text-muted-foreground shrink-0" />
                 <Link
-                  href={`/search?q=${encodeURIComponent(searchQuery)}`}
+                  href={`/search?from=map&q=${encodeURIComponent(searchQuery)}`}
                   className="flex-1 text-sm truncate"
                 >
                   {searchQuery}
@@ -348,7 +348,7 @@ export function MapPageClient({
               </div>
             ) : (
               <Link
-                href="/search"
+                href="/search?from=map"
                 className="flex-1 flex items-center gap-2.5 bg-background rounded-full px-4 py-2.5 shadow-md"
               >
                 <Search className="size-4 text-muted-foreground shrink-0" />
