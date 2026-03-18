@@ -145,7 +145,78 @@ export function CategoryTopicGrid({
     );
   }
 
-  // Level 1이 섹션 헤더, Level 2가 pill 칩
+  // K-POP: L1 섹션 헤더 없이 모든 L2 플랫 표시
+  if (parentTopic.nameEn === "K-POP") {
+    const allL2 = level1Topics.flatMap((l1) => l1.children.map((l2) => ({ l2, l1 })));
+    const expandedEntry = expandedL2Id ? allL2.find(({ l2 }) => l2.id === expandedL2Id) ?? null : null;
+    const expandedL2 = expandedEntry?.l2 ?? null;
+    const expandedL2Parent = expandedEntry?.l1 ?? null;
+    const expandedL2Bg = expandedL2 && expandedL2Parent
+      ? labelBackground({ text: "", ...resolveTopicColors({ ...expandedL2, parent: { ...expandedL2Parent, parent: parentTopic } }) })
+      : null;
+
+    return (
+      <div className="p-4 space-y-4 [--pill-py:0.25rem]">
+        <AllBadge href={`/explore?topicId=${parentTopic.id}`} className="mb-2" />
+        <div className="flex flex-wrap gap-x-2 gap-y-2.5">
+          {allL2.map(({ l2, l1 }) => {
+            const l2Colors = resolveTopicColors({ ...l2, parent: { ...l1, parent: parentTopic } });
+            const bg = labelBackground({ text: "", ...l2Colors });
+            const fg = l2Colors.textColorHex ?? DEFAULT_TEXT;
+            const hasChildren = l2.children.length > 0;
+            const isExpanded = expandedL2Id === l2.id;
+
+            if (!hasChildren) {
+              return (
+                <Link key={l2.id} href={`/explore?topicId=${l2.id}`} className="pill-badge" style={{ background: bg, color: fg }}>
+                  {l2.nameEn}
+                </Link>
+              );
+            }
+
+            return (
+              <LabelBadge
+                key={l2.id}
+                as="button"
+                text={l2.nameEn}
+                background={bg}
+                color={fg}
+                className="transition-all active:opacity-70"
+                style={badgeRingStyle(l2.colorHex ?? l1.colorHex ?? null, isExpanded)}
+                onClick={() => setExpandedL2Id(isExpanded ? null : l2.id)}
+              >
+                {isExpanded ? <ChevronUp className="size-3 opacity-70" /> : <ChevronDown className="size-3 opacity-70" />}
+              </LabelBadge>
+            );
+          })}
+        </div>
+
+        {expandedL2 && expandedL2Parent && expandedL2Bg && (
+          <div className="rounded-2xl bg-muted/60 p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: expandedL2Bg }} />
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{expandedL2.nameEn}</p>
+            </div>
+            <div className="flex flex-wrap gap-x-2 gap-y-2.5">
+              <AllBadge href={`/explore?topicId=${expandedL2.id}`} />
+              {expandedL2.children.map((l3) => {
+                const l3Colors = resolveTopicColors({ ...l3, parent: { ...expandedL2, parent: { ...expandedL2Parent, parent: parentTopic } } });
+                const bg = labelBackground({ text: "", ...l3Colors });
+                const fg = l3Colors.textColorHex ?? DEFAULT_TEXT;
+                return (
+                  <Link key={l3.id} href={`/explore?topicId=${l3.id}`} className="pill-badge" style={{ background: bg, color: fg }}>
+                    {l3.nameEn}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // 일반 모드: Level 1이 섹션 헤더, Level 2가 pill 칩
   return (
     <div className="p-4 space-y-6 [--pill-py:0.25rem]">
       <AllBadge href={`/explore?topicId=${parentTopic.id}`} className="mb-4" />
@@ -211,7 +282,6 @@ export function CategoryTopicGrid({
               })}
             </div>
 
-            {/* L3 펼침 카드 */}
             {expandedL2 && expandedL2Bg && (
               <div className="rounded-2xl bg-muted/60 p-4 mt-3 space-y-3">
                 <div className="flex items-center gap-2">

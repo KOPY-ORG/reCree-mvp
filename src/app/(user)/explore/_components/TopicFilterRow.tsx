@@ -71,6 +71,7 @@ export function TopicFilterRow({ topics }: { topics: Level0Topic[] }) {
   }
 
   const openTopic = openId ? topics.find((t) => t.id === openId) : null;
+  const isKpop = openTopic?.nameEn === "K-POP";
   const resolvedL1Id = activeL1Id ?? openTopic?.children[0]?.id ?? null;
   const activeL1 = openTopic?.children.find((c) => c.id === resolvedL1Id) ?? null;
   const activeL2 = activeL2Id ? (activeL1?.children.find((c) => c.id === activeL2Id) ?? null) : null;
@@ -187,71 +188,46 @@ export function TopicFilterRow({ topics }: { topics: Level0Topic[] }) {
             <p className="text-base font-bold">{openTopic?.nameEn}</p>
           </div>
 
-          <div className="flex overflow-x-auto scrollbar-hide border-b border-border shrink-0">
-            {openTopic?.children.map((l1) => {
-              const isActive = l1.id === resolvedL1Id;
-              const accentColor = l1.colorHex ?? openTopic?.colorHex ?? "#000000";
-              return (
-                <button
-                  key={l1.id}
-                  onClick={() => { setActiveL1Id(l1.id); setActiveL2Id(null); }}
-                  className="shrink-0 px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap active:opacity-70"
-                  style={{
-                    color: isActive ? accentColor : undefined,
-                    borderBottomColor: isActive ? accentColor : "transparent",
-                  }}
-                >
-                  <span className={isActive ? "" : "text-muted-foreground"}>{l1.nameEn}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="flex-1 overflow-y-auto">
-            {activeL1 && (
+          {/* K-POP: L1 탭 없이 모든 L2 플랫 표시 */}
+          {isKpop ? (
+            <div className="flex-1 overflow-y-auto">
               <div className="px-4 pt-4 pb-6 space-y-4 [--pill-py:0.25rem]">
                 <div className="flex flex-wrap gap-2">
                   <AllBadge
-                    onClick={() => navigateGroup(openTopic!.id, activeL1.id)}
-                    active={getGroupSelection(openTopic!.id) === activeL1.id}
+                    onClick={() => navigateGroup(openTopic!.id, openTopic!.id)}
+                    active={getGroupSelection(openTopic!.id) === openTopic!.id}
                     className="shrink-0"
-                  >
-                    All {activeL1.nameEn}
-                  </AllBadge>
-
-                  {activeL1.children.map((l2) => {
-                    const isSelected = activeL2Id === l2.id;
-                    const isNavigated = getGroupSelection(openTopic!.id) === l2.id;
-                    const highlight = isSelected || isNavigated;
-                    const l2Colors = resolveTopicColors({ ...l2, parent: { ...activeL1, parent: openTopic! } });
-                    const hasChildren = l2.children.length > 0;
-
-                    return (
-                      <LabelBadge
-                        key={l2.id}
-                        as="button"
-                        text={l2.nameEn}
-                        background={labelBackground({ text: "", ...l2Colors })}
-                        color={l2Colors.textColorHex}
-                        className="shrink-0 transition-all active:opacity-70"
-                        style={{ ...badgeRingStyle(l2.colorHex ?? activeL1?.colorHex ?? openTopic?.colorHex ?? null, highlight) }}
-                        onClick={() => {
-                          if (hasChildren) {
-                            setActiveL2Id(isSelected ? null : l2.id);
-                          } else {
-                            navigateGroup(openTopic!.id, l2.id);
-                          }
-                        }}
-                      >
-                        {hasChildren &&
-                          (isSelected ? (
-                            <ChevronUp className="size-3.5 opacity-70" />
-                          ) : (
-                            <ChevronDown className="size-3.5 opacity-70" />
-                          ))}
-                      </LabelBadge>
-                    );
-                  })}
+                  />
+                  {openTopic?.children.flatMap((l1) =>
+                    l1.children.map((l2) => {
+                      const isSelected = activeL2Id === l2.id;
+                      const isNavigated = getGroupSelection(openTopic!.id) === l2.id;
+                      const highlight = isSelected || isNavigated;
+                      const l2Colors = resolveTopicColors({ ...l2, parent: { ...l1, parent: openTopic! } });
+                      const hasChildren = l2.children.length > 0;
+                      return (
+                        <LabelBadge
+                          key={l2.id}
+                          as="button"
+                          text={l2.nameEn}
+                          background={labelBackground({ text: "", ...l2Colors })}
+                          color={l2Colors.textColorHex}
+                          className="shrink-0 transition-all active:opacity-70"
+                          style={{ ...badgeRingStyle(l2.colorHex ?? l1.colorHex ?? openTopic?.colorHex ?? null, highlight) }}
+                          onClick={() => {
+                            if (hasChildren) {
+                              setActiveL1Id(l1.id);
+                              setActiveL2Id(isSelected ? null : l2.id);
+                            } else {
+                              navigateGroup(openTopic!.id, l2.id);
+                            }
+                          }}
+                        >
+                          {hasChildren && (isSelected ? <ChevronUp className="size-3.5 opacity-70" /> : <ChevronDown className="size-3.5 opacity-70" />)}
+                        </LabelBadge>
+                      );
+                    })
+                  )}
                 </div>
 
                 {activeL2 && activeL2.children.length > 0 && (
@@ -291,8 +267,112 @@ export function TopicFilterRow({ topics }: { topics: Level0Topic[] }) {
                   </div>
                 )}
               </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <>
+              {/* 일반 모드: L1 탭 바 */}
+              <div className="flex overflow-x-auto scrollbar-hide border-b border-border shrink-0">
+                {openTopic?.children.map((l1) => {
+                  const isActive = l1.id === resolvedL1Id;
+                  const accentColor = l1.colorHex ?? openTopic?.colorHex ?? "#000000";
+                  return (
+                    <button
+                      key={l1.id}
+                      onClick={() => { setActiveL1Id(l1.id); setActiveL2Id(null); }}
+                      className="shrink-0 px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap active:opacity-70"
+                      style={{
+                        color: isActive ? accentColor : undefined,
+                        borderBottomColor: isActive ? accentColor : "transparent",
+                      }}
+                    >
+                      <span className={isActive ? "" : "text-muted-foreground"}>{l1.nameEn}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex-1 overflow-y-auto">
+                {activeL1 && (
+                  <div className="px-4 pt-4 pb-6 space-y-4 [--pill-py:0.25rem]">
+                    <div className="flex flex-wrap gap-2">
+                      <AllBadge
+                        onClick={() => navigateGroup(openTopic!.id, activeL1.id)}
+                        active={getGroupSelection(openTopic!.id) === activeL1.id}
+                        className="shrink-0"
+                      >
+                        All {activeL1.nameEn}
+                      </AllBadge>
+
+                      {activeL1.children.map((l2) => {
+                        const isSelected = activeL2Id === l2.id;
+                        const isNavigated = getGroupSelection(openTopic!.id) === l2.id;
+                        const highlight = isSelected || isNavigated;
+                        const l2Colors = resolveTopicColors({ ...l2, parent: { ...activeL1, parent: openTopic! } });
+                        const hasChildren = l2.children.length > 0;
+                        return (
+                          <LabelBadge
+                            key={l2.id}
+                            as="button"
+                            text={l2.nameEn}
+                            background={labelBackground({ text: "", ...l2Colors })}
+                            color={l2Colors.textColorHex}
+                            className="shrink-0 transition-all active:opacity-70"
+                            style={{ ...badgeRingStyle(l2.colorHex ?? activeL1?.colorHex ?? openTopic?.colorHex ?? null, highlight) }}
+                            onClick={() => {
+                              if (hasChildren) {
+                                setActiveL2Id(isSelected ? null : l2.id);
+                              } else {
+                                navigateGroup(openTopic!.id, l2.id);
+                              }
+                            }}
+                          >
+                            {hasChildren && (isSelected ? <ChevronUp className="size-3.5 opacity-70" /> : <ChevronDown className="size-3.5 opacity-70" />)}
+                          </LabelBadge>
+                        );
+                      })}
+                    </div>
+
+                    {activeL2 && activeL2.children.length > 0 && (
+                      <div className="rounded-2xl bg-muted/60 p-4 space-y-3">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="w-2 h-2 rounded-full shrink-0"
+                            style={{ background: labelBackground({ text: "", ...resolveTopicColors({ ...activeL2, parent: { ...activeL1!, parent: openTopic! } }) }) }}
+                          />
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                            {activeL2.nameEn}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <AllBadge
+                            onClick={() => navigateGroup(openTopic!.id, activeL2.id)}
+                            active={getGroupSelection(openTopic!.id) === activeL2.id}
+                            className="shrink-0"
+                          />
+                          {activeL2.children.map((l3) => {
+                            const l3Colors = resolveTopicColors({ ...l3, parent: { ...activeL2, parent: { ...activeL1!, parent: openTopic! } } });
+                            const isActive = getGroupSelection(openTopic!.id) === l3.id;
+                            return (
+                              <LabelBadge
+                                key={l3.id}
+                                as="button"
+                                text={l3.nameEn}
+                                background={labelBackground({ text: "", ...l3Colors })}
+                                color={l3Colors.textColorHex}
+                                className="shrink-0 transition-all active:opacity-70"
+                                style={badgeRingStyle(l3.colorHex ?? activeL2.colorHex ?? activeL1?.colorHex ?? openTopic?.colorHex ?? null, isActive)}
+                                onClick={() => navigateGroup(openTopic!.id, l3.id)}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </SheetContent>
       </Sheet>
     </>
