@@ -7,9 +7,24 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-inter);
+  --font-sans: var(--font-noto-sans-kr), var(--font-noto-sans);
+  --color-gray-900: var(--palette-gray-900);
+
+  /* ── Typography Scale ───────────────── */
+  /* base: 16px (html 100%) */
+  --text-2xs:    0.6875rem;  /* 11px — 최소 보조 텍스트 */
+  --text-xs:     0.75rem;    /* 12px — 캡션, 메타데이터 */
+  --text-sm:     0.875rem;   /* 14px — 배지, 레이블, 보조 본문 ← 최소 기준 */
+  --text-base:   1rem;       /* 16px — 기본 본문 */
+  --text-lg:     1.125rem;   /* 18px — 섹션 타이틀 */
+  --text-xl:     1.25rem;    /* 20px — 페이지 타이틀 */
+  --text-2xl:    1.5rem;     /* 24px — 디스플레이 */
+
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
+  --color-brand-sub: var(--brand-sub);
+  --color-brand-sub2: var(--brand-sub2);
+  --color-brand-sub3: var(--brand-sub3);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -50,77 +65,68 @@
 
 :root {
   --radius: 0.625rem;
-  /* 브랜드 컬러 */
-  --brand: #C8FF09;
-  --brand-foreground: #0a0a0a;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+
+  /* ── Raw Palette ────────────────── */
+  --palette-brand:      #C8FF09;
+  --palette-brand-sub:  #D0FF6C;
+  --palette-brand-sub2: #E7FFB3;
+  --palette-brand-sub3: #F9FFE3;
+  --palette-black:      #000000;
+  --palette-gray-900:   #3F3D3D;
+  --palette-gray-700:   #737373;
+  --palette-gray-400:   #BABABA;
+  --palette-gray-100:   #F3F3F3;
+  --palette-white:      #FCFCFC;
+
+  /* ── Brand ──────────────────────── */
+  --brand:              var(--palette-brand);
+  --brand-sub:          var(--palette-brand-sub);
+  --brand-sub2:         var(--palette-brand-sub2);
+  --brand-sub3:         var(--palette-brand-sub3);
+  --brand-foreground:   var(--palette-black);
+
+  /* ── Semantic (shadcn/ui) ───────── */
+  --background:           var(--palette-white);
+  --foreground:           var(--palette-black);
+  --card:                 var(--palette-white);
+  --card-foreground:      var(--palette-black);
+  --popover:              var(--palette-white);
+  --popover-foreground:   var(--palette-black);
+  --primary:              var(--palette-black);
+  --primary-foreground:   var(--palette-white);
+  --secondary:            var(--palette-gray-100);
+  --secondary-foreground: var(--palette-black);
+  --muted:                var(--palette-gray-100);
+  --muted-foreground:     var(--palette-gray-700);
+  --accent:               var(--palette-gray-100);
+  --accent-foreground:    var(--palette-black);
+  --destructive:          oklch(0.577 0.245 27.325);
+  --border:               var(--palette-gray-400);
+  --input:                var(--palette-gray-400);
+  --ring:                 var(--palette-gray-700);
+
+  /* ── Chart ──────────────────────── */
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
+  /* ── Sidebar (관리자 사이드바 다크 테마) ── */
+  --sidebar:                    oklch(0.985 0 0);
+  --sidebar-foreground:         oklch(0.145 0 0);
+  --sidebar-primary:            oklch(0.205 0 0);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-accent:             oklch(0.97 0 0);
+  --sidebar-accent-foreground:  oklch(0.205 0 0);
+  --sidebar-border:             oklch(0.922 0 0);
+  --sidebar-ring:               oklch(0.708 0 0);
 }
 
 @layer base {
+  html {
+    font-size: 100%; /* 16px base — text-sm = 14px */
+  }
   * {
     @apply border-border outline-ring/50;
   }
@@ -128,3 +134,81 @@
     @apply bg-background text-foreground;
   }
 }
+
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ── 공통 Pill 뱃지 스타일 ── */
+/* --pill-py (기본 py-0.75), --pill-fs (기본 text-sm) 를 부모에서 오버라이드 가능 */
+.pill-badge {
+  @apply inline-flex items-center gap-1 px-2 rounded-full font-medium leading-none;
+  padding-top: var(--pill-py, 0.1875rem);
+  padding-bottom: var(--pill-py, 0.1875rem);
+  font-size: var(--pill-fs, var(--text-xs));
+}
+
+/* ── 공통 앱 헤더 스타일 ── */
+.app-header {
+  @apply sticky top-0 z-40 bg-background/95 backdrop-blur-sm;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+}
+
+/* ── Post Body Markdown ── */
+.post-body .wmde-markdown {
+  font-family: var(--font-sans) !important;
+  font-size: 0.875rem !important; /* 14px */
+  line-height: 1.8 !important;
+  color: var(--palette-gray-900) !important;
+  background: transparent !important;
+}
+.post-body .wmde-markdown p {
+  margin-bottom: 1.1rem !important;
+}
+.post-body .wmde-markdown p:last-child {
+  margin-bottom: 0 !important;
+}
+.post-body .wmde-markdown h1,
+.post-body .wmde-markdown h2,
+.post-body .wmde-markdown h3 {
+  font-family: var(--font-sans) !important;
+  font-weight: 700 !important;
+  color: var(--foreground) !important;
+  margin-top: 1.75rem !important;
+  margin-bottom: 0.5rem !important;
+  line-height: 1.4 !important;
+}
+.post-body .wmde-markdown h2 { font-size: 1.0625rem !important; } /* 17px */
+.post-body .wmde-markdown h3 { font-size: 0.9375rem !important; } /* 15px */
+.post-body .wmde-markdown strong {
+  font-weight: 700 !important;
+  color: var(--foreground) !important;
+}
+.post-body .wmde-markdown ul,
+.post-body .wmde-markdown ol {
+  padding-left: 1.25rem !important;
+  margin-bottom: 1rem !important;
+}
+.post-body .wmde-markdown li {
+  margin-bottom: 0.35rem !important;
+  line-height: 1.7 !important;
+}
+.post-body .wmde-markdown blockquote {
+  border-left: 3px solid var(--palette-brand) !important;
+  padding: 0.5rem 0.875rem !important;
+  margin: 1.25rem 0 !important;
+  background: var(--palette-gray-100) !important;
+  border-radius: 0 0.5rem 0.5rem 0 !important;
+  color: var(--palette-gray-900) !important;
+}
+.post-body .wmde-markdown hr {
+  border-color: var(--palette-gray-100) !important;
+  margin: 1.5rem 0 !important;
+}
+.post-body .wmde-markdown code {
+  font-size: 0.8125rem !important;
+  background: var(--palette-gray-100) !important;
+  border-radius: 0.25rem !important;
+  padding: 0.1em 0.35em !important;
+  color: var(--palette-gray-900) !important;
+}
+

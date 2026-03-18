@@ -1,5 +1,9 @@
 import { AppHeader } from "./_components/AppHeader";
-import { BottomNav } from "./_components/BottomNav";
+import { ExploreHeader } from "./_components/ExploreHeader";
+import { SavedHeader } from "./_components/SavedHeader";
+import { ConditionalHeader } from "./_components/ConditionalHeader";
+import { ConditionalBottomNav } from "./_components/ConditionalBottomNav";
+import { ActivityTracker } from "./_components/ActivityTracker";
 
 export default function UserLayout({
   children,
@@ -7,12 +11,12 @@ export default function UserLayout({
   children: React.ReactNode;
 }) {
   return (
-    // 데스크탑: 회색 배경 + 중앙 모바일 프레임
-    <div className="lg:min-h-screen lg:bg-zinc-200 lg:flex lg:items-start lg:justify-center lg:py-8">
-      <div className="relative w-full max-w-[430px] h-[100dvh] overflow-hidden bg-background lg:h-[calc(100vh-4rem)] lg:rounded-[2.5rem] lg:shadow-2xl lg:ring-1 lg:ring-zinc-300 flex flex-col">
-        <AppHeader />
-        <main className="flex-1 overflow-y-auto">{children}</main>
-        <BottomNav />
+    <div className="min-h-[100dvh] flex flex-col bg-background">
+      <ActivityTracker />
+      <ConditionalHeader header={<AppHeader />} exploreHeader={<ExploreHeader />} savedHeader={<SavedHeader />} />
+      <main className="flex-1 w-full overflow-x-hidden">{children}</main>
+      <div className="lg:hidden sticky bottom-0 z-40">
+        <ConditionalBottomNav />
       </div>
     </div>
   );

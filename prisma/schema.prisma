@@ -16,8 +16,8 @@ enum UserRole {
 }
 
 enum PostStatus {
-  DRAFT
-  PUBLISHED
+  DRAFT       // 임시저장 (편집 중)
+  PUBLISHED   // 사용자에게 노출
 }
 
 enum PlaceSource {
@@ -34,25 +34,25 @@ enum PlaceStatus {
 enum ReCreeshotStatus {
   ACTIVE
   REPORTED
-  HIDDEN
+  HIDDEN        // 관리자가 직접 숨김
+  REPORT_HIDDEN // 신고 처리로 인한 숨김
   DELETED
 }
 
-enum TopicType {
-  CATEGORY
-  GROUP
-  PERSON
-  WORK
-  SEASON
-  OTHER
+enum ImageType {
+  BANNER    // 장소 사진 (캐러셀, 최대 5장)
+  ORIGINAL  // 연예인 원본 장면/사진 (배너 좌하단 오버레이, 최대 2장)
 }
 
-enum TagGroup {
-  FOOD
-  SPOT
-  EXPERIENCE
-  ITEM
-  BEAUTY
+enum ImageSource {
+  UPLOAD  // Supabase Storage 직접 업로드
+  URL     // 외부 이미지 URL 직접 입력
+  AUTO    // 출처 URL에서 자동 추출 (YouTube oembed 썸네일 등)
+}
+
+enum SourceType {
+  PRIMARY    // 공식 출처 (공식 유튜브, 공식 인스타, 기사 등)
+  REFERENCE  // 참고 출처 (팬 트위터, 팬 인스타, 블로그 등)
 }
 
 enum SaveTarget {
@@ -66,22 +66,46 @@ enum SectionType {
   AUTO_HOT
 }
 
+enum ContentType {
+  POST
+  RECREESHOT
+}
+
+enum ReportReason {
+  SPAM
+  INAPPROPRIATE
+  HARASSMENT
+  FALSE_INFORMATION
+  COPYRIGHT
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING    // 미처리
+  DISMISSED  // 기각
+  RESOLVED   // 처리완료
+}
+
 // ─── Models ───────────────────────────────────────────────────────────────────
 
 model User {
-  id              String   @id @db.Uuid
-  email           String   @unique
-  nickname        String?
-  bio             String?
-  profileImageUrl String?
-  role            UserRole @default(USER)
-  language        String   @default("en")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id               String    @id @db.Uuid
+  email            String    @unique
+  nickname         String?
+  bio              String?
+  profileImageUrl  String?
+  role             UserRole  @default(USER)
+  language         String    @default("en")
+  termsAcceptedAt  DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  posts       Post[]
-  reCreeshots ReCreeshot[]
-  saves       Save[]
+  posts           Post[]
+  reCreeshots     ReCreeshot[]
+  saves           Save[]
+  reCreeshotLikes ReCreeshotLike[]
+  reports         Report[]
+  dailyActivities DailyActiveUser[]
 }
 
 model Topic {
@@ -89,21 +113,22 @@ model Topic {
   nameKo    String
   nameEn    String
   slug      String    @unique
-  type      TopicType
-  subtype   String?
   level     Int       @default(0)
   parentId  String?   @db.Uuid
-  colorHex  String?
-  isActive  Boolean   @default(true)
-  sortOrder Int       @default(0)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  colorHex     String?
+  colorHex2    String?   // 그라데이션 끝 색 (null = 단색)
+  gradientDir  String    @default("to bottom")  // 그라데이션 방향
+  gradientStop Int       @default(150)           // 그라데이션 종료 위치 (%)
+  textColorHex String?
+  isActive     Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   parent   Topic?  @relation("TopicHierarchy", fields: [parentId], references: [id])
   children Topic[] @relation("TopicHierarchy")
 
   postTopics        PostTopic[]
-  placeTopics       PlaceTopic[]
   reCreeshotTopics  ReCreeshotTopic[]
   curatedSections   CuratedSection[]  @relation("FilterTopic")
 }
@@ -113,45 +138,138 @@ model Tag {
   name      String   @unique
   nameKo    String
   slug      String   @unique
-  group     TagGroup
-  colorHex  String?
-  isActive  Boolean  @default(true)
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  group     String
+  colorHex     String?   // null = 그룹 색 상속
+  colorHex2    String?   // 그라데이션 끝 색 (null = 단색)
+  textColorHex String?   // null = 그룹 색 상속
+  isActive     Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   postTags        PostTag[]
-  placeTags       PlaceTag[]
   reCreeshotTags  ReCreeshotTag[]
   curatedSections CuratedSection[] @relation("FilterTag")
 }
 
+model TagGroupConfig {
+  group        String   @id
+  nameEn       String   @default("")
+  colorHex     String   @default("#C6FD09")
+  colorHex2    String?
+  gradientDir  String   @default("to bottom")
+  gradientStop Int      @default(150)
+  textColorHex String   @default("#000000")
+  isVisible    Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  updatedAt    DateTime @updatedAt
+}
+
 model Post {
-  id             String     @id @default(uuid()) @db.Uuid
-  titleKo        String
-  titleEn        String
-  slug           String     @unique
-  subtitleKo     String?
-  subtitleEn     String?
-  bodyKo         String?
-  bodyEn         String?
-  thumbnailUrl   String?
-  images         String[]
-  status         PostStatus @default(DRAFT)
-  source         String?
-  viewCount      Int        @default(0)
-  saveCount      Int        @default(0)
-  authorId       String?    @db.Uuid
-  translatedAt   DateTime?
-  publishedAt    DateTime?
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  id           String     @id @default(uuid()) @db.Uuid
+  titleKo      String
+  titleEn      String
+  slug         String     @unique
+  bodyKo       String?
+  bodyEn       String?
+  status       PostStatus @default(DRAFT)
+  source       String?
+  importNote   String?    // 시트 원본 데이터 (JSON 문자열)
+  memo         String?    // 관리자 내부 메모
+  collectedBy  String?    // 수집자 이름
+  collectedAt  String?    // 수집 날짜 (예: "2024-01-15")
+  recreePhotoUrl String?   // 리크리샷 기준 이미지 (4:5, 관리자 설정)
+  viewCount    Int        @default(0)
+  saveCount    Int        @default(0)
+  authorId     String?    @db.Uuid
+  translatedAt DateTime?
+  publishedAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
   author      User?        @relation(fields: [authorId], references: [id])
   postTopics  PostTopic[]
   postTags    PostTag[]
   postPlaces  PostPlace[]
+  postImages  PostImage[]
+  postSources PostSource[]
   homeBanners HomeBanner[]
+  reports     Report[]
+
+  @@index([saveCount])
+}
+
+model PostImage {
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  postId      String      @db.Uuid
+  imageType   ImageType
+  imageSource ImageSource @default(UPLOAD)
+  url         String
+  linkUrl     String?     // 카드 클릭 시 이동 URL (ORIGINAL 이미지용)
+  isThumbnail Boolean     @default(false)
+  sortOrder   Int         @default(0)
+  slotIndex   Int?        // null=BANNER, 0=슬롯1, 1=슬롯2
+  isSlotCard  Boolean     @default(false)  // 슬롯별 미니 소스 카드 대표 이미지
+  focalX      Float?      // 0.0 ~ 1.0, null = 0.5 (center)
+  focalY      Float?      // 0.0 ~ 1.0, null = 0.5 (center)
+  createdAt   DateTime    @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+}
+
+model PostSource {
+  id             String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  postId         String     @db.Uuid
+  url            String
+  sourceType     SourceType @default(PRIMARY)
+  platform       String?    // YOUTUBE | X | INSTAGRAM | PINTEREST | BLOG | ARTICLE | OTHER
+  sourceNote     String?
+  sourcePostDate String?    // 출처 원본 게시 날짜 (예: "2024-01-15")
+  isOriginalLink Boolean    @default(false) // 원본이미지 클릭 시 이동 URL (포스트당 1개만 true)
+  sortOrder      Int        @default(0)
+  createdAt      DateTime   @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+}
+
+model PlaceType {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String   @unique   // 영문 key: "cafe", "restaurant", "photo_spot"
+  nameKo    String             // 한글: "카페", "레스토랑", "포토스팟"
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model PlaceImage {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  placeId     String   @db.Uuid
+  url         String
+  isThumbnail Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  caption     String?
+  createdAt   DateTime @default(now())
+
+  place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
+}
+
+model Area {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nameKo    String
+  nameEn    String?
+  level     Int      @default(0)   // 0=도시, 1=구역
+  parentId  String?  @db.Uuid
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  parent   Area?   @relation("AreaHierarchy", fields: [parentId], references: [id])
+  children Area[]  @relation("AreaHierarchy")
+  places   Place[]
 }
 
 model Place {
@@ -163,20 +281,30 @@ model Place {
   latitude       Float?
   longitude      Float?
   googlePlaceId  String?     @unique
+  googleMapsUrl  String?
   naverPlaceId   String?
+  naverMapsUrl   String?
+  kakaoMapsUrl   String?
+  gettingThere   String?    // 교통편 안내 텍스트
+  streetViewUrl  String?    // Google Street View URL
+  placeTypes     String[]   @default([])  // 장소 유형 key 배열 (예: ["cafe", "photo_spot"])
   phone          String?
   operatingHours Json?
-  imageUrl       String?
+  rating         Float?    // Google Maps 평점
+  imageUrl       String?   // fallback용 단일 이미지 URL
   source         PlaceSource @default(ADMIN)
   isVerified     Boolean     @default(false)
   status         PlaceStatus @default(OPEN)
+  country        String      @default("KR")
+  city           String?
+  areaId         String?     @db.Uuid
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
+  area         Area?        @relation(fields: [areaId], references: [id])
   postPlaces   PostPlace[]
-  placeTags    PlaceTag[]
-  placeTopics  PlaceTopic[]
   reCreeshots  ReCreeshot[]
+  placeImages  PlaceImage[]
 }
 
 model ReCreeshot {
@@ -195,21 +323,29 @@ model ReCreeshot {
   showBadge        Boolean          @default(false)
   status           ReCreeshotStatus @default(ACTIVE)
   saveCount        Int              @default(0)
+  likeCount        Int              @default(0)
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
-  user            User              @relation(fields: [userId], references: [id])
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   place           Place?            @relation(fields: [placeId], references: [id])
   reCreeshotTopics ReCreeshotTopic[]
   reCreeshotTags   ReCreeshotTag[]
+  reCreeshotLikes  ReCreeshotLike[]
+  reports          Report[]
+
+  @@index([saveCount])
+  @@index([likeCount])
 }
 
 // ─── M:N 조인 테이블 ──────────────────────────────────────────────────────────
 
 model PostTopic {
-  postId    String   @db.Uuid
-  topicId   String   @db.Uuid
-  createdAt DateTime @default(now())
+  postId       String   @db.Uuid
+  topicId      String   @db.Uuid
+  isVisible    Boolean  @default(false)
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
 
   post  Post  @relation(fields: [postId], references: [id], onDelete: Cascade)
   topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
@@ -218,9 +354,11 @@ model PostTopic {
 }
 
 model PostTag {
-  postId    String   @db.Uuid
-  tagId     String   @db.Uuid
-  createdAt DateTime @default(now())
+  postId       String   @db.Uuid
+  tagId        String   @db.Uuid
+  isVisible    Boolean  @default(false)
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
 
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
   tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
@@ -235,7 +373,6 @@ model PostPlace {
   vibe        String[]
   mustTry     String?
   tip         String?
-  reference   String?
   insightEn   Json?
   createdAt   DateTime @default(now())
 
@@ -243,28 +380,6 @@ model PostPlace {
   place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
 
   @@id([postId, placeId])
-}
-
-model PlaceTopic {
-  placeId   String   @db.Uuid
-  topicId   String   @db.Uuid
-  createdAt DateTime @default(now())
-
-  place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
-  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
-
-  @@id([placeId, topicId])
-}
-
-model PlaceTag {
-  placeId   String   @db.Uuid
-  tagId     String   @db.Uuid
-  createdAt DateTime @default(now())
-
-  place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
-  tag   Tag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
-
-  @@id([placeId, tagId])
 }
 
 model ReCreeshotTopic {
@@ -289,6 +404,18 @@ model ReCreeshotTag {
   @@id([reCreeshotId, tagId])
 }
 
+model ReCreeshotLike {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @db.Uuid
+  reCreeshotId String   @db.Uuid
+  createdAt    DateTime @default(now())
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reCreeshot ReCreeshot @relation(fields: [reCreeshotId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, reCreeshotId])
+}
+
 // ─── 기타 모델 ────────────────────────────────────────────────────────────────
 
 model Save {
@@ -304,10 +431,11 @@ model Save {
 }
 
 model HomeBanner {
-  id       String  @id @default(uuid()) @db.Uuid
-  postId   String  @db.Uuid
-  order    Int     @default(0)
-  isActive Boolean @default(true)
+  id             String  @id @default(uuid()) @db.Uuid
+  postId         String  @db.Uuid
+  order          Int     @default(0)
+  isActive       Boolean @default(true)
+  labelOverrides Json?   // [{ type: "topic"|"tag", id: string }] 최대 3개. null = 기본(isVisible top-2)
 
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 }
@@ -315,7 +443,8 @@ model HomeBanner {
 model CuratedSection {
   id            String      @id @default(uuid()) @db.Uuid
   titleEn       String
-  titleKo       String
+  subtitleEn    String?
+  contentType   ContentType @default(POST)
   type          SectionType @default(MANUAL)
   postIds       String[]    @db.Uuid
   filterTopicId String?     @db.Uuid
@@ -330,6 +459,26 @@ model CuratedSection {
   filterTag   Tag?   @relation("FilterTag", fields: [filterTagId], references: [id])
 }
 
+model Report {
+  id           String       @id @default(uuid()) @db.Uuid
+  reason       ReportReason
+  description  String?
+  status       ReportStatus @default(PENDING)
+  reporterId   String       @db.Uuid
+  postId       String?      @db.Uuid
+  reCreeshotId String?      @db.Uuid
+  createdAt    DateTime     @default(now())
+  resolvedAt   DateTime?
+
+  reporter   User        @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  post       Post?       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  reCreeshot ReCreeshot? @relation(fields: [reCreeshotId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([reCreeshotId])
+  @@index([status])
+}
+
 model PopularSearch {
   id        String   @id @default(uuid()) @db.Uuid
   keyword   String   @unique
@@ -337,4 +486,30 @@ model PopularSearch {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model GuideVideo {
+  id           String   @id @default(uuid()) @db.Uuid
+  videoUrl     String
+  thumbnailUrl String?
+  titleEn      String   @default("How to reCree")
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Policy {
+  id        String   @id  // "terms" | "privacy"
+  content   String   @db.Text
+  updatedAt DateTime @updatedAt
+}
+
+model DailyActiveUser {
+  userId String   @db.Uuid
+  date   DateTime @db.Date
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, date])
+  @@index([date])
 }

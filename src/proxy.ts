@@ -32,18 +32,25 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // /admin/* 경로: 비로그인 시 /login 리다이렉트
+  // /admin/* 경로: 비로그인 시 / 리다이렉트
   if (pathname.startsWith("/admin") && !user) {
-    const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = "/login";
-    return NextResponse.redirect(loginUrl);
-  }
-
-  // /login 경로: 이미 로그인된 경우 / 리다이렉트 (중복 로그인 방지)
-  if (pathname === "/login" && user) {
     const homeUrl = request.nextUrl.clone();
     homeUrl.pathname = "/";
     return NextResponse.redirect(homeUrl);
+  }
+
+  // 온보딩 미완료 유저: 허용 경로 외 접근 시 /onboarding으로
+  const onboardingExempt =
+    pathname === "/onboarding" ||
+    pathname === "/login" ||
+    pathname.startsWith("/auth/") ||
+    pathname.startsWith("/policy/") ||
+    pathname.startsWith("/admin");
+
+  if (user && !user.user_metadata?.onboarded && !onboardingExempt) {
+    const onboardingUrl = request.nextUrl.clone();
+    onboardingUrl.pathname = "/onboarding";
+    return NextResponse.redirect(onboardingUrl);
   }
 
   return supabaseResponse;
