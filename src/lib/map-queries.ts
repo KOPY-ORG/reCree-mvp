@@ -52,6 +52,7 @@ export type MapPlace = {
   addressEn: string | null;
   googleMapsUrl: string | null;
   naverMapsUrl: string | null;
+  streetViewUrl: string | null;
   imageUrl: string | null;
   phone: string | null;
   operatingHours: string[] | null;
@@ -78,6 +79,7 @@ async function fetchPostPlaceRows(where: object) {
           addressEn: true,
           googleMapsUrl: true,
           naverMapsUrl: true,
+          streetViewUrl: true,
           imageUrl: true,
           phone: true,
           operatingHours: true,
@@ -212,6 +214,7 @@ function groupByPlace(rows: RawPostPlaceRow[]): MapPlace[] {
         addressEn: place.addressEn,
         googleMapsUrl: place.googleMapsUrl,
         naverMapsUrl: place.naverMapsUrl,
+        streetViewUrl: place.streetViewUrl,
         imageUrl: place.imageUrl,
         phone: place.phone,
         operatingHours: place.operatingHours as string[] | null,
@@ -253,6 +256,7 @@ export async function getMapPlacesByIdsWithFallback(ids: string[]): Promise<MapP
       addressEn: true,
       googleMapsUrl: true,
       naverMapsUrl: true,
+      streetViewUrl: true,
       imageUrl: true,
       phone: true,
       operatingHours: true,
@@ -285,6 +289,7 @@ export async function getMapPlacesByIdsWithFallback(ids: string[]): Promise<MapP
       addressEn: p.addressEn,
       googleMapsUrl: p.googleMapsUrl,
       naverMapsUrl: p.naverMapsUrl,
+      streetViewUrl: p.streetViewUrl,
       imageUrl: p.imageUrl,
       phone: p.phone,
       operatingHours: p.operatingHours as string[] | null,

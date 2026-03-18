@@ -83,6 +83,7 @@ export function PostReCreeshotSection({ postId, shots, originalImageUrl }: Props
           <div className="px-4 space-y-2">
             {shots
               .filter((s) => s.tips)
+              .slice(0, 3)
               .map((shot) => (
                 <div key={shot.id} className="rounded-xl bg-muted/50 px-3.5 py-3 space-y-1">
                   <p className="text-xs font-semibold text-muted-foreground">

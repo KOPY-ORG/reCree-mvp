@@ -17,10 +17,7 @@ export function ScrapButton({ postId, initialSaved, size = "md" }: Props) {
   const { toast, showToast } = useToast();
 
   const iconSize = size === "sm" ? "h-4 w-4" : "h-5 w-5";
-  const unsavedClass =
-    size === "sm"
-      ? "text-white/80 hover:text-white"
-      : "text-muted-foreground hover:text-foreground";
+  const unsavedClass = "text-muted-foreground hover:text-foreground";
 
   function handleClick(e: React.MouseEvent) {
     e.preventDefault();

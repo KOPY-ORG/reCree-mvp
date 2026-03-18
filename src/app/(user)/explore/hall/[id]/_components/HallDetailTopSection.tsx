@@ -6,6 +6,7 @@ import { ChevronLeft, MoreVertical, Download, Pencil, Trash2, Flag } from "lucid
 import { showError } from "@/lib/toast";
 import { deleteReCreeshot } from "@/app/(user)/_actions/recreeshot-actions";
 import { ReportDialog } from "@/components/ReportDialog";
+import { coverRect, loadImage } from "@/lib/canvas-utils";
 
 interface Props {
   id: string;
@@ -22,12 +23,12 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
   const searchParams = useSearchParams();
   const from = searchParams.get("from");
 
+  const savedTab = searchParams.get("savedTab");
+
   function handleBack() {
-    if (from === "profile") {
-      router.push("/profile");
-    } else {
-      router.back();
-    }
+    if (from === "profile") router.push("/profile");
+    else if (from === "saved") router.push(savedTab ? `/saved?tab=${savedTab}` : "/saved");
+    else router.back();
   }
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [compositeUrl, setCompositeUrl] = useState<string | null>(null);
@@ -51,7 +52,9 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
 
       try {
         const shotImg = await loadImage(imageUrl);
-        ctx.drawImage(shotImg, 0, 0, W, H);
+        // object-cover 방식: 비율 유지하며 캔버스를 채움 (찌부 방지)
+        const { sx, sy, sw, sh } = coverRect(shotImg.naturalWidth, shotImg.naturalHeight, W, H);
+        ctx.drawImage(shotImg, sx, sy, sw, sh, 0, 0, W, H);
 
         if (referencePhotoUrl) {
           const refImg = await loadImage(referencePhotoUrl);
@@ -75,7 +78,7 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
           ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
           ctx.clip();
           ctx.filter = "blur(12px)";
-          ctx.drawImage(shotImg, 0, 0, W, H);
+          ctx.drawImage(shotImg, sx, sy, sw, sh, 0, 0, W, H);
           ctx.filter = "none";
           ctx.fillStyle = "rgba(255,255,255,0.15)";
           ctx.fillRect(thumbX, thumbY, thumbW, thumbH);
@@ -164,7 +167,8 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
       setIsDeleting(false);
       return;
     }
-    router.push("/explore?tab=hall");
+    if (from === "profile") router.push("/profile");
+    else router.push("/explore?tab=hall");
   }
 
   function handleReport() {
@@ -291,12 +295,3 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
   );
 }
 
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new window.Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = src;
-  });
-}
