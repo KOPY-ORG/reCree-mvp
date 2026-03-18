@@ -5,6 +5,8 @@ import { X } from "lucide-react";
 
 const CROP_RATIO = 4 / 5; // width / height
 const MIN_BOX_W = 80;
+const OUTPUT_W = 1080;
+const OUTPUT_H = Math.round(OUTPUT_W / CROP_RATIO); // 1350
 
 type DragMode = "move" | "tl" | "tr" | "bl" | "br";
 
@@ -167,14 +169,15 @@ export function ImageCropOverlay({ file, onConfirm, onClose }: Props) {
     const { x: bx, y: by, w: bw, h: bh } = boxRef.current;
 
     const canvas = document.createElement("canvas");
-    canvas.width = Math.round(bw * scale);
-    canvas.height = Math.round(bh * scale);
+    canvas.width = OUTPUT_W;
+    canvas.height = OUTPUT_H;
     const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    if (!ctx) { setIsProcessing(false); return; }
 
-    ctx.drawImage(img, bx * scale, by * scale, bw * scale, bh * scale, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, bx * scale, by * scale, bw * scale, bh * scale, 0, 0, OUTPUT_W, OUTPUT_H);
 
     canvas.toBlob((blob) => {
+      setIsProcessing(false);
       if (!blob) return;
       const croppedFile = new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" });
       onConfirm(croppedFile);
