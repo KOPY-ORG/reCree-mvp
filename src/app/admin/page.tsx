@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { FileText, MapPin, Tag, Hash, ArrowRight, Users, Camera, Flag, Search, Bookmark, Heart } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { formatDate } from "@/lib/utils";
 import { PostStatus } from "@prisma/client";
 
 const STATUS_LABELS: Record<PostStatus, string> = {
@@ -12,11 +13,6 @@ const STATUS_COLORS: Record<PostStatus, string> = {
   DRAFT: "bg-amber-100 text-amber-700",
   PUBLISHED: "bg-green-100 text-green-700",
 };
-
-function formatDate(date: Date): string {
-  const d = new Date(date);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
-}
 
 function StatCard({
   label,
@@ -54,6 +50,39 @@ function StatCard({
     return <Link href={href} className="block hover:opacity-80 transition-opacity h-full">{content}</Link>;
   }
   return content;
+}
+
+function ReCreeshotRankList({ items, countKey, icon: Icon, countColor }: {
+  items: { id: string; locationName: string | null; saveCount?: number; likeCount?: number; user: { nickname: string | null } }[];
+  countKey: "saveCount" | "likeCount";
+  icon: React.ElementType;
+  countColor: string;
+}) {
+  if (items.length === 0) {
+    return <div className="px-4 py-8 text-center text-sm text-zinc-400">데이터 없음</div>;
+  }
+  return (
+    <div className="divide-y divide-zinc-100">
+      {items.map((shot, idx) => (
+        <Link
+          key={shot.id}
+          href={`/explore/hall/${shot.id}`}
+          target="_blank"
+          className="flex items-center gap-3 px-4 py-2.5 hover:bg-zinc-50 transition-colors"
+        >
+          <span className="text-xs font-bold text-zinc-300 w-4 tabular-nums shrink-0">{idx + 1}</span>
+          <div className="flex-1 min-w-0">
+            <span className="text-sm text-zinc-800 truncate block">{shot.locationName ?? "(장소 없음)"}</span>
+            <span className="text-xs text-zinc-400">{shot.user.nickname ?? "익명"}</span>
+          </div>
+          <span className={`text-xs font-semibold shrink-0 flex items-center gap-0.5 ${countColor}`}>
+            <Icon className="size-3" />
+            {shot[countKey] ?? 0}
+          </span>
+        </Link>
+      ))}
+    </div>
+  );
 }
 
 function SectionCard({ title, href, linkLabel, children }: {
@@ -225,58 +254,12 @@ export default async function AdminPage() {
       <div className="grid grid-cols-3 gap-4">
         {/* 스크랩 많은 리크리샷 */}
         <SectionCard title="스크랩 많은 리크리샷" href="/admin/recreeshots" linkLabel="전체 보기">
-          {topSavedRecreeshots.length === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-zinc-400">데이터 없음</div>
-          ) : (
-            <div className="divide-y divide-zinc-100">
-              {topSavedRecreeshots.map((shot, idx) => (
-                <Link
-                  key={shot.id}
-                  href={`/explore/hall/${shot.id}`}
-                  target="_blank"
-                  className="flex items-center gap-3 px-4 py-2.5 hover:bg-zinc-50 transition-colors"
-                >
-                  <span className="text-xs font-bold text-zinc-300 w-4 tabular-nums shrink-0">{idx + 1}</span>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm text-zinc-800 truncate block">{shot.locationName ?? "(장소 없음)"}</span>
-                    <span className="text-xs text-zinc-400">{shot.user.nickname ?? "익명"}</span>
-                  </div>
-                  <span className="text-xs font-semibold text-zinc-500 shrink-0 flex items-center gap-0.5">
-                    <Bookmark className="size-3" />
-                    {shot.saveCount}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          )}
+          <ReCreeshotRankList items={topSavedRecreeshots} countKey="saveCount" icon={Bookmark} countColor="text-zinc-500" />
         </SectionCard>
 
         {/* 좋아요 많은 리크리샷 */}
         <SectionCard title="좋아요 많은 리크리샷" href="/admin/recreeshots" linkLabel="전체 보기">
-          {topLikedRecreeshots.length === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-zinc-400">데이터 없음</div>
-          ) : (
-            <div className="divide-y divide-zinc-100">
-              {topLikedRecreeshots.map((shot, idx) => (
-                <Link
-                  key={shot.id}
-                  href={`/explore/hall/${shot.id}`}
-                  target="_blank"
-                  className="flex items-center gap-3 px-4 py-2.5 hover:bg-zinc-50 transition-colors"
-                >
-                  <span className="text-xs font-bold text-zinc-300 w-4 tabular-nums shrink-0">{idx + 1}</span>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm text-zinc-800 truncate block">{shot.locationName ?? "(장소 없음)"}</span>
-                    <span className="text-xs text-zinc-400">{shot.user.nickname ?? "익명"}</span>
-                  </div>
-                  <span className="text-xs font-semibold text-rose-400 shrink-0 flex items-center gap-0.5">
-                    <Heart className="size-3" />
-                    {shot.likeCount}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          )}
+          <ReCreeshotRankList items={topLikedRecreeshots} countKey="likeCount" icon={Heart} countColor="text-rose-400" />
         </SectionCard>
 
         {/* 인기 검색어 */}

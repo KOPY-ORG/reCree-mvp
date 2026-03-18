@@ -195,6 +195,8 @@ model Post {
   postSources PostSource[]
   homeBanners HomeBanner[]
   reports     Report[]
+
+  @@index([saveCount])
 }
 
 model PostImage {
@@ -331,6 +333,9 @@ model ReCreeshot {
   reCreeshotTags   ReCreeshotTag[]
   reCreeshotLikes  ReCreeshotLike[]
   reports          Report[]
+
+  @@index([saveCount])
+  @@index([likeCount])
 }
 
 // ─── M:N 조인 테이블 ──────────────────────────────────────────────────────────
