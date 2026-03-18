@@ -15,6 +15,7 @@ import {
   Plus,
   FileText,
   ShieldCheck,
+  EyeOff,
 } from "lucide-react";
 import { ReCreeshotImage } from "@/components/recreeshot-image";
 import { deleteAccount } from "../_actions/profile-actions";
@@ -27,6 +28,7 @@ interface ReCreeshot {
   referencePhotoUrl: string | null;
   matchScore: number | null;
   showBadge: boolean;
+  status: string;
 }
 
 interface Props {
@@ -158,26 +160,36 @@ export function ProfileView({
         </div>
       ) : (
         <div className="px-2 grid grid-cols-2 gap-2 bg-background">
-          {recreeshots.map((shot) => (
-            <button
-              key={shot.id}
-              type="button"
-              onClick={() => router.push(`/explore/hall/${shot.id}`)}
-              className="block w-full"
-            >
-              <ReCreeshotImage
-                shotUrl={shot.imageUrl}
-                referenceUrl={shot.referencePhotoUrl}
-                matchScore={shot.matchScore}
-                showBadge={shot.showBadge}
-                referencePosition="top-left"
-                badgePosition="top-right"
-                variant="thumb-md"
-                className="w-full aspect-[4/5] rounded-none"
-                sizes="50vw"
-              />
-            </button>
-          ))}
+          {recreeshots.map((shot) => {
+            const isHidden = shot.status === "HIDDEN" || shot.status === "REPORT_HIDDEN";
+            return (
+              <button
+                key={shot.id}
+                type="button"
+                onClick={() => !isHidden && router.push(`/explore/hall/${shot.id}?from=profile`)}
+                disabled={isHidden}
+                className="relative block w-full disabled:cursor-default"
+              >
+                <ReCreeshotImage
+                  shotUrl={shot.imageUrl}
+                  referenceUrl={shot.referencePhotoUrl}
+                  matchScore={isHidden ? null : shot.matchScore}
+                  showBadge={isHidden ? false : shot.showBadge}
+                  referencePosition="top-left"
+                  badgePosition="top-right"
+                  variant="thumb-md"
+                  className="w-full aspect-[4/5] rounded-none"
+                  sizes="50vw"
+                />
+                {isHidden && (
+                  <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-1.5">
+                    <EyeOff className="size-5 text-white/80" />
+                    <span className="text-[11px] text-white/70 font-medium">Hidden</span>
+                  </div>
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
 

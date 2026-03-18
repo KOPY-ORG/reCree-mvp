@@ -5,7 +5,7 @@ import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { checkNicknameAvailable } from "@/app/(user)/onboarding/_actions/onboarding-actions";
+import { checkNicknameAvailable } from "@/lib/actions/user-actions";
 
 function getAdminClient() {
   return createAdminClient(

@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useTransition, useEffect, useRef } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Check, ChevronRight, CheckCircle2, XCircle, Loader2 } from "lucide-react";
-import { completeOnboarding, checkNicknameAvailable } from "../_actions/onboarding-actions";
-
-type NicknameStatus = "idle" | "checking" | "available" | "taken";
+import { Check, ChevronRight } from "lucide-react";
+import { completeOnboarding } from "../_actions/onboarding-actions";
+import { useNicknameCheck } from "@/hooks/use-nickname-check";
+import { NicknameInput } from "@/components/NicknameInput";
 
 export function OnboardingFlow({
   emailPrefix,
@@ -18,28 +18,9 @@ export function OnboardingFlow({
   const [agreed, setAgreed] = useState(false);
   const [nickname, setNickname] = useState("");
   const [bio, setBio] = useState("");
-  const [nicknameStatus, setNicknameStatus] = useState<NicknameStatus>("idle");
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // 닉네임 입력 시 디바운스 중복 체크
-  useEffect(() => {
-    const trimmed = nickname.trim();
-    if (!trimmed) {
-      setNicknameStatus("idle");
-      return;
-    }
-    setNicknameStatus("checking");
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(async () => {
-      const available = await checkNicknameAvailable(trimmed);
-      setNicknameStatus(available ? "available" : "taken");
-    }, 500);
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [nickname]);
+  const nicknameStatus = useNicknameCheck(nickname);
 
   function handleAgree() {
     if (!agreed) return;
@@ -147,39 +128,13 @@ export function OnboardingFlow({
                 <label className="block text-xs font-medium text-muted-foreground mb-1.5">
                   Nickname <span className="text-destructive">*</span>
                 </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={nickname}
-                    onChange={(e) => setNickname(e.target.value)}
-                    placeholder={emailPrefix}
-                    maxLength={30}
-                    className={`w-full h-11 px-4 pr-10 rounded-xl border bg-background text-sm focus:outline-none transition-colors ${
-                      nicknameStatus === "taken"
-                        ? "border-destructive focus:border-destructive"
-                        : nicknameStatus === "available"
-                        ? "border-green-500 focus:border-green-500"
-                        : "border-border focus:border-foreground"
-                    }`}
-                  />
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    {nicknameStatus === "checking" && (
-                      <Loader2 className="size-4 text-muted-foreground animate-spin" />
-                    )}
-                    {nicknameStatus === "available" && (
-                      <CheckCircle2 className="size-4 text-green-500" />
-                    )}
-                    {nicknameStatus === "taken" && (
-                      <XCircle className="size-4 text-destructive" />
-                    )}
-                  </div>
-                </div>
-                {nicknameStatus === "taken" && (
-                  <p className="mt-1.5 text-xs text-destructive">This nickname is already taken.</p>
-                )}
-                {nicknameStatus === "available" && (
-                  <p className="mt-1.5 text-xs text-green-500">Available!</p>
-                )}
+                <NicknameInput
+                  value={nickname}
+                  onChange={setNickname}
+                  status={nicknameStatus}
+                  placeholder={emailPrefix}
+                  className="h-11 px-4 rounded-xl"
+                />
               </div>
 
               <div>
