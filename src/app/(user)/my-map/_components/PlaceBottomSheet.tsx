@@ -52,7 +52,7 @@ function PostCard({
       {/* 썸네일 */}
       <div className="relative w-20 h-20 shrink-0 rounded-xl overflow-hidden bg-muted">
         {post.imageUrl ? (
-          <Image src={post.imageUrl} alt={post.titleEn} fill unoptimized className="object-cover" sizes="64px" />
+          <Image src={post.imageUrl} alt={post.titleEn} fill unoptimized className="object-cover" sizes="80px" />
         ) : (
           <div className="w-full h-full bg-muted" />
         )}
@@ -180,39 +180,22 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
 
         {/* 지도 링크 */}
         <div className="flex items-center gap-2 flex-wrap">
-          {place.googleMapsUrl && (
+          {[
+            { label: "Google Maps", url: place.googleMapsUrl },
+            { label: "Naver Maps", url: place.naverMapsUrl },
+            { label: "Street View", url: place.streetViewUrl },
+          ].filter((l) => l.url).map((l) => (
             <a
-              href={place.googleMapsUrl}
+              key={l.label}
+              href={l.url!}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium"
             >
               <ExternalLink className="size-3" />
-              Google Maps
+              {l.label}
             </a>
-          )}
-          {place.naverMapsUrl && (
-            <a
-              href={place.naverMapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium"
-            >
-              <ExternalLink className="size-3" />
-              Naver Maps
-            </a>
-          )}
-          {place.streetViewUrl && (
-            <a
-              href={place.streetViewUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium"
-            >
-              <ExternalLink className="size-3" />
-              Street View
-            </a>
-          )}
+          ))}
         </div>
       </div>
 

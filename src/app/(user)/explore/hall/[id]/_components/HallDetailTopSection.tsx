@@ -22,12 +22,12 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
   const searchParams = useSearchParams();
   const from = searchParams.get("from");
 
+  const savedTab = searchParams.get("savedTab");
+
   function handleBack() {
-    if (from === "profile") {
-      router.push("/profile");
-    } else {
-      router.back();
-    }
+    if (from === "profile") router.push("/profile");
+    else if (from === "saved") router.push(savedTab ? `/saved?tab=${savedTab}` : "/saved");
+    else router.back();
   }
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [compositeUrl, setCompositeUrl] = useState<string | null>(null);
