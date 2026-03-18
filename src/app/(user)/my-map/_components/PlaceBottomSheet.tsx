@@ -5,13 +5,7 @@ import { useSheetDrag } from "../_hooks/useSheetDrag";
 import { useToast } from "../../_hooks/useToast";
 import Image from "next/image";
 import Link from "next/link";
-import {
-  ChevronDown,
-  Clock,
-  ExternalLink,
-  Phone,
-  Star,
-} from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { CloseButton } from "./CloseButton";
 import { LabelBadge } from "@/components/LabelBadge";
 import {
@@ -54,45 +48,29 @@ function PostCard({
   const labels = [...topicLabels, ...tagLabels];
 
   return (
-    <Link href={`/posts/${post.slug}`} className="w-[152px] shrink-0">
-      <div className="relative aspect-[3/4] rounded-xl overflow-hidden bg-muted">
+    <Link href={`/posts/${post.slug}`} className="flex gap-3 items-center bg-white border border-border/50 rounded-2xl px-3 py-3">
+      {/* 썸네일 */}
+      <div className="relative w-20 h-20 shrink-0 rounded-xl overflow-hidden bg-muted">
         {post.imageUrl ? (
-          <Image
-            src={post.imageUrl}
-            alt={post.titleEn}
-            fill
-            unoptimized
-            className="object-cover"
-            sizes="152px"
-          />
+          <Image src={post.imageUrl} alt={post.titleEn} fill unoptimized className="object-cover" sizes="64px" />
         ) : (
           <div className="w-full h-full bg-muted" />
         )}
-        {/* 그라데이션 오버레이 */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-        {/* 상단: 토픽·태그 배지 */}
+      </div>
+      {/* 텍스트 */}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold leading-snug line-clamp-2 mb-1">{post.titleEn}</p>
         {labels.length > 0 && (
-          <div className="absolute top-2 left-2 right-2 flex flex-wrap gap-1 [--pill-fs:0.6rem]">
+          <div className="flex flex-wrap gap-1 [--pill-fs:0.6rem]">
             {labels.map((label, i) => (
-              <LabelBadge
-                key={i}
-                text={label.text}
-                background={labelBackground(label)}
-                color={label.textColorHex}
-              />
+              <LabelBadge key={i} text={label.text} background={labelBackground(label)} color={label.textColorHex} />
             ))}
           </div>
         )}
-        {/* 하단 좌: 제목 */}
-        <div className="absolute bottom-2 left-2 right-8">
-          <p className="text-white text-xs font-semibold line-clamp-2 leading-snug drop-shadow">
-            {post.titleEn}
-          </p>
-        </div>
-        {/* 하단 우: 스크랩 버튼 */}
-        <div className="absolute bottom-2 right-2">
-          <ScrapButton postId={post.id} initialSaved={isSaved} size="sm" />
-        </div>
+      </div>
+      {/* 스크랩 버튼 */}
+      <div className="shrink-0">
+        <ScrapButton postId={post.id} initialSaved={isSaved} size="md" />
       </div>
     </Link>
   );
@@ -100,7 +78,6 @@ function PostCard({
 
 export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: Props) {
   const [state, setState] = useState<PlaceSheetState>("half");
-  const [infoOpen, setInfoOpen] = useState(false);
   const { toast, showToast } = useToast();
 
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -114,10 +91,7 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
   });
 
   useEffect(() => {
-    if (place) {
-      setState("half");
-      setInfoOpen(false);
-    }
+    if (place) setState("half");
   }, [place?.id]);
 
   const PLACE_SHEET_STATES = ["tab-only", "half", "full"] as const;
@@ -163,8 +137,6 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
 
   if (!place) return null;
 
-  const hasExtraInfo = !!(place.phone || place.operatingHours?.length);
-
   return (
     <>
     {toast && (
@@ -174,7 +146,7 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
     )}
     <div
       ref={sheetRef}
-      className="absolute inset-x-0 bottom-0 z-50 bg-background rounded-t-[2rem] flex flex-col shadow-[0_-8px_40px_rgba(0,0,0,0.18)] overflow-hidden"
+      className="absolute inset-x-0 bottom-0 z-50 bg-white rounded-t-[2rem] flex flex-col shadow-[0_-8px_40px_rgba(0,0,0,0.18)] overflow-hidden"
       style={sheetStyle}
     >
       {/* 드래그 가능 상단 영역 */}
@@ -206,14 +178,8 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
           </button>
         )}
 
-        {/* 평점 + 지도 링크 */}
+        {/* 지도 링크 */}
         <div className="flex items-center gap-2 flex-wrap">
-          {place.rating != null && (
-            <span className="flex items-center gap-1 text-sm font-semibold">
-              <Star className="size-3.5 fill-brand stroke-brand" />
-              {place.rating.toFixed(1)}
-            </span>
-          )}
           {place.googleMapsUrl && (
             <a
               href={place.googleMapsUrl}
@@ -234,6 +200,17 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
             >
               <ExternalLink className="size-3" />
               Naver Maps
+            </a>
+          )}
+          {place.streetViewUrl && (
+            <a
+              href={place.streetViewUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium"
+            >
+              <ExternalLink className="size-3" />
+              Street View
             </a>
           )}
         </div>
@@ -260,58 +237,16 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
           );
         })()}
 
-        {/* More info 토글 */}
-        {hasExtraInfo && (
-          <div className="border-t border-border/50 mx-5">
-            <button
-              onClick={() => setInfoOpen((v) => !v)}
-              className="flex items-center justify-between w-full py-3 text-xs font-medium text-muted-foreground"
-            >
-              <span>More info</span>
-              <ChevronDown
-                className="size-3.5 transition-transform duration-200"
-                style={{ transform: infoOpen ? "rotate(180deg)" : "rotate(0deg)" }}
-              />
-            </button>
-
-            {infoOpen && (
-              <div className="pb-4 space-y-3">
-                {place.phone && (
-                  <div className="flex items-center gap-2">
-                    <Phone className="size-3.5 shrink-0 text-muted-foreground" />
-                    <a href={`tel:${place.phone}`} className="text-xs">
-                      {place.phone}
-                    </a>
-                  </div>
-                )}
-                {place.operatingHours && place.operatingHours.length > 0 && (
-                  <div className="flex items-start gap-2">
-                    <Clock className="size-3.5 shrink-0 text-muted-foreground mt-0.5" />
-                    <div className="space-y-0.5">
-                      {place.operatingHours.map((line, i) => (
-                        <p key={i} className="text-xs text-muted-foreground">
-                          {line}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                <p className="text-[0.6rem] text-muted-foreground/60 pt-1">via Google Maps</p>
-              </div>
-            )}
-          </div>
-        )}
-
         {/* 관련 포스트 */}
         {place.posts.length > 0 && (
           <>
-            {!hasExtraInfo && <div className="border-t border-border/50 mx-5" />}
+            <div className="border-t border-border/50 mx-5" />
             <div className="px-5 pt-3 pb-2">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                 Related Posts{place.posts.length > 1 ? ` · ${place.posts.length}` : ""}
               </p>
             </div>
-            <div className="flex gap-3 px-5 pb-6 overflow-x-auto scrollbar-hide">
+            <div className="px-5 pb-6 space-y-3">
               {place.posts.map((post) => (
                 <PostCard
                   key={post.id}

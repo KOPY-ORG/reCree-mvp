@@ -307,6 +307,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
       {/* Location 카드 */}
       {spotInsight && (
         <LocationCard
+          placeId={spotInsight.place.id}
           nameEn={spotInsight.place.nameEn}
           nameKo={spotInsight.place.nameKo}
           addressEn={spotInsight.place.addressEn}
@@ -315,10 +316,15 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
           googleMapsUrl={spotInsight.place.googleMapsUrl}
           naverMapsUrl={spotInsight.place.naverMapsUrl ?? null}
           streetViewUrl={spotInsight.place.streetViewUrl ?? null}
-          phone={spotInsight.place.phone ?? null}
-          operatingHours={(spotInsight.place.operatingHours as string[] | null) ?? null}
         />
       )}
+
+      {/* How others reCree'd + Tips */}
+      <PostReCreeshotSection
+        postId={post.id}
+        shots={reCreeshorts}
+        originalImageUrl={originalImages[0]?.url ?? null}
+      />
 
       {/* 본문 */}
       {post.bodyEn && (
@@ -332,13 +338,6 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
           </div>
         </div>
       )}
-
-      {/* How others reCree'd + Tips */}
-      <PostReCreeshotSection
-        postId={post.id}
-        shots={reCreeshorts}
-        originalImageUrl={originalImages[0]?.url ?? null}
-      />
 
       {/* From the Source */}
       <SourceSection sources={post.postSources} />
