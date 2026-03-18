@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronRight, MapPin } from "lucide-react";
+import { ChevronLeft, ChevronRight, MapPin, EyeOff } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { resolveTopicColors, resolveTagColors, type TagGroupColorMap } from "@/lib/post-labels";
@@ -50,6 +50,28 @@ export default async function HallDetailPage({
   });
 
   if (!shot || shot.status === "DELETED") notFound();
+
+  // 숨김 처리된 리크리샷 안내 페이지
+  if (shot.status === "HIDDEN") {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <div className="flex items-center h-12 px-2 bg-white border-b border-gray-100">
+          <Link href="/explore?tab=hall" className="p-2 rounded-full">
+            <ChevronLeft className="size-5 text-black" />
+          </Link>
+        </div>
+        <div className="flex flex-col items-center justify-center py-24 px-8 gap-4 text-center">
+          <div className="size-14 rounded-full bg-muted flex items-center justify-center">
+            <EyeOff className="size-6 text-muted-foreground" />
+          </div>
+          <div className="space-y-1.5">
+            <p className="font-semibold text-base">관리자에 의해 숨김 처리된 리크리샷입니다.</p>
+            <p className="text-sm text-muted-foreground">이 콘텐츠는 현재 표시되지 않습니다.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // 태그 그룹 컬러 맵
   const tagGroups = await prisma.tagGroupConfig.findMany({

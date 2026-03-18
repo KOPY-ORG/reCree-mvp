@@ -34,7 +34,15 @@ export default async function AdminRecreeshotsPage({
         showBadge: true,
         status: true,
         createdAt: true,
+        linkedPostId: true,
         user: { select: { email: true } },
+        place: { select: { nameKo: true } },
+        reCreeshotTopics: {
+          select: { topic: { select: { nameEn: true } } },
+        },
+        reCreeshotTags: {
+          select: { tag: { select: { name: true } } },
+        },
       },
     }),
     prisma.reCreeshot.groupBy({
@@ -42,6 +50,21 @@ export default async function AdminRecreeshotsPage({
       _count: true,
     }),
   ]);
+
+  // linkedPostId로 Post 조회 (Prisma relation 없으므로 별도 쿼리)
+  const linkedPostIds = recreeshots
+    .map((r) => r.linkedPostId)
+    .filter((id): id is string => id !== null);
+
+  const linkedPosts =
+    linkedPostIds.length > 0
+      ? await prisma.post.findMany({
+          where: { id: { in: linkedPostIds } },
+          select: { id: true, titleKo: true },
+        })
+      : [];
+
+  const postMap = new Map(linkedPosts.map((p) => [p.id, p]));
 
   const countMap = new Map(totalCounts.map((c) => [c.status, c._count]));
   const totalActive = countMap.get("ACTIVE") ?? 0;
@@ -56,7 +79,21 @@ export default async function AdminRecreeshotsPage({
     HIDDEN: totalHidden,
   };
 
-  const rows: RecreeshotRow[] = recreeshots;
+  const rows: RecreeshotRow[] = recreeshots.map((r) => ({
+    id: r.id,
+    imageUrl: r.imageUrl,
+    matchScore: r.matchScore,
+    showBadge: r.showBadge,
+    status: r.status,
+    createdAt: r.createdAt,
+    user: r.user,
+    place: r.place,
+    linkedPost: r.linkedPostId ? (postMap.get(r.linkedPostId) ?? null) : null,
+    labelNames: [
+      ...r.reCreeshotTopics.map((t) => t.topic.nameEn),
+      ...r.reCreeshotTags.map((t) => t.tag.name),
+    ],
+  }));
 
   return (
     <div className="p-8">

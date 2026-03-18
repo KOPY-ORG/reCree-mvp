@@ -284,7 +284,7 @@ export function UploadStep3({
         )}
         <button
           type="button"
-          onClick={() => router.push(`/explore/hall/${createdId}`)}
+          onClick={() => router.replace(`/explore/hall/${createdId}`)}
           className="flex items-center justify-center w-full py-3 rounded-full font-semibold text-sm bg-brand text-black"
         >
           {isComposing ? "Skip" : "Done"}
