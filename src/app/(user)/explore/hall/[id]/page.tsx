@@ -1,12 +1,11 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, MapPin } from "lucide-react";
+import { ChevronRight, MapPin } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { HallDetailClient } from "./_components/HallDetailClient";
-import { HallDetailMenuButton } from "./_components/HallDetailMenuButton";
-import { ReCreeshotImage } from "@/components/recreeshot-image";
+import { HallDetailTopSection } from "./_components/HallDetailTopSection";
 
 export default async function HallDetailPage({
   params,
@@ -61,34 +60,15 @@ export default async function HallDetailPage({
   return (
     <div className="max-w-2xl mx-auto pb-20">
 
-      {/* 메인 이미지 + 오버레이 헤더 */}
-      <div className="relative aspect-[4/5]">
-        <ReCreeshotImage
-          shotUrl={shot.imageUrl}
-          referenceUrl={shot.referencePhotoUrl}
-          matchScore={shot.matchScore}
-          showBadge={shot.showBadge}
-          rounded={false}
-          className="w-full h-full"
-          sizes="(max-width: 672px) 100vw, 672px"
-          priority
-        />
-
-        {/* 헤더 오버레이 */}
-        <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-2 pt-3 pb-8 bg-gradient-to-b from-black/40 to-transparent z-10">
-          <Link href="/explore?tab=hall" className="p-2 rounded-full">
-            <ChevronLeft className="size-5 text-white" />
-          </Link>
-          <HallDetailMenuButton
-            id={id}
-            isOwner={isOwner}
-            imageUrl={shot.imageUrl}
-            referencePhotoUrl={shot.referencePhotoUrl}
-            matchScore={shot.matchScore}
-            showBadge={shot.showBadge}
-          />
-        </div>
-      </div>
+      {/* 흰색 헤더 + 합성 이미지 (꾹 눌러 Photos 저장) */}
+      <HallDetailTopSection
+        id={id}
+        isOwner={isOwner}
+        imageUrl={shot.imageUrl}
+        referencePhotoUrl={shot.referencePhotoUrl}
+        matchScore={shot.matchScore}
+        showBadge={shot.showBadge}
+      />
 
       {/* 콘텐츠 */}
       <div className="px-4 py-4 space-y-4">

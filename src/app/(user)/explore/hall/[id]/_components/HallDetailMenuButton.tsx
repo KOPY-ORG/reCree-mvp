@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { MoreVertical, Download, Pencil, Trash2, Flag } from "lucide-react";
 import { toast } from "sonner";
@@ -22,9 +22,150 @@ export function HallDetailMenuButton({ id, isOwner, imageUrl, referencePhotoUrl,
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // iOS에서 navigator.share() 호출이 user gesture 체인 안에 있으려면 blob을 미리 준비해야 함
+  const preparedFileRef = useRef<File | null>(null);
+  const preparedUrlRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    let objectUrl: string | null = null;
+
+    async function prerender() {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const W = 1080;
+      const H = W * (5 / 4);
+      canvas.width = W;
+      canvas.height = H;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      try {
+        const shotImg = await loadImage(imageUrl);
+        ctx.drawImage(shotImg, 0, 0, W, H);
+
+        if (referencePhotoUrl) {
+          const refImg = await loadImage(referencePhotoUrl);
+          const thumbW = W * 0.18;
+          const thumbH = thumbW * (5 / 4);
+          const thumbX = W * 0.03;
+          const thumbY = W * 0.03;
+          const thumbR = Math.round(thumbW * 0.12);
+          ctx.save();
+          ctx.beginPath();
+          ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
+          ctx.clip();
+          ctx.filter = "blur(12px)";
+          ctx.drawImage(shotImg, 0, 0, W, H);
+          ctx.filter = "none";
+          ctx.fillStyle = "rgba(255,255,255,0.15)";
+          ctx.fillRect(thumbX, thumbY, thumbW, thumbH);
+          ctx.restore();
+          ctx.save();
+          ctx.filter = "blur(8px)";
+          ctx.fillStyle = "rgba(255,255,255,0.5)";
+          ctx.beginPath();
+          ctx.roundRect(thumbX - 2, thumbY - 2, thumbW + 4, thumbH + 4, thumbR + 2);
+          ctx.fill();
+          ctx.filter = "none";
+          ctx.restore();
+          ctx.save();
+          ctx.beginPath();
+          ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
+          ctx.clip();
+          ctx.drawImage(refImg, thumbX, thumbY, thumbW, thumbH);
+          ctx.restore();
+          ctx.save();
+          ctx.strokeStyle = "#ffffff";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        if (showBadge && matchScore !== null) {
+          const badgeText = `${Math.round(matchScore)}% Match`;
+          const fontSize = 32;
+          const badgePadX = 28;
+          const badgePadY = 20;
+          ctx.font = `700 ${fontSize}px -apple-system, Helvetica Neue, sans-serif`;
+          const textW = ctx.measureText(badgeText).width;
+          const badgeW = textW + badgePadX * 2;
+          const badgeH = fontSize + badgePadY * 2;
+          const badgeX = W - badgeW - W * 0.03;
+          const badgeY = W * 0.03;
+          const grad = ctx.createLinearGradient(badgeX, 0, badgeX + badgeW * 1.5, 0);
+          grad.addColorStop(0, "#C8FF09");
+          grad.addColorStop(1, "#ffffff");
+          ctx.save();
+          ctx.shadowColor = "rgba(0,0,0,0.15)";
+          ctx.shadowBlur = 12;
+          ctx.shadowOffsetY = 3;
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.roundRect(badgeX, badgeY, badgeW, badgeH, badgeH / 2);
+          ctx.fill();
+          ctx.restore();
+          ctx.save();
+          ctx.fillStyle = "#000000";
+          ctx.font = `700 ${fontSize}px -apple-system, Helvetica Neue, sans-serif`;
+          ctx.textBaseline = "alphabetic";
+          const textY = badgeY + badgePadY + fontSize * 0.82;
+          ctx.fillText(badgeText, badgeX + badgePadX, textY);
+          ctx.restore();
+        }
+
+        ctx.save();
+        ctx.font = `600 28px 'Noto Sans', sans-serif`;
+        ctx.fillStyle = "rgba(255,255,255,0.75)";
+        ctx.textBaseline = "alphabetic";
+        ctx.shadowColor = "rgba(0,0,0,0.75)";
+        ctx.shadowBlur = 8;
+        ctx.shadowOffsetY = 2;
+        const watermarkText = "reCree";
+        const watermarkX = W - ctx.measureText(watermarkText).width - W * 0.03;
+        const watermarkY = H - W * 0.03;
+        ctx.fillText(watermarkText, watermarkX, watermarkY);
+        ctx.restore();
+
+        canvas.toBlob((blob) => {
+          if (!blob) return;
+          objectUrl = URL.createObjectURL(blob);
+          preparedFileRef.current = new File([blob], "recreeshot.jpg", { type: "image/jpeg" });
+          preparedUrlRef.current = objectUrl;
+        }, "image/jpeg", 0.92);
+      } catch {
+        // CORS 등 실패 시 무시 — 저장 버튼 누를 때 재시도
+      }
+    }
+
+    prerender();
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [imageUrl, referencePhotoUrl, matchScore, showBadge]);
 
   async function handleSaveImage() {
     setOpen(false);
+
+    // 미리 준비된 blob이 있으면 바로 share (user gesture 체인 유지)
+    if (preparedFileRef.current && navigator.share) {
+      try {
+        await navigator.share({ files: [preparedFileRef.current], title: "My recreeshot" });
+        return;
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") return;
+      }
+    }
+    if (preparedUrlRef.current) {
+      const a = document.createElement("a");
+      a.href = preparedUrlRef.current;
+      a.download = "recreeshot.jpg";
+      a.click();
+      return;
+    }
+
+    // fallback: 미리 준비 안 됐을 때 직접 렌더링
     setIsGenerating(true);
 
     const canvas = canvasRef.current;
@@ -43,7 +184,7 @@ export function HallDetailMenuButton({ id, isOwner, imageUrl, referencePhotoUrl,
     if (referencePhotoUrl) {
       const refImg = await loadImage(referencePhotoUrl);
       const thumbW = W * 0.18;
-      const thumbH = thumbW * (4 / 3);
+      const thumbH = thumbW * (5 / 4);
       const thumbX = W * 0.03;
       const thumbY = W * 0.03;
       const thumbR = Math.round(thumbW * 0.12);
@@ -215,17 +356,18 @@ export function HallDetailMenuButton({ id, isOwner, imageUrl, referencePhotoUrl,
           <>
             <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
             <div className="absolute top-10 right-0 z-20 bg-black/50 backdrop-blur-md rounded-lg shadow-lg overflow-hidden w-max">
+              {/* TODO: 테스트용 — Save image 전체 공개, 이후 isOwner 조건으로 복구 필요 */}
+              <button
+                type="button"
+                onClick={handleSaveImage}
+                disabled={isGenerating}
+                className="flex items-center gap-2 w-full px-3.5 py-2.5 text-xs font-medium text-white/90 hover:bg-white/10 transition-colors disabled:opacity-50 border-b border-white/10"
+              >
+                <Download className="size-3.5 shrink-0" />
+                {isGenerating ? "Saving..." : "Save image"}
+              </button>
               {isOwner ? (
                 <>
-                  <button
-                    type="button"
-                    onClick={handleSaveImage}
-                    disabled={isGenerating}
-                    className="flex items-center gap-2 w-full px-3.5 py-2.5 text-xs font-medium text-white/90 hover:bg-white/10 transition-colors disabled:opacity-50 border-b border-white/10"
-                  >
-                    <Download className="size-3.5 shrink-0" />
-                    {isGenerating ? "Saving..." : "Save image"}
-                  </button>
                   <button
                     type="button"
                     onClick={() => { setOpen(false); router.push(`/explore/hall/${id}/edit`); }}
