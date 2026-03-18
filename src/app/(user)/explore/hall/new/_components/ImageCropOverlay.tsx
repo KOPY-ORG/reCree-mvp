@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { X } from "lucide-react";
 
-const CROP_RATIO = 3 / 4; // width / height
+const CROP_RATIO = 4 / 5; // width / height
 const MIN_BOX_W = 80;
 
 type DragMode = "move" | "tl" | "tr" | "bl" | "br";

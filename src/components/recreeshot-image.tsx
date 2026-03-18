@@ -38,7 +38,7 @@ export function ReCreeshotImage({
   const refStyle: React.CSSProperties = {
     position: "absolute",
     width: "22%",
-    aspectRatio: "3/4",
+    aspectRatio: "4/5",
     overflow: "hidden",
     borderRadius: "8%",
     backdropFilter: "blur(4px)",

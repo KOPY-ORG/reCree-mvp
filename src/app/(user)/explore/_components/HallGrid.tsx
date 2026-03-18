@@ -35,7 +35,7 @@ export function HallGrid({ shots }: Props) {
             badgePosition="top-right"
             showMatchLabel={false}
             rounded={false}
-            className="aspect-[3/4] rounded-lg"
+            className="aspect-[4/5] rounded-lg"
             sizes="(max-width: 672px) 50vw, 336px"
           />
         </Link>

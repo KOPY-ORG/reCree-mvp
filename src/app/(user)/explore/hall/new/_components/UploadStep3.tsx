@@ -33,7 +33,7 @@ export function UploadStep3({
 
       // 미리보기와 동일한 비율로 캔버스 생성 (패딩 없음)
       const W = 1080;
-      const H = W * (4 / 3);
+      const H = W * (5 / 4);
       canvas.width = W;
       canvas.height = H;
 
@@ -192,7 +192,7 @@ export function UploadStep3({
       )}
 
       {/* 이미지 — Step 1/2와 동일한 비율·스타일 */}
-      <div className="relative mx-auto h-[50dvh] aspect-[3/4] shadow-md">
+      <div className="relative mx-auto h-[50dvh] aspect-[4/5] shadow-md">
         <ReCreeshotImage
           shotUrl={shotPreviewUrl}
           referenceUrl={referencePreviewUrl}

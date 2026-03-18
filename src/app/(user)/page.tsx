@@ -263,7 +263,7 @@ export default async function HomePage() {
             <HScrollSection key={section.id} title={section.titleEn} moreHref="/explore?tab=hall">
               {data.items.map((shot) => (
                 <div key={shot.id} className="shrink-0 w-[120px]">
-                  <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-muted">
+                  <div className="relative aspect-[4/5] rounded-lg overflow-hidden bg-muted">
                     <Image
                       src={shot.imageUrl}
                       alt="recreeshot"

@@ -75,7 +75,7 @@ export function UploadStep1({
   return (
     <div className="flex flex-col h-[calc(100dvh-3rem)] px-4 py-4 gap-3">
       {/* 메인 shot 영역 */}
-      <div className="relative w-full aspect-[3/4]">
+      <div className="relative w-full aspect-[4/5]">
         {/* 리크리샷 업로드 버튼 */}
         <button
           type="button"

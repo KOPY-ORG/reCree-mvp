@@ -103,7 +103,7 @@ function RecreeshotInlineSection({
               badgePosition="top-right"
               showMatchLabel={false}
               rounded={false}
-              className="aspect-[3/4] rounded-lg"
+              className="aspect-[4/5] rounded-lg"
               sizes="90px"
             />
           </Link>

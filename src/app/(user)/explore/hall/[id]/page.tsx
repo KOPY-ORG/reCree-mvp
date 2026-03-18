@@ -62,7 +62,7 @@ export default async function HallDetailPage({
     <div className="max-w-2xl mx-auto pb-20">
 
       {/* 메인 이미지 + 오버레이 헤더 */}
-      <div className="relative aspect-[3/4]">
+      <div className="relative aspect-[4/5]">
         <ReCreeshotImage
           shotUrl={shot.imageUrl}
           referenceUrl={shot.referencePhotoUrl}

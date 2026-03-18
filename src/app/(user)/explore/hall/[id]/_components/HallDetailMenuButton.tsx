@@ -31,7 +31,7 @@ export function HallDetailMenuButton({ id, isOwner, imageUrl, referencePhotoUrl,
     if (!canvas) return;
 
     const W = 1080;
-    const H = W * (4 / 3);
+    const H = W * (5 / 4);
     canvas.width = W;
     canvas.height = H;
     const ctx = canvas.getContext("2d");
