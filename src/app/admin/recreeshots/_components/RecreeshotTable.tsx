@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { EyeOff, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatDate } from "@/lib/utils";
 import { setRecreeshotStatus } from "../_actions/recreeshot-actions";
 import type { ReCreeshotStatus } from "@prisma/client";
 
@@ -35,10 +36,6 @@ const STATUS_LABEL: Record<ReCreeshotStatus, string> = {
   DELETED: "삭제됨",
 };
 
-function formatDate(d: Date) {
-  const date = new Date(d);
-  return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, "0")}.${String(date.getDate()).padStart(2, "0")}`;
-}
 
 export function RecreeshotTable({ rows }: { rows: RecreeshotRow[] }) {
   const [, startTransition] = useTransition();

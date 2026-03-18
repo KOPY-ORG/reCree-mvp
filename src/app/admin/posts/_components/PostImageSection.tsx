@@ -622,12 +622,12 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
                     key={img.url}
                     type="button"
                     onClick={() => setReCreeCropSrc(img.url)}
-                    className="relative w-12 aspect-[3/2] rounded overflow-hidden border hover:border-zinc-400 transition-colors shrink-0"
+                    className="group relative w-12 aspect-[3/2] rounded overflow-hidden border hover:border-zinc-400 transition-colors shrink-0"
                     title={`배너 ${i + 1}에서 자르기`}
                   >
                     <img src={img.url} alt="" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/30 transition-colors">
-                      <Crop className="h-3 w-3 text-white opacity-0 hover:opacity-100" />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors">
+                      <Crop className="h-3 w-3 text-white opacity-0 group-hover:opacity-100" />
                     </div>
                   </button>
                 ))}
@@ -654,8 +654,8 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
                   const file = e.target.files?.[0];
                   e.target.value = "";
                   if (!file) return;
-                  const objectUrl = URL.createObjectURL(file);
-                  setReCreeCropSrc(objectUrl);
+                  // blob URL은 크롭 완료/취소 시 revoke됨
+                  setReCreeCropSrc(URL.createObjectURL(file));
                 }}
               />
             </label>
@@ -668,12 +668,16 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
         <ReCreeshotCropDialog
           open
           imageSrc={reCreeCropSrc}
-          onClose={() => setReCreeCropSrc(null)}
+          onClose={() => {
+            if (reCreeCropSrc.startsWith("blob:")) URL.revokeObjectURL(reCreeCropSrc);
+            setReCreeCropSrc(null);
+          }}
           onConfirm={async (blob) => {
+            if (reCreeCropSrc.startsWith("blob:")) URL.revokeObjectURL(reCreeCropSrc);
             setReCreeCropSrc(null);
             setRecreeUploading(true);
             try {
-              const supabase = (await import("@/lib/supabase/client")).createClient();
+              const supabase = createClient();
               const path = `recree/${postId ?? "new"}/${Date.now()}.jpg`;
               const { error } = await supabase.storage.from("post-images").upload(path, blob, { contentType: "image/jpeg", upsert: false });
               if (error) { toast.error("업로드 실패: " + error.message); return; }
