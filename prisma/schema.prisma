@@ -105,6 +105,7 @@ model User {
   saves           Save[]
   reCreeshotLikes ReCreeshotLike[]
   reports         Report[]
+  dailyActivities DailyActiveUser[]
 }
 
 model Topic {
@@ -496,4 +497,14 @@ model Policy {
   id        String   @id  // "terms" | "privacy"
   content   String   @db.Text
   updatedAt DateTime @updatedAt
+}
+
+model DailyActiveUser {
+  userId String   @db.Uuid
+  date   DateTime @db.Date
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, date])
+  @@index([date])
 }
