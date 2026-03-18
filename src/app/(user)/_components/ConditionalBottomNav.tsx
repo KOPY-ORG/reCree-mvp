@@ -9,7 +9,8 @@ export function ConditionalBottomNav() {
     pathname === "/search" ||
     pathname === "/explore/hall/new" ||
     pathname.endsWith("/edit") ||
-    pathname.startsWith("/policy/")
+    pathname.startsWith("/policy/") ||
+    pathname === "/onboarding"
   ) return null;
   return <BottomNav />;
 }

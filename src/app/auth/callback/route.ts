@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   const { user } = data.session;
 
   // Prisma users 테이블에 upsert (Supabase auth.users와 동기화)
-  await prisma.user.upsert({
+  const dbUser = await prisma.user.upsert({
     where: { id: user.id },
     create: {
       id: user.id,
@@ -40,6 +40,11 @@ export async function GET(request: NextRequest) {
     },
     data: { profileImageUrl: null },
   });
+
+  // 온보딩 미완료 유저 → /onboarding
+  if (!dbUser.termsAcceptedAt) {
+    return NextResponse.redirect(`${origin}/onboarding`);
+  }
 
   return NextResponse.redirect(`${origin}${next}`);
 }

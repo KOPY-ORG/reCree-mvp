@@ -39,6 +39,20 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(homeUrl);
   }
 
+  // 온보딩 미완료 유저: 허용 경로 외 접근 시 /onboarding으로
+  const onboardingExempt =
+    pathname === "/onboarding" ||
+    pathname === "/login" ||
+    pathname.startsWith("/auth/") ||
+    pathname.startsWith("/policy/") ||
+    pathname.startsWith("/admin");
+
+  if (user && !user.user_metadata?.onboarded && !onboardingExempt) {
+    const onboardingUrl = request.nextUrl.clone();
+    onboardingUrl.pathname = "/onboarding";
+    return NextResponse.redirect(onboardingUrl);
+  }
+
   return supabaseResponse;
 }
 

@@ -1,10 +1,13 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useRef, useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Camera } from "lucide-react";
+import { Camera, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { updateProfile, uploadProfileImage } from "../_actions/profile-actions";
+import { checkNicknameAvailable } from "@/app/(user)/onboarding/_actions/onboarding-actions";
 import { showToast, showError } from "@/lib/toast";
+
+type NicknameStatus = "idle" | "checking" | "available" | "taken";
 
 interface Props {
   email: string;
@@ -24,9 +27,31 @@ export function ProfileEditForm({
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(profileImageUrl);
   const [photoRemoved, setPhotoRemoved] = useState(false);
+  const [nicknameStatus, setNicknameStatus] = useState<NicknameStatus>("idle");
   const router = useRouter();
   const [isSaving, startSaving] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const trimmed = nicknameVal.trim();
+    // 현재 닉네임과 동일하면 체크 불필요
+    if (trimmed === (nickname ?? "").trim()) {
+      setNicknameStatus("idle");
+      return;
+    }
+    if (!trimmed) {
+      setNicknameStatus("idle");
+      return;
+    }
+    setNicknameStatus("checking");
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      const available = await checkNicknameAvailable(trimmed);
+      setNicknameStatus(available ? "available" : "taken");
+    }, 500);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [nicknameVal, nickname]);
 
   const initial = email[0].toUpperCase();
 
@@ -140,15 +165,40 @@ export function ProfileEditForm({
           <label htmlFor="nickname" className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
             Nickname
           </label>
-          <input
-            id="nickname"
-            type="text"
-            value={nicknameVal}
-            onChange={(e) => setNicknameVal(e.target.value)}
-            placeholder="Your nickname"
-            maxLength={30}
-            className="w-full text-sm bg-transparent border border-border rounded-lg px-3 py-2.5 outline-none focus:border-foreground transition-colors placeholder:text-muted-foreground/50"
-          />
+          <div className="relative">
+            <input
+              id="nickname"
+              type="text"
+              value={nicknameVal}
+              onChange={(e) => setNicknameVal(e.target.value)}
+              placeholder="Your nickname"
+              maxLength={30}
+              className={`w-full text-sm bg-transparent border rounded-lg px-3 py-2.5 pr-9 outline-none transition-colors placeholder:text-muted-foreground/50 ${
+                nicknameStatus === "taken"
+                  ? "border-destructive focus:border-destructive"
+                  : nicknameStatus === "available"
+                  ? "border-green-500 focus:border-green-500"
+                  : "border-border focus:border-foreground"
+              }`}
+            />
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              {nicknameStatus === "checking" && (
+                <Loader2 className="size-4 text-muted-foreground animate-spin" />
+              )}
+              {nicknameStatus === "available" && (
+                <CheckCircle2 className="size-4 text-green-500" />
+              )}
+              {nicknameStatus === "taken" && (
+                <XCircle className="size-4 text-destructive" />
+              )}
+            </div>
+          </div>
+          {nicknameStatus === "taken" && (
+            <p className="text-xs text-destructive">This nickname is already taken.</p>
+          )}
+          {nicknameStatus === "available" && (
+            <p className="text-xs text-green-500">Available!</p>
+          )}
         </div>
 
         <div className="space-y-1.5">
@@ -170,7 +220,7 @@ export function ProfileEditForm({
         <button
           type="button"
           onClick={handleSave}
-          disabled={isSaving}
+          disabled={isSaving || nicknameStatus === "taken" || nicknameStatus === "checking"}
           className="w-full py-3 rounded-lg bg-brand text-black text-sm font-semibold disabled:opacity-50 transition-opacity"
         >
           {isSaving ? "Saving..." : "Save changes"}

@@ -1,8 +1,7 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { PolicyContent } from "./_components/PolicyContent";
+import { PolicyBackButton } from "./_components/PolicyBackButton";
 
 const TITLES: Record<string, string> = {
   terms: "Terms of Service",
@@ -25,9 +24,7 @@ export default async function PolicyPage({
     <div className="min-h-screen bg-background">
       <header className="app-header">
         <div className="h-12 flex items-center gap-1 px-2">
-          <Link href="/profile" className="flex items-center justify-center size-8">
-            <ChevronLeft className="size-5" />
-          </Link>
+          <PolicyBackButton />
           <h1 className="text-sm font-semibold">{TITLES[type]}</h1>
         </div>
       </header>
