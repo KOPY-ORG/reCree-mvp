@@ -48,7 +48,7 @@ export function PostReCreeshotSection({ postId, shots, originalImageUrl }: Props
           className="shrink-0 w-[90px] aspect-[4/5] rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-1.5 bg-muted/30 hover:bg-muted/50 transition-colors"
         >
           <Camera className="size-5 text-muted-foreground" />
-          <span className="text-[10px] font-semibold text-muted-foreground leading-tight text-center">Add<br />reCree</span>
+          <span className="text-[10px] font-semibold text-muted-foreground leading-tight text-center">Add<br />recreeshot</span>
         </button>
 
         {/* 리크리샷 카드 목록 */}
@@ -77,19 +77,19 @@ export function PostReCreeshotSection({ postId, shots, originalImageUrl }: Props
 
       {/* Tips 섹션 */}
       {shots.some((s) => s.tips) && (
-        <div className="mx-4 mt-3 rounded-2xl border border-secondary bg-white overflow-hidden">
-          <div className="px-4 pt-4 pb-3">
+        <div className="mt-4">
+          <div className="px-4 mb-2">
             <p className="text-sm font-bold">Tips from reCree&apos;rs</p>
           </div>
-          <div className="px-4 pb-4 space-y-3">
+          <div className="px-4 space-y-2">
             {shots
               .filter((s) => s.tips)
               .map((shot) => (
-                <div key={shot.id} className="space-y-0.5">
+                <div key={shot.id} className="rounded-xl bg-muted/50 px-3.5 py-3 space-y-1">
                   <p className="text-xs font-semibold text-muted-foreground">
                     {shot.user.nickname ?? "Anonymous"}
                   </p>
-                  <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-line">
+                  <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">
                     {shot.tips}
                   </p>
                 </div>

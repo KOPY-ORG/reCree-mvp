@@ -17,6 +17,8 @@ interface Props {
   onCheckScore: () => void;
   onNext: () => void;
   isUploading: boolean;
+  prefillReferenceUrl?: string;
+  onRestoreReference?: () => void;
 }
 
 function getScoreMessage(score: number): { headline: string; sub: string } {
@@ -40,6 +42,8 @@ export function UploadStep1({
   onCheckScore,
   onNext,
   isUploading,
+  prefillReferenceUrl,
+  onRestoreReference,
 }: Props) {
   const refInputRef = useRef<HTMLInputElement>(null);
   const shotInputRef = useRef<HTMLInputElement>(null);
@@ -147,6 +151,17 @@ export function UploadStep1({
           </div>
         )}
       </div>
+
+      {/* prefill reference 복원 버튼 */}
+      {!hasReference && prefillReferenceUrl && onRestoreReference && (
+        <button
+          type="button"
+          onClick={onRestoreReference}
+          className="w-full py-2.5 rounded-full text-sm font-medium border border-border text-foreground"
+        >
+          Use original photo
+        </button>
+      )}
 
       {/* 점수 결과 영역 */}
       {scoreMessage && previewScore !== null && (
