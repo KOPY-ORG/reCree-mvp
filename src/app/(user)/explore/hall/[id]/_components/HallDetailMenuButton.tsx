@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { MoreVertical, Download, Pencil, Trash2, Flag } from "lucide-react";
 import { showToast, showError } from "@/lib/toast";
 import { deleteReCreeshot } from "@/app/(user)/_actions/recreeshot-actions";
+import { loadImage } from "@/lib/canvas-utils";
 
 interface Props {
   id: string;
@@ -403,12 +404,3 @@ export function HallDetailMenuButton({ id, isOwner, imageUrl, referencePhotoUrl,
   );
 }
 
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new window.Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = src;
-  });
-}

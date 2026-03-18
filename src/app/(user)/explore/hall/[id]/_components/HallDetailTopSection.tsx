@@ -6,6 +6,7 @@ import { ChevronLeft, MoreVertical, Download, Pencil, Trash2, Flag } from "lucid
 import { showError } from "@/lib/toast";
 import { deleteReCreeshot } from "@/app/(user)/_actions/recreeshot-actions";
 import { ReportDialog } from "@/components/ReportDialog";
+import { coverRect, loadImage } from "@/lib/canvas-utils";
 
 interface Props {
   id: string;
@@ -166,7 +167,8 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
       setIsDeleting(false);
       return;
     }
-    router.push("/explore?tab=hall");
+    if (from === "profile") router.push("/profile");
+    else router.push("/explore?tab=hall");
   }
 
   function handleReport() {
@@ -293,26 +295,3 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
   );
 }
 
-function coverRect(natW: number, natH: number, canvasW: number, canvasH: number) {
-  const imgAspect = natW / natH;
-  const canvasAspect = canvasW / canvasH;
-  let sx = 0, sy = 0, sw = natW, sh = natH;
-  if (imgAspect > canvasAspect) {
-    sw = Math.round(natH * canvasAspect);
-    sx = Math.round((natW - sw) / 2);
-  } else {
-    sh = Math.round(natW / canvasAspect);
-    sy = Math.round((natH - sh) / 2);
-  }
-  return { sx, sy, sw, sh };
-}
-
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new window.Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = src;
-  });
-}

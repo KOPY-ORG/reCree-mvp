@@ -36,6 +36,8 @@ function rehypeRemoveUnknownElements() {
   };
 }
 
+const REHYPE_PLUGINS: [() => (tree: Root) => void] = [rehypeRemoveUnknownElements];
+
 interface Props {
   source: string;
 }
@@ -46,7 +48,7 @@ export function MarkdownContent({ source }: Props) {
       <MDPreview
         source={source}
         style={{ background: "transparent" }}
-        rehypePlugins={[rehypeRemoveUnknownElements]}
+        rehypePlugins={REHYPE_PLUGINS}
       />
     </div>
   );
