@@ -33,6 +33,7 @@ const MapPreview = dynamic(
   { ssr: false, loading: () => <div className="h-[260px] rounded-md bg-muted/50 animate-pulse" /> },
 );
 import type { PostStatus } from "@prisma/client";
+import { STATUS_LABELS, STATUS_COLORS } from "../_constants";
 import { computeTopicEffectiveColors, type EffectiveColorInfo } from "@/lib/post-labels";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -584,6 +585,11 @@ export function PostForm({
             <h1 className="text-base font-semibold">
               {isEdit ? "포스트 수정" : "포스트 작성"}
             </h1>
+            {isEdit && (
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[status]}`}>
+                {STATUS_LABELS[status]}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             {!isEmbedded && isEdit && initialData?.slug && (
@@ -608,7 +614,7 @@ export function PostForm({
 
             {!isEmbedded && isEdit && status === "PUBLISHED" && (
               <Button variant="outline" size="sm" disabled={isPending} onClick={() => handleSubmit("DRAFT")}>
-                임시저장으로 변경
+                비공개로 변경
               </Button>
             )}
 

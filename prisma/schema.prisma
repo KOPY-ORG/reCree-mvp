@@ -34,7 +34,8 @@ enum PlaceStatus {
 enum ReCreeshotStatus {
   ACTIVE
   REPORTED
-  HIDDEN
+  HIDDEN        // 관리자가 직접 숨김
+  REPORT_HIDDEN // 신고 처리로 인한 숨김
   DELETED
 }
 

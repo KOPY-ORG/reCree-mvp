@@ -3,13 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, MoreVertical, Flag } from "lucide-react";
+import { toast } from "sonner";
 import { ReportDialog } from "@/components/ReportDialog";
 
 interface Props {
   postId?: string;
+  isLoggedIn?: boolean;
 }
 
-export function PostDetailHeader({ postId }: Props) {
+export function PostDetailHeader({ postId, isLoggedIn }: Props) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
@@ -41,7 +43,7 @@ export function PostDetailHeader({ postId }: Props) {
                 <div className="absolute top-10 right-0 z-20 bg-white/80 backdrop-blur-md rounded-xl shadow-md overflow-hidden min-w-[160px]">
                   <button
                     type="button"
-                    onClick={() => { setMenuOpen(false); setReportOpen(true); }}
+                    onClick={() => { setMenuOpen(false); if (!isLoggedIn) { toast.error("Please sign in to report content."); return; } setReportOpen(true); }}
                     className="flex items-center gap-2 w-full px-4 py-3 text-sm font-medium text-gray-800 hover:bg-gray-50 transition-colors"
                   >
                     <Flag className="size-4 shrink-0" />

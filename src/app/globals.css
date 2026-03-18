@@ -211,3 +211,10 @@
   padding: 0.1em 0.35em !important;
   color: var(--palette-gray-900) !important;
 }
+
+/* ── Sonner Toast Override ─────────────────────────────────────── */
+[data-sonner-toaster] {
+  --width: 280px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+}

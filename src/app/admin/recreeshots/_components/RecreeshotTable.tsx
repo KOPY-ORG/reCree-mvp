@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { EyeOff, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
 import { setRecreeshotStatus } from "../_actions/recreeshot-actions";
@@ -23,22 +22,23 @@ export type RecreeshotRow = {
 };
 
 const STATUS_BADGE: Record<ReCreeshotStatus, string> = {
-  ACTIVE: "bg-green-100 text-green-700",
-  REPORTED: "bg-orange-100 text-orange-700",
-  HIDDEN: "bg-zinc-100 text-zinc-500",
-  DELETED: "bg-red-100 text-red-600",
+  ACTIVE:       "bg-green-100 text-green-700",
+  REPORTED:     "bg-orange-100 text-orange-700",
+  HIDDEN:       "bg-zinc-100 text-zinc-500",
+  REPORT_HIDDEN:"bg-red-100 text-red-600",
+  DELETED:      "bg-zinc-100 text-zinc-400",
 };
 
 const STATUS_LABEL: Record<ReCreeshotStatus, string> = {
-  ACTIVE: "활성",
-  REPORTED: "신고됨",
-  HIDDEN: "숨김",
-  DELETED: "삭제됨",
+  ACTIVE:       "공개",
+  REPORTED:     "신고됨",
+  HIDDEN:       "숨김",
+  REPORT_HIDDEN:"신고로 숨김",
+  DELETED:      "삭제됨",
 };
 
-
 export function RecreeshotTable({ rows }: { rows: RecreeshotRow[] }) {
-  const [, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
   const [localRows, setLocalRows] = useState(rows);
 
   function optimisticUpdate(id: string, status: ReCreeshotStatus) {
@@ -62,14 +62,14 @@ export function RecreeshotTable({ rows }: { rows: RecreeshotRow[] }) {
           <thead className="bg-zinc-50 border-b border-zinc-100">
             <tr>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground w-[72px]">이미지</th>
+              <th className="text-left px-4 py-3 font-medium text-muted-foreground">상태</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">사용자</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">장소</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">포스트</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">라벨</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap w-[90px]">점수</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">등록일</th>
-              <th className="text-left px-4 py-3 font-medium text-muted-foreground">상태</th>
-              <th className="w-20 px-2 py-3" />
+              <th className="w-28 px-2 py-3" />
             </tr>
           </thead>
           <tbody>
@@ -89,21 +89,23 @@ export function RecreeshotTable({ rows }: { rows: RecreeshotRow[] }) {
                 <td className="px-4 py-3">
                   <Link href={`/explore/hall/${row.id}`} target="_blank" rel="noopener noreferrer">
                     <div className="relative w-10 aspect-[4/5] rounded overflow-hidden bg-muted hover:opacity-80 transition-opacity">
-                      <Image
-                        src={row.imageUrl}
-                        alt="recreeshot"
-                        fill
-                        className="object-cover"
-                        sizes="40px"
-                      />
+                      <Image src={row.imageUrl} alt="recreeshot" fill className="object-cover" sizes="40px" />
                     </div>
                   </Link>
                 </td>
 
-                {/* 사용자 */}
-                <td className="px-4 py-3 text-xs text-muted-foreground">
-                  {row.user?.email ?? "—"}
+                {/* 상태 — 앞으로 이동해 한눈에 파악 */}
+                <td className="px-4 py-3">
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${STATUS_BADGE[row.status]}`}>
+                    {STATUS_LABEL[row.status]}
+                  </span>
+                  {row.status === "REPORTED" && (
+                    <p className="text-[10px] text-orange-500 mt-0.5 whitespace-nowrap">신고 처리 탭에서 조치</p>
+                  )}
                 </td>
+
+                {/* 사용자 */}
+                <td className="px-4 py-3 text-xs text-muted-foreground">{row.user?.email ?? "—"}</td>
 
                 {/* 장소 */}
                 <td className="px-4 py-3 min-w-[120px]">
@@ -133,15 +135,12 @@ export function RecreeshotTable({ rows }: { rows: RecreeshotRow[] }) {
                   )}
                 </td>
 
-                {/* 태그 */}
+                {/* 라벨 */}
                 <td className="px-4 py-3 min-w-[120px]">
                   <div className="flex flex-wrap gap-1">
                     {row.labelNames.length > 0 ? (
                       row.labelNames.slice(0, 3).map((name) => (
-                        <span
-                          key={name}
-                          className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded"
-                        >
+                        <span key={name} className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                           {name}
                         </span>
                       ))
@@ -168,41 +167,31 @@ export function RecreeshotTable({ rows }: { rows: RecreeshotRow[] }) {
                 </td>
 
                 {/* 등록일 */}
-                <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                  {formatDate(row.createdAt)}
-                </td>
-
-                {/* 상태 */}
-                <td className="px-4 py-3">
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${STATUS_BADGE[row.status]}`}>
-                    {STATUS_LABEL[row.status]}
-                  </span>
-                </td>
+                <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{formatDate(row.createdAt)}</td>
 
                 {/* 액션 */}
-                <td className="px-2 py-3">
-                  <div className="flex items-center justify-end gap-1">
-                    {row.status === "ACTIVE" || row.status === "REPORTED" ? (
+                <td className="px-4 py-3">
+                  <div className="flex items-center justify-end">
+                    {(row.status === "ACTIVE" || row.status === "REPORTED") && (
                       <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        size="sm"
+                        disabled={isPending}
                         onClick={() => handleHide(row.id)}
-                        title="숨김 처리"
+                        className="text-xs h-7 px-2.5 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 border-0"
                       >
-                        <EyeOff className="size-3.5" />
+                        숨김 처리
                       </Button>
-                    ) : row.status === "HIDDEN" ? (
+                    )}
+                    {(row.status === "HIDDEN" || row.status === "REPORT_HIDDEN") && (
                       <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        size="sm"
+                        disabled={isPending}
                         onClick={() => handleRestore(row.id)}
-                        title="복원"
+                        className="text-xs h-7 px-2.5 bg-green-100 hover:bg-green-200 text-green-700 border-0"
                       >
-                        <RotateCcw className="size-3.5" />
+                        공개 복원
                       </Button>
-                    ) : null}
+                    )}
                   </div>
                 </td>
               </tr>

@@ -10,13 +10,14 @@ import { ReportDialog } from "@/components/ReportDialog";
 interface Props {
   id: string;
   isOwner: boolean;
+  isLoggedIn: boolean;
   imageUrl: string;
   referencePhotoUrl: string | null;
   matchScore: number | null;
   showBadge: boolean;
 }
 
-export function HallDetailTopSection({ id, isOwner, imageUrl, referencePhotoUrl, matchScore, showBadge }: Props) {
+export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, referencePhotoUrl, matchScore, showBadge }: Props) {
   const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [compositeUrl, setCompositeUrl] = useState<string | null>(null);
@@ -158,6 +159,10 @@ export function HallDetailTopSection({ id, isOwner, imageUrl, referencePhotoUrl,
 
   function handleReport() {
     setMenuOpen(false);
+    if (!isLoggedIn) {
+      toast.error("Please sign in to report content.");
+      return;
+    }
     setReportOpen(true);
   }
 

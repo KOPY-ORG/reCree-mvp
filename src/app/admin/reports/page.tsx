@@ -1,12 +1,14 @@
-import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { PostReportTable, type PostReportRow } from "./_components/PostReportTable";
+import { ReportTabs } from "./_components/ReportTabs";
 import type { ReportStatus } from "@prisma/client";
 
+export const dynamic = "force-dynamic";
+
 const STATUS_TABS = [
-  { label: "미처리", value: "PENDING" },
-  { label: "기각됨", value: "DISMISSED" },
-  { label: "처리완료", value: "RESOLVED" },
+  { label: "미처리",    value: "PENDING" },
+  { label: "신고 기각", value: "DISMISSED" },
+  { label: "비공개 처리됨", value: "RESOLVED" },
 ] as const;
 
 export default async function AdminReportsPage({
@@ -31,7 +33,7 @@ export default async function AdminReportsPage({
         status: true,
         createdAt: true,
         reporter: { select: { email: true } },
-        post: { select: { id: true, titleKo: true, slug: true } },
+        post: { select: { id: true, titleKo: true, slug: true, status: true } },
       },
     }),
     prisma.report.groupBy({
@@ -42,6 +44,13 @@ export default async function AdminReportsPage({
   ]);
 
   const countMap = new Map(counts.map((c) => [c.status, c._count]));
+
+  const tabs = STATUS_TABS.map(({ label, value }) => ({
+    label,
+    value,
+    count: countMap.get(value as ReportStatus) ?? 0,
+    highlight: value === "PENDING",
+  }));
 
   const rows: PostReportRow[] = reports.map((r) => ({
     id: r.id,
@@ -62,27 +71,12 @@ export default async function AdminReportsPage({
         </p>
       </div>
 
-      <div className="flex border-b border-zinc-200">
-        {STATUS_TABS.map(({ label, value }) => (
-          <Link
-            key={value}
-            href={`?status=${value}`}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5 ${
-              status === value
-                ? "border-zinc-900 text-zinc-900"
-                : "border-transparent text-zinc-400 hover:text-zinc-700"
-            }`}
-          >
-            {label}
-            {(countMap.get(value as ReportStatus) ?? 0) > 0 && (
-              <span className={`text-xs font-normal ${value === "PENDING" && status !== "PENDING" ? "text-orange-500 font-semibold" : "text-muted-foreground"}`}>
-                ({countMap.get(value as ReportStatus) ?? 0})
-              </span>
-            )}
-          </Link>
-        ))}
-      </div>
-
+      <ReportTabs tabs={tabs} current={status} />
+      {status === "PENDING" && (countMap.get("PENDING") ?? 0) > 0 && (
+        <div className="mt-3 inline-flex items-center gap-1.5 bg-orange-50 border border-orange-200 text-orange-700 text-xs font-medium px-3 py-1.5 rounded-lg">
+          미처리 신고 {countMap.get("PENDING")}건이 있습니다.
+        </div>
+      )}
       <PostReportTable rows={rows} />
     </div>
   );
