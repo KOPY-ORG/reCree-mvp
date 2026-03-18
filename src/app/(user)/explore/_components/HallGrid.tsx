@@ -44,7 +44,8 @@ export function HallGrid({ shots, guideVideo }: Props) {
           <img
             src={shot.imageUrl}
             alt="recreeshot"
-            className="w-full aspect-[4/5] rounded-lg object-cover bg-muted"
+            className="w-full aspect-[4/5] object-cover bg-muted"
+            style={{ borderRadius: "7%" }}
           />
           {/* 소스 이미지 overlay */}
           {shot.referencePhotoUrl && (

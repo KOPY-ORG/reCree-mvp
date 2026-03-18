@@ -86,7 +86,7 @@ function RecreeshotInlineSection({
       </div>
       <div className="flex gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory">
         {shots.map((shot) => (
-          <Link key={shot.id} href={`/explore/hall/${shot.id}`} className="relative snap-start shrink-0 w-[90px] aspect-[4/5] block rounded-lg overflow-hidden bg-muted">
+          <Link key={shot.id} href={`/explore/hall/${shot.id}`} className="relative snap-start shrink-0 w-[90px] aspect-[4/5] block overflow-hidden bg-muted" style={{ borderRadius: "7%" }}>
             <img
               src={shot.imageUrl}
               alt="recreeshot"

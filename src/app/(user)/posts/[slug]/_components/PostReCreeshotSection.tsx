@@ -44,7 +44,8 @@ export function PostReCreeshotSection({ postId, shots, originalImageUrl }: Props
         <button
           type="button"
           onClick={handleAdd}
-          className="shrink-0 w-[90px] aspect-[4/5] rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-1.5 bg-muted/30 hover:bg-muted/50 transition-colors"
+          className="shrink-0 w-[90px] aspect-[4/5] border-2 border-dashed border-border flex flex-col items-center justify-center gap-1.5 bg-muted/30 hover:bg-muted/50 transition-colors"
+          style={{ borderRadius: "7%" }}
         >
           <Camera className="size-5 text-muted-foreground" />
           <span className="text-[10px] font-semibold text-muted-foreground leading-tight text-center">Add<br />recreeshot</span>
@@ -56,7 +57,8 @@ export function PostReCreeshotSection({ postId, shots, originalImageUrl }: Props
             key={shot.id}
             type="button"
             onClick={() => router.push(`/explore/hall/${shot.id}`)}
-            className="relative shrink-0 w-[90px] aspect-[4/5] rounded-xl overflow-hidden"
+            className="relative shrink-0 w-[90px] aspect-[4/5] overflow-hidden"
+            style={{ borderRadius: "7%" }}
           >
             <img
               src={shot.imageUrl}

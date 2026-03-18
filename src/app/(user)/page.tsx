@@ -275,7 +275,7 @@ export default async function HomePage() {
                 </div>
               )}
               {data.items.map((shot) => (
-                <Link key={shot.id} href={`/explore/hall/${shot.id}`} className="relative shrink-0 w-[120px] aspect-[4/5] block rounded-lg overflow-hidden bg-muted">
+                <Link key={shot.id} href={`/explore/hall/${shot.id}`} className="relative shrink-0 w-[120px] aspect-[4/5] block overflow-hidden bg-muted" style={{ borderRadius: "7%" }}>
                   <img
                     src={shot.imageUrl}
                     alt="recreeshot"
