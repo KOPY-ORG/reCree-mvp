@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { formatDate } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -51,10 +52,6 @@ interface Props {
 }
 
 
-function formatDate(date: Date): string {
-  const d = new Date(date);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
-}
 
 export function PlacesTable({ places, isFiltered, currentPage = 1 }: Props) {
   const router = useRouter();

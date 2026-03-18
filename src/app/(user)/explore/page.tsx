@@ -8,13 +8,13 @@ import { getLevel0TopicsDeep } from "@/lib/topic-queries";
 import { type TagGroupColorMap } from "@/lib/post-labels";
 import { getCurrentUser } from "@/lib/auth";
 import { ScrapButton } from "../_components/ScrapButton";
-import { ReCreeshotImage } from "@/components/recreeshot-image";
 import { PostBadges } from "../_components/PostCard";
 import { TopicFilterRow } from "./_components/TopicFilterRow";
 import { TagFilterRow } from "./_components/TagFilterRow";
 import { ExploreTabBar } from "./_components/ExploreTabBar";
 import { ExploreSearchActiveBar } from "./_components/ExploreSearchActiveBar";
 import { HallGrid } from "./_components/HallGrid";
+import { ReCreeshotImage } from "@/components/recreeshot-image";
 
 // ─── 서브 컴포넌트 ────────────────────────────────────────────────────────────
 
@@ -71,13 +71,7 @@ function PostListItem({
 function RecreeshotInlineSection({
   shots,
 }: {
-  shots: {
-    id: string;
-    imageUrl: string;
-    referencePhotoUrl: string | null;
-    matchScore: number | null;
-    showBadge: boolean;
-  }[];
+  shots: { id: string; imageUrl: string; matchScore: number | null; showBadge: boolean; referencePhotoUrl: string | null }[];
 }) {
   if (shots.length === 0) return null;
   return (
@@ -93,7 +87,7 @@ function RecreeshotInlineSection({
       </div>
       <div className="flex gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory">
         {shots.map((shot) => (
-          <Link key={shot.id} href={`/explore/hall/${shot.id}`} className="snap-start shrink-0 w-[90px]">
+          <Link key={shot.id} href={`/explore/hall/${shot.id}`} className="snap-start shrink-0 w-[90px] block">
             <ReCreeshotImage
               shotUrl={shot.imageUrl}
               referenceUrl={shot.referencePhotoUrl}
@@ -101,9 +95,8 @@ function RecreeshotInlineSection({
               showBadge={shot.showBadge}
               referencePosition="top-left"
               badgePosition="top-right"
-              showMatchLabel={false}
-              rounded={false}
-              className="aspect-[3/4] rounded-lg"
+              variant="thumb-sm"
+              className="aspect-[4/5]"
               sizes="90px"
             />
           </Link>
@@ -131,6 +124,8 @@ export default async function ExplorePage({
   const tagIds = tagId ? (Array.isArray(tagId) ? tagId : [tagId]) : [];
   const currentUser = await getCurrentUser();
 
+  const guideVideo = await prisma.guideVideo.findFirst({ where: { isActive: true } });
+
   const [level0Topics, tagGroups, tagGroupConfigs, recreeshots, savedPostIds] =
     await Promise.all([
       getLevel0TopicsDeep(),
@@ -148,7 +143,7 @@ export default async function ExplorePage({
       prisma.reCreeshot.findMany({
         where: { status: "ACTIVE" },
         orderBy: { createdAt: "desc" },
-        select: { id: true, imageUrl: true, referencePhotoUrl: true, matchScore: true, showBadge: true },
+        select: { id: true, imageUrl: true, matchScore: true, showBadge: true, referencePhotoUrl: true },
       }),
       getSavedPostIds(currentUser?.id ?? null),
     ]);
@@ -222,7 +217,7 @@ export default async function ExplorePage({
       {/* Hall 탭 */}
       {tab === "hall" && (
         <div className="px-4 py-4">
-          <HallGrid shots={recreeshots} />
+          <HallGrid shots={recreeshots} guideVideo={guideVideo} />
         </div>
       )}
     </div>

@@ -12,8 +12,3 @@ export async function setRecreeshotStatus(id: string, status: ReCreeshotStatus) 
   await prisma.reCreeshot.update({ where: { id }, data: { status } });
   revalidate();
 }
-
-export async function deleteRecreeshot(id: string) {
-  await prisma.reCreeshot.delete({ where: { id } });
-  revalidate();
-}

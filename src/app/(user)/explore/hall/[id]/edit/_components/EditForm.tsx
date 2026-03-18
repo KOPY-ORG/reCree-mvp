@@ -26,7 +26,7 @@ export function EditForm({ id, initialStory, initialTips }: Props) {
       setIsSaving(false);
       return;
     }
-    router.push(`/explore/hall/${id}`);
+    router.replace(`/explore/hall/${id}`);
   }
 
   return (

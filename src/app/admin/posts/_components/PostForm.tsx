@@ -136,6 +136,7 @@ export type PostInitialData = {
   bodyEn: string | null;
   status: PostStatus;
   memo: string | null;
+  recreePhotoUrl?: string | null;
   collectedBy: string | null;
   collectedAt: string | null;
   postTopics: { topicId: string; isVisible: boolean; displayOrder: number }[];
@@ -271,6 +272,7 @@ export function PostForm({
   const [bodyKo, setBodyKo] = useState(initialData?.bodyKo ?? "");
   const [bodyEn, setBodyEn] = useState(initialData?.bodyEn ?? "");
   const [images, setImages] = useState<PostImageInput[]>(initialData?.postImages ?? []);
+  const [recreePhotoUrl, setRecreePhotoUrl] = useState<string | null>(initialData?.recreePhotoUrl ?? null);
   const [status, setStatus] = useState<PostStatus>(initialData?.status ?? "DRAFT");
   const [memo, setMemo] = useState(initialData?.memo ?? "");
   const [collectedBy, setCollectedBy] = useState(initialData?.collectedBy ?? "");
@@ -471,6 +473,7 @@ export function PostForm({
       bodyEn: bodyEn.trim(),
       status: finalStatus,
       memo: memo.trim(),
+      recreePhotoUrl: recreePhotoUrl || null,
       collectedBy: collectedBy.trim(),
       collectedAt: collectedAt.trim(),
       images,
@@ -928,6 +931,8 @@ export function PostForm({
                       images={images}
                       onChange={setImages}
                       sources={sources}
+                      recreePhotoUrl={recreePhotoUrl}
+                      onRecreePhotoChange={setRecreePhotoUrl}
                     />
                   )}
                 </div>

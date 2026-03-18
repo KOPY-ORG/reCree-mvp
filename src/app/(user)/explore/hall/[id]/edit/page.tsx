@@ -26,7 +26,7 @@ export default async function HallEditPage({
     <div className="flex flex-col min-h-screen bg-background">
       <header className="app-header">
         <div className="relative h-12 flex items-center px-2">
-          <Link href={`/explore/hall/${id}`} className="flex items-center justify-center size-8">
+          <Link replace href={`/explore/hall/${id}`} className="flex items-center justify-center size-8">
             <ChevronLeft className="size-5" />
           </Link>
           <span className="absolute left-1/2 -translate-x-1/2 font-bold text-base tracking-tight">

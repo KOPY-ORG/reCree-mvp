@@ -45,10 +45,23 @@ interface Topic {
   parentId: string | null;
 }
 
+interface PlacePrefill {
+  id: string;
+  nameEn: string | null;
+  nameKo: string | null;
+  addressEn: string | null;
+  imageUrl: string | null;
+}
+
 interface Props {
   tagGroups: TagGroup[];
   topics: Topic[];
   userId: string;
+  prefillPostId?: string;
+  prefillReferenceUrl?: string;
+  prefillPlace?: PlacePrefill;
+  prefillTagIds?: string[];
+  prefillTopicIds?: string[];
 }
 
 type State = {
@@ -75,16 +88,16 @@ type State = {
   showLeaveDialog: boolean;
 };
 
-export function ReCreeshotUploadFlow({ tagGroups, topics, userId }: Props) {
+export function ReCreeshotUploadFlow({ tagGroups, topics, userId, prefillPostId, prefillReferenceUrl, prefillPlace, prefillTagIds = [], prefillTopicIds = [] }: Props) {
   const router = useRouter();
   const [pendingCrop, setPendingCrop] = useState<{ file: File; type: "shot" | "reference" } | null>(null);
   const [state, setState] = useState<State>({
     step: 1,
     referenceFile: null,
-    referencePreviewUrl: null,
+    referencePreviewUrl: prefillReferenceUrl ?? null,
     shotFile: null,
     shotPreviewUrl: null,
-    uploadedReferenceUrl: null,
+    uploadedReferenceUrl: prefillReferenceUrl ?? null,
     uploadedShotUrl: null,
     uploadedShotPath: null,
     uploadedReferencePath: null,
@@ -204,17 +217,22 @@ export function ReCreeshotUploadFlow({ tagGroups, topics, userId }: Props) {
 
   // original + shot 있을 때 → 업로드 후 Gemini 채점
   async function handleCheckScore() {
-    if (!state.shotFile || !state.referenceFile) return;
+    if (!state.shotFile) return;
+    if (!state.referenceFile && !state.uploadedReferenceUrl) return;
 
     setState((s) => ({ ...s, isScoringPreview: true, error: null }));
 
     try {
-      const [shot, ref] = await Promise.all([
+      // shot은 항상 업로드, reference는 이미 URL 있으면 재사용
+      const [shot, refUpload] = await Promise.all([
         uploadToSupabase(state.shotFile),
-        uploadToSupabase(state.referenceFile),
+        state.referenceFile ? uploadToSupabase(state.referenceFile) : Promise.resolve(null),
       ]);
 
-      const result = await previewMatchScore(ref.url, shot.url);
+      const refUrl = refUpload?.url ?? state.uploadedReferenceUrl!;
+      const refPath = refUpload?.path ?? state.uploadedReferencePath;
+
+      const result = await previewMatchScore(refUrl, shot.url);
 
       if ("error" in result) {
         setState((s) => ({
@@ -222,8 +240,8 @@ export function ReCreeshotUploadFlow({ tagGroups, topics, userId }: Props) {
           isScoringPreview: false,
           uploadedShotUrl: shot.url,
           uploadedShotPath: shot.path,
-          uploadedReferenceUrl: ref.url,
-          uploadedReferencePath: ref.path,
+          uploadedReferenceUrl: refUrl,
+          uploadedReferencePath: refPath,
           scoringDone: true,
           previewScore: null,
           matchScore: null,
@@ -236,8 +254,8 @@ export function ReCreeshotUploadFlow({ tagGroups, topics, userId }: Props) {
         isScoringPreview: false,
         uploadedShotUrl: shot.url,
         uploadedShotPath: shot.path,
-        uploadedReferenceUrl: ref.url,
-        uploadedReferencePath: ref.path,
+        uploadedReferenceUrl: refUrl,
+        uploadedReferencePath: refPath,
         previewScore: result.score,
         matchScore: result.score,
         scoringDone: true,
@@ -348,8 +366,12 @@ export function ReCreeshotUploadFlow({ tagGroups, topics, userId }: Props) {
             isScoringPreview={state.isScoringPreview}
             scoringDone={state.scoringDone}
             onCheckScore={handleCheckScore}
-            onNext={state.referenceFile ? handleGoToStep2 : handleNext}
+            onNext={(state.referenceFile || state.uploadedReferenceUrl) ? handleGoToStep2 : handleNext}
             isUploading={state.isUploading}
+            prefillReferenceUrl={prefillReferenceUrl}
+            onRestoreReference={prefillReferenceUrl ? () => {
+              setState((s) => ({ ...s, referencePreviewUrl: prefillReferenceUrl, uploadedReferenceUrl: prefillReferenceUrl, referenceFile: null, previewScore: null, scoringDone: false }));
+            } : undefined}
           />
           {state.error && (
             <p className="text-red-500 text-sm text-center py-2">{state.error}</p>
@@ -370,6 +392,10 @@ export function ReCreeshotUploadFlow({ tagGroups, topics, userId }: Props) {
             onBack={() => setState((s) => ({ ...s, step: 1 }))}
             onShare={handleShare}
             isSubmitting={state.isSubmitting}
+            prefillPostId={prefillPostId}
+            prefillPlace={prefillPlace}
+            prefillTagIds={prefillTagIds}
+            prefillTopicIds={prefillTopicIds}
           />
           {state.error && (
             <p className="text-red-500 text-sm text-center py-2">{state.error}</p>
@@ -384,6 +410,8 @@ export function ReCreeshotUploadFlow({ tagGroups, topics, userId }: Props) {
           matchScore={state.matchScore}
           showBadge={state.showBadge}
           createdId={state.createdId}
+          userId={userId}
+          uploadedShotPath={state.uploadedShotPath}
         />
       )}
 

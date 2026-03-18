@@ -1,12 +1,12 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, MapPin } from "lucide-react";
+import { ChevronLeft, ChevronRight, MapPin, EyeOff } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { resolveTopicColors, resolveTagColors, type TagGroupColorMap } from "@/lib/post-labels";
 import { HallDetailClient } from "./_components/HallDetailClient";
-import { HallDetailMenuButton } from "./_components/HallDetailMenuButton";
-import { ReCreeshotImage } from "@/components/recreeshot-image";
+import { HallDetailTopSection } from "./_components/HallDetailTopSection";
 
 export default async function HallDetailPage({
   params,
@@ -26,6 +26,17 @@ export default async function HallDetailPage({
             select: {
               id: true, nameEn: true,
               colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true,
+              parent: {
+                select: {
+                  colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true,
+                  parent: {
+                    select: {
+                      colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true,
+                      parent: { select: { colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true } },
+                    },
+                  },
+                },
+              },
             },
           },
         },
@@ -40,9 +51,33 @@ export default async function HallDetailPage({
 
   if (!shot || shot.status === "DELETED") notFound();
 
+  // 숨김 처리된 리크리샷 안내 페이지
+  if (shot.status === "HIDDEN") {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <div className="flex items-center h-12 px-2 bg-white border-b border-gray-100">
+          <Link href="/explore?tab=hall" className="p-2 rounded-full">
+            <ChevronLeft className="size-5 text-black" />
+          </Link>
+        </div>
+        <div className="flex flex-col items-center justify-center py-24 px-8 gap-4 text-center">
+          <div className="size-14 rounded-full bg-muted flex items-center justify-center">
+            <EyeOff className="size-6 text-muted-foreground" />
+          </div>
+          <div className="space-y-1.5">
+            <p className="font-semibold text-base">관리자에 의해 숨김 처리된 리크리샷입니다.</p>
+            <p className="text-sm text-muted-foreground">이 콘텐츠는 현재 표시되지 않습니다.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // 태그 그룹 컬러 맵
-  const tagGroups = await prisma.tagGroupConfig.findMany();
-  const groupMap = new Map(tagGroups.map((g) => [g.group, g]));
+  const tagGroups = await prisma.tagGroupConfig.findMany({
+    select: { group: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true },
+  });
+  const groupMap: TagGroupColorMap = new Map(tagGroups.map((g) => [g.group, g]));
 
   const liked = currentUser
     ? !!(await prisma.reCreeshotLike.findUnique({
@@ -61,34 +96,15 @@ export default async function HallDetailPage({
   return (
     <div className="max-w-2xl mx-auto pb-20">
 
-      {/* 메인 이미지 + 오버레이 헤더 */}
-      <div className="relative aspect-[3/4]">
-        <ReCreeshotImage
-          shotUrl={shot.imageUrl}
-          referenceUrl={shot.referencePhotoUrl}
-          matchScore={shot.matchScore}
-          showBadge={shot.showBadge}
-          rounded={false}
-          className="w-full h-full"
-          sizes="(max-width: 672px) 100vw, 672px"
-          priority
-        />
-
-        {/* 헤더 오버레이 */}
-        <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-2 pt-3 pb-8 bg-gradient-to-b from-black/40 to-transparent z-10">
-          <Link href="/explore?tab=hall" className="p-2 rounded-full">
-            <ChevronLeft className="size-5 text-white" />
-          </Link>
-          <HallDetailMenuButton
-            id={id}
-            isOwner={isOwner}
-            imageUrl={shot.imageUrl}
-            referencePhotoUrl={shot.referencePhotoUrl}
-            matchScore={shot.matchScore}
-            showBadge={shot.showBadge}
-          />
-        </div>
-      </div>
+      {/* 흰색 헤더 + 합성 이미지 (꾹 눌러 Photos 저장) */}
+      <HallDetailTopSection
+        id={id}
+        isOwner={isOwner}
+        imageUrl={shot.imageUrl}
+        referencePhotoUrl={shot.referencePhotoUrl}
+        matchScore={shot.matchScore}
+        showBadge={shot.showBadge}
+      />
 
       {/* 콘텐츠 */}
       <div className="px-4 py-4 space-y-4">
@@ -148,34 +164,30 @@ export default async function HallDetailPage({
         {(shot.reCreeshotTopics.length > 0 || shot.reCreeshotTags.length > 0) && (
           <div className="flex flex-wrap gap-1.5">
             {shot.reCreeshotTopics.map(({ topic }) => {
-              const bg = topic.colorHex2
-                ? `linear-gradient(${topic.gradientDir}, ${topic.colorHex}, ${topic.colorHex2} ${topic.gradientStop}%)`
-                : (topic.colorHex ?? "#C8FF09");
+              const c = resolveTopicColors(topic);
+              const bg = c.colorHex2
+                ? `linear-gradient(${c.gradientDir}, ${c.colorHex}, ${c.colorHex2} ${c.gradientStop}%)`
+                : c.colorHex;
               return (
                 <span
                   key={topic.id}
                   className="pill-badge text-xs font-medium"
-                  style={{ background: bg, color: topic.textColorHex ?? "#000" }}
+                  style={{ background: bg, color: c.textColorHex }}
                 >
                   {topic.nameEn}
                 </span>
               );
             })}
             {shot.reCreeshotTags.map(({ tag }) => {
-              const group = groupMap.get(tag.group);
-              const colorHex = tag.colorHex ?? group?.colorHex ?? "#e5e7eb";
-              const colorHex2 = tag.colorHex2 ?? group?.colorHex2;
-              const gradientDir = group?.gradientDir ?? "to right";
-              const gradientStop = group?.gradientStop ?? 150;
-              const textColorHex = tag.textColorHex ?? group?.textColorHex ?? "#000";
-              const bg = colorHex2
-                ? `linear-gradient(${gradientDir}, ${colorHex}, ${colorHex2} ${gradientStop}%)`
-                : colorHex;
+              const c = resolveTagColors(tag, groupMap.get(tag.group));
+              const bg = c.colorHex2
+                ? `linear-gradient(${c.gradientDir}, ${c.colorHex}, ${c.colorHex2} ${c.gradientStop}%)`
+                : c.colorHex;
               return (
                 <span
                   key={tag.id}
                   className="pill-badge text-xs font-medium"
-                  style={{ background: bg, color: textColorHex }}
+                  style={{ background: bg, color: c.textColorHex }}
                 >
                   {tag.name}
                 </span>

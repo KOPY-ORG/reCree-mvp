@@ -2,7 +2,8 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { toast } from "sonner";
-import { Upload, Link as LinkIcon, X, GripVertical, ImageIcon, Crosshair, MapPin } from "lucide-react";
+import { Upload, Link as LinkIcon, X, GripVertical, ImageIcon, Crosshair, MapPin, Crop } from "lucide-react";
+import { ReCreeshotCropDialog } from "./ReCreeshotCropDialog";
 import {
   DndContext,
   closestCenter,
@@ -224,14 +225,18 @@ interface Props {
   images: PostImageInput[];
   onChange: (images: PostImageInput[]) => void;
   sources: PostSourceInput[];
+  recreePhotoUrl: string | null;
+  onRecreePhotoChange: (url: string | null) => void;
 }
 
-export function PostImageSection({ postId, placeId, images, onChange, sources }: Props) {
+export function PostImageSection({ postId, placeId, images, onChange, sources, recreePhotoUrl, onRecreePhotoChange }: Props) {
   const bannerImages   = images.filter((img) => img.imageType === "BANNER");
   const originalImage  = images.find((img) => img.imageType === "ORIGINAL") ?? null;
 
   const [bannerUploading, setBannerUploading] = useState(false);
   const [originalMode, setOriginalMode] = useState<OriginalMode>("idle");
+  const [reCreeCropSrc, setReCreeCropSrc] = useState<string | null>(null);
+  const [recreeUploading, setRecreeUploading] = useState(false);
   const [placeImages, setPlaceImages] = useState<PlaceImageItem[]>([]);
 
   useEffect(() => {
@@ -559,6 +564,131 @@ export function PostImageSection({ postId, placeId, images, onChange, sources }:
           )}
         </div>
       </div>
+
+      {/* ─ 리크리샷 기준 이미지 ────────────────────────────────────────────── */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold">리크리샷 기준 이미지</span>
+          <span className="text-xs text-muted-foreground">(4:5 · 사용자 리크리샷 참고용)</span>
+        </div>
+
+        <div className="border rounded-lg p-3 bg-muted/20 space-y-3">
+          {recreePhotoUrl ? (
+            <div className="flex gap-4 items-start">
+              <div className="relative group w-24 aspect-[4/5] rounded-lg overflow-hidden border shrink-0">
+                <img src={recreePhotoUrl} alt="" className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  className="absolute top-1 right-1 p-0.5 rounded bg-black/40 opacity-0 group-hover:opacity-100 text-white"
+                  onClick={() => onRecreePhotoChange(null)}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+                <button
+                  type="button"
+                  className="absolute bottom-1 right-1 p-0.5 rounded bg-black/40 opacity-0 group-hover:opacity-100 text-white"
+                  onClick={() => setReCreeCropSrc(recreePhotoUrl)}
+                  title="다시 자르기"
+                >
+                  <Crop className="h-3 w-3" />
+                </button>
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-relaxed pt-1">
+                사용자가 이 포스트에서 리크리샷을 업로드할 때 기준 이미지로 표시됩니다.
+                <br />
+                다른 이미지로 변경하려면 아래 버튼을 사용하세요.
+              </p>
+            </div>
+          ) : null}
+
+          {/* 추가/변경 버튼 */}
+          <div className="flex flex-wrap gap-2">
+            {/* 소스 이미지에서 가져오기 */}
+            {originalImage && (
+              <button
+                type="button"
+                onClick={() => setReCreeCropSrc(originalImage.url)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border hover:bg-muted transition-colors text-sky-700 border-sky-200"
+              >
+                <Crop className="h-3.5 w-3.5" />
+                소스 이미지에서 자르기
+              </button>
+            )}
+            {/* 배너에서 가져오기 */}
+            {bannerImages.length > 0 && (
+              <div className="flex items-center gap-1 flex-wrap">
+                {bannerImages.slice(0, 3).map((img, i) => (
+                  <button
+                    key={img.url}
+                    type="button"
+                    onClick={() => setReCreeCropSrc(img.url)}
+                    className="group relative w-12 aspect-[3/2] rounded overflow-hidden border hover:border-zinc-400 transition-colors shrink-0"
+                    title={`배너 ${i + 1}에서 자르기`}
+                  >
+                    <img src={img.url} alt="" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors">
+                      <Crop className="h-3 w-3 text-white opacity-0 group-hover:opacity-100" />
+                    </div>
+                  </button>
+                ))}
+                {bannerImages.length > 3 && (
+                  <span className="text-xs text-muted-foreground">+{bannerImages.length - 3}</span>
+                )}
+              </div>
+            )}
+            {/* 새 파일 업로드 */}
+            <label className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border cursor-pointer transition-colors",
+              recreeUploading ? "opacity-50 cursor-not-allowed" : "hover:bg-muted",
+            )}>
+              {recreeUploading
+                ? <><div className="h-3.5 w-3.5 rounded-full border-2 border-t-transparent border-zinc-400 animate-spin" />업로드 중...</>
+                : <><Upload className="h-3.5 w-3.5" />새 파일 업로드</>
+              }
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="sr-only"
+                disabled={recreeUploading}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!file) return;
+                  // blob URL은 크롭 완료/취소 시 revoke됨
+                  setReCreeCropSrc(URL.createObjectURL(file));
+                }}
+              />
+            </label>
+          </div>
+        </div>
+      </div>
+
+      {/* 크롭 다이얼로그 */}
+      {reCreeCropSrc && (
+        <ReCreeshotCropDialog
+          open
+          imageSrc={reCreeCropSrc}
+          onClose={() => {
+            if (reCreeCropSrc.startsWith("blob:")) URL.revokeObjectURL(reCreeCropSrc);
+            setReCreeCropSrc(null);
+          }}
+          onConfirm={async (blob) => {
+            if (reCreeCropSrc.startsWith("blob:")) URL.revokeObjectURL(reCreeCropSrc);
+            setReCreeCropSrc(null);
+            setRecreeUploading(true);
+            try {
+              const supabase = createClient();
+              const path = `recree/${postId ?? "new"}/${Date.now()}.jpg`;
+              const { error } = await supabase.storage.from("post-images").upload(path, blob, { contentType: "image/jpeg", upsert: false });
+              if (error) { toast.error("업로드 실패: " + error.message); return; }
+              const { data } = supabase.storage.from("post-images").getPublicUrl(path);
+              onRecreePhotoChange(data.publicUrl);
+            } finally {
+              setRecreeUploading(false);
+            }
+          }}
+        />
+      )}
 
       {/* ─ 현재 썸네일 ─────────────────────────────────────────────────────── */}
       {thumbImage && (

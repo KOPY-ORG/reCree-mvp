@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import Image from "next/image";
 import { Camera, X } from "lucide-react";
 
@@ -17,6 +17,8 @@ interface Props {
   onCheckScore: () => void;
   onNext: () => void;
   isUploading: boolean;
+  prefillReferenceUrl?: string;
+  onRestoreReference?: () => void;
 }
 
 function getScoreMessage(score: number): { headline: string; sub: string } {
@@ -40,9 +42,29 @@ export function UploadStep1({
   onCheckScore,
   onNext,
   isUploading,
+  prefillReferenceUrl,
+  onRestoreReference,
 }: Props) {
   const refInputRef = useRef<HTMLInputElement>(null);
   const shotInputRef = useRef<HTMLInputElement>(null);
+
+  const [msgIndex, setMsgIndex] = useState(0);
+  const waitingMessages = [
+    "ANALYZING...",
+    "COMPARING YOUR SHOT...",
+    "ALMOST THERE...",
+    "FINISHING UP...",
+    "COMPUTING SCORE...",
+  ];
+
+  // 채점 중 메시지 순차 진행 (마지막에서 멈춤)
+  useEffect(() => {
+    if (!isScoringPreview) { setMsgIndex(0); return; }
+    const interval = setInterval(() => {
+      setMsgIndex((i) => Math.min(i + 1, waitingMessages.length - 1));
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [isScoringPreview]);
 
   const hasShot = !!shotPreviewUrl;
   const hasReference = !!referencePreviewUrl;
@@ -75,7 +97,7 @@ export function UploadStep1({
   return (
     <div className="flex flex-col h-[calc(100dvh-3rem)] px-4 py-4 gap-3">
       {/* 메인 shot 영역 */}
-      <div className="relative w-full aspect-[3/4]">
+      <div className="relative w-full aspect-[4/5]">
         {/* 리크리샷 업로드 버튼 */}
         <button
           type="button"
@@ -133,20 +155,38 @@ export function UploadStep1({
           )}
         </div>
 
-        {/* 채점 중 로딩 오버레이 */}
+        {/* 채점 중 로딩 오버레이 — 카운트업 숫자 */}
         {isScoringPreview && (
-          <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/30 z-20">
-            <div className="relative flex items-center justify-center">
-              <span className="absolute inline-flex size-24 rounded-full bg-brand/40 animate-ping" />
-              <span className="relative inline-flex size-16 rounded-full items-center justify-center" style={{ background: "linear-gradient(135deg, #C8FF09, #ffffff 150%)" }}>
-                <span className="text-black text-xs font-bold text-center leading-tight">
-                  AI<br />Scoring
-                </span>
+          <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40 z-20">
+            <div className="flex flex-col items-center gap-3">
+              <div className="relative flex items-center justify-center">
+                <span
+                  className="absolute inline-flex size-36 rounded-full animate-ping"
+                  style={{ backgroundColor: "rgba(200,255,9,0.15)" }}
+                />
+                <div className="relative flex flex-col items-center leading-tight" style={{ color: "#C8FF09", textShadow: "0 0 40px rgba(200,255,9,0.6)" }}>
+                  <span className="text-4xl font-black tracking-tight">AI</span>
+                  <span className="text-4xl font-black tracking-tight">Scoring</span>
+                </div>
+              </div>
+              <span className="text-xs font-semibold text-white/70 uppercase tracking-widest">
+                {waitingMessages[msgIndex]}
               </span>
             </div>
           </div>
         )}
       </div>
+
+      {/* prefill reference 복원 버튼 */}
+      {!hasReference && prefillReferenceUrl && onRestoreReference && (
+        <button
+          type="button"
+          onClick={onRestoreReference}
+          className="w-full py-2.5 rounded-full text-sm font-medium border border-border text-foreground"
+        >
+          Use original photo
+        </button>
+      )}
 
       {/* 점수 결과 영역 */}
       {scoreMessage && previewScore !== null && (

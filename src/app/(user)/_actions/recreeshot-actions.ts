@@ -400,3 +400,28 @@ export async function updateReCreeshot(
   revalidatePath(`/explore/hall/${id}`);
   return {};
 }
+
+// ─── updateReCreeshotImageUrl ─────────────────────────────────────────────────
+// Step3에서 합성 이미지 업로드 후 imageUrl을 교체
+
+export async function updateReCreeshotImageUrl(
+  id: string,
+  compositeUrl: string
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "unauthenticated" };
+
+  const shot = await prisma.reCreeshot.findUnique({ where: { id }, select: { userId: true } });
+  if (!shot || shot.userId !== user.id) return { error: "forbidden" };
+
+  await prisma.reCreeshot.update({
+    where: { id },
+    data: { imageUrl: compositeUrl },
+  });
+
+  revalidatePath(`/explore/hall/${id}`);
+  revalidatePath("/explore");
+  revalidatePath("/");
+  return {};
+}

@@ -60,6 +60,14 @@ interface PostResult {
   tagIds: string[];
 }
 
+interface PlacePrefill {
+  id: string;
+  nameEn: string | null;
+  nameKo: string | null;
+  addressEn: string | null;
+  imageUrl: string | null;
+}
+
 interface Props {
   referencePreviewUrl: string | null;
   shotPreviewUrl: string;
@@ -80,6 +88,10 @@ interface Props {
     showBadge: boolean;
   }) => void;
   isSubmitting: boolean;
+  prefillPostId?: string;
+  prefillPlace?: PlacePrefill;
+  prefillTagIds?: string[];
+  prefillTopicIds?: string[];
 }
 
 // ── Topic tree types ──────────────────────────────────────────────────────────
@@ -123,11 +135,15 @@ export function UploadStep2({
   onBack: _onBack,
   onShare,
   isSubmitting,
+  prefillPostId,
+  prefillPlace,
+  prefillTagIds = [],
+  prefillTopicIds = [],
 }: Props) {
   const [story, setStory] = useState("");
   const [tips, setTips] = useState("");
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
-  const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([]);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>(prefillTagIds);
+  const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>(prefillTopicIds);
   const [submitted, setSubmitted] = useState(false);
 
   // 장소 검색
@@ -136,11 +152,13 @@ export function UploadStep2({
   const [popularPlaces, setPopularPlaces] = useState<PlaceResult[]>([]);
   const [placeResults, setPlaceResults] = useState<PlaceResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [selectedPlace, setSelectedPlace] = useState<PlaceResult | null>(null);
+  const [selectedPlace, setSelectedPlace] = useState<PlaceResult | null>(
+    prefillPlace ? { id: prefillPlace.id, nameEn: prefillPlace.nameEn, nameKo: prefillPlace.nameKo, addressEn: prefillPlace.addressEn, city: null, imageUrl: prefillPlace.imageUrl } : null
+  );
 
   // 포스트 연결
   const [linkedPosts, setLinkedPosts] = useState<PostResult[]>([]);
-  const [linkedPostId, setLinkedPostId] = useState<string | undefined>(undefined);
+  const [linkedPostId, setLinkedPostId] = useState<string | undefined>(prefillPostId);
 
   // 구글맵 장소 추가 오버레이
   const [addPlaceOverlay, setAddPlaceOverlay] = useState(false);
@@ -153,6 +171,12 @@ export function UploadStep2({
   const [themeSearchQuery, setThemeSearchQuery] = useState("");
 
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── prefill 장소의 포스트 목록 로드 ─────────────────────────────────────────
+  useEffect(() => {
+    if (!prefillPlace) return;
+    getPostsByPlace(prefillPlace.id).then(setLinkedPosts);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── 시트 열릴 때 인기 장소 로드 ────────────────────────────────────────────
   useEffect(() => {

@@ -11,7 +11,9 @@ import {
 } from "@/lib/post-labels";
 import { PostCard } from "./_components/PostCard";
 import { SearchBar } from "./_components/SearchBar";
+import { GuideVideoCard } from "./_components/GuideVideoCard";
 import { getCurrentUser } from "@/lib/auth";
+import { ReCreeshotImage } from "@/components/recreeshot-image";
 
 // ─── 가로 스크롤 섹션 ────────────────────────────────────────────────────────
 
@@ -49,6 +51,8 @@ function HScrollSection({
 
 export default async function HomePage() {
   const currentUser = await getCurrentUser();
+
+  const guideVideo = await prisma.guideVideo.findFirst({ where: { isActive: true } });
 
   const [homeBanners, sections, tagGroupConfigs, savedPostIds] = await Promise.all([
     prisma.homeBanner.findMany({
@@ -126,7 +130,7 @@ export default async function HomePage() {
 
   type SectionData =
     | { kind: "posts"; items: PostItem[] }
-    | { kind: "reCreeshots"; items: { id: string; imageUrl: string; matchScore: number | null; showBadge: boolean }[] };
+    | { kind: "reCreeshots"; items: { id: string; imageUrl: string; matchScore: number | null; showBadge: boolean; referencePhotoUrl: string | null }[] };
 
   const sectionData: SectionData[] = await Promise.all(
     sections.map(async (section): Promise<SectionData> => {
@@ -143,7 +147,7 @@ export default async function HomePage() {
           },
           orderBy: { createdAt: "desc" },
           take: section.maxCount,
-          select: { id: true, imageUrl: true, matchScore: true, showBadge: true },
+          select: { id: true, imageUrl: true, matchScore: true, showBadge: true, referencePhotoUrl: true },
         });
         return { kind: "reCreeshots", items };
       }
@@ -261,23 +265,30 @@ export default async function HomePage() {
         if (data.kind === "reCreeshots") {
           return (
             <HScrollSection key={section.id} title={section.titleEn} moreHref="/explore?tab=hall">
-              {data.items.map((shot) => (
-                <div key={shot.id} className="shrink-0 w-[120px]">
-                  <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-muted">
-                    <Image
-                      src={shot.imageUrl}
-                      alt="recreeshot"
-                      fill
-                      className="object-cover"
-                      sizes="120px"
-                    />
-                    {shot.matchScore != null && shot.showBadge && (
-                      <span className="absolute top-2 right-2 bg-brand text-black text-xs font-bold px-1.5 py-0.5 rounded-full">
-                        {Math.round(shot.matchScore)}%
-                      </span>
-                    )}
-                  </div>
+              {guideVideo && (
+                <div className="shrink-0 w-[120px]">
+                  <GuideVideoCard
+                    videoUrl={guideVideo.videoUrl}
+                    thumbnailUrl={guideVideo.thumbnailUrl}
+                    titleEn={guideVideo.titleEn}
+                    className="aspect-[4/5] rounded-lg"
+                  />
                 </div>
+              )}
+              {data.items.map((shot) => (
+                <Link key={shot.id} href={`/explore/hall/${shot.id}`} className="shrink-0 w-[120px] block">
+                  <ReCreeshotImage
+                    shotUrl={shot.imageUrl}
+                    referenceUrl={shot.referencePhotoUrl}
+                    matchScore={shot.matchScore}
+                    showBadge={shot.showBadge}
+                    referencePosition="top-left"
+                    badgePosition="top-right"
+                    variant="thumb-sm"
+                    className="aspect-[4/5]"
+                    sizes="120px"
+                  />
+                </Link>
               ))}
             </HScrollSection>
           );
