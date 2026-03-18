@@ -28,7 +28,6 @@ interface ReCreeshot {
 }
 
 interface Props {
-  userId: string;
   email: string;
   nickname: string | null;
   bio: string | null;
@@ -156,8 +155,7 @@ export function ProfileView({
           </Link>
         </div>
       ) : (
-        <div className="px-2 bg-background">
-        <div className="grid grid-cols-2 gap-2 bg-background">
+        <div className="px-2 grid grid-cols-2 gap-2 bg-background">
           {recreeshots.map((shot) => (
             <button
               key={shot.id}
@@ -178,7 +176,6 @@ export function ProfileView({
               />
             </button>
           ))}
-        </div>
         </div>
       )}
 
