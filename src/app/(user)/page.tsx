@@ -11,6 +11,7 @@ import {
 } from "@/lib/post-labels";
 import { PostCard } from "./_components/PostCard";
 import { SearchBar } from "./_components/SearchBar";
+import { GuideVideoCard } from "./_components/GuideVideoCard";
 import { getCurrentUser } from "@/lib/auth";
 
 // ─── 가로 스크롤 섹션 ────────────────────────────────────────────────────────
@@ -49,6 +50,8 @@ function HScrollSection({
 
 export default async function HomePage() {
   const currentUser = await getCurrentUser();
+
+  const guideVideo = await prisma.guideVideo.findFirst({ where: { isActive: true } });
 
   const [homeBanners, sections, tagGroupConfigs, savedPostIds] = await Promise.all([
     prisma.homeBanner.findMany({
@@ -261,6 +264,16 @@ export default async function HomePage() {
         if (data.kind === "reCreeshots") {
           return (
             <HScrollSection key={section.id} title={section.titleEn} moreHref="/explore?tab=hall">
+              {guideVideo && (
+                <div className="shrink-0 w-[120px]">
+                  <GuideVideoCard
+                    videoUrl={guideVideo.videoUrl}
+                    thumbnailUrl={guideVideo.thumbnailUrl}
+                    titleEn={guideVideo.titleEn}
+                    className="aspect-[4/5] rounded-lg"
+                  />
+                </div>
+              )}
               {data.items.map((shot) => (
                 <div key={shot.id} className="shrink-0 w-[120px]">
                   <div className="relative aspect-[4/5] rounded-lg overflow-hidden bg-muted">

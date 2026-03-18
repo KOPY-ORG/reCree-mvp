@@ -131,6 +131,8 @@ export default async function ExplorePage({
   const tagIds = tagId ? (Array.isArray(tagId) ? tagId : [tagId]) : [];
   const currentUser = await getCurrentUser();
 
+  const guideVideo = await prisma.guideVideo.findFirst({ where: { isActive: true } });
+
   const [level0Topics, tagGroups, tagGroupConfigs, recreeshots, savedPostIds] =
     await Promise.all([
       getLevel0TopicsDeep(),
@@ -222,7 +224,7 @@ export default async function ExplorePage({
       {/* Hall 탭 */}
       {tab === "hall" && (
         <div className="px-4 py-4">
-          <HallGrid shots={recreeshots} />
+          <HallGrid shots={recreeshots} guideVideo={guideVideo} />
         </div>
       )}
     </div>

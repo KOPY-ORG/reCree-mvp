@@ -16,6 +16,7 @@ import {
   TrendingUp,
   Layers,
   Map,
+  Video,
 } from "lucide-react";
 import { signOut } from "@/lib/actions/auth";
 
@@ -38,6 +39,7 @@ const TOOLS_MENUS = [
 const CURATION_MENUS = [
   { label: "홈 큐레이션", icon: Home, href: "/admin/home-curation" },
   { label: "recreeshot 관리", icon: Camera, href: "/admin/recreeshots" },
+  { label: "가이드 영상", icon: Video, href: "/admin/guide-video" },
   { label: "인기 검색어", icon: TrendingUp, href: "/admin/popular-searches" },
 ] as const;
 
