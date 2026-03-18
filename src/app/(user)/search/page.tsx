@@ -76,6 +76,7 @@ function SearchPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [value, setValue] = useState(() => searchParams.get("q") ?? "");
+  const from = searchParams.get("from");
   const [recent, setRecent] = useState<string[]>(() => getRecent());
   const [recentPosts, setRecentPosts] = useState<RecentPost[]>(() => getRecentPosts());
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -103,7 +104,11 @@ function SearchPageContent() {
 
   function navigateKeyword(text: string) {
     saveRecent(text);
-    router.push(`/my-map?q=${encodeURIComponent(text)}`);
+    if (from === "map") {
+      router.push(`/my-map?q=${encodeURIComponent(text)}`);
+    } else {
+      router.push(`/explore?q=${encodeURIComponent(text)}`);
+    }
   }
 
   function navigatePost(title: string, slug: string, placeName?: string) {
