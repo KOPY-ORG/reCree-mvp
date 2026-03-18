@@ -52,6 +52,8 @@ export type PostFormData = {
   // 수집 정보
   collectedBy: string;
   collectedAt: string;
+  // 리크리샷 기준 이미지
+  recreePhotoUrl: string | null;
   // 이미지
   images: PostImageInput[];
   // 복수 출처
@@ -177,6 +179,7 @@ export async function createPost(
         bodyEn: data.bodyEn || null,
         status: data.status,
         memo: data.memo || null,
+        recreePhotoUrl: data.recreePhotoUrl || null,
         collectedBy: data.collectedBy || null,
         collectedAt: data.collectedAt || null,
         authorId: user?.id ?? null,
@@ -280,6 +283,7 @@ export async function updatePost(
           bodyEn: data.bodyEn || null,
           status: data.status,
           memo: data.memo || null,
+          recreePhotoUrl: data.recreePhotoUrl || null,
           collectedBy: data.collectedBy || null,
           collectedAt: data.collectedAt || null,
           postTopics: {

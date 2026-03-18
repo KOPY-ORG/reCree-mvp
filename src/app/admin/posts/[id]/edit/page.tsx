@@ -152,6 +152,7 @@ export default async function EditPostPage({ params, searchParams }: Props) {
     bodyEn: post.bodyEn,
     status: post.status,
     memo: post.memo,
+    recreePhotoUrl: post.recreePhotoUrl,
     collectedBy: post.collectedBy,
     collectedAt: post.collectedAt,
     postTopics: post.postTopics,

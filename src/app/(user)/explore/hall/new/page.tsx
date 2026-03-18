@@ -35,6 +35,7 @@ export default async function HallNewPage({ searchParams }: PageProps) {
       where: { id: postId, status: "PUBLISHED" },
       select: {
         id: true,
+        recreePhotoUrl: true,
         postPlaces: {
           take: 1,
           select: {
@@ -47,7 +48,8 @@ export default async function HallNewPage({ searchParams }: PageProps) {
     });
     if (post) {
       prefillPostId = post.id;
-      prefillReferenceUrl = referenceUrl;
+      // 관리자가 설정한 기준 이미지 우선, 없으면 query param fallback
+      prefillReferenceUrl = post.recreePhotoUrl ?? referenceUrl;
       prefillPlace = post.postPlaces[0]?.place;
       prefillTagIds = post.postTags.map((t) => t.tag.id);
       prefillTopicIds = post.postTopics.map((t) => t.topic.id);

@@ -159,6 +159,7 @@ model Post {
   memo         String?    // 관리자 내부 메모
   collectedBy  String?    // 수집자 이름
   collectedAt  String?    // 수집 날짜 (예: "2024-01-15")
+  recreePhotoUrl String?   // 리크리샷 기준 이미지 (4:5, 관리자 설정)
   viewCount    Int        @default(0)
   saveCount    Int        @default(0)
   authorId     String?    @db.Uuid
