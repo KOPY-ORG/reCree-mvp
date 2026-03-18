@@ -48,32 +48,23 @@ export function UploadStep1({
   const refInputRef = useRef<HTMLInputElement>(null);
   const shotInputRef = useRef<HTMLInputElement>(null);
 
-  // 카운트업 애니메이션
-  const [animatedScore, setAnimatedScore] = useState(0);
+  const [msgIndex, setMsgIndex] = useState(0);
+  const waitingMessages = [
+    "ANALYZING...",
+    "COMPARING YOUR SHOT...",
+    "ALMOST THERE...",
+    "FINISHING UP...",
+    "COMPUTING SCORE...",
+  ];
 
+  // 채점 중 메시지 순차 진행 (마지막에서 멈춤)
   useEffect(() => {
-    if (!isScoringPreview) {
-      setAnimatedScore(0);
-      return;
-    }
-    // 채점 중: 0 → 최대 88까지 랜덤하게 올라가다 슬로다운
+    if (!isScoringPreview) { setMsgIndex(0); return; }
     const interval = setInterval(() => {
-      setAnimatedScore((prev) => {
-        if (prev >= 88) return prev;
-        const step = Math.max(1, Math.round((1 - prev / 100) * (Math.random() * 10)));
-        return Math.min(88, prev + step);
-      });
-    }, 120);
+      setMsgIndex((i) => Math.min(i + 1, waitingMessages.length - 1));
+    }, 5000);
     return () => clearInterval(interval);
   }, [isScoringPreview]);
-
-  useEffect(() => {
-    if (scoringDone && previewScore !== null) {
-      // 실제 점수로 이동 (살짝 딜레이 후 snap)
-      const t = setTimeout(() => setAnimatedScore(Math.round(previewScore)), 200);
-      return () => clearTimeout(t);
-    }
-  }, [scoringDone, previewScore]);
 
   const hasShot = !!shotPreviewUrl;
   const hasReference = !!referencePreviewUrl;
@@ -167,15 +158,19 @@ export function UploadStep1({
         {/* 채점 중 로딩 오버레이 — 카운트업 숫자 */}
         {isScoringPreview && (
           <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40 z-20">
-            <div className="flex flex-col items-center gap-2">
-              <span
-                className="text-7xl font-black tracking-tighter leading-none tabular-nums"
-                style={{ color: "#C8FF09", textShadow: "0 0 40px rgba(200,255,9,0.6)" }}
-              >
-                {animatedScore}%
-              </span>
+            <div className="flex flex-col items-center gap-3">
+              <div className="relative flex items-center justify-center">
+                <span
+                  className="absolute inline-flex size-36 rounded-full animate-ping"
+                  style={{ backgroundColor: "rgba(200,255,9,0.15)" }}
+                />
+                <div className="relative flex flex-col items-center leading-tight" style={{ color: "#C8FF09", textShadow: "0 0 40px rgba(200,255,9,0.6)" }}>
+                  <span className="text-4xl font-black tracking-tight">AI</span>
+                  <span className="text-4xl font-black tracking-tight">Scoring</span>
+                </div>
+              </div>
               <span className="text-xs font-semibold text-white/70 uppercase tracking-widest">
-                Analyzing...
+                {waitingMessages[msgIndex]}
               </span>
             </div>
           </div>
