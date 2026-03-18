@@ -2,7 +2,6 @@
 
 import { useRef, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { ChevronLeft, MoreVertical, Download, Pencil, Trash2, Flag } from "lucide-react";
 import { toast } from "sonner";
 import { deleteReCreeshot } from "@/app/(user)/_actions/recreeshot-actions";
@@ -206,9 +205,9 @@ export function HallDetailTopSection({ id, isOwner, imageUrl, referencePhotoUrl,
 
       {/* 헤더 */}
       <div className="flex items-center justify-between px-2 h-12 bg-white border-b border-gray-100">
-        <Link href="/explore?tab=hall" className="p-2 rounded-full">
+        <button type="button" onClick={() => router.back()} className="p-2 rounded-full">
           <ChevronLeft className="size-5 text-black" />
-        </Link>
+        </button>
 
         <div className="relative">
           <button

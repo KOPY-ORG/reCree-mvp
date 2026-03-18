@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ChevronRight, MapPin } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { resolveTopicColors, resolveTagColors, type TagGroupColorMap } from "@/lib/post-labels";
 import { HallDetailClient } from "./_components/HallDetailClient";
 import { HallDetailTopSection } from "./_components/HallDetailTopSection";
 
@@ -25,6 +26,17 @@ export default async function HallDetailPage({
             select: {
               id: true, nameEn: true,
               colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true,
+              parent: {
+                select: {
+                  colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true,
+                  parent: {
+                    select: {
+                      colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true,
+                      parent: { select: { colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true } },
+                    },
+                  },
+                },
+              },
             },
           },
         },
@@ -40,8 +52,10 @@ export default async function HallDetailPage({
   if (!shot || shot.status === "DELETED") notFound();
 
   // 태그 그룹 컬러 맵
-  const tagGroups = await prisma.tagGroupConfig.findMany();
-  const groupMap = new Map(tagGroups.map((g) => [g.group, g]));
+  const tagGroups = await prisma.tagGroupConfig.findMany({
+    select: { group: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true },
+  });
+  const groupMap: TagGroupColorMap = new Map(tagGroups.map((g) => [g.group, g]));
 
   const liked = currentUser
     ? !!(await prisma.reCreeshotLike.findUnique({
@@ -128,34 +142,30 @@ export default async function HallDetailPage({
         {(shot.reCreeshotTopics.length > 0 || shot.reCreeshotTags.length > 0) && (
           <div className="flex flex-wrap gap-1.5">
             {shot.reCreeshotTopics.map(({ topic }) => {
-              const bg = topic.colorHex2
-                ? `linear-gradient(${topic.gradientDir}, ${topic.colorHex}, ${topic.colorHex2} ${topic.gradientStop}%)`
-                : (topic.colorHex ?? "#C8FF09");
+              const c = resolveTopicColors(topic);
+              const bg = c.colorHex2
+                ? `linear-gradient(${c.gradientDir}, ${c.colorHex}, ${c.colorHex2} ${c.gradientStop}%)`
+                : c.colorHex;
               return (
                 <span
                   key={topic.id}
                   className="pill-badge text-xs font-medium"
-                  style={{ background: bg, color: topic.textColorHex ?? "#000" }}
+                  style={{ background: bg, color: c.textColorHex }}
                 >
                   {topic.nameEn}
                 </span>
               );
             })}
             {shot.reCreeshotTags.map(({ tag }) => {
-              const group = groupMap.get(tag.group);
-              const colorHex = tag.colorHex ?? group?.colorHex ?? "#e5e7eb";
-              const colorHex2 = tag.colorHex2 ?? group?.colorHex2;
-              const gradientDir = group?.gradientDir ?? "to right";
-              const gradientStop = group?.gradientStop ?? 150;
-              const textColorHex = tag.textColorHex ?? group?.textColorHex ?? "#000";
-              const bg = colorHex2
-                ? `linear-gradient(${gradientDir}, ${colorHex}, ${colorHex2} ${gradientStop}%)`
-                : colorHex;
+              const c = resolveTagColors(tag, groupMap.get(tag.group));
+              const bg = c.colorHex2
+                ? `linear-gradient(${c.gradientDir}, ${c.colorHex}, ${c.colorHex2} ${c.gradientStop}%)`
+                : c.colorHex;
               return (
                 <span
                   key={tag.id}
                   className="pill-badge text-xs font-medium"
-                  style={{ background: bg, color: textColorHex }}
+                  style={{ background: bg, color: c.textColorHex }}
                 >
                   {tag.name}
                 </span>
