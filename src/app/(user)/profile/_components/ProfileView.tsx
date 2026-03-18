@@ -13,6 +13,8 @@ import {
   LogOut,
   Trash2,
   Plus,
+  FileText,
+  ShieldCheck,
 } from "lucide-react";
 import { ReCreeshotImage } from "@/components/recreeshot-image";
 import { deleteAccount } from "../_actions/profile-actions";
@@ -205,6 +207,20 @@ export function ProfileView({
                 icon={<Pencil className="size-4" />}
                 label="Edit Profile"
                 href="/profile/edit"
+                onClick={() => setDrawerOpen(false)}
+              />
+
+              <DrawerSection label="LEGAL" />
+              <DrawerItem
+                icon={<FileText className="size-4" />}
+                label="Terms of Service"
+                href="/policy/terms"
+                onClick={() => setDrawerOpen(false)}
+              />
+              <DrawerItem
+                icon={<ShieldCheck className="size-4" />}
+                label="Privacy Policy"
+                href="/policy/privacy"
                 onClick={() => setDrawerOpen(false)}
               />
 
