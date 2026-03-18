@@ -18,6 +18,7 @@ import {
   Map,
   Video,
   Flag,
+  ScrollText,
 } from "lucide-react";
 import { signOut } from "@/lib/actions/auth";
 
@@ -35,6 +36,7 @@ const TAXONOMY_MENUS = [
 
 const TOOLS_MENUS = [
   { label: "시트 가져오기", icon: Download, href: "/admin/import" },
+  { label: "정책 관리", icon: ScrollText, href: "/admin/policy" },
 ] as const;
 
 const CURATION_MENUS = [

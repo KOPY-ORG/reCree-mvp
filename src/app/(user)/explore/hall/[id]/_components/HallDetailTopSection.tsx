@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, MoreVertical, Download, Pencil, Trash2, Flag } from "lucide-react";
 import { showError } from "@/lib/toast";
 import { deleteReCreeshot } from "@/app/(user)/_actions/recreeshot-actions";
@@ -19,6 +19,16 @@ interface Props {
 
 export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, referencePhotoUrl, matchScore, showBadge }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const from = searchParams.get("from");
+
+  function handleBack() {
+    if (from === "profile") {
+      router.push("/profile");
+    } else {
+      router.back();
+    }
+  }
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [compositeUrl, setCompositeUrl] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -208,7 +218,7 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
 
       {/* 헤더 */}
       <div className="flex items-center justify-between px-2 h-12 bg-white border-b border-gray-100">
-        <button type="button" onClick={() => router.back()} className="p-2 rounded-full">
+        <button type="button" onClick={handleBack} className="p-2 rounded-full">
           <ChevronLeft className="size-5 text-black" />
         </button>
 

@@ -5,6 +5,7 @@ import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { checkNicknameAvailable } from "@/lib/actions/user-actions";
 
 function getAdminClient() {
   return createAdminClient(
@@ -62,11 +63,17 @@ export async function updateProfile(data: {
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
+  const trimmedNickname = data.nickname.trim();
+  if (trimmedNickname) {
+    const available = await checkNicknameAvailable(trimmedNickname, user.id);
+    if (!available) return { error: "This nickname is already taken." };
+  }
+
   try {
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        nickname: data.nickname.trim() || null,
+        nickname: trimmedNickname || null,
         bio: data.bio.trim() || null,
         profileImageUrl: data.profileImageUrl,
       },

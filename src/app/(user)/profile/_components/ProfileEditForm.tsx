@@ -4,6 +4,8 @@ import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Camera } from "lucide-react";
 import { updateProfile, uploadProfileImage } from "../_actions/profile-actions";
+import { useNicknameCheck } from "@/hooks/use-nickname-check";
+import { NicknameInput } from "@/components/NicknameInput";
 import { showToast, showError } from "@/lib/toast";
 
 interface Props {
@@ -27,6 +29,7 @@ export function ProfileEditForm({
   const router = useRouter();
   const [isSaving, startSaving] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const nicknameStatus = useNicknameCheck(nicknameVal, nickname ?? "");
 
   const initial = email[0].toUpperCase();
 
@@ -140,14 +143,10 @@ export function ProfileEditForm({
           <label htmlFor="nickname" className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
             Nickname
           </label>
-          <input
-            id="nickname"
-            type="text"
+          <NicknameInput
             value={nicknameVal}
-            onChange={(e) => setNicknameVal(e.target.value)}
-            placeholder="Your nickname"
-            maxLength={30}
-            className="w-full text-sm bg-transparent border border-border rounded-lg px-3 py-2.5 outline-none focus:border-foreground transition-colors placeholder:text-muted-foreground/50"
+            onChange={setNicknameVal}
+            status={nicknameStatus}
           />
         </div>
 
@@ -170,7 +169,7 @@ export function ProfileEditForm({
         <button
           type="button"
           onClick={handleSave}
-          disabled={isSaving}
+          disabled={isSaving || nicknameStatus === "taken" || nicknameStatus === "checking"}
           className="w-full py-3 rounded-lg bg-brand text-black text-sm font-semibold disabled:opacity-50 transition-opacity"
         >
           {isSaving ? "Saving..." : "Save changes"}
