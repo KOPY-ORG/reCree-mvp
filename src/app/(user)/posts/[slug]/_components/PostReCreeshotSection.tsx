@@ -2,14 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { Camera } from "lucide-react";
-import { ReCreeshotImage } from "@/components/recreeshot-image";
 
 interface Shot {
   id: string;
   imageUrl: string;
-  referencePhotoUrl: string | null;
   matchScore: number | null;
   showBadge: boolean;
+  referencePhotoUrl: string | null;
   user: { nickname: string | null };
   tips: string | null;
 }
@@ -57,20 +56,23 @@ export function PostReCreeshotSection({ postId, shots, originalImageUrl }: Props
             key={shot.id}
             type="button"
             onClick={() => router.push(`/explore/hall/${shot.id}`)}
-            className="shrink-0 w-[90px] aspect-[4/5] rounded-xl overflow-hidden"
+            className="relative shrink-0 w-[90px] aspect-[4/5] rounded-xl overflow-hidden"
           >
-            <ReCreeshotImage
-              shotUrl={shot.imageUrl}
-              referenceUrl={shot.referencePhotoUrl}
-              matchScore={shot.matchScore}
-              showBadge={shot.showBadge}
-              referencePosition="top-left"
-              badgePosition="top-right"
-              rounded={false}
-              showMatchLabel={false}
-              className="w-full h-full"
-              sizes="90px"
+            <img
+              src={shot.imageUrl}
+              alt="recreeshot"
+              className="w-full h-full object-cover"
             />
+            {shot.referencePhotoUrl && (
+              <div className="absolute rounded-[10%] overflow-hidden" style={{ top: "4%", left: "4%", width: "22%", aspectRatio: "4/5", outline: "1px solid rgba(255,255,255,0.9)", boxShadow: "0 0 8px 4px rgba(255,255,255,0.6)" }}>
+                <img src={shot.referencePhotoUrl} alt="" className="w-full h-full object-cover" />
+              </div>
+            )}
+            {shot.showBadge && shot.matchScore !== null && (
+              <div className="absolute top-1 right-1 text-black text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none" style={{ background: "linear-gradient(to right, #C8FF09, #ffffff 150%)", boxShadow: "0 1px 3px rgba(0,0,0,0.15)" }}>
+                {Math.round(shot.matchScore)}%
+              </div>
+            )}
           </button>
         ))}
       </div>

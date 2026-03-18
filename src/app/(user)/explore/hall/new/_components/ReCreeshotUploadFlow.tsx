@@ -410,6 +410,8 @@ export function ReCreeshotUploadFlow({ tagGroups, topics, userId, prefillPostId,
           matchScore={state.matchScore}
           showBadge={state.showBadge}
           createdId={state.createdId}
+          userId={userId}
+          uploadedShotPath={state.uploadedShotPath}
         />
       )}
 

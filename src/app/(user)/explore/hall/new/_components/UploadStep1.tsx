@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import Image from "next/image";
 import { Camera, X } from "lucide-react";
 
@@ -47,6 +47,33 @@ export function UploadStep1({
 }: Props) {
   const refInputRef = useRef<HTMLInputElement>(null);
   const shotInputRef = useRef<HTMLInputElement>(null);
+
+  // 카운트업 애니메이션
+  const [animatedScore, setAnimatedScore] = useState(0);
+
+  useEffect(() => {
+    if (!isScoringPreview) {
+      setAnimatedScore(0);
+      return;
+    }
+    // 채점 중: 0 → 최대 88까지 랜덤하게 올라가다 슬로다운
+    const interval = setInterval(() => {
+      setAnimatedScore((prev) => {
+        if (prev >= 88) return prev;
+        const step = Math.max(1, Math.round((1 - prev / 100) * (Math.random() * 10)));
+        return Math.min(88, prev + step);
+      });
+    }, 120);
+    return () => clearInterval(interval);
+  }, [isScoringPreview]);
+
+  useEffect(() => {
+    if (scoringDone && previewScore !== null) {
+      // 실제 점수로 이동 (살짝 딜레이 후 snap)
+      const t = setTimeout(() => setAnimatedScore(Math.round(previewScore)), 200);
+      return () => clearTimeout(t);
+    }
+  }, [scoringDone, previewScore]);
 
   const hasShot = !!shotPreviewUrl;
   const hasReference = !!referencePreviewUrl;
@@ -137,15 +164,18 @@ export function UploadStep1({
           )}
         </div>
 
-        {/* 채점 중 로딩 오버레이 */}
+        {/* 채점 중 로딩 오버레이 — 카운트업 숫자 */}
         {isScoringPreview && (
-          <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/30 z-20">
-            <div className="relative flex items-center justify-center">
-              <span className="absolute inline-flex size-24 rounded-full bg-brand/40 animate-ping" />
-              <span className="relative inline-flex size-16 rounded-full items-center justify-center" style={{ background: "linear-gradient(135deg, #C8FF09, #ffffff 150%)" }}>
-                <span className="text-black text-xs font-bold text-center leading-tight">
-                  AI<br />Scoring
-                </span>
+          <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40 z-20">
+            <div className="flex flex-col items-center gap-2">
+              <span
+                className="text-7xl font-black tracking-tighter leading-none tabular-nums"
+                style={{ color: "#C8FF09", textShadow: "0 0 40px rgba(200,255,9,0.6)" }}
+              >
+                {animatedScore}%
+              </span>
+              <span className="text-xs font-semibold text-white/70 uppercase tracking-widest">
+                Analyzing...
               </span>
             </div>
           </div>

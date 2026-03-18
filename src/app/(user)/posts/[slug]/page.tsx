@@ -159,9 +159,9 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
     select: {
       id: true,
       imageUrl: true,
-      referencePhotoUrl: true,
       matchScore: true,
       showBadge: true,
+      referencePhotoUrl: true,
       tips: true,
       user: { select: { nickname: true } },
     },

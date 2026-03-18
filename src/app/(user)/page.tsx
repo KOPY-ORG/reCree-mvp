@@ -129,7 +129,7 @@ export default async function HomePage() {
 
   type SectionData =
     | { kind: "posts"; items: PostItem[] }
-    | { kind: "reCreeshots"; items: { id: string; imageUrl: string; matchScore: number | null; showBadge: boolean }[] };
+    | { kind: "reCreeshots"; items: { id: string; imageUrl: string; matchScore: number | null; showBadge: boolean; referencePhotoUrl: string | null }[] };
 
   const sectionData: SectionData[] = await Promise.all(
     sections.map(async (section): Promise<SectionData> => {
@@ -146,7 +146,7 @@ export default async function HomePage() {
           },
           orderBy: { createdAt: "desc" },
           take: section.maxCount,
-          select: { id: true, imageUrl: true, matchScore: true, showBadge: true },
+          select: { id: true, imageUrl: true, matchScore: true, showBadge: true, referencePhotoUrl: true },
         });
         return { kind: "reCreeshots", items };
       }
@@ -275,22 +275,23 @@ export default async function HomePage() {
                 </div>
               )}
               {data.items.map((shot) => (
-                <div key={shot.id} className="shrink-0 w-[120px]">
-                  <div className="relative aspect-[4/5] rounded-lg overflow-hidden bg-muted">
-                    <Image
-                      src={shot.imageUrl}
-                      alt="recreeshot"
-                      fill
-                      className="object-cover"
-                      sizes="120px"
-                    />
-                    {shot.matchScore != null && shot.showBadge && (
-                      <span className="absolute top-2 right-2 bg-brand text-black text-xs font-bold px-1.5 py-0.5 rounded-full">
-                        {Math.round(shot.matchScore)}%
-                      </span>
-                    )}
-                  </div>
-                </div>
+                <Link key={shot.id} href={`/explore/hall/${shot.id}`} className="relative shrink-0 w-[120px] aspect-[4/5] block rounded-lg overflow-hidden bg-muted">
+                  <img
+                    src={shot.imageUrl}
+                    alt="recreeshot"
+                    className="w-full h-full object-cover"
+                  />
+                  {shot.referencePhotoUrl && (
+                    <div className="absolute rounded-[10%] overflow-hidden" style={{ top: "4%", left: "4%", width: "22%", aspectRatio: "4/5", outline: "1px solid rgba(255,255,255,0.9)", boxShadow: "0 0 8px 4px rgba(255,255,255,0.6)" }}>
+                      <img src={shot.referencePhotoUrl} alt="" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  {shot.showBadge && shot.matchScore !== null && (
+                    <div className="absolute top-1 right-1 text-black text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none" style={{ background: "linear-gradient(to right, #C8FF09, #ffffff 150%)", boxShadow: "0 1px 3px rgba(0,0,0,0.15)" }}>
+                      {Math.round(shot.matchScore)}%
+                    </div>
+                  )}
+                </Link>
               ))}
             </HScrollSection>
           );

@@ -1,12 +1,11 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft, MoreVertical, Download, Pencil, Trash2, Flag } from "lucide-react";
 import { toast } from "sonner";
 import { deleteReCreeshot } from "@/app/(user)/_actions/recreeshot-actions";
-import { ReCreeshotImage } from "@/components/recreeshot-image";
 
 interface Props {
   id: string;
@@ -21,19 +20,17 @@ export function HallDetailTopSection({ id, isOwner, imageUrl, referencePhotoUrl,
   const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [compositeUrl, setCompositeUrl] = useState<string | null>(null);
-  const compositeFileRef = useRef<File | null>(null);
+  const preparedFileRef = useRef<File | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // 마운트 시 canvas 합성 → compositeUrl 생성
   useEffect(() => {
     let objectUrl: string | null = null;
 
     async function compose() {
       const canvas = canvasRef.current;
       if (!canvas) return;
-
       const W = 1080;
       const H = W * (5 / 4);
       canvas.width = W;
@@ -53,19 +50,15 @@ export function HallDetailTopSection({ id, isOwner, imageUrl, referencePhotoUrl,
           const thumbY = W * 0.03;
           const thumbR = Math.round(thumbW * 0.12);
 
-          // 1. 글로우 (CSS boxShadow 재현): frosted glass 전에 그려야 섬네일 이미지로 안이 가려짐
           ctx.save();
           ctx.shadowColor = "rgba(255,255,255,0.75)";
           ctx.shadowBlur = 60;
-          ctx.shadowOffsetX = 0;
-          ctx.shadowOffsetY = 0;
           ctx.fillStyle = "rgba(255,255,255,0.5)";
           ctx.beginPath();
           ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
           ctx.fill();
           ctx.restore();
 
-          // 2. frosted glass (클립 안 — 글로우 fill 위를 덮음)
           ctx.save();
           ctx.beginPath();
           ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
@@ -77,7 +70,6 @@ export function HallDetailTopSection({ id, isOwner, imageUrl, referencePhotoUrl,
           ctx.fillRect(thumbX, thumbY, thumbW, thumbH);
           ctx.restore();
 
-          // 3. original 이미지
           ctx.save();
           ctx.beginPath();
           ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
@@ -85,7 +77,6 @@ export function HallDetailTopSection({ id, isOwner, imageUrl, referencePhotoUrl,
           ctx.drawImage(refImg, thumbX, thumbY, thumbW, thumbH);
           ctx.restore();
 
-          // 4. 흰색 테두리
           ctx.save();
           ctx.strokeStyle = "#ffffff";
           ctx.lineWidth = 3;
@@ -99,14 +90,13 @@ export function HallDetailTopSection({ id, isOwner, imageUrl, referencePhotoUrl,
           const badgeText = `${Math.round(matchScore)}% Match`;
           const fontSize = 32;
           const badgePadX = 28;
-          const badgePadY = 20;
+          const badgePadY = 10;
           ctx.font = `700 ${fontSize}px -apple-system, Helvetica Neue, sans-serif`;
           const textW = ctx.measureText(badgeText).width;
           const badgeW = textW + badgePadX * 2;
           const badgeH = fontSize + badgePadY * 2;
           const badgeX = W - badgeW - W * 0.03;
           const badgeY = W * 0.03;
-
           const grad = ctx.createLinearGradient(badgeX, 0, badgeX + badgeW * 1.5, 0);
           grad.addColorStop(0, "#C8FF09");
           grad.addColorStop(1, "#ffffff");
@@ -125,40 +115,43 @@ export function HallDetailTopSection({ id, isOwner, imageUrl, referencePhotoUrl,
           ctx.fillStyle = "#000000";
           ctx.font = `700 ${fontSize}px -apple-system, Helvetica Neue, sans-serif`;
           ctx.textBaseline = "alphabetic";
-          const textY = badgeY + badgePadY + fontSize * 0.82;
-          ctx.fillText(badgeText, badgeX + badgePadX, textY);
+          ctx.fillText(badgeText, badgeX + badgePadX, badgeY + badgePadY + fontSize * 0.82);
           ctx.restore();
         }
 
-        ctx.save();
-        ctx.font = `600 28px 'Noto Sans', sans-serif`;
-        ctx.fillStyle = "rgba(255,255,255,0.75)";
-        ctx.textBaseline = "alphabetic";
-        ctx.shadowColor = "rgba(0,0,0,0.75)";
-        ctx.shadowBlur = 8;
-        ctx.shadowOffsetY = 2;
-        const watermarkText = "reCree";
-        const watermarkX = W - ctx.measureText(watermarkText).width - W * 0.03;
-        const watermarkY = H - W * 0.03;
-        ctx.fillText(watermarkText, watermarkX, watermarkY);
-        ctx.restore();
+        // imageUrl에 워터마크가 이미 포함되어 있으므로 별도 렌더링 불필요
 
         canvas.toBlob((blob) => {
           if (!blob) return;
           objectUrl = URL.createObjectURL(blob);
-          compositeFileRef.current = new File([blob], "recreeshot.jpg", { type: "image/jpeg" });
           setCompositeUrl(objectUrl);
+          preparedFileRef.current = new File([blob], "recreeshot.jpg", { type: "image/jpeg" });
         }, "image/jpeg", 0.92);
       } catch {
-        // CORS 등 실패 시 무시
+        // CORS 실패 등 → compositeUrl 없이 imageUrl fallback
       }
     }
 
     compose();
-    return () => {
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
+    return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
   }, [imageUrl, referencePhotoUrl, matchScore, showBadge]);
+
+  async function handleSave() {
+    setMenuOpen(false);
+    if (preparedFileRef.current && navigator.canShare?.({ files: [preparedFileRef.current] })) {
+      try {
+        await navigator.share({ files: [preparedFileRef.current], title: "My recreeshot" });
+        return;
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") return;
+      }
+    }
+    const url = compositeUrl ?? imageUrl;
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "recreeshot.jpg";
+    a.click();
+  }
 
   async function handleDelete() {
     setShowDeleteConfirm(false);
@@ -211,13 +204,12 @@ export function HallDetailTopSection({ id, isOwner, imageUrl, referencePhotoUrl,
         </div>
       )}
 
-      {/* 흰색 헤더 */}
+      {/* 헤더 */}
       <div className="flex items-center justify-between px-2 h-12 bg-white border-b border-gray-100">
         <Link href="/explore?tab=hall" className="p-2 rounded-full">
           <ChevronLeft className="size-5 text-black" />
         </Link>
 
-        {/* 3-dot 메뉴 */}
         <div className="relative">
           <button
             type="button"
@@ -232,24 +224,16 @@ export function HallDetailTopSection({ id, isOwner, imageUrl, referencePhotoUrl,
             <>
               <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
               <div className="absolute top-10 right-0 z-20 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden w-max">
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  className="flex items-center gap-2 w-full px-3.5 py-2.5 text-xs font-medium text-gray-800 hover:bg-gray-50 transition-colors border-b border-gray-100"
+                >
+                  <Download className="size-3.5 shrink-0" />
+                  Download
+                </button>
                 {isOwner ? (
                   <>
-                    {compositeUrl ? (
-                      <a
-                        href={compositeUrl}
-                        download="recreeshot.jpg"
-                        onClick={() => setMenuOpen(false)}
-                        className="flex items-center gap-2 w-full px-3.5 py-2.5 text-xs font-medium text-gray-800 hover:bg-gray-50 transition-colors border-b border-gray-100"
-                      >
-                        <Download className="size-3.5 shrink-0" />
-                        Save image
-                      </a>
-                    ) : (
-                      <div className="flex items-center gap-2 px-3.5 py-2.5 text-xs font-medium text-gray-400 border-b border-gray-100">
-                        <Download className="size-3.5 shrink-0" />
-                        Preparing...
-                      </div>
-                    )}
                     <button
                       type="button"
                       onClick={() => { setMenuOpen(false); router.push(`/explore/hall/${id}/edit`); }}
@@ -283,30 +267,13 @@ export function HallDetailTopSection({ id, isOwner, imageUrl, referencePhotoUrl,
         </div>
       </div>
 
-      {/* 이미지 영역 — Step3와 동일한 비율·구성 */}
+      {/* 이미지 — canvas 합성본 표시 (꾹 눌러 저장 시 동일 이미지) */}
       <div className="relative aspect-[4/5] bg-muted">
-        {compositeUrl ? (
-          /* 합성 완료: img 태그로 표시 → iOS 꾹 눌러 Photos 저장 가능 */
-          <img
-            src={compositeUrl}
-            alt="recreeshot"
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          /* 합성 중: ReCreeshotImage 미리보기 */
-          <ReCreeshotImage
-            shotUrl={imageUrl}
-            referenceUrl={referencePhotoUrl}
-            matchScore={matchScore}
-            showBadge={showBadge}
-            referencePosition="top-left"
-            badgePosition="top-right"
-            rounded={false}
-            className="w-full h-full"
-            sizes="(max-width: 672px) 100vw, 672px"
-            priority
-          />
-        )}
+        <img
+          src={compositeUrl ?? imageUrl}
+          alt="recreeshot"
+          className="w-full h-full object-cover"
+        />
       </div>
     </>
   );

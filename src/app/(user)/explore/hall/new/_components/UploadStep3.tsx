@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Download, Share2, CheckCircle2 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { updateReCreeshotImageUrl } from "@/app/(user)/_actions/recreeshot-actions";
 import { ReCreeshotImage } from "@/components/recreeshot-image";
 
 interface Props {
@@ -11,6 +13,8 @@ interface Props {
   matchScore: number | null;
   showBadge: boolean;
   createdId: string;
+  userId: string;
+  uploadedShotPath: string | null;
 }
 
 export function UploadStep3({
@@ -19,11 +23,12 @@ export function UploadStep3({
   matchScore,
   showBadge,
   createdId,
+  userId,
+  uploadedShotPath,
 }: Props) {
   const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [compositeUrl, setCompositeUrl] = useState<string | null>(null);
-  const [compositeFile, setCompositeFile] = useState<File | null>(null);
   const [isComposing, setIsComposing] = useState(true);
 
   useEffect(() => {
@@ -52,7 +57,6 @@ export function UploadStep3({
         const thumbY = W * 0.03;
         const thumbR = Math.round(thumbW * 0.12);
 
-        // 1. 글로우 (CSS boxShadow 재현): frosted glass 전에 그려야 섬네일 이미지로 안이 가려짐
         ctx.save();
         ctx.shadowColor = "rgba(255,255,255,0.75)";
         ctx.shadowBlur = 60;
@@ -64,7 +68,6 @@ export function UploadStep3({
         ctx.fill();
         ctx.restore();
 
-        // 2. frosted glass (클립 안 — 글로우 fill 위를 덮음)
         ctx.save();
         ctx.beginPath();
         ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
@@ -76,7 +79,6 @@ export function UploadStep3({
         ctx.fillRect(thumbX, thumbY, thumbW, thumbH);
         ctx.restore();
 
-        // 3. original 이미지
         ctx.save();
         ctx.beginPath();
         ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
@@ -84,7 +86,6 @@ export function UploadStep3({
         ctx.drawImage(refImg, thumbX, thumbY, thumbW, thumbH);
         ctx.restore();
 
-        // 4. 흰색 테두리
         ctx.save();
         ctx.strokeStyle = "#ffffff";
         ctx.lineWidth = 3;
@@ -98,7 +99,7 @@ export function UploadStep3({
         const badgeText = `${Math.round(matchScore)}% Match`;
         const fontSize = 32;
         const badgePadX = 28;
-        const badgePadY = 20;
+        const badgePadY = 10;
         ctx.font = `700 ${fontSize}px -apple-system, Helvetica Neue, sans-serif`;
         const textW = ctx.measureText(badgeText).width;
         const badgeW = textW + badgePadX * 2;
@@ -142,11 +143,51 @@ export function UploadStep3({
       ctx.fillText(watermarkText, watermarkX, watermarkY);
       ctx.restore();
 
-      canvas.toBlob((blob) => {
+      canvas.toBlob(async (blob) => {
         if (!blob) return;
+
+        // 로컬 미리보기 + 다운로드용 URL (배지·소스이미지 포함 full composite)
         objectUrl = URL.createObjectURL(blob);
         setCompositeUrl(objectUrl);
-        setCompositeFile(new File([blob], "recreeshot.jpg", { type: "image/jpeg" }));
+
+        // DB 저장용 클린 버전 (메인 샷 + 워터마크만, CSS overlay로 배지·소스이미지 표시)
+        ctx.clearRect(0, 0, W, H);
+        ctx.drawImage(shotImg, 0, 0, W, H);
+        ctx.save();
+        ctx.font = `600 28px 'Noto Sans', sans-serif`;
+        ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
+        ctx.textBaseline = "alphabetic";
+        ctx.shadowColor = "rgba(0, 0, 0, 0.75)";
+        ctx.shadowBlur = 8;
+        ctx.shadowOffsetY = 2;
+        const wText = "reCree";
+        ctx.fillText(wText, W - ctx.measureText(wText).width - W * 0.03, H - W * 0.03);
+        ctx.restore();
+
+        await new Promise<void>((resolve) => {
+          canvas.toBlob(async (cleanBlob) => {
+            if (!cleanBlob) { resolve(); return; }
+            try {
+              const supabase = createClient();
+              const cleanPath = `${userId}/${Date.now()}-shot.jpg`;
+              const { error: uploadError } = await supabase.storage
+                .from("recreeshot-images")
+                .upload(cleanPath, cleanBlob, { contentType: "image/jpeg", upsert: false });
+
+              if (!uploadError) {
+                const { data } = supabase.storage.from("recreeshot-images").getPublicUrl(cleanPath);
+                await updateReCreeshotImageUrl(createdId, data.publicUrl);
+                if (uploadedShotPath) {
+                  await supabase.storage.from("recreeshot-images").remove([uploadedShotPath]);
+                }
+              }
+            } catch {
+              // 업로드 실패해도 로컬 미리보기는 유지
+            }
+            resolve();
+          }, "image/jpeg", 0.92);
+        });
+
         setIsComposing(false);
       }, "image/jpeg", 0.92);
     }
@@ -155,13 +196,12 @@ export function UploadStep3({
     return () => {
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [shotPreviewUrl, referencePreviewUrl, matchScore, showBadge]);
+  }, [shotPreviewUrl, referencePreviewUrl, matchScore, showBadge, createdId, userId, uploadedShotPath]);
 
   return (
     <div className="flex flex-col flex-1 px-4 py-4 bg-background">
       <canvas ref={canvasRef} className="hidden" />
 
-      {/* 완료 표시 */}
       {!isComposing && (
         <div className="flex items-center gap-2.5 mb-3">
           <CheckCircle2 className="size-5 shrink-0 drop-shadow-[0_1px_1px_rgba(0,0,0,0.08)]" style={{ color: "#C8FF09" }} />
@@ -173,16 +213,14 @@ export function UploadStep3({
       )}
 
       {/* 이미지 영역 */}
-      <div className="relative mx-auto h-[50dvh] aspect-[4/5] shadow-md overflow-hidden">
+      <div className="relative mx-auto h-[50dvh] aspect-[4/5] shadow-md overflow-hidden rounded-xl">
         {compositeUrl ? (
-          /* 합성 완료: img 태그로 표시 → iOS에서 꾹 눌러 Photos 저장 가능 */
           <img
             src={compositeUrl}
             alt="recreeshot"
             className="w-full h-full object-cover"
           />
         ) : (
-          /* 합성 중: 미리보기 + 로딩 오버레이 */
           <>
             <ReCreeshotImage
               shotUrl={shotPreviewUrl}
@@ -213,16 +251,18 @@ export function UploadStep3({
 
       {/* 하단 버튼 */}
       <div className="mt-4 space-y-2">
-        {compositeUrl && compositeFile && (
+        {compositeUrl && (
           <div className="flex gap-2">
+            {/* Download — 웹 브라우저용 */}
             <a
               href={compositeUrl}
               download="recreeshot.jpg"
               className="flex items-center justify-center gap-2 flex-1 py-3 rounded-full font-semibold text-sm border border-border"
             >
               <Download className="size-4" />
-              Save
+              Download
             </a>
+            {/* Flex it — 페이지 링크 공유 */}
             <button
               type="button"
               onClick={async () => {
@@ -238,7 +278,7 @@ export function UploadStep3({
               className="flex items-center justify-center gap-2 flex-1 py-3 rounded-full font-semibold text-sm border border-border"
             >
               <Share2 className="size-4" />
-              Share
+              Flex it
             </button>
           </div>
         )}

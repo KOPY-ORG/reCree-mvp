@@ -8,7 +8,6 @@ import { getLevel0TopicsDeep } from "@/lib/topic-queries";
 import { type TagGroupColorMap } from "@/lib/post-labels";
 import { getCurrentUser } from "@/lib/auth";
 import { ScrapButton } from "../_components/ScrapButton";
-import { ReCreeshotImage } from "@/components/recreeshot-image";
 import { PostBadges } from "../_components/PostCard";
 import { TopicFilterRow } from "./_components/TopicFilterRow";
 import { TagFilterRow } from "./_components/TagFilterRow";
@@ -71,13 +70,7 @@ function PostListItem({
 function RecreeshotInlineSection({
   shots,
 }: {
-  shots: {
-    id: string;
-    imageUrl: string;
-    referencePhotoUrl: string | null;
-    matchScore: number | null;
-    showBadge: boolean;
-  }[];
+  shots: { id: string; imageUrl: string; matchScore: number | null; showBadge: boolean; referencePhotoUrl: string | null }[];
 }) {
   if (shots.length === 0) return null;
   return (
@@ -93,19 +86,22 @@ function RecreeshotInlineSection({
       </div>
       <div className="flex gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory">
         {shots.map((shot) => (
-          <Link key={shot.id} href={`/explore/hall/${shot.id}`} className="snap-start shrink-0 w-[90px]">
-            <ReCreeshotImage
-              shotUrl={shot.imageUrl}
-              referenceUrl={shot.referencePhotoUrl}
-              matchScore={shot.matchScore}
-              showBadge={shot.showBadge}
-              referencePosition="top-left"
-              badgePosition="top-right"
-              showMatchLabel={false}
-              rounded={false}
-              className="aspect-[4/5] rounded-lg"
-              sizes="90px"
+          <Link key={shot.id} href={`/explore/hall/${shot.id}`} className="relative snap-start shrink-0 w-[90px] aspect-[4/5] block rounded-lg overflow-hidden bg-muted">
+            <img
+              src={shot.imageUrl}
+              alt="recreeshot"
+              className="w-full h-full object-cover"
             />
+            {shot.referencePhotoUrl && (
+              <div className="absolute rounded-[10%] overflow-hidden" style={{ top: "4%", left: "4%", width: "22%", aspectRatio: "4/5", outline: "1px solid rgba(255,255,255,0.9)", boxShadow: "0 0 8px 4px rgba(255,255,255,0.6)" }}>
+                <img src={shot.referencePhotoUrl} alt="" className="w-full h-full object-cover" />
+              </div>
+            )}
+            {shot.showBadge && shot.matchScore !== null && (
+              <div className="absolute top-1 right-1 text-black text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none" style={{ background: "linear-gradient(to right, #C8FF09, #ffffff 150%)", boxShadow: "0 1px 3px rgba(0,0,0,0.15)" }}>
+                {Math.round(shot.matchScore)}%
+              </div>
+            )}
           </Link>
         ))}
       </div>
@@ -150,7 +146,7 @@ export default async function ExplorePage({
       prisma.reCreeshot.findMany({
         where: { status: "ACTIVE" },
         orderBy: { createdAt: "desc" },
-        select: { id: true, imageUrl: true, referencePhotoUrl: true, matchScore: true, showBadge: true },
+        select: { id: true, imageUrl: true, matchScore: true, showBadge: true, referencePhotoUrl: true },
       }),
       getSavedPostIds(currentUser?.id ?? null),
     ]);
