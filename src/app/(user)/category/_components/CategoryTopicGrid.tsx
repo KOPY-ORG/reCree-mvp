@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+
+const KPOP_TOPIC_NAME = "K-POP";
 import Link from "next/link";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import {
@@ -146,7 +148,7 @@ export function CategoryTopicGrid({
   }
 
   // K-POP: L1 섹션 헤더 없이 모든 L2 플랫 표시
-  if (parentTopic.nameEn === "K-POP") {
+  if (parentTopic.nameEn === KPOP_TOPIC_NAME) {
     const allL2 = level1Topics.flatMap((l1) => l1.children.map((l2) => ({ l2, l1 })));
     const expandedEntry = expandedL2Id ? allL2.find(({ l2 }) => l2.id === expandedL2Id) ?? null : null;
     const expandedL2 = expandedEntry?.l2 ?? null;
