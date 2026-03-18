@@ -19,7 +19,6 @@ export function HallDetailTopSection({ id, isOwner, imageUrl, referencePhotoUrl,
   const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [compositeUrl, setCompositeUrl] = useState<string | null>(null);
-  const preparedFileRef = useRef<File | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -124,7 +123,6 @@ export function HallDetailTopSection({ id, isOwner, imageUrl, referencePhotoUrl,
           if (!blob) return;
           objectUrl = URL.createObjectURL(blob);
           setCompositeUrl(objectUrl);
-          preparedFileRef.current = new File([blob], "recreeshot.jpg", { type: "image/jpeg" });
         }, "image/jpeg", 0.92);
       } catch {
         // CORS 실패 등 → compositeUrl 없이 imageUrl fallback
@@ -135,16 +133,8 @@ export function HallDetailTopSection({ id, isOwner, imageUrl, referencePhotoUrl,
     return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
   }, [imageUrl, referencePhotoUrl, matchScore, showBadge]);
 
-  async function handleSave() {
+  function handleSave() {
     setMenuOpen(false);
-    if (preparedFileRef.current && navigator.canShare?.({ files: [preparedFileRef.current] })) {
-      try {
-        await navigator.share({ files: [preparedFileRef.current], title: "My recreeshot" });
-        return;
-      } catch (err) {
-        if (err instanceof Error && err.name === "AbortError") return;
-      }
-    }
     const url = compositeUrl ?? imageUrl;
     const a = document.createElement("a");
     a.href = url;
@@ -222,7 +212,7 @@ export function HallDetailTopSection({ id, isOwner, imageUrl, referencePhotoUrl,
           {menuOpen && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-              <div className="absolute top-10 right-0 z-20 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden w-max">
+              <div className="absolute top-10 right-0 z-20 bg-white/80 backdrop-blur-md rounded-xl shadow-lg overflow-hidden min-w-[160px]">
                 <button
                   type="button"
                   onClick={handleSave}
