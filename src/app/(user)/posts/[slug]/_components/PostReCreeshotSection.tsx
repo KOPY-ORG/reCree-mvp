@@ -1,8 +1,17 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Camera } from "lucide-react";
+import { Camera, LogIn } from "lucide-react";
+import Link from "next/link";
 import { ReCreeshotImage } from "@/components/recreeshot-image";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 interface Shot {
   id: string;
@@ -18,12 +27,18 @@ interface Props {
   postId: string;
   shots: Shot[];
   originalImageUrl: string | null;
+  isLoggedIn: boolean;
 }
 
-export function PostReCreeshotSection({ postId, shots, originalImageUrl }: Props) {
+export function PostReCreeshotSection({ postId, shots, originalImageUrl, isLoggedIn }: Props) {
   const router = useRouter();
+  const [showLoginDialog, setShowLoginDialog] = useState(false);
 
   function handleAdd() {
+    if (!isLoggedIn) {
+      setShowLoginDialog(true);
+      return;
+    }
     const params = new URLSearchParams({ postId });
     if (originalImageUrl) params.set("referenceUrl", originalImageUrl);
     router.push(`/explore/hall/new?${params.toString()}`);
@@ -97,6 +112,24 @@ export function PostReCreeshotSection({ postId, shots, originalImageUrl }: Props
           </div>
         </div>
       )}
+
+      <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
+        <DialogContent className="max-w-xs rounded-2xl text-center">
+          <DialogHeader className="items-center gap-3">
+            <LogIn className="size-10 text-muted-foreground" strokeWidth={1.5} />
+            <DialogTitle>Sign in to add a recreeshot</DialogTitle>
+            <DialogDescription>
+              Share your recreation photo and compare it with the original.
+            </DialogDescription>
+          </DialogHeader>
+          <Link
+            href="/login"
+            className="mt-2 w-full py-2.5 rounded-full bg-brand text-black text-sm font-semibold text-center block transition-opacity hover:opacity-80"
+          >
+            Sign in
+          </Link>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

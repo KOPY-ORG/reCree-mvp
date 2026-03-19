@@ -324,6 +324,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
         postId={post.id}
         shots={reCreeshorts}
         originalImageUrl={originalImages[0]?.url ?? null}
+        isLoggedIn={!!currentUser}
       />
 
       {/* 본문 */}

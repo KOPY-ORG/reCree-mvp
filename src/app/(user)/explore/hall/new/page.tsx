@@ -1,4 +1,5 @@
-import { redirect } from "next/navigation";
+import Link from "next/link";
+import { LogIn } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { getTagGroupsWithTags } from "@/lib/filter-queries";
@@ -10,7 +11,25 @@ interface PageProps {
 
 export default async function HallNewPage({ searchParams }: PageProps) {
   const currentUser = await getCurrentUser();
-  if (!currentUser) redirect("/login");
+  if (!currentUser) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] gap-4 text-center px-4">
+        <LogIn className="size-10 text-muted-foreground" strokeWidth={1.5} />
+        <div className="space-y-1">
+          <p className="text-lg font-semibold">Sign in to add a recreeshot</p>
+          <p className="text-sm text-muted-foreground">
+            Share your recreation photo and compare it with the original.
+          </p>
+        </div>
+        <Link
+          href="/login"
+          className="mt-2 px-5 py-2.5 rounded-full bg-brand text-black text-sm font-semibold transition-opacity hover:opacity-80"
+        >
+          Sign in
+        </Link>
+      </div>
+    );
+  }
 
   const { postId, referenceUrl } = await searchParams;
 

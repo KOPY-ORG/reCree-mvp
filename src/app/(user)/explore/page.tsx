@@ -216,7 +216,7 @@ export default async function ExplorePage({
       )}
 
       {/* 탭 바 (sticky top-14 = AppHeader 높이) */}
-      <ExploreTabBar />
+      <ExploreTabBar isLoggedIn={!!currentUser} />
 
       {/* Posts 탭 */}
       {tab === "posts" && (
