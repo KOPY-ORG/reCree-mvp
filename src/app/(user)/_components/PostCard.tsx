@@ -69,7 +69,7 @@ export function PostCard({
 
   return (
     <Link href={`/posts/${post.slug}`} className={wrapperClass}>
-      <div className="relative aspect-[3/2] rounded-lg overflow-hidden bg-muted">
+      <div className="relative aspect-[4/3] rounded-lg overflow-hidden bg-muted">
         {post.postImages[0]?.url ? (
           <Image
             src={post.postImages[0].url}
