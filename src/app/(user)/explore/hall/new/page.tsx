@@ -17,9 +17,9 @@ export default async function HallNewPage({ searchParams }: PageProps) {
         <LogIn className="size-10 text-muted-foreground" strokeWidth={1.5} />
         <div className="space-y-1">
           <p className="text-lg font-semibold">Sign in to add a recreeshot</p>
-          {/* <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Share your recreation photo and compare it with the original.
-          </p> */}
+          </p>
         </div>
         <Link
           href="/login"
