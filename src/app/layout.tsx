@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Noto_Sans, Noto_Sans_KR } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ToastProvider } from "@/components/toast-provider";
 import "./globals.css";
 
@@ -31,6 +32,7 @@ export default function RootLayout({
       <body className={`${notoSans.variable} ${notoSansKR.variable} font-sans antialiased`} suppressHydrationWarning>
         <ToastProvider>{children}</ToastProvider>
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
