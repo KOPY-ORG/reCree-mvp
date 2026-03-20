@@ -447,8 +447,9 @@ model CuratedSection {
   contentType   ContentType @default(POST)
   type          SectionType @default(MANUAL)
   postIds       String[]    @db.Uuid
-  filterTopicId String?     @db.Uuid
-  filterTagId   String?     @db.Uuid
+  filterTopicId  String?     @db.Uuid
+  filterTagId    String?     @db.Uuid
+  filterTagGroup String?
   maxCount      Int         @default(10)
   order         Int         @default(0)
   isActive      Boolean     @default(true)

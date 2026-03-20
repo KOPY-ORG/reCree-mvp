@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect, useId } from "react";
+import { useState, useTransition, useEffect, useId, useMemo } from "react";
 import {
   DndContext,
   closestCenter,
@@ -44,6 +44,7 @@ import type { SectionType, ContentType } from "@prisma/client";
 
 type TopicOption = { id: string; nameKo: string; nameEn: string };
 type TagOption = { id: string; nameKo: string; name: string };
+type TagGroupOption = { group: string; nameEn: string };
 
 interface SectionDialogProps {
   open: boolean;
@@ -51,6 +52,7 @@ interface SectionDialogProps {
   posts: PickablePost[];
   topics: TopicOption[];
   tags: TagOption[];
+  tagGroups: TagGroupOption[];
   editTarget?: {
     id: string;
     titleEn: string;
@@ -59,6 +61,7 @@ interface SectionDialogProps {
     postIds: string[];
     filterTopicId: string | null;
     filterTagId: string | null;
+    filterTagGroup: string | null;
     maxCount: number;
     isActive: boolean;
   };
@@ -71,6 +74,7 @@ const INITIAL: SectionFormData = {
   postIds: [],
   filterTopicId: "",
   filterTagId: "",
+  filterTagGroup: "",
   maxCount: 10,
   isActive: true,
 };
@@ -126,6 +130,7 @@ export function SectionDialog({
   posts,
   topics,
   tags,
+  tagGroups,
   editTarget,
 }: SectionDialogProps) {
   const [form, setForm] = useState<SectionFormData>(INITIAL);
@@ -149,6 +154,7 @@ export function SectionDialog({
               postIds: editTarget.postIds,
               filterTopicId: editTarget.filterTopicId ?? "",
               filterTagId: editTarget.filterTagId ?? "",
+              filterTagGroup: editTarget.filterTagGroup ?? "",
               maxCount: editTarget.maxCount,
               isActive: editTarget.isActive,
             }
@@ -176,11 +182,41 @@ export function SectionDialog({
     set("postIds", form.postIds.filter((x) => x !== id));
   }
 
+  // 필터 조건에 맞는 포스트만 picker에 표시
+  const filteredPosts = useMemo(() => {
+    const { filterTopicId, filterTagId, filterTagGroup } = form;
+    if (!filterTopicId && !filterTagId && !filterTagGroup) return posts;
+    return posts.filter((p) => {
+      if (filterTopicId && !p.allTopicIds?.includes(filterTopicId)) return false;
+      if (filterTagId && !p.tagIds?.includes(filterTagId)) return false;
+      if (filterTagGroup && !p.tagGroups?.includes(filterTagGroup)) return false;
+      return true;
+    });
+  }, [posts, form.filterTopicId, form.filterTagId, form.filterTagGroup]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // picker 필터 레이블
+  const pickerFilterLabel = useMemo(() => {
+    if (form.filterTopicId) {
+      const t = topics.find((t) => t.id === form.filterTopicId);
+      return t ? `${t.nameKo} (${t.nameEn})` : form.filterTopicId;
+    }
+    if (form.filterTagGroup) {
+      const g = tagGroups.find((g) => g.group === form.filterTagGroup);
+      return g ? `${g.nameEn} 전체` : form.filterTagGroup;
+    }
+    if (form.filterTagId) {
+      const t = tags.find((t) => t.id === form.filterTagId);
+      return t ? `${t.nameKo} (${t.name})` : form.filterTagId;
+    }
+    return undefined;
+  }, [form.filterTopicId, form.filterTagId, form.filterTagGroup, topics, tags, tagGroups]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // 선택된 포스트 객체 (순서 유지)
-  const postMap = new Map(posts.map((p) => [p.id, p]));
-  const selectedPosts = form.postIds
-    .map((id) => postMap.get(id))
-    .filter((p): p is PickablePost => !!p);
+  const postMap = useMemo(() => new Map(posts.map((p) => [p.id, p])), [posts]);
+  const selectedPosts = useMemo(
+    () => form.postIds.map((id) => postMap.get(id)).filter((p): p is PickablePost => !!p),
+    [form.postIds, postMap]
+  );
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -265,14 +301,17 @@ export function SectionDialog({
               </div>
             </div>
 
-            {/* MANUAL: 인라인 포스트 목록 + 추가 버튼 */}
-            {form.contentType === "POST" && form.type === "MANUAL" && (
+            {/* 포스트 순서 설정: MANUAL은 필수, AUTO는 선택(고정 순서 적용) */}
+            {form.contentType === "POST" && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label>
-                    선택된 포스트{" "}
+                    {form.type === "MANUAL" ? "선택된 포스트" : "고정 포스트 순서"}
+                    {" "}
                     <span className="text-muted-foreground font-normal">
-                      ({form.postIds.length}개)
+                      ({form.postIds.length}개
+                      {form.type !== "MANUAL" && form.postIds.length === 0 && " · 비어있으면 자동 정렬"}
+                      )
                     </span>
                   </Label>
                   <Button
@@ -292,7 +331,9 @@ export function SectionDialog({
                     className="rounded-lg border border-dashed px-4 py-6 text-center text-sm text-muted-foreground cursor-pointer hover:bg-muted/30 transition-colors"
                     onClick={() => setPickerOpen(true)}
                   >
-                    포스트를 선택해주세요
+                    {form.type === "MANUAL"
+                      ? "포스트를 선택해주세요"
+                      : "포스트를 추가하면 해당 순서로 고정됩니다"}
                   </div>
                 ) : (
                   <div className="rounded-lg border bg-muted/20 p-2 space-y-1.5 max-h-64 overflow-y-auto">
@@ -346,14 +387,34 @@ export function SectionDialog({
                   <div className="space-y-1.5">
                     <Label>태그 필터</Label>
                     <Select
-                      value={form.filterTagId || "none"}
-                      onValueChange={(v) => set("filterTagId", v === "none" ? "" : v)}
+                      value={
+                        form.filterTagGroup
+                          ? `group:${form.filterTagGroup}`
+                          : form.filterTagId || "none"
+                      }
+                      onValueChange={(v) => {
+                        if (v === "none") {
+                          set("filterTagId", "");
+                          set("filterTagGroup", "");
+                        } else if (v.startsWith("group:")) {
+                          set("filterTagGroup", v.slice(6));
+                          set("filterTagId", "");
+                        } else {
+                          set("filterTagId", v);
+                          set("filterTagGroup", "");
+                        }
+                      }}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="전체" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">전체</SelectItem>
+                        {tagGroups.map((g) => (
+                          <SelectItem key={`group:${g.group}`} value={`group:${g.group}`}>
+                            ▸ {g.nameEn} 전체
+                          </SelectItem>
+                        ))}
                         {tags.map((t) => (
                           <SelectItem key={t.id} value={t.id}>
                             {t.nameKo} ({t.name})
@@ -404,9 +465,11 @@ export function SectionDialog({
       <PostPickerDialog
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
-        posts={posts}
+        posts={filteredPosts}
         selectedIds={form.postIds}
         onConfirm={(ids) => set("postIds", ids)}
+        maxSelect={10}
+        filterLabel={pickerFilterLabel}
       />
     </>
   );

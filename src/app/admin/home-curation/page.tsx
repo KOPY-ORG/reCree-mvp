@@ -11,7 +11,7 @@ export default async function HomeCurationPage({
 }) {
   const { tab = "banner" } = await searchParams;
 
-  const [homeBanners, sections, publishedPosts, topics, tags] =
+  const [homeBanners, sections, publishedPosts, topics, tags, tagGroups] =
     await Promise.all([
       prisma.homeBanner.findMany({
         orderBy: { order: "asc" },
@@ -43,6 +43,7 @@ export default async function HomeCurationPage({
           postIds: true,
           filterTopicId: true,
           filterTagId: true,
+          filterTagGroup: true,
           maxCount: true,
           order: true,
           isActive: true,
@@ -50,7 +51,7 @@ export default async function HomeCurationPage({
       }),
       prisma.post.findMany({
         where: { status: "PUBLISHED" },
-        orderBy: { publishedAt: "desc" },
+        orderBy: { createdAt: "desc" },
         select: {
           id: true,
           titleEn: true,
@@ -61,10 +62,9 @@ export default async function HomeCurationPage({
             take: 1,
           },
           postTopics: {
-            where: { isVisible: true },
             orderBy: { displayOrder: "asc" },
-            take: 3,
             select: {
+              isVisible: true,
               topic: {
                 select: {
                   id: true,
@@ -74,6 +74,9 @@ export default async function HomeCurationPage({
                 },
               },
             },
+          },
+          postTags: {
+            select: { tag: { select: { id: true, group: true } } },
           },
         },
       }),
@@ -86,6 +89,11 @@ export default async function HomeCurationPage({
         where: { isActive: true },
         orderBy: { sortOrder: "asc" },
         select: { id: true, nameKo: true, name: true },
+      }),
+      prisma.tagGroupConfig.findMany({
+        where: { isVisible: true },
+        orderBy: { sortOrder: "asc" },
+        select: { group: true, nameEn: true },
       }),
     ]);
 
@@ -107,11 +115,17 @@ export default async function HomeCurationPage({
     titleEn: p.titleEn,
     titleKo: p.titleKo,
     thumbnailUrl: p.postImages[0]?.url ?? null,
-    topicLabels: p.postTopics.map(({ topic }) => ({
-      id: topic.id,
-      nameEn: topic.nameEn,
-      colorHex: topic.colorHex ?? topic.parent?.colorHex ?? null,
-    })),
+    topicLabels: p.postTopics
+      .filter((pt) => pt.isVisible)
+      .slice(0, 3)
+      .map(({ topic }) => ({
+        id: topic.id,
+        nameEn: topic.nameEn,
+        colorHex: topic.colorHex ?? topic.parent?.colorHex ?? null,
+      })),
+    allTopicIds: p.postTopics.map(({ topic }) => topic.id),
+    tagIds: p.postTags.map(({ tag }) => tag.id),
+    tagGroups: [...new Set(p.postTags.map(({ tag }) => tag.group))],
   }));
 
   return (
@@ -158,6 +172,7 @@ export default async function HomeCurationPage({
           posts={pickablePosts}
           topics={topics}
           tags={tags}
+          tagGroups={tagGroups}
         />
       )}
     </div>

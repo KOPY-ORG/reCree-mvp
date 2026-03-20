@@ -143,6 +143,8 @@ export default async function HomePage() {
               : {}),
             ...(section.filterTagId
               ? { reCreeshotTags: { some: { tagId: section.filterTagId } } }
+              : section.filterTagGroup
+              ? { reCreeshotTags: { some: { tag: { group: section.filterTagGroup } } } }
               : {}),
           },
           orderBy: { createdAt: "desc" },
@@ -152,8 +154,8 @@ export default async function HomePage() {
         return { kind: "reCreeshots", items };
       }
 
-      if (section.type === "MANUAL") {
-        if (section.postIds.length === 0) return { kind: "posts", items: [] };
+      // postIds가 지정된 경우(MANUAL 또는 AUTO 고정 순서): 해당 포스트를 그 순서로 표시
+      if (section.postIds.length > 0) {
         const posts = await getPostsWithLabels({
           id: { in: section.postIds },
           status: "PUBLISHED",
@@ -165,6 +167,10 @@ export default async function HomePage() {
         };
       }
 
+      // MANUAL인데 postIds가 없으면 빈 섹션
+      if (section.type === "MANUAL") return { kind: "posts", items: [] };
+
+      // AUTO: 필터 + 자동 정렬
       const items = await getPostsWithLabels(
         {
           status: "PUBLISHED",
@@ -173,11 +179,13 @@ export default async function HomePage() {
             : {}),
           ...(section.filterTagId
             ? { postTags: { some: { tagId: section.filterTagId } } }
+            : section.filterTagGroup
+            ? { postTags: { some: { tag: { group: section.filterTagGroup } } } }
             : {}),
         },
         {
           take: section.maxCount,
-          orderBy: section.type === "AUTO_HOT" ? { viewCount: "desc" } : { publishedAt: "desc" },
+          orderBy: section.type === "AUTO_HOT" ? { viewCount: "desc" } : { createdAt: "desc" },
         }
       );
       return { kind: "posts", items };
@@ -194,7 +202,7 @@ export default async function HomePage() {
   if (!hasBanners && !hasSections) {
     const fallbackPosts = await getPostsWithLabels(
       { status: "PUBLISHED" },
-      { orderBy: { publishedAt: "desc" } }
+      { orderBy: { createdAt: "desc" } }
     );
 
     if (fallbackPosts.length === 0) {
@@ -262,6 +270,15 @@ export default async function HomePage() {
         const data = sectionData[i];
         if (!data || data.items.length === 0) return null;
 
+        // POST AUTO 섹션은 필터 조건을 지도에 그대로 전달
+        function getPostMoreHref() {
+          if (section.type === "MANUAL") return "/explore";
+          if (section.filterTopicId) return `/my-map?topicId=${section.filterTopicId}`;
+          if (section.filterTagId) return `/my-map?tagId=${section.filterTagId}`;
+          if (section.filterTagGroup) return `/my-map?tagGroup=${section.filterTagGroup}`;
+          return "/my-map";
+        }
+
         if (data.kind === "reCreeshots") {
           return (
             <HScrollSection key={section.id} title={section.titleEn} moreHref="/explore?tab=hall">
@@ -295,7 +312,7 @@ export default async function HomePage() {
         }
 
         return (
-          <HScrollSection key={section.id} title={section.titleEn} moreHref="/explore">
+          <HScrollSection key={section.id} title={section.titleEn} moreHref={getPostMoreHref()}>
             {data.items.map((post) => (
               <PostCard key={post.id} post={post} tagGroupMap={tagGroupMap} isSaved={savedPostIds.has(post.id)} />
             ))}
