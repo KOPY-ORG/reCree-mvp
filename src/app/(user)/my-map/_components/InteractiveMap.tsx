@@ -12,6 +12,7 @@ type MarkerPlace = {
   longitude: number;
   nameEn: string;
   markerColor?: string;
+  markerGlyphColor?: string;
 };
 
 interface Props {
@@ -73,7 +74,8 @@ function MapContent({
       {places.map((place) => {
         const isSelected = selectedPlaceId === place.id;
         const isHighlighted = highlightedIds?.has(place.id) ?? false;
-        const color = place.markerColor;
+        const color = place.markerColor ?? "#C8FF09";
+        const glyphColor = place.markerGlyphColor ?? "white";
         return (
           <AdvancedMarker
             key={place.id}
@@ -82,21 +84,12 @@ function MapContent({
             title={place.nameEn}
             zIndex={isSelected ? 10 : isHighlighted ? 5 : 1}
           >
-            {color ? (
-              <Pin
-                background={color}
-                borderColor={color}
-                glyphColor="white"
-                scale={isSelected ? 1.3 : isHighlighted ? 1.1 : 1}
-              />
-            ) : (
-              <Pin
-                background="#1a1a1a"
-                borderColor="#1a1a1a"
-                glyphColor="white"
-                scale={isSelected ? 1.3 : isHighlighted ? 1.1 : 1}
-              />
-            )}
+            <Pin
+              background={color}
+              borderColor= "white" //{isSelected ? glyphColor : color}
+              glyphColor={glyphColor}
+              scale={isSelected ? 1.3 : isHighlighted ? 1.1 : 1}
+            />
           </AdvancedMarker>
         );
       })}
