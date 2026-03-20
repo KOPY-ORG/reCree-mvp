@@ -219,9 +219,10 @@ export function MapPageClient({
     });
   }, [basePlaces, selectedTopicId, selectedTagId, selectedTagGroup]);
 
-  const arirangConfig = tagGroupConfigs.find((c) => c.nameEn === "ARIRANG");
-  const arirangColor = arirangConfig?.colorHex ?? null;
-  const arirangGroupKey = arirangConfig?.group ?? null;
+  const { arirangColor, arirangGroupKey } = useMemo(() => {
+    const config = tagGroupConfigs.find((c) => c.nameEn === "ARIRANG");
+    return { arirangColor: config?.colorHex ?? null, arirangGroupKey: config?.group ?? null };
+  }, [tagGroupConfigs]);
 
   const isSearchMode = !!searchQuery && searchedPlaces !== null;
   const displayPlaces = isSearchMode ? (searchedPlaces ?? []) : filteredPlaces;

@@ -62,10 +62,9 @@ export default async function HomeCurationPage({
             take: 1,
           },
           postTopics: {
-            where: { isVisible: true },
             orderBy: { displayOrder: "asc" },
-            take: 3,
             select: {
+              isVisible: true,
               topic: {
                 select: {
                   id: true,
@@ -75,6 +74,9 @@ export default async function HomeCurationPage({
                 },
               },
             },
+          },
+          postTags: {
+            select: { tag: { select: { id: true, group: true } } },
           },
         },
       }),
@@ -113,11 +115,17 @@ export default async function HomeCurationPage({
     titleEn: p.titleEn,
     titleKo: p.titleKo,
     thumbnailUrl: p.postImages[0]?.url ?? null,
-    topicLabels: p.postTopics.map(({ topic }) => ({
-      id: topic.id,
-      nameEn: topic.nameEn,
-      colorHex: topic.colorHex ?? topic.parent?.colorHex ?? null,
-    })),
+    topicLabels: p.postTopics
+      .filter((pt) => pt.isVisible)
+      .slice(0, 3)
+      .map(({ topic }) => ({
+        id: topic.id,
+        nameEn: topic.nameEn,
+        colorHex: topic.colorHex ?? topic.parent?.colorHex ?? null,
+      })),
+    allTopicIds: p.postTopics.map(({ topic }) => topic.id),
+    tagIds: p.postTags.map(({ tag }) => tag.id),
+    tagGroups: [...new Set(p.postTags.map(({ tag }) => tag.group))],
   }));
 
   return (

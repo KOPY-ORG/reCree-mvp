@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect, useId } from "react";
+import { useState, useTransition, useEffect, useId, useMemo } from "react";
 import {
   DndContext,
   closestCenter,
@@ -182,11 +182,41 @@ export function SectionDialog({
     set("postIds", form.postIds.filter((x) => x !== id));
   }
 
+  // 필터 조건에 맞는 포스트만 picker에 표시
+  const filteredPosts = useMemo(() => {
+    const { filterTopicId, filterTagId, filterTagGroup } = form;
+    if (!filterTopicId && !filterTagId && !filterTagGroup) return posts;
+    return posts.filter((p) => {
+      if (filterTopicId && !p.allTopicIds?.includes(filterTopicId)) return false;
+      if (filterTagId && !p.tagIds?.includes(filterTagId)) return false;
+      if (filterTagGroup && !p.tagGroups?.includes(filterTagGroup)) return false;
+      return true;
+    });
+  }, [posts, form.filterTopicId, form.filterTagId, form.filterTagGroup]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // picker 필터 레이블
+  const pickerFilterLabel = useMemo(() => {
+    if (form.filterTopicId) {
+      const t = topics.find((t) => t.id === form.filterTopicId);
+      return t ? `${t.nameKo} (${t.nameEn})` : form.filterTopicId;
+    }
+    if (form.filterTagGroup) {
+      const g = tagGroups.find((g) => g.group === form.filterTagGroup);
+      return g ? `${g.nameEn} 전체` : form.filterTagGroup;
+    }
+    if (form.filterTagId) {
+      const t = tags.find((t) => t.id === form.filterTagId);
+      return t ? `${t.nameKo} (${t.name})` : form.filterTagId;
+    }
+    return undefined;
+  }, [form.filterTopicId, form.filterTagId, form.filterTagGroup, topics, tags, tagGroups]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // 선택된 포스트 객체 (순서 유지)
-  const postMap = new Map(posts.map((p) => [p.id, p]));
-  const selectedPosts = form.postIds
-    .map((id) => postMap.get(id))
-    .filter((p): p is PickablePost => !!p);
+  const postMap = useMemo(() => new Map(posts.map((p) => [p.id, p])), [posts]);
+  const selectedPosts = useMemo(
+    () => form.postIds.map((id) => postMap.get(id)).filter((p): p is PickablePost => !!p),
+    [form.postIds, postMap]
+  );
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -435,9 +465,11 @@ export function SectionDialog({
       <PostPickerDialog
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
-        posts={posts}
+        posts={filteredPosts}
         selectedIds={form.postIds}
         onConfirm={(ids) => set("postIds", ids)}
+        maxSelect={10}
+        filterLabel={pickerFilterLabel}
       />
     </>
   );

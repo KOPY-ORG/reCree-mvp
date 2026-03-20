@@ -24,6 +24,23 @@ export type Level2Topic = TopicBase & { children: Level3Topic[] };
 export type Level1Topic = TopicBase & { children: Level2Topic[] };
 export type Level0Topic = TopicBase & { children: Level1Topic[] };
 
+/** 주어진 topicId가 level0 그룹(또는 그 하위)에 속하는지 확인 */
+export function isTopicInGroup(topics: Level0Topic[], level0Id: string, topicId: string): boolean {
+  const group = topics.find((t) => t.id === level0Id);
+  if (!group) return false;
+  if (group.id === topicId) return true;
+  for (const l1 of group.children) {
+    if (l1.id === topicId) return true;
+    for (const l2 of l1.children) {
+      if (l2.id === topicId) return true;
+      for (const l3 of l2.children) {
+        if (l3.id === topicId) return true;
+      }
+    }
+  }
+  return false;
+}
+
 interface Props {
   topics: Level0Topic[];
   /** URL 모드: searchParams.getAll("topicId"), 컨트롤 모드: selectedTopicId ? [selectedTopicId] : [] */
@@ -50,19 +67,7 @@ export function TopicFilterRow({
   const isMap = variant === "map";
 
   function isInGroup(level0Id: string, topicId: string): boolean {
-    const group = topics.find((t) => t.id === level0Id);
-    if (!group) return false;
-    if (group.id === topicId) return true;
-    for (const l1 of group.children) {
-      if (l1.id === topicId) return true;
-      for (const l2 of l1.children) {
-        if (l2.id === topicId) return true;
-        for (const l3 of l2.children) {
-          if (l3.id === topicId) return true;
-        }
-      }
-    }
-    return false;
+    return isTopicInGroup(topics, level0Id, topicId);
   }
 
   function getGroupSelection(level0Id: string): string | null {
