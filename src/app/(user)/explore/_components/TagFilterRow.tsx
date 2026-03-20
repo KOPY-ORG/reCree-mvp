@@ -97,15 +97,23 @@ export function TagFilterRow({ tagGroups }: { tagGroups: TagGroup[] }) {
           const activeTag = group.tags.find((t) => t.id === selectedTagId);
           const label = activeTag ? `${group.nameEn} / ${activeTag.name}` : group.nameEn;
 
+          const isArirang = group.nameEn === "ARIRANG";
           return (
             <button
               key={group.group}
               onClick={() => setOpenGroup(group.group)}
               className={`pill-badge shrink-0 border transition-colors ${
-                isActive
+                isArirang
+                  ? ""
+                  : isActive
                   ? "bg-foreground text-background border-foreground"
                   : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
               }`}
+              style={isArirang ? {
+                backgroundColor: group.colorHex,
+                color: "#ffffff",
+                borderColor: group.colorHex,
+              } : undefined}
             >
               {label}
               {isActive ? (

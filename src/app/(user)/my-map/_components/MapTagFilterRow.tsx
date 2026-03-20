@@ -67,15 +67,23 @@ export function MapTagFilterRow({ tagGroups, selectedTagId, selectedTagGroup, on
           const activeTag = group.tags.find((t) => t.id === selectedId);
           const label = activeTag ? `${group.nameEn} / ${activeTag.name}` : group.nameEn;
 
+          const isArirang = group.nameEn === "ARIRANG";
           return (
             <button
               key={group.group}
               onClick={() => setOpenGroup(group.group)}
               className={`pill-badge shrink-0 border transition-colors shadow-md ${
-                isActive
+                isArirang
+                  ? ""
+                  : isActive
                   ? "bg-foreground text-background border-foreground"
                   : "bg-background text-muted-foreground border-border hover:text-foreground"
               }`}
+              style={isArirang ? {
+                backgroundColor: group.colorHex,
+                color: "#ffffff",
+                borderColor: group.colorHex,
+              } : undefined}
             >
               {label}
               {isActive ? (
