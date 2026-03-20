@@ -37,6 +37,7 @@ type TagGroup = {
 
 type TagGroupConfig = {
   group: string;
+  nameEn: string;
   colorHex: string; colorHex2: string | null;
   gradientDir: string; gradientStop: number; textColorHex: string;
 };
@@ -226,6 +227,10 @@ export function MapPageClient({
     });
   }, [basePlaces, selectedTopicId, selectedTagId, selectedTagGroup]);
 
+  const arirangConfig = tagGroupConfigs.find((c) => c.nameEn === "ARIRANG");
+  const arirangColor = arirangConfig?.colorHex ?? null;
+  const arirangGroupKey = arirangConfig?.group ?? null;
+
   const isSearchMode = !!searchQuery && searchedPlaces !== null;
   const displayPlaces = isSearchMode ? (searchedPlaces ?? []) : filteredPlaces;
 
@@ -317,7 +322,14 @@ export function MapPageClient({
 
         {/* ── 지도 (전체 배경) ── */}
         <InteractiveMap
-          places={displayPlaces}
+          places={displayPlaces.map((p) => ({
+            ...p,
+            markerColor:
+              arirangColor && arirangGroupKey &&
+              p.posts.some((post) => post.allTagGroups.includes(arirangGroupKey))
+                ? arirangColor
+                : undefined,
+          }))}
           selectedPlaceId={selectedPlaceId}
           highlightedIds={isSearchMode ? new Set(displayPlaces.map((p) => p.id)) : undefined}
           boundsKey={isSearchMode ? searchQuery : undefined}

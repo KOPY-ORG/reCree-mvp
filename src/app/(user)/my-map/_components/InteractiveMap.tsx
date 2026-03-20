@@ -3,6 +3,30 @@
 import { useEffect } from "react";
 import { APIProvider, Map, AdvancedMarker, useMap } from "@vis.gl/react-google-maps";
 
+function PinMarker({ color, size }: { color: string; size: number }) {
+  // 핀 비율: width = size * 0.7, height = size
+  const w = Math.round(size * 0.7);
+  const h = size;
+  return (
+    <svg
+      width={w}
+      height={h}
+      viewBox="0 0 28 40"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ display: "block", filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.35))" }}
+    >
+      {/* 핀 몸통 */}
+      <path
+        d="M14 0C6.268 0 0 6.268 0 14c0 9.333 14 26 14 26S28 23.333 28 14C28 6.268 21.732 0 14 0z"
+        fill={color}
+      />
+      {/* 안쪽 흰 원 */}
+      <circle cx="14" cy="14" r="5.5" fill="white" fillOpacity="0.85" />
+    </svg>
+  );
+}
+
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 const MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID ?? "DEMO_MAP_ID";
 
@@ -11,6 +35,7 @@ type MarkerPlace = {
   latitude: number;
   longitude: number;
   nameEn: string;
+  markerColor?: string;
 };
 
 interface Props {
@@ -81,6 +106,7 @@ function MapContent({
         {places.map((place) => {
           const isSelected = selectedPlaceId === place.id;
           const isHighlighted = highlightedIds?.has(place.id) ?? false;
+          const pinColor = place.markerColor ?? "#1a1a1a";
           return (
             <AdvancedMarker
               key={place.id}
@@ -102,14 +128,10 @@ function MapContent({
                       borderTop: "6px solid hsl(var(--foreground))",
                     }}
                   />
-                  <div className="w-2.5 h-2.5 rounded-full bg-brand border-2 border-white shadow -mt-0.5" />
+                  <PinMarker color={pinColor} size={34} />
                 </div>
-              ) : isHighlighted ? (
-                // 검색 결과 마커: 브랜드 색 점
-                <div className="w-3 h-3 rounded-full bg-brand border-2 border-white shadow-sm" />
               ) : (
-                // 기본 마커: 어두운 점
-                <div className="w-3 h-3 rounded-full bg-foreground/80 border-2 border-white shadow-sm" />
+                <PinMarker color={pinColor} size={isHighlighted ? 32 : 28} />
               )}
             </AdvancedMarker>
           );

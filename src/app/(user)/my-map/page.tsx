@@ -29,6 +29,7 @@ export default async function MyTripPage({
       prisma.tagGroupConfig.findMany({
         select: {
           group: true,
+          nameEn: true,
           colorHex: true,
           colorHex2: true,
           gradientDir: true,
