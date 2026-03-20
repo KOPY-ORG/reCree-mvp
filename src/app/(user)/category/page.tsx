@@ -25,14 +25,23 @@ export default async function CategoryPage({
     (g) => !topicGroupKeys.has(g.nameEn.toLowerCase())
   );
 
+  const arirangGroups = extraTagGroups.filter((g) => g.nameEn === "ARIRANG");
+  const otherGroups = extraTagGroups.filter((g) => g.nameEn !== "ARIRANG");
+
   const sidebarItems = [
+    ...arirangGroups.map((g) => ({
+      kind: "group" as const,
+      group: g.group,
+      nameEn: g.nameEn,
+      colorHex: g.colorHex,
+    })),
     ...level0Topics.map((t) => ({
       kind: "topic" as const,
       id: t.id,
       nameEn: t.nameEn,
       colorHex: t.colorHex,
     })),
-    ...extraTagGroups.map((g) => ({
+    ...otherGroups.map((g) => ({
       kind: "group" as const,
       group: g.group,
       nameEn: g.nameEn,

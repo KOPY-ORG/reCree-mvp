@@ -33,6 +33,9 @@ export type PickablePost = {
   titleKo: string;
   thumbnailUrl: string | null;
   topicLabels?: { id: string; nameEn: string; colorHex: string | null }[];
+  allTopicIds?: string[];
+  tagIds?: string[];
+  tagGroups?: string[];
 };
 
 function SortableSelectedRow({
@@ -96,6 +99,7 @@ interface PostPickerDialogProps {
   selectedIds: string[];
   onConfirm: (ids: string[]) => void;
   maxSelect?: number;
+  filterLabel?: string;
 }
 
 export function PostPickerDialog({
@@ -105,6 +109,7 @@ export function PostPickerDialog({
   selectedIds,
   onConfirm,
   maxSelect,
+  filterLabel,
 }: PostPickerDialogProps) {
   const [query, setQuery] = useState("");
   const [picked, setPicked] = useState<string[]>(selectedIds);
@@ -169,6 +174,11 @@ export function PostPickerDialog({
       <DialogContent className="max-w-lg max-h-[85vh] flex flex-col gap-0 p-0">
         <DialogHeader className="px-5 pt-5 pb-3 border-b shrink-0">
           <DialogTitle>포스트 선택</DialogTitle>
+          {filterLabel && (
+            <p className="text-xs text-muted-foreground mt-0.5">
+              필터: {filterLabel} · {posts.length}개
+            </p>
+          )}
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto flex flex-col min-h-0">

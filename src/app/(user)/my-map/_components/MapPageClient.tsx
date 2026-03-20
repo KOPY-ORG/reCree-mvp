@@ -13,30 +13,17 @@ import { MapTopicFilterRow } from "./MapTopicFilterRow";
 import { MapTagFilterRow } from "./MapTagFilterRow";
 import { InteractiveMap } from "./InteractiveMap";
 import { PlaceBottomSheet } from "./PlaceBottomSheet";
+import type { Level0Topic } from "@/components/TopicFilterRow";
+import type { TagGroupForFilter as TagGroup } from "@/components/TagFilterRow";
 
 // ─── 타입 ─────────────────────────────────────────────────────────────────────
 
 type Tab = "places" | "my-maps";
 type SheetState = "collapsed" | "tab-only" | "peek" | "expanded";
 
-type Level3Topic = {
-  id: string; nameEn: string;
-  colorHex: string | null; colorHex2: string | null;
-  gradientDir: string; gradientStop: number; textColorHex: string | null;
-};
-type Level2Topic = Level3Topic & { children: Level3Topic[] };
-type Level1Topic = Level3Topic & { children: Level2Topic[] };
-type Level0Topic = Level3Topic & { children: Level1Topic[] };
-
-type TagGroup = {
-  group: string; nameEn: string;
-  colorHex: string; colorHex2: string | null;
-  gradientDir: string; gradientStop: number; textColorHex: string;
-  tags: { id: string; name: string; colorHex: string | null; colorHex2?: string | null; textColorHex: string | null }[];
-};
-
 type TagGroupConfig = {
   group: string;
+  nameEn: string;
   colorHex: string; colorHex2: string | null;
   gradientDir: string; gradientStop: number; textColorHex: string;
 };
@@ -187,9 +174,15 @@ export function MapPageClient({
   }
 
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
-  const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
-  const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
-  const [selectedTagGroup, setSelectedTagGroup] = useState<string | null>(null);
+  const [selectedTopicId, setSelectedTopicId] = useState<string | null>(
+    searchParams.get("topicId")
+  );
+  const [selectedTagId, setSelectedTagId] = useState<string | null>(
+    searchParams.get("tagId")
+  );
+  const [selectedTagGroup, setSelectedTagGroup] = useState<string | null>(
+    searchParams.get("tagGroup")
+  );
   const [sheetState, setSheetState] = useState<SheetState>(
     searchParams.get("place") ? "collapsed" : "peek"
   );
@@ -225,6 +218,11 @@ export function MapPageClient({
       return true;
     });
   }, [basePlaces, selectedTopicId, selectedTagId, selectedTagGroup]);
+
+  const { arirangColor, arirangGroupKey } = useMemo(() => {
+    const config = tagGroupConfigs.find((c) => c.nameEn === "ARIRANG");
+    return { arirangColor: config?.colorHex ?? null, arirangGroupKey: config?.group ?? null };
+  }, [tagGroupConfigs]);
 
   const isSearchMode = !!searchQuery && searchedPlaces !== null;
   const displayPlaces = isSearchMode ? (searchedPlaces ?? []) : filteredPlaces;
@@ -317,7 +315,14 @@ export function MapPageClient({
 
         {/* ── 지도 (전체 배경) ── */}
         <InteractiveMap
-          places={displayPlaces}
+          places={displayPlaces.map((p) => ({
+            ...p,
+            markerColor:
+              arirangColor && arirangGroupKey &&
+              p.posts.some((post) => post.allTagGroups.includes(arirangGroupKey))
+                ? arirangColor
+                : undefined,
+          }))}
           selectedPlaceId={selectedPlaceId}
           highlightedIds={isSearchMode ? new Set(displayPlaces.map((p) => p.id)) : undefined}
           boundsKey={isSearchMode ? searchQuery : undefined}

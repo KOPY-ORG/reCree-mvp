@@ -25,15 +25,17 @@ export function CategorySidebar({ items }: { items: SidebarItem[] }) {
             ? `/category?topicId=${item.id}`
             : `/category?groupId=${item.group}`;
 
+        const isArirang = item.nameEn === "ARIRANG";
         return (
           <button
             key={item.kind === "topic" ? item.id : item.group}
             onClick={() => router.push(href)}
             className={`w-full px-3 py-3 text-left text-xs font-medium transition-colors ${
               isActive
-                ? "bg-background text-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
+                ? "bg-background"
+                : ""
+            } ${isArirang ? "font-bold" : isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            style={isArirang && item.colorHex ? { color: item.colorHex } : undefined}
           >
             {item.nameEn}
           </button>

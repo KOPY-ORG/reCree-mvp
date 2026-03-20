@@ -30,6 +30,7 @@ import type { SectionType, ContentType } from "@prisma/client";
 
 type TopicOption = { id: string; nameKo: string; nameEn: string };
 type TagOption = { id: string; nameKo: string; name: string };
+type TagGroupOption = { group: string; nameEn: string };
 
 export type SectionRow = {
   id: string;
@@ -39,6 +40,7 @@ export type SectionRow = {
   postIds: string[];
   filterTopicId: string | null;
   filterTagId: string | null;
+  filterTagGroup: string | null;
   maxCount: number;
   order: number;
   isActive: boolean;
@@ -95,10 +97,10 @@ function SortableSectionRow({
           <p className="text-xs text-muted-foreground mt-0.5">
             recreeshot · 최대 {section.maxCount}개
           </p>
-        ) : section.type === "MANUAL" ? (
+        ) : section.type === "MANUAL" || section.postIds.length > 0 ? (
           <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
             <FileText className="size-3" />
-            포스트 {section.postIds.length}개
+            포스트 {section.postIds.length}개{section.type !== "MANUAL" && " (고정)"}
           </p>
         ) : (
           <p className="text-xs text-muted-foreground mt-0.5">
@@ -143,11 +145,13 @@ export function SectionTab({
   posts,
   topics,
   tags,
+  tagGroups,
 }: {
   initialSections: SectionRow[];
   posts: PickablePost[];
   topics: TopicOption[];
   tags: TagOption[];
+  tagGroups: TagGroupOption[];
 }) {
   const [sections, setSections] = useState(initialSections);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -244,6 +248,7 @@ export function SectionTab({
         posts={posts}
         topics={topics}
         tags={tags}
+        tagGroups={tagGroups}
         editTarget={
           editTarget
             ? {
@@ -254,6 +259,7 @@ export function SectionTab({
                 postIds: editTarget.postIds,
                 filterTopicId: editTarget.filterTopicId,
                 filterTagId: editTarget.filterTagId,
+                filterTagGroup: editTarget.filterTagGroup,
                 maxCount: editTarget.maxCount,
                 isActive: editTarget.isActive,
               }
