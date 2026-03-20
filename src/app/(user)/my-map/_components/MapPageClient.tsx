@@ -40,6 +40,8 @@ interface Props {
   searchQuery: string;
   searchedPlaces: MapPlace[] | null;
   initialTab?: Tab;
+  btsTopicId: string | null;
+  btsTopicColor: string | null;
 }
 
 // ─── 헬퍼 ─────────────────────────────────────────────────────────────────────
@@ -153,6 +155,8 @@ export function MapPageClient({
   searchQuery,
   searchedPlaces,
   initialTab = "places",
+  btsTopicId,
+  btsTopicColor,
 }: Props) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -315,14 +319,19 @@ export function MapPageClient({
 
         {/* ── 지도 (전체 배경) ── */}
         <InteractiveMap
-          places={displayPlaces.map((p) => ({
-            ...p,
-            markerColor:
-              arirangColor && arirangGroupKey &&
-              p.posts.some((post) => post.allTagGroups.includes(arirangGroupKey))
-                ? arirangColor
-                : undefined,
-          }))}
+          places={displayPlaces.map((p) => {
+            const isArirang =
+              !!arirangColor && !!arirangGroupKey &&
+              p.posts.some((post) => post.allTagGroups.includes(arirangGroupKey));
+            const isBts =
+              !isArirang && !!btsTopicId && !!btsTopicColor &&
+              p.posts.some((post) => post.topics.some((t) => isTopicMatch(t, btsTopicId)));
+            return {
+              ...p,
+              markerColor: isArirang ? arirangColor : isBts ? btsTopicColor : undefined,
+              markerGlyphColor: isArirang ? "#1a1a1a" : "white",
+            };
+          })}
           selectedPlaceId={selectedPlaceId}
           highlightedIds={isSearchMode ? new Set(displayPlaces.map((p) => p.id)) : undefined}
           boundsKey={isSearchMode ? searchQuery : undefined}

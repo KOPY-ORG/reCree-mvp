@@ -19,7 +19,7 @@ export default async function MyTripPage({
 
   const currentUser = await getCurrentUser();
 
-  const [allPlaces, savedPlaces, savedPostIds, topics, tagGroups, tagGroupConfigs, searchedPlaces] =
+  const [allPlaces, savedPlaces, savedPostIds, topics, tagGroups, tagGroupConfigs, searchedPlaces, btsTopic] =
     await Promise.all([
       getAllMapPlaces(),
       currentUser ? getSavedMapPlaces(currentUser.id) : Promise.resolve([]),
@@ -38,7 +38,33 @@ export default async function MyTripPage({
         },
       }),
       query ? searchMapPlaces(query) : Promise.resolve(null),
+      prisma.topic.findFirst({
+        where: { nameEn: "BTS" },
+        select: {
+          id: true,
+          colorHex: true,
+          parent: {
+            select: {
+              colorHex: true,
+              parent: {
+                select: {
+                  colorHex: true,
+                  parent: { select: { colorHex: true } },
+                },
+              },
+            },
+          },
+        },
+      }),
     ]);
+
+  const btsTopicId = btsTopic?.id ?? null;
+  const btsTopicColor =
+    btsTopic?.colorHex ??
+    btsTopic?.parent?.colorHex ??
+    btsTopic?.parent?.parent?.colorHex ??
+    btsTopic?.parent?.parent?.parent?.colorHex ??
+    null;
 
   return (
     <Suspense>
@@ -54,6 +80,8 @@ export default async function MyTripPage({
         searchQuery={query}
         searchedPlaces={searchedPlaces}
         initialTab={initialTab}
+        btsTopicId={btsTopicId}
+        btsTopicColor={btsTopicColor}
       />
     </Suspense>
   );
