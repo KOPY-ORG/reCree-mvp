@@ -13,6 +13,7 @@ export type SectionFormData = {
   postIds: string[];
   filterTopicId?: string;
   filterTagId?: string;
+  filterTagGroup?: string;
   maxCount: number;
   isActive: boolean;
 };
@@ -71,6 +72,7 @@ export async function createSection(data: SectionFormData) {
       postIds: data.postIds,
       filterTopicId: data.filterTopicId || null,
       filterTagId: data.filterTagId || null,
+      filterTagGroup: data.filterTagGroup || null,
       maxCount: data.maxCount,
       isActive: data.isActive,
       order: (max?.order ?? 0) + 1,
@@ -89,6 +91,7 @@ export async function updateSection(id: string, data: SectionFormData) {
       postIds: data.postIds,
       filterTopicId: data.filterTopicId || null,
       filterTagId: data.filterTagId || null,
+      filterTagGroup: data.filterTagGroup || null,
       maxCount: data.maxCount,
       isActive: data.isActive,
     },

@@ -11,7 +11,7 @@ export default async function HomeCurationPage({
 }) {
   const { tab = "banner" } = await searchParams;
 
-  const [homeBanners, sections, publishedPosts, topics, tags] =
+  const [homeBanners, sections, publishedPosts, topics, tags, tagGroups] =
     await Promise.all([
       prisma.homeBanner.findMany({
         orderBy: { order: "asc" },
@@ -43,6 +43,7 @@ export default async function HomeCurationPage({
           postIds: true,
           filterTopicId: true,
           filterTagId: true,
+          filterTagGroup: true,
           maxCount: true,
           order: true,
           isActive: true,
@@ -86,6 +87,11 @@ export default async function HomeCurationPage({
         where: { isActive: true },
         orderBy: { sortOrder: "asc" },
         select: { id: true, nameKo: true, name: true },
+      }),
+      prisma.tagGroupConfig.findMany({
+        where: { isVisible: true },
+        orderBy: { sortOrder: "asc" },
+        select: { group: true, nameEn: true },
       }),
     ]);
 
@@ -158,6 +164,7 @@ export default async function HomeCurationPage({
           posts={pickablePosts}
           topics={topics}
           tags={tags}
+          tagGroups={tagGroups}
         />
       )}
     </div>

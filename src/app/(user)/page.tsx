@@ -143,6 +143,8 @@ export default async function HomePage() {
               : {}),
             ...(section.filterTagId
               ? { reCreeshotTags: { some: { tagId: section.filterTagId } } }
+              : section.filterTagGroup
+              ? { reCreeshotTags: { some: { tag: { group: section.filterTagGroup } } } }
               : {}),
           },
           orderBy: { createdAt: "desc" },
@@ -173,6 +175,8 @@ export default async function HomePage() {
             : {}),
           ...(section.filterTagId
             ? { postTags: { some: { tagId: section.filterTagId } } }
+            : section.filterTagGroup
+            ? { postTags: { some: { tag: { group: section.filterTagGroup } } } }
             : {}),
         },
         {

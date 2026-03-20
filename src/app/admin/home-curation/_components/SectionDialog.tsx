@@ -44,6 +44,7 @@ import type { SectionType, ContentType } from "@prisma/client";
 
 type TopicOption = { id: string; nameKo: string; nameEn: string };
 type TagOption = { id: string; nameKo: string; name: string };
+type TagGroupOption = { group: string; nameEn: string };
 
 interface SectionDialogProps {
   open: boolean;
@@ -51,6 +52,7 @@ interface SectionDialogProps {
   posts: PickablePost[];
   topics: TopicOption[];
   tags: TagOption[];
+  tagGroups: TagGroupOption[];
   editTarget?: {
     id: string;
     titleEn: string;
@@ -59,6 +61,7 @@ interface SectionDialogProps {
     postIds: string[];
     filterTopicId: string | null;
     filterTagId: string | null;
+    filterTagGroup: string | null;
     maxCount: number;
     isActive: boolean;
   };
@@ -71,6 +74,7 @@ const INITIAL: SectionFormData = {
   postIds: [],
   filterTopicId: "",
   filterTagId: "",
+  filterTagGroup: "",
   maxCount: 10,
   isActive: true,
 };
@@ -126,6 +130,7 @@ export function SectionDialog({
   posts,
   topics,
   tags,
+  tagGroups,
   editTarget,
 }: SectionDialogProps) {
   const [form, setForm] = useState<SectionFormData>(INITIAL);
@@ -149,6 +154,7 @@ export function SectionDialog({
               postIds: editTarget.postIds,
               filterTopicId: editTarget.filterTopicId ?? "",
               filterTagId: editTarget.filterTagId ?? "",
+              filterTagGroup: editTarget.filterTagGroup ?? "",
               maxCount: editTarget.maxCount,
               isActive: editTarget.isActive,
             }
@@ -346,14 +352,34 @@ export function SectionDialog({
                   <div className="space-y-1.5">
                     <Label>태그 필터</Label>
                     <Select
-                      value={form.filterTagId || "none"}
-                      onValueChange={(v) => set("filterTagId", v === "none" ? "" : v)}
+                      value={
+                        form.filterTagGroup
+                          ? `group:${form.filterTagGroup}`
+                          : form.filterTagId || "none"
+                      }
+                      onValueChange={(v) => {
+                        if (v === "none") {
+                          set("filterTagId", "");
+                          set("filterTagGroup", "");
+                        } else if (v.startsWith("group:")) {
+                          set("filterTagGroup", v.slice(6));
+                          set("filterTagId", "");
+                        } else {
+                          set("filterTagId", v);
+                          set("filterTagGroup", "");
+                        }
+                      }}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="전체" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">전체</SelectItem>
+                        {tagGroups.map((g) => (
+                          <SelectItem key={`group:${g.group}`} value={`group:${g.group}`}>
+                            ▸ {g.nameEn} 전체
+                          </SelectItem>
+                        ))}
                         {tags.map((t) => (
                           <SelectItem key={t.id} value={t.id}>
                             {t.nameKo} ({t.name})

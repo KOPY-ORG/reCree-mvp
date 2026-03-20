@@ -13,27 +13,13 @@ import { MapTopicFilterRow } from "./MapTopicFilterRow";
 import { MapTagFilterRow } from "./MapTagFilterRow";
 import { InteractiveMap } from "./InteractiveMap";
 import { PlaceBottomSheet } from "./PlaceBottomSheet";
+import type { Level0Topic } from "@/components/TopicFilterRow";
+import type { TagGroupForFilter as TagGroup } from "@/components/TagFilterRow";
 
 // ─── 타입 ─────────────────────────────────────────────────────────────────────
 
 type Tab = "places" | "my-maps";
 type SheetState = "collapsed" | "tab-only" | "peek" | "expanded";
-
-type Level3Topic = {
-  id: string; nameEn: string;
-  colorHex: string | null; colorHex2: string | null;
-  gradientDir: string; gradientStop: number; textColorHex: string | null;
-};
-type Level2Topic = Level3Topic & { children: Level3Topic[] };
-type Level1Topic = Level3Topic & { children: Level2Topic[] };
-type Level0Topic = Level3Topic & { children: Level1Topic[] };
-
-type TagGroup = {
-  group: string; nameEn: string;
-  colorHex: string; colorHex2: string | null;
-  gradientDir: string; gradientStop: number; textColorHex: string;
-  tags: { id: string; name: string; colorHex: string | null; colorHex2?: string | null; textColorHex: string | null }[];
-};
 
 type TagGroupConfig = {
   group: string;
