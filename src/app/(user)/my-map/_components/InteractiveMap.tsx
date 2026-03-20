@@ -86,7 +86,7 @@ function MapContent({
           >
             <Pin
               background={color}
-              borderColor= "white" //{isSelected ? glyphColor : color}
+              borderColor={isSelected ? "white" : color}
               glyphColor={glyphColor}
               scale={isSelected ? 1.3 : isHighlighted ? 1.1 : 1}
             />
@@ -101,7 +101,7 @@ export function InteractiveMap({ places, selectedPlaceId, highlightedIds, bounds
   if (!API_KEY) {
     return (
       <div className={`flex items-center justify-center bg-muted/50 text-sm text-muted-foreground ${className ?? ""}`}>
-        지도를 불러올 수 없습니다.
+        Cannot load map.
       </div>
     );
   }
