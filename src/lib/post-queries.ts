@@ -4,7 +4,10 @@ import { Prisma } from "@prisma/client";
 
 export async function getPostsWithLabels(
   where: Prisma.PostWhereInput,
-  options?: { take?: number; orderBy?: Prisma.PostOrderByWithRelationInput }
+  options?: {
+    take?: number;
+    orderBy?: Prisma.PostOrderByWithRelationInput | Prisma.PostOrderByWithRelationInput[];
+  }
 ) {
   return prisma.post.findMany({
     where,
@@ -14,6 +17,7 @@ export async function getPostsWithLabels(
       id: true,
       slug: true,
       titleEn: true,
+      createdAt: true,
       postImages: {
         where: { isThumbnail: true },
         select: { url: true, focalX: true, focalY: true },

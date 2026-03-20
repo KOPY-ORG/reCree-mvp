@@ -97,10 +97,10 @@ function SortableSectionRow({
           <p className="text-xs text-muted-foreground mt-0.5">
             recreeshot · 최대 {section.maxCount}개
           </p>
-        ) : section.type === "MANUAL" ? (
+        ) : section.type === "MANUAL" || section.postIds.length > 0 ? (
           <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
             <FileText className="size-3" />
-            포스트 {section.postIds.length}개
+            포스트 {section.postIds.length}개{section.type !== "MANUAL" && " (고정)"}
           </p>
         ) : (
           <p className="text-xs text-muted-foreground mt-0.5">

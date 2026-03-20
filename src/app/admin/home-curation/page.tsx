@@ -51,7 +51,7 @@ export default async function HomeCurationPage({
       }),
       prisma.post.findMany({
         where: { status: "PUBLISHED" },
-        orderBy: { publishedAt: "desc" },
+        orderBy: { createdAt: "desc" },
         select: {
           id: true,
           titleEn: true,

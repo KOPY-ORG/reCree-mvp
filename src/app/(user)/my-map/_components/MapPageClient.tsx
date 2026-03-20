@@ -174,9 +174,15 @@ export function MapPageClient({
   }
 
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
-  const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
-  const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
-  const [selectedTagGroup, setSelectedTagGroup] = useState<string | null>(null);
+  const [selectedTopicId, setSelectedTopicId] = useState<string | null>(
+    searchParams.get("topicId")
+  );
+  const [selectedTagId, setSelectedTagId] = useState<string | null>(
+    searchParams.get("tagId")
+  );
+  const [selectedTagGroup, setSelectedTagGroup] = useState<string | null>(
+    searchParams.get("tagGroup")
+  );
   const [sheetState, setSheetState] = useState<SheetState>(
     searchParams.get("place") ? "collapsed" : "peek"
   );

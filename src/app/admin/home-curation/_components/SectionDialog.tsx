@@ -271,14 +271,17 @@ export function SectionDialog({
               </div>
             </div>
 
-            {/* MANUAL: 인라인 포스트 목록 + 추가 버튼 */}
-            {form.contentType === "POST" && form.type === "MANUAL" && (
+            {/* 포스트 순서 설정: MANUAL은 필수, AUTO는 선택(고정 순서 적용) */}
+            {form.contentType === "POST" && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label>
-                    선택된 포스트{" "}
+                    {form.type === "MANUAL" ? "선택된 포스트" : "고정 포스트 순서"}
+                    {" "}
                     <span className="text-muted-foreground font-normal">
-                      ({form.postIds.length}개)
+                      ({form.postIds.length}개
+                      {form.type !== "MANUAL" && form.postIds.length === 0 && " · 비어있으면 자동 정렬"}
+                      )
                     </span>
                   </Label>
                   <Button
@@ -298,7 +301,9 @@ export function SectionDialog({
                     className="rounded-lg border border-dashed px-4 py-6 text-center text-sm text-muted-foreground cursor-pointer hover:bg-muted/30 transition-colors"
                     onClick={() => setPickerOpen(true)}
                   >
-                    포스트를 선택해주세요
+                    {form.type === "MANUAL"
+                      ? "포스트를 선택해주세요"
+                      : "포스트를 추가하면 해당 순서로 고정됩니다"}
                   </div>
                 ) : (
                   <div className="rounded-lg border bg-muted/20 p-2 space-y-1.5 max-h-64 overflow-y-auto">

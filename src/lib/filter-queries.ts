@@ -38,24 +38,7 @@ export async function getFilteredPosts(params: {
   const searchWords = params.q ? parseSearchWords(params.q) : [];
 
   if (searchWords.length === 0) {
-    const posts = await getPostsWithLabels({ AND }, { orderBy: { publishedAt: "desc" } });
-
-    // 토픽 필터가 있을 때 대표 토픽(displayOrder 0) 매칭 포스트를 상위로
-    if (expandedTopicIdSets.length > 0) {
-      const allFilteredTopicIds = [...new Set(expandedTopicIdSets.flat())];
-      const representativeHits = await prisma.postTopic.findMany({
-        where: { topicId: { in: allFilteredTopicIds }, displayOrder: 0 },
-        select: { postId: true },
-      });
-      const representativePostIds = new Set(representativeHits.map((h) => h.postId));
-      return posts.sort((a, b) => {
-        const aRep = representativePostIds.has(a.id) ? 1 : 0;
-        const bRep = representativePostIds.has(b.id) ? 1 : 0;
-        return bRep - aRep; // 동점이면 publishedAt 순서(기존) 유지
-      });
-    }
-
-    return posts;
+    return getPostsWithLabels({ AND }, { orderBy: { createdAt: "desc" } });
   }
 
   // 각 단어에 대해 매칭 토픽 ID(하위 토픽 포함) 사전 계산
@@ -144,9 +127,9 @@ export async function getFilteredPosts(params: {
 
   // 매칭 포스트 전체 조회
   AND.push({ OR: enrichedConditions });
-  const posts = await getPostsWithLabels({ AND }, { orderBy: { publishedAt: "desc" } });
+  const posts = await getPostsWithLabels({ AND }, { orderBy: { createdAt: "desc" } });
 
-  // 1차: 구조적 점수(토픽·태그), 2차: 대표 토픽 매칭, 3차: 전체 점수
+  // 1차: 구조적 점수(토픽·태그), 2차: 대표 토픽 매칭, 3차: 전체 점수, 4차: 최신순
   return posts.sort((a, b) => {
     const sa1 = structuredScores.get(a.slug) ?? 0;
     const sb1 = structuredScores.get(b.slug) ?? 0;
@@ -154,7 +137,9 @@ export async function getFilteredPosts(params: {
     const ra = representativeScores.get(a.slug) ?? 0;
     const rb = representativeScores.get(b.slug) ?? 0;
     if (rb !== ra) return rb - ra;
-    return (totalScores.get(b.slug) ?? 0) - (totalScores.get(a.slug) ?? 0);
+    const tc = (totalScores.get(b.slug) ?? 0) - (totalScores.get(a.slug) ?? 0);
+    if (tc !== 0) return tc;
+    return b.createdAt.getTime() - a.createdAt.getTime();
   });
 }
 
