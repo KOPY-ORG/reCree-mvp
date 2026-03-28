@@ -6,13 +6,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { PostStatus, SourceType } from "@prisma/client";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { makeStorageExtractor } from "@/lib/storage";
 
-const POST_IMAGE_STORAGE_PREFIX = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/post-images/`;
-
-function extractPostImageStoragePath(url: string): string | null {
-  if (!url.startsWith(POST_IMAGE_STORAGE_PREFIX)) return null;
-  return url.slice(POST_IMAGE_STORAGE_PREFIX.length);
-}
+const extractPostImageStoragePath = makeStorageExtractor("post-images");
 
 // ─── 타입 정의 ─────────────────────────────────────────────────────────────────
 

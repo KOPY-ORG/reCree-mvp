@@ -5,13 +5,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { calculateMatchScore } from "@/lib/gemini";
+import { makeStorageExtractor } from "@/lib/storage";
 
-const RECREESHOT_STORAGE_PREFIX = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/recreeshot-images/`;
-
-function extractReCreeStoragePath(url: string): string | null {
-  if (!url.startsWith(RECREESHOT_STORAGE_PREFIX)) return null;
-  return url.slice(RECREESHOT_STORAGE_PREFIX.length);
-}
+const extractReCreeStoragePath = makeStorageExtractor("recreeshot-images");
 
 // ─── previewMatchScore ───────────────────────────────────────────────────────
 

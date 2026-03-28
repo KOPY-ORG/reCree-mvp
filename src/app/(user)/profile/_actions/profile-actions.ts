@@ -1,21 +1,17 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { createClient as createAdminClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { makeStorageExtractor } from "@/lib/storage";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { checkNicknameAvailable } from "@/lib/actions/user-actions";
 
-function getAdminClient() {
-  return createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
+const extractProfileImageStoragePath = makeStorageExtractor("profile-images");
 
 async function ensureProfileImagesBucket(): Promise<void> {
-  const admin = getAdminClient();
+  const admin = createAdminClient();
   const { data: buckets } = await admin.storage.listBuckets();
   const exists = buckets?.some((b) => b.name === "profile-images");
   if (!exists) {
@@ -41,7 +37,7 @@ export async function uploadProfileImage(
   const path = `${user.id}/${Date.now()}.${ext}`;
   const arrayBuffer = await file.arrayBuffer();
 
-  const admin = getAdminClient();
+  const admin = createAdminClient();
   const { error } = await admin.storage
     .from("profile-images")
     .upload(path, arrayBuffer, { contentType: file.type, upsert: true });
@@ -50,13 +46,6 @@ export async function uploadProfileImage(
 
   const { data } = admin.storage.from("profile-images").getPublicUrl(path);
   return { url: data.publicUrl };
-}
-
-const PROFILE_IMAGE_STORAGE_PREFIX = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/profile-images/`;
-
-function extractProfileImageStoragePath(url: string): string | null {
-  if (!url.startsWith(PROFILE_IMAGE_STORAGE_PREFIX)) return null;
-  return url.slice(PROFILE_IMAGE_STORAGE_PREFIX.length);
 }
 
 export async function updateProfile(data: {
@@ -101,7 +90,7 @@ export async function updateProfile(data: {
     const storagePath = extractProfileImageStoragePath(oldUrl);
     if (storagePath) {
       try {
-        const admin = getAdminClient();
+        const admin = createAdminClient();
         const { error: storageError } = await admin.storage
           .from("profile-images")
           .remove([storagePath]);
@@ -127,7 +116,7 @@ export async function deleteAccount(): Promise<{ error?: string }> {
   try {
     await prisma.user.delete({ where: { id: user.id } });
     await supabase.auth.signOut();
-    const admin = getAdminClient();
+    const admin = createAdminClient();
     await admin.auth.admin.deleteUser(user.id);
 
     // profile-images/${userId}/ 폴더 내 파일 삭제 (best-effort)

@@ -1,8 +1,8 @@
 /**
  * Supabase Storage 좀비 파일 정리 스크립트
  *
- * Storage에는 있지만 DB(PlaceImage, PostImage, Post.recreePhotoUrl)에 없는
- * 파일을 탐지하고 삭제합니다.
+ * Storage에는 있지만 DB에 없는 파일을 탐지하고 삭제합니다.
+ * 대상 버킷: place-images, post-images, recreeshot-images, profile-images
  *
  * 사용법:
  *   npx tsx src/scripts/cleanup-storage.ts           # dry-run (목록만 출력)
@@ -20,7 +20,7 @@ try {
   // .env.local이 없으면 무시 (환경변수가 직접 주입된 경우)
 }
 
-const BUCKETS = ["place-images", "post-images"] as const;
+const BUCKETS = ["place-images", "post-images", "recreeshot-images", "profile-images"] as const;
 type Bucket = (typeof BUCKETS)[number];
 
 const BATCH_SIZE = 100; // Storage.remove() 한 번에 처리할 파일 수
@@ -106,12 +106,25 @@ async function main() {
     // ── 1. DB에서 모든 이미지 URL 수집 ──────────────────────────────────
     console.log("\n📋 DB 이미지 URL 수집 중...");
 
-    const [placeImageRows, postImageRows, postRecreeRows] = await Promise.all([
+    const [
+      placeImageRows,
+      postImageRows,
+      postRecreeRows,
+      reCreeshotRows,
+      userProfileRows,
+    ] = await Promise.all([
       prisma.placeImage.findMany({ select: { url: true } }),
       prisma.postImage.findMany({ select: { url: true } }),
       prisma.post.findMany({
         where: { recreePhotoUrl: { not: null } },
         select: { recreePhotoUrl: true },
+      }),
+      prisma.reCreeshot.findMany({
+        select: { imageUrl: true, referencePhotoUrl: true },
+      }),
+      prisma.user.findMany({
+        where: { profileImageUrl: { not: null } },
+        select: { profileImageUrl: true },
       }),
     ]);
 
@@ -119,12 +132,18 @@ async function main() {
       ...placeImageRows.map((r) => r.url),
       ...postImageRows.map((r) => r.url),
       ...postRecreeRows.map((r) => r.recreePhotoUrl!),
+      ...reCreeshotRows.flatMap((r) =>
+        [r.imageUrl, r.referencePhotoUrl].filter((u): u is string => !!u),
+      ),
+      ...userProfileRows.map((r) => r.profileImageUrl!),
     ]);
 
-    console.log(`  PlaceImage      : ${placeImageRows.length}개`);
-    console.log(`  PostImage       : ${postImageRows.length}개`);
-    console.log(`  Post.recreePhoto: ${postRecreeRows.length}개`);
-    console.log(`  총 DB URL       : ${dbUrls.size}개`);
+    console.log(`  PlaceImage           : ${placeImageRows.length}개`);
+    console.log(`  PostImage            : ${postImageRows.length}개`);
+    console.log(`  Post.recreePhoto     : ${postRecreeRows.length}개`);
+    console.log(`  ReCreeshot 이미지     : ${reCreeshotRows.length}개 (imageUrl + referencePhotoUrl)`);
+    console.log(`  User.profileImage    : ${userProfileRows.length}개`);
+    console.log(`  총 DB URL            : ${dbUrls.size}개`);
 
     // ── 2. 버킷별 좀비 파일 탐지 ─────────────────────────────────────────
     let totalZombies = 0;

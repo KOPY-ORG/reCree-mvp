@@ -189,12 +189,15 @@ function groupByPlace(rows: RawPostPlaceRow[]): MapPlace[] {
     if (place.latitude === null || place.longitude === null) continue;
 
     const thumbnailImg = post.postImages.find((img) => img.isThumbnail);
+    const imageUrl = thumbnailImg?.url ?? post.postImages[0]?.url ?? null;
     const mapPost: MapPost = {
       id: post.id,
       slug: post.slug,
       titleEn: post.titleEn,
-      imageUrl: thumbnailImg?.url ?? post.postImages[0]?.url ?? null,
-      images: post.postImages.filter((img) => !img.isThumbnail).map((img) => img.url),
+      imageUrl,
+      images: post.postImages
+        .filter((img) => !img.isThumbnail && img.url !== imageUrl)
+        .map((img) => img.url),
       topics: post.postTopics.map((pt) => pt.topic),
       tags: post.postTags.filter((pt) => pt.isVisible).map((pt) => pt.tag),
       allTagGroups: post.postTags.map((pt) => pt.tag.group),

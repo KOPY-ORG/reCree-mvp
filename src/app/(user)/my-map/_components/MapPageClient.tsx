@@ -101,27 +101,24 @@ function SearchResultItem({
         </div>
       </button>
 
-      {/* 이미지 가로 슬라이드: 썸네일 → 장소 이미지 → 배너, 중복 제거 */}
+      {/* 이미지 가로 슬라이드: 장소 이미지 → 배너 → 소스, 중복 제거 (PlaceBottomSheet와 동일 순서) */}
       {(() => {
         const seen = new Set<string>();
-        const dedup = (url: string) => {
-          if (seen.has(url)) return false;
+        const add = (url: string | null | undefined): boolean => {
+          if (!url || seen.has(url)) return false;
           seen.add(url);
           return true;
         };
-        const thumbnails = place.posts.map((p) => p.imageUrl).filter(Boolean) as string[];
-        const placeImgs = place.placeImages.map((img) => img.url);
-        const banners = place.posts.flatMap((p) => p.images);
-        const allImages = [
-          ...thumbnails.filter(dedup),
-          ...placeImgs.filter(dedup),
-          ...banners.filter(dedup),
-        ];
+        const allImages: string[] = [];
+        place.placeImages.forEach((img) => { if (add(img.url)) allImages.push(img.url); });
+        if (allImages.length === 0) { const u = place.imageUrl; if (add(u)) allImages.push(u!); }
+        place.posts.forEach((p) => { if (add(p.imageUrl)) allImages.push(p.imageUrl!); });
+        place.posts.flatMap((p) => p.images).forEach((url) => { if (add(url)) allImages.push(url); });
         if (allImages.length === 0) return null;
         return (
           <div className="flex gap-2.5 px-5 pb-4 overflow-x-auto scrollbar-hide">
-            {allImages.map((url, i) => (
-              <div key={i} className="size-[100px] shrink-0 rounded-xl overflow-hidden bg-muted relative">
+            {allImages.map((url) => (
+              <div key={url} className="size-[100px] shrink-0 rounded-xl overflow-hidden bg-muted relative">
                 <Image
                   src={url}
                   alt={place.nameEn}

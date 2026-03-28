@@ -7,13 +7,9 @@ import { Prisma } from "@prisma/client";
 import type { PlaceStatus } from "@prisma/client";
 import { resolveGoogleMapsUrl } from "@/lib/google-maps-url";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { makeStorageExtractor } from "@/lib/storage";
 
-const SUPABASE_STORAGE_PREFIX = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/place-images/`;
-
-function extractStoragePath(url: string): string | null {
-  if (!url.startsWith(SUPABASE_STORAGE_PREFIX)) return null;
-  return url.slice(SUPABASE_STORAGE_PREFIX.length);
-}
+const extractStoragePath = makeStorageExtractor("place-images");
 
 export type PlaceFormData = {
   nameKo: string;
@@ -230,9 +226,9 @@ export async function deletePlaceImage(
         try {
           const supabase = createAdminClient();
           const { error } = await supabase.storage.from("place-images").remove([storagePath]);
-          if (error) console.error("Storage 파일 삭제 오류:", error.message);
+          if (error) console.error("Place Storage 파일 삭제 오류:", error.message);
         } catch (e) {
-          console.error("Storage 파일 삭제 오류:", e);
+          console.error("Place Storage 파일 삭제 오류:", e);
         }
       }
     }
@@ -276,5 +272,26 @@ export async function updatePlaceImageCaption(
   } catch (e) {
     console.error("캡션 수정 오류:", e);
     return { error: "캡션을 수정하는 중 오류가 발생했습니다." };
+  }
+}
+
+export async function reorderPlaceImages(
+  placeId: string,
+  orderedIds: string[],
+): Promise<{ error?: string }> {
+  try {
+    await prisma.$transaction(
+      orderedIds.map((id, index) =>
+        prisma.placeImage.update({
+          where: { id },
+          data: { sortOrder: index },
+        }),
+      ),
+    );
+    revalidatePath(`/admin/places/${placeId}/edit`);
+    return {};
+  } catch (e) {
+    console.error("이미지 순서 변경 오류:", e);
+    return { error: "이미지 순서를 변경하는 중 오류가 발생했습니다." };
   }
 }

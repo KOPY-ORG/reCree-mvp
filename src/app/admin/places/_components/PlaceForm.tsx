@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft,
   ExternalLink,
+  GripVertical,
   Loader2,
   Map,
   MapPin,
@@ -16,6 +17,23 @@ import {
   Upload,
   Link as LinkIcon,
 } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import Link from "next/link";
 import Image from "next/image";
 import { isExternalImage } from "@/lib/image";
@@ -50,6 +68,7 @@ import type { PlaceFormData } from "../actions";
 import {
   addPlaceImage,
   deletePlaceImage,
+  reorderPlaceImages,
   setPlaceImageThumbnail,
   updatePlaceImageCaption,
 } from "../actions";
@@ -143,8 +162,155 @@ async function uploadPlaceImage(
   return { url: data.publicUrl };
 }
 
-// ─── 상수 ──────────────────────────────────────────────────────────────────────
+// ─── 정렬 가능한 이미지 아이템 ──────────────────────────────────────────────────
 
+function SortablePendingImageItem({
+  pending,
+  idx,
+  onCaptionChange,
+  onDelete,
+}: {
+  pending: PendingImage;
+  idx: number;
+  onCaptionChange: (key: string, caption: string) => void;
+  onDelete: (key: string) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: pending.key });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+      }}
+      className="flex items-start gap-3 rounded-lg border bg-muted/20 p-3"
+    >
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        className="mt-1 shrink-0 cursor-grab touch-none text-muted-foreground hover:text-foreground active:cursor-grabbing"
+        tabIndex={-1}
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+      <div className="relative size-20 shrink-0 overflow-hidden rounded-md bg-muted">
+        <Image
+          src={pending.previewUrl}
+          alt=""
+          fill
+          unoptimized={isExternalImage(pending.previewUrl)}
+          className="object-cover"
+          sizes="80px"
+        />
+      </div>
+      <div className="flex-1 min-w-0 space-y-2">
+        <p className="text-xs text-muted-foreground truncate">
+          {pending.type === "file" ? pending.file?.name : pending.previewUrl}
+        </p>
+        <Input
+          value={pending.caption}
+          onChange={(e) => onCaptionChange(pending.key, e.target.value)}
+          placeholder="캡션 (선택)"
+          className="text-xs h-7"
+        />
+        {idx === 0 && (
+          <span className="text-xs text-muted-foreground">대표 사진 (첫 번째 자동 설정)</span>
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={() => onDelete(pending.key)}
+        className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
+      >
+        <Trash2 className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
+function SortablePlaceImageItem({
+  img,
+  disabled,
+  onDelete,
+  onSetThumbnail,
+  onCaptionBlur,
+}: {
+  img: PlaceImageData;
+  disabled: boolean;
+  onDelete: (id: string) => void;
+  onSetThumbnail: (id: string) => void;
+  onCaptionBlur: (id: string, caption: string) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: img.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-start gap-3 rounded-lg border bg-muted/20 p-3"
+    >
+      {/* 드래그 핸들 */}
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        className="mt-1 shrink-0 cursor-grab touch-none text-muted-foreground hover:text-foreground active:cursor-grabbing"
+        tabIndex={-1}
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+
+      <div className="relative size-20 shrink-0 overflow-hidden rounded-md bg-muted">
+        <Image
+          src={img.url}
+          alt=""
+          fill
+          unoptimized={isExternalImage(img.url)}
+          className="object-cover"
+          sizes="80px"
+        />
+      </div>
+      <div className="flex-1 min-w-0 space-y-2">
+        <p className="text-xs text-muted-foreground truncate">{img.url}</p>
+        <Input
+          defaultValue={img.caption ?? ""}
+          placeholder="캡션 (선택)"
+          className="text-xs h-7"
+          onBlur={(e) => onCaptionBlur(img.id, e.target.value)}
+        />
+        <label className="flex items-center gap-1.5 cursor-pointer w-fit">
+          <input
+            type="radio"
+            name="thumbnail"
+            checked={img.isThumbnail}
+            onChange={() => onSetThumbnail(img.id)}
+            className="accent-foreground"
+          />
+          <span className="text-xs">대표 사진</span>
+        </label>
+      </div>
+      <button
+        type="button"
+        onClick={() => onDelete(img.id)}
+        disabled={disabled}
+        className="text-muted-foreground hover:text-destructive transition-colors shrink-0 disabled:opacity-40"
+      >
+        <Trash2 className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
 
 // ─── 컴포넌트 ──────────────────────────────────────────────────────────────────
 
@@ -522,6 +688,37 @@ export function PlaceForm({
     if (!isEdit || !initialData) return;
     startImageTransition(async () => {
       await updatePlaceImageCaption(imageId, initialData.id, caption);
+    });
+  }
+
+  // ── 드래그앤드롭 ────────────────────────────────────────────────────────────
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  function handleDragEndEdit(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !initialData) return;
+
+    const oldIndex = placeImages.findIndex((img) => img.id === active.id);
+    const newIndex = placeImages.findIndex((img) => img.id === over.id);
+    const reordered = arrayMove(placeImages, oldIndex, newIndex);
+    const orderedIds = reordered.map((img) => img.id);
+    setPlaceImages(reordered);
+    startImageTransition(async () => {
+      const result = await reorderPlaceImages(initialData.id, orderedIds);
+      if (result.error) toast.error(result.error);
+    });
+  }
+
+  function handleDragEndPending(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setPendingImages((prev) => {
+      const oldIndex = prev.findIndex((img) => img.key === active.id);
+      const newIndex = prev.findIndex((img) => img.key === over.id);
+      return arrayMove(prev, oldIndex, newIndex);
     });
   }
 
@@ -906,106 +1103,63 @@ export function PlaceForm({
                       </Button>
                     </div>
 
-                    {/* create 모드: pending 이미지 미리보기 */}
+                    {/* create 모드: pending 이미지 미리보기 (드래그로 순서 변경) */}
                     {!isEdit && pendingImages.length > 0 && (
-                      <div className="space-y-2">
-                        {pendingImages.map((pending, idx) => (
-                          <div
-                            key={pending.key}
-                            className="flex items-start gap-3 rounded-lg border bg-muted/20 p-3"
-                          >
-                            <div className="relative size-20 shrink-0 overflow-hidden rounded-md bg-muted">
-                              <Image
-                                src={pending.previewUrl}
-                                alt=""
-                                fill
-                                unoptimized={isExternalImage(pending.previewUrl)}
-                                className="object-cover"
-                                sizes="80px"
-                              />
-                            </div>
-                            <div className="flex-1 min-w-0 space-y-2">
-                              <p className="text-xs text-muted-foreground truncate">
-                                {pending.type === "file" ? pending.file?.name : pending.previewUrl}
-                              </p>
-                              <Input
-                                value={pending.caption}
-                                onChange={(e) =>
+                      <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleDragEndPending}
+                      >
+                        <SortableContext
+                          items={pendingImages.map((p) => p.key)}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          <div className="space-y-2">
+                            {pendingImages.map((pending, idx) => (
+                              <SortablePendingImageItem
+                                key={pending.key}
+                                pending={pending}
+                                idx={idx}
+                                onCaptionChange={(key, caption) =>
                                   setPendingImages((prev) =>
-                                    prev.map((p, i) =>
-                                      i === idx ? { ...p, caption: e.target.value } : p,
-                                    ),
+                                    prev.map((p) => (p.key === key ? { ...p, caption } : p)),
                                   )
                                 }
-                                placeholder="캡션 (선택)"
-                                className="text-xs h-7"
+                                onDelete={(key) =>
+                                  setPendingImages((prev) => prev.filter((p) => p.key !== key))
+                                }
                               />
-                              {idx === 0 && (
-                                <span className="text-xs text-muted-foreground">대표 사진 (첫 번째 자동 설정)</span>
-                              )}
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setPendingImages((prev) => prev.filter((_, i) => i !== idx))
-                              }
-                              className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                            ))}
                           </div>
-                        ))}
-                      </div>
+                        </SortableContext>
+                      </DndContext>
                     )}
 
-                    {/* edit 모드: 저장된 이미지 목록 */}
+                    {/* edit 모드: 저장된 이미지 목록 (드래그로 순서 변경) */}
                     {isEdit && placeImages.length > 0 && (
-                      <div className="space-y-2">
-                        {placeImages.map((img) => (
-                          <div
-                            key={img.id}
-                            className="flex items-start gap-3 rounded-lg border bg-muted/20 p-3"
-                          >
-                            <div className="relative size-20 shrink-0 overflow-hidden rounded-md bg-muted">
-                              <Image
-                                src={img.url}
-                                alt=""
-                                fill
-                                unoptimized={isExternalImage(img.url)}
-                                className="object-cover"
-                                sizes="80px"
+                      <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleDragEndEdit}
+                      >
+                        <SortableContext
+                          items={placeImages.map((img) => img.id)}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          <div className="space-y-2">
+                            {placeImages.map((img) => (
+                              <SortablePlaceImageItem
+                                key={img.id}
+                                img={img}
+                                disabled={isImagePending || isUploading}
+                                onDelete={handleDeleteImage}
+                                onSetThumbnail={handleSetThumbnail}
+                                onCaptionBlur={handleCaptionBlur}
                               />
-                            </div>
-                            <div className="flex-1 min-w-0 space-y-2">
-                              <p className="text-xs text-muted-foreground truncate">{img.url}</p>
-                              <Input
-                                defaultValue={img.caption ?? ""}
-                                placeholder="캡션 (선택)"
-                                className="text-xs h-7"
-                                onBlur={(e) => handleCaptionBlur(img.id, e.target.value)}
-                              />
-                              <label className="flex items-center gap-1.5 cursor-pointer w-fit">
-                                <input
-                                  type="radio"
-                                  name="thumbnail"
-                                  checked={img.isThumbnail}
-                                  onChange={() => handleSetThumbnail(img.id)}
-                                  className="accent-foreground"
-                                />
-                                <span className="text-xs">대표 사진</span>
-                              </label>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteImage(img.id)}
-                              disabled={isImagePending || isUploading}
-                              className="text-muted-foreground hover:text-destructive transition-colors shrink-0 disabled:opacity-40"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                            ))}
                           </div>
-                        ))}
-                      </div>
+                        </SortableContext>
+                      </DndContext>
                     )}
                   </CardContent>
                 </Card>
