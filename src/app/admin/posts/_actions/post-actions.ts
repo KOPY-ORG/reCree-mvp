@@ -5,6 +5,10 @@ import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { PostStatus, SourceType } from "@prisma/client";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { makeStorageExtractor } from "@/lib/storage";
+
+const extractPostImageStoragePath = makeStorageExtractor("post-images");
 
 // ─── 타입 정의 ─────────────────────────────────────────────────────────────────
 
@@ -266,6 +270,15 @@ export async function updatePost(
   returnUrl?: string,
 ): Promise<{ error?: string }> {
   try {
+    // Storage 정리를 위해 기존 데이터 먼저 조회
+    const existing = await prisma.post.findUnique({
+      where: { id },
+      select: {
+        recreePhotoUrl: true,
+        postImages: { select: { url: true } },
+      },
+    });
+
     await prisma.$transaction(async (tx) => {
       await tx.postTopic.deleteMany({ where: { postId: id } });
       await tx.postTag.deleteMany({ where: { postId: id } });
@@ -351,6 +364,42 @@ export async function updatePost(
       });
     });
 
+    // Storage 파일 정리 (best-effort, 트랜잭션 성공 후)
+    if (existing) {
+      const supabase = createAdminClient();
+
+      // 교체된 PostImage Storage 파일 삭제
+      const newUrlSet = new Set(data.images.map((img) => img.url));
+      const orphanedPaths = existing.postImages
+        .map((img) => img.url)
+        .filter((url) => !newUrlSet.has(url))
+        .map(extractPostImageStoragePath)
+        .filter((p): p is string => p !== null);
+      if (orphanedPaths.length > 0) {
+        try {
+          const { error } = await supabase.storage.from("post-images").remove(orphanedPaths);
+          if (error) console.error("PostImage Storage 파일 삭제 오류:", error.message);
+        } catch (storageErr) {
+          console.error("PostImage Storage 파일 삭제 오류:", storageErr);
+        }
+      }
+
+      // recreePhotoUrl Storage 파일 삭제
+      const oldRecreeUrl = existing.recreePhotoUrl;
+      const newRecreeUrl = data.recreePhotoUrl || null;
+      if (oldRecreeUrl && oldRecreeUrl !== newRecreeUrl) {
+        const path = extractPostImageStoragePath(oldRecreeUrl);
+        if (path) {
+          try {
+            const { error } = await supabase.storage.from("post-images").remove([path]);
+            if (error) console.error("recreePhotoUrl Storage 파일 삭제 오류:", error.message);
+          } catch (storageErr) {
+            console.error("recreePhotoUrl Storage 파일 삭제 오류:", storageErr);
+          }
+        }
+      }
+    }
+
     revalidatePath("/");
     revalidatePath("/explore");
   } catch (e) {
@@ -365,6 +414,29 @@ export async function updatePost(
 
 export async function deletePost(id: string): Promise<{ error?: string }> {
   try {
+    // Storage 파일 삭제 (best-effort)
+    const post = await prisma.post.findUnique({
+      where: { id },
+      select: {
+        recreePhotoUrl: true,
+        postImages: { select: { url: true } },
+      },
+    });
+    if (post) {
+      const paths = [
+        ...post.postImages.map((img) => extractPostImageStoragePath(img.url)),
+        extractPostImageStoragePath(post.recreePhotoUrl ?? ""),
+      ].filter((p): p is string => p !== null);
+      if (paths.length > 0) {
+        try {
+          const supabase = createAdminClient();
+          const { error } = await supabase.storage.from("post-images").remove(paths);
+          if (error) console.error("Post Storage 파일 삭제 오류:", error.message);
+        } catch (storageErr) {
+          console.error("Post Storage 파일 삭제 오류:", storageErr);
+        }
+      }
+    }
     await prisma.post.delete({ where: { id } });
     revalidatePath("/admin/posts");
     revalidatePath("/");

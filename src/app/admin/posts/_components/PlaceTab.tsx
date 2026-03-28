@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Image from "next/image";
+import { isExternalImage } from "@/lib/image";
 import { Plus, X, MapPin, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,6 +35,7 @@ export function PlaceTab({ selectedPlace, onPickPlace, onViewDetail }: Props) {
                     src={selectedPlace.imageUrl}
                     alt={selectedPlace.nameKo}
                     fill
+                    unoptimized={isExternalImage(selectedPlace.imageUrl)}
                     className="object-cover"
                   />
                 </div>

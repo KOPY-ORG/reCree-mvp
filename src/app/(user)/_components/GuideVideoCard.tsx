@@ -33,7 +33,7 @@ export function GuideVideoCard({ videoUrl, thumbnailUrl, titleEn, className = "a
         className={`relative w-full overflow-hidden bg-zinc-900 flex items-center justify-center ${className}`}
       >
         {thumb ? (
-          <Image src={thumb} alt={titleEn} fill className="object-cover" sizes="(max-width: 672px) 50vw, 336px" unoptimized />
+          <Image src={thumb} alt={titleEn} fill className="object-cover" sizes="(max-width: 672px) 50vw, 336px" />
         ) : (
           <div className="w-full h-full bg-zinc-800" />
         )}

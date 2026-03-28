@@ -1,21 +1,17 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { createClient as createAdminClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { makeStorageExtractor } from "@/lib/storage";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { checkNicknameAvailable } from "@/lib/actions/user-actions";
 
-function getAdminClient() {
-  return createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
+const extractProfileImageStoragePath = makeStorageExtractor("profile-images");
 
 async function ensureProfileImagesBucket(): Promise<void> {
-  const admin = getAdminClient();
+  const admin = createAdminClient();
   const { data: buckets } = await admin.storage.listBuckets();
   const exists = buckets?.some((b) => b.name === "profile-images");
   if (!exists) {
@@ -41,7 +37,7 @@ export async function uploadProfileImage(
   const path = `${user.id}/${Date.now()}.${ext}`;
   const arrayBuffer = await file.arrayBuffer();
 
-  const admin = getAdminClient();
+  const admin = createAdminClient();
   const { error } = await admin.storage
     .from("profile-images")
     .upload(path, arrayBuffer, { contentType: file.type, upsert: true });
@@ -69,6 +65,12 @@ export async function updateProfile(data: {
     if (!available) return { error: "This nickname is already taken." };
   }
 
+  // 기존 프로필 이미지 URL 조회 (변경 시 Storage 정리용)
+  const existingUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { profileImageUrl: true },
+  });
+
   try {
     await prisma.user.update({
       where: { id: user.id },
@@ -80,6 +82,23 @@ export async function updateProfile(data: {
     });
   } catch {
     return { error: "Failed to update profile. Please try again." };
+  }
+
+  // 구 프로필 이미지 Storage 파일 삭제 (best-effort)
+  const oldUrl = existingUser?.profileImageUrl;
+  if (oldUrl && oldUrl !== data.profileImageUrl) {
+    const storagePath = extractProfileImageStoragePath(oldUrl);
+    if (storagePath) {
+      try {
+        const admin = createAdminClient();
+        const { error: storageError } = await admin.storage
+          .from("profile-images")
+          .remove([storagePath]);
+        if (storageError) console.error("프로필 이미지 Storage 파일 삭제 오류:", storageError.message);
+      } catch (e) {
+        console.error("프로필 이미지 Storage 파일 삭제 오류:", e);
+      }
+    }
   }
 
   revalidatePath("/profile");
@@ -97,7 +116,24 @@ export async function deleteAccount(): Promise<{ error?: string }> {
   try {
     await prisma.user.delete({ where: { id: user.id } });
     await supabase.auth.signOut();
-    await getAdminClient().auth.admin.deleteUser(user.id);
+    const admin = createAdminClient();
+    await admin.auth.admin.deleteUser(user.id);
+
+    // profile-images/${userId}/ 폴더 내 파일 삭제 (best-effort)
+    try {
+      const { data: files } = await admin.storage
+        .from("profile-images")
+        .list(user.id);
+      if (files && files.length > 0) {
+        const paths = files.map((f) => `${user.id}/${f.name}`);
+        const { error: storageError } = await admin.storage
+          .from("profile-images")
+          .remove(paths);
+        if (storageError) console.error("프로필 이미지 Storage 폴더 삭제 오류:", storageError.message);
+      }
+    } catch (e) {
+      console.error("프로필 이미지 Storage 폴더 삭제 오류:", e);
+    }
   } catch {
     return { error: "Failed to delete account. Please try again." };
   }

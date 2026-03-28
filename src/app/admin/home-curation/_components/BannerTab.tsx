@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useId, useEffect } from "react";
 import Image from "next/image";
+import { isExternalImage } from "@/lib/image";
 import {
   DndContext,
   closestCenter,
@@ -87,7 +88,7 @@ function SortableBannerRow({
             src={banner.post.thumbnailUrl}
             alt={banner.post.titleEn}
             fill
-            unoptimized
+            unoptimized={isExternalImage(banner.post.thumbnailUrl)}
             className="object-cover"
           />
         )}

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { isExternalImage } from "@/lib/image";
 import { Play, Camera, Link2 } from "lucide-react";
 
 interface OriginalImage {
@@ -78,7 +79,7 @@ function SourceCard({ image, onClick }: { image: OriginalImage; onClick?: () => 
           src={image.url}
           alt={shortDomain}
           fill
-          unoptimized
+          unoptimized={isExternalImage(image.url)}
           className="object-cover"
           sizes="(min-width: 1024px) 160px, (min-width: 768px) 128px, (min-width: 640px) 96px, 72px"
           onError={() => setError(true)}

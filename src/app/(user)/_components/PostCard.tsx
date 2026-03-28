@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { isExternalImage } from "@/lib/image";
 import {
   resolveTopicColors,
   resolveTagColors,
@@ -75,7 +76,7 @@ export function PostCard({
             src={post.postImages[0].url}
             alt={post.titleEn}
             fill
-            unoptimized
+            unoptimized={isExternalImage(post.postImages[0].url)}
             className="object-cover"
             style={{
               objectPosition: `${(post.postImages[0].focalX ?? 0.5) * 100}% ${(post.postImages[0].focalY ?? 0.5) * 100}%`,
