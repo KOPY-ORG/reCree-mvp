@@ -1,9 +1,17 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { calculateMatchScore } from "@/lib/gemini";
+
+const RECREESHOT_STORAGE_PREFIX = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/recreeshot-images/`;
+
+function extractReCreeStoragePath(url: string): string | null {
+  if (!url.startsWith(RECREESHOT_STORAGE_PREFIX)) return null;
+  return url.slice(RECREESHOT_STORAGE_PREFIX.length);
+}
 
 // ─── previewMatchScore ───────────────────────────────────────────────────────
 
@@ -364,14 +372,35 @@ export async function deleteReCreeshot(id: string): Promise<{ error?: string }> 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "unauthenticated" };
 
-  const shot = await prisma.reCreeshot.findUnique({ where: { id }, select: { userId: true } });
+  const shot = await prisma.reCreeshot.findUnique({
+    where: { id },
+    select: { userId: true, imageUrl: true, referencePhotoUrl: true },
+  });
   if (!shot) return { error: "not found" };
   if (shot.userId !== user.id) return { error: "forbidden" };
 
+  // DB 소프트 딜리트 먼저 처리
   await prisma.reCreeshot.update({
     where: { id },
     data: { status: "DELETED" },
   });
+
+  // Storage 파일 삭제 (best-effort, DB 성공 후)
+  const storagePaths = [shot.imageUrl, shot.referencePhotoUrl]
+    .filter((url): url is string => !!url)
+    .map(extractReCreeStoragePath)
+    .filter((p): p is string => p !== null);
+  if (storagePaths.length > 0) {
+    try {
+      const adminClient = createAdminClient();
+      const { error: storageError } = await adminClient.storage
+        .from("recreeshot-images")
+        .remove(storagePaths);
+      if (storageError) console.error("ReCreeshot Storage 파일 삭제 오류:", storageError.message);
+    } catch (e) {
+      console.error("ReCreeshot Storage 파일 삭제 오류:", e);
+    }
+  }
 
   revalidatePath("/explore");
   return {};

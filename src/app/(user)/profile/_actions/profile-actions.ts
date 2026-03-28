@@ -52,6 +52,13 @@ export async function uploadProfileImage(
   return { url: data.publicUrl };
 }
 
+const PROFILE_IMAGE_STORAGE_PREFIX = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/profile-images/`;
+
+function extractProfileImageStoragePath(url: string): string | null {
+  if (!url.startsWith(PROFILE_IMAGE_STORAGE_PREFIX)) return null;
+  return url.slice(PROFILE_IMAGE_STORAGE_PREFIX.length);
+}
+
 export async function updateProfile(data: {
   nickname: string;
   bio: string;
@@ -69,6 +76,12 @@ export async function updateProfile(data: {
     if (!available) return { error: "This nickname is already taken." };
   }
 
+  // 기존 프로필 이미지 URL 조회 (변경 시 Storage 정리용)
+  const existingUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { profileImageUrl: true },
+  });
+
   try {
     await prisma.user.update({
       where: { id: user.id },
@@ -80,6 +93,23 @@ export async function updateProfile(data: {
     });
   } catch {
     return { error: "Failed to update profile. Please try again." };
+  }
+
+  // 구 프로필 이미지 Storage 파일 삭제 (best-effort)
+  const oldUrl = existingUser?.profileImageUrl;
+  if (oldUrl && oldUrl !== data.profileImageUrl) {
+    const storagePath = extractProfileImageStoragePath(oldUrl);
+    if (storagePath) {
+      try {
+        const admin = getAdminClient();
+        const { error: storageError } = await admin.storage
+          .from("profile-images")
+          .remove([storagePath]);
+        if (storageError) console.error("프로필 이미지 Storage 파일 삭제 오류:", storageError.message);
+      } catch (e) {
+        console.error("프로필 이미지 Storage 파일 삭제 오류:", e);
+      }
+    }
   }
 
   revalidatePath("/profile");
@@ -97,7 +127,24 @@ export async function deleteAccount(): Promise<{ error?: string }> {
   try {
     await prisma.user.delete({ where: { id: user.id } });
     await supabase.auth.signOut();
-    await getAdminClient().auth.admin.deleteUser(user.id);
+    const admin = getAdminClient();
+    await admin.auth.admin.deleteUser(user.id);
+
+    // profile-images/${userId}/ 폴더 내 파일 삭제 (best-effort)
+    try {
+      const { data: files } = await admin.storage
+        .from("profile-images")
+        .list(user.id);
+      if (files && files.length > 0) {
+        const paths = files.map((f) => `${user.id}/${f.name}`);
+        const { error: storageError } = await admin.storage
+          .from("profile-images")
+          .remove(paths);
+        if (storageError) console.error("프로필 이미지 Storage 폴더 삭제 오류:", storageError.message);
+      }
+    } catch (e) {
+      console.error("프로필 이미지 Storage 폴더 삭제 오류:", e);
+    }
   } catch {
     return { error: "Failed to delete account. Please try again." };
   }
