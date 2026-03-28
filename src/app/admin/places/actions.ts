@@ -6,6 +6,14 @@ import { redirect } from "next/navigation";
 import { Prisma } from "@prisma/client";
 import type { PlaceStatus } from "@prisma/client";
 import { resolveGoogleMapsUrl } from "@/lib/google-maps-url";
+import { createAdminClient } from "@/lib/supabase/admin";
+
+const SUPABASE_STORAGE_PREFIX = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/place-images/`;
+
+function extractStoragePath(url: string): string | null {
+  if (!url.startsWith(SUPABASE_STORAGE_PREFIX)) return null;
+  return url.slice(SUPABASE_STORAGE_PREFIX.length);
+}
 
 export type PlaceFormData = {
   nameKo: string;
@@ -196,6 +204,19 @@ export async function deletePlaceImage(
       });
       if (first) {
         await prisma.placeImage.update({ where: { id: first.id }, data: { isThumbnail: true } });
+      }
+    }
+    // Supabase Storage 파일 삭제 (외부 URL은 스킵)
+    if (img?.url) {
+      const storagePath = extractStoragePath(img.url);
+      if (storagePath) {
+        try {
+          const supabase = createAdminClient();
+          const { error } = await supabase.storage.from("place-images").remove([storagePath]);
+          if (error) console.error("Storage 파일 삭제 오류:", error.message);
+        } catch (e) {
+          console.error("Storage 파일 삭제 오류:", e);
+        }
       }
     }
     revalidatePath(`/admin/places/${placeId}/edit`);
