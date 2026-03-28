@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { isExternalImage } from "@/lib/image";
 import Link from "next/link";
 import { Loader2, MapPin, Search } from "lucide-react";
 import {
@@ -129,6 +130,7 @@ export function PlacePickerSheet({
                     alt={place.nameKo}
                     width={48}
                     height={48}
+                    unoptimized={isExternalImage(place.imageUrl)}
                     className="object-cover w-full h-full"
                   />
                 ) : (

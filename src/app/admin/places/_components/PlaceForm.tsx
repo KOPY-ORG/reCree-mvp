@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { isExternalImage } from "@/lib/image";
 import type { PlaceStatus } from "@prisma/client";
 import { STATUS_LABELS } from "../_constants";
 import { createClient } from "@/lib/supabase/client";
@@ -918,6 +919,7 @@ export function PlaceForm({
                                 src={pending.previewUrl}
                                 alt=""
                                 fill
+                                unoptimized={isExternalImage(pending.previewUrl)}
                                 className="object-cover"
                                 sizes="80px"
                               />
@@ -969,6 +971,7 @@ export function PlaceForm({
                                 src={img.url}
                                 alt=""
                                 fill
+                                unoptimized={isExternalImage(img.url)}
                                 className="object-cover"
                                 sizes="80px"
                               />

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
+import { isExternalImage } from "@/lib/image";
 import { ExternalLink, MapPin, Phone, Star } from "lucide-react";
 import {
   Sheet,
@@ -111,7 +112,7 @@ export function PlaceDetailSheet({
                   >
                     {urls.map((url, i) => (
                       <div key={i} className="relative aspect-square w-full shrink-0 snap-start bg-muted">
-                        <Image src={url} alt="" fill className="object-cover" sizes="440px" />
+                        <Image src={url} alt="" fill unoptimized={isExternalImage(url)} className="object-cover" sizes="440px" />
                       </div>
                     ))}
                   </div>

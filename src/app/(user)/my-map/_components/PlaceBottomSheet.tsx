@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useSheetDrag } from "../_hooks/useSheetDrag";
 import { useToast } from "../../_hooks/useToast";
 import Image from "next/image";
+import { isExternalImage } from "@/lib/image";
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import { CloseButton } from "./CloseButton";
@@ -52,7 +53,7 @@ function PostCard({
       {/* 썸네일 */}
       <div className="relative w-20 h-20 shrink-0 rounded-xl overflow-hidden bg-muted">
         {post.imageUrl ? (
-          <Image src={post.imageUrl} alt={post.titleEn} fill className="object-cover" sizes="80px" />
+          <Image src={post.imageUrl} alt={post.titleEn} fill unoptimized={isExternalImage(post.imageUrl)} className="object-cover" sizes="80px" />
         ) : (
           <div className="w-full h-full bg-muted" />
         )}
@@ -213,7 +214,7 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
                   key={i}
                   className={`relative aspect-[3/2] w-[40%] shrink-0 snap-start rounded-xl overflow-hidden bg-muted ${i === 0 ? "ml-5" : ""} ${i === urls.length - 1 ? "mr-5" : ""}`}
                 >
-                  <Image src={url} alt="" fill className="object-cover" sizes="40vw" />
+                  <Image src={url} alt="" fill unoptimized={isExternalImage(url)} className="object-cover" sizes="40vw" />
                 </div>
               ))}
             </div>

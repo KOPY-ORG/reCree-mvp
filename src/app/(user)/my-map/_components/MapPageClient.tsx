@@ -4,6 +4,7 @@ import { useState, useMemo, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSheetDrag } from "../_hooks/useSheetDrag";
 import Image from "next/image";
+import { isExternalImage } from "@/lib/image";
 import Link from "next/link";
 import { Search, User, Star, AlignJustify, X, MapPin } from "lucide-react";
 import { CloseButton } from "./CloseButton";
@@ -125,6 +126,7 @@ function SearchResultItem({
                   src={url}
                   alt={place.nameEn}
                   fill
+                  unoptimized={isExternalImage(url)}
                   className="object-cover"
                   sizes="88px"
                 />

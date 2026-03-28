@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { isExternalImage } from "@/lib/image";
 import { ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getSavedPostIds, type PostItem } from "@/lib/post-queries";
@@ -38,6 +39,7 @@ function PostListItem({
             src={post.postImages[0].url}
             alt={post.titleEn}
             fill
+            unoptimized={isExternalImage(post.postImages[0].url)}
             className="object-cover"
             sizes="88px"
           />
