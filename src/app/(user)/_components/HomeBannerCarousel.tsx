@@ -65,7 +65,6 @@ export function HomeBannerCarousel({ banners }: { banners: BannerItem[] }) {
             src={banner.thumbnailUrl}
             alt={banner.titleEn}
             fill
-            unoptimized
             className="object-cover"
             style={{ objectPosition: `${(banner.focalX ?? 0.5) * 100}% ${(banner.focalY ?? 0.5) * 100}%` }}
             sizes="(max-width: 672px) 100vw, 672px"

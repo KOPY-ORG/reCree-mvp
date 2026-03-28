@@ -125,7 +125,6 @@ function SearchResultItem({
                   src={url}
                   alt={place.nameEn}
                   fill
-                  unoptimized
                   className="object-cover"
                   sizes="88px"
                 />

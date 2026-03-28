@@ -111,7 +111,7 @@ export function PlaceDetailSheet({
                   >
                     {urls.map((url, i) => (
                       <div key={i} className="relative aspect-square w-full shrink-0 snap-start bg-muted">
-                        <Image src={url} alt="" fill unoptimized className="object-cover" sizes="440px" />
+                        <Image src={url} alt="" fill className="object-cover" sizes="440px" />
                       </div>
                     ))}
                   </div>

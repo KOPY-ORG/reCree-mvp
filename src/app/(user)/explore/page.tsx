@@ -38,7 +38,6 @@ function PostListItem({
             src={post.postImages[0].url}
             alt={post.titleEn}
             fill
-            unoptimized
             className="object-cover"
             sizes="88px"
           />

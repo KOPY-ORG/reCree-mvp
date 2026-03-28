@@ -796,7 +796,7 @@ export function PostForm({
                           <div className="flex gap-2 overflow-x-auto pb-0.5">
                             {place.placeImages.map((img, i) => (
                               <div key={i} className="relative size-20 shrink-0 overflow-hidden rounded-md border bg-muted">
-                                <Image src={img.url} alt="" fill unoptimized className="object-cover" sizes="80px" />
+                                <Image src={img.url} alt="" fill className="object-cover" sizes="80px" />
                               </div>
                             ))}
                           </div>

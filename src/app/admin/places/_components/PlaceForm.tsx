@@ -918,7 +918,6 @@ export function PlaceForm({
                                 src={pending.previewUrl}
                                 alt=""
                                 fill
-                                unoptimized
                                 className="object-cover"
                                 sizes="80px"
                               />
@@ -970,7 +969,6 @@ export function PlaceForm({
                                 src={img.url}
                                 alt=""
                                 fill
-                                unoptimized
                                 className="object-cover"
                                 sizes="80px"
                               />

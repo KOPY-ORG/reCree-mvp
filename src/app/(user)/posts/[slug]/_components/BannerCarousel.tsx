@@ -108,7 +108,6 @@ export function BannerCarousel({ images, children }: Props) {
                   style={{ objectPosition: `${(img.focalX ?? 0.5) * 100}% ${(img.focalY ?? 0.5) * 100}%` }}
                   sizes="(min-width: 672px) 672px, 100vw"
                   priority={i === 1}
-                  unoptimized
                   onLoad={() => setLoadedMap((m) => ({ ...m, [img.id]: true }))}
                   onError={() => setErrorMap((m) => ({ ...m, [img.id]: true }))}
                 />

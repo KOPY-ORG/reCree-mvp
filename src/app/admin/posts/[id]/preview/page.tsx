@@ -57,7 +57,6 @@ export default async function PreviewPostPage({ params }: Props) {
               src={post.postImages[0].url}
               alt={post.titleKo}
               fill
-              unoptimized
               className="object-cover"
             />
           </div>

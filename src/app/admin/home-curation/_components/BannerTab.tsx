@@ -87,7 +87,6 @@ function SortableBannerRow({
             src={banner.post.thumbnailUrl}
             alt={banner.post.titleEn}
             fill
-            unoptimized
             className="object-cover"
           />
         )}

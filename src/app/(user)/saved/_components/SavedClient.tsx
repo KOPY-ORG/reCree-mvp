@@ -45,7 +45,6 @@ function SavedPostCard({ post, tagGroupMap }: { post: PostItem; tagGroupMap: Tag
             src={post.postImages[0].url}
             alt={post.titleEn}
             fill
-            unoptimized
             className="object-cover"
             sizes="88px"
           />

@@ -78,7 +78,6 @@ function SourceCard({ image, onClick }: { image: OriginalImage; onClick?: () => 
           src={image.url}
           alt={shortDomain}
           fill
-          unoptimized
           className="object-cover"
           sizes="(min-width: 1024px) 160px, (min-width: 768px) 128px, (min-width: 640px) 96px, 72px"
           onError={() => setError(true)}
