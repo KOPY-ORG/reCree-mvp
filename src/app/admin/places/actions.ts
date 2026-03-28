@@ -44,6 +44,23 @@ export async function deletePlace(id: string): Promise<{ error?: string }> {
         error: `이 장소를 사용 중인 포스트가 ${postCount}개 있습니다. 먼저 연결을 해제해주세요.`,
       };
     }
+    // Storage 파일 삭제 (best-effort)
+    const images = await prisma.placeImage.findMany({
+      where: { placeId: id },
+      select: { url: true },
+    });
+    const storagePaths = images
+      .map((img) => extractStoragePath(img.url))
+      .filter((p): p is string => p !== null);
+    if (storagePaths.length > 0) {
+      try {
+        const supabase = createAdminClient();
+        const { error } = await supabase.storage.from("place-images").remove(storagePaths);
+        if (error) console.error("Place Storage 파일 삭제 오류:", error.message);
+      } catch (e) {
+        console.error("Place Storage 파일 삭제 오류:", e);
+      }
+    }
     await prisma.place.delete({ where: { id } });
     revalidatePath("/admin/places");
     return {};
