@@ -418,6 +418,29 @@ export async function updatePost(
 
 export async function deletePost(id: string): Promise<{ error?: string }> {
   try {
+    // Storage 파일 삭제 (best-effort)
+    const post = await prisma.post.findUnique({
+      where: { id },
+      select: {
+        recreePhotoUrl: true,
+        postImages: { select: { url: true } },
+      },
+    });
+    if (post) {
+      const paths = [
+        ...post.postImages.map((img) => extractPostImageStoragePath(img.url)),
+        extractPostImageStoragePath(post.recreePhotoUrl ?? ""),
+      ].filter((p): p is string => p !== null);
+      if (paths.length > 0) {
+        try {
+          const supabase = createAdminClient();
+          const { error } = await supabase.storage.from("post-images").remove(paths);
+          if (error) console.error("Post Storage 파일 삭제 오류:", error.message);
+        } catch (storageErr) {
+          console.error("Post Storage 파일 삭제 오류:", storageErr);
+        }
+      }
+    }
     await prisma.post.delete({ where: { id } });
     revalidatePath("/admin/posts");
     revalidatePath("/");
