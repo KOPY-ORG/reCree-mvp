@@ -138,7 +138,8 @@ export function PostPickerDialog({
       (p) =>
         !q ||
         p.titleEn.toLowerCase().includes(q) ||
-        p.titleKo.toLowerCase().includes(q)
+        p.titleKo.toLowerCase().includes(q) ||
+        (p.placeNameKo?.toLowerCase().includes(q) ?? false)
     );
   }, [posts, query]);
 
@@ -155,17 +156,17 @@ export function PostPickerDialog({
     setPicked(arrayMove(picked, oldIdx, newIdx));
   }
 
+  function remove(id: string) {
+    setPicked((prev) => prev.filter((x) => x !== id));
+  }
+
   function toggle(id: string) {
     if (picked.includes(id)) {
-      setPicked((prev) => prev.filter((x) => x !== id));
+      remove(id);
     } else {
       if (maxSelect !== undefined && picked.length >= maxSelect) return;
       setPicked((prev) => [...prev, id]);
     }
-  }
-
-  function remove(id: string) {
-    setPicked((prev) => prev.filter((x) => x !== id));
   }
 
   function handleConfirm() {

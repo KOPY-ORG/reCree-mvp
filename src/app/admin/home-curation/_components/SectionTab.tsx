@@ -28,9 +28,9 @@ import { SectionDialog } from "./SectionDialog";
 import type { PickablePost } from "./PostPickerDialog";
 import type { SectionType, ContentType } from "@prisma/client";
 
-type TopicOption = { id: string; nameKo: string; nameEn: string };
-type TagOption = { id: string; nameKo: string; name: string };
-type TagGroupOption = { group: string; nameEn: string };
+type TopicOption = { id: string; nameKo: string; nameEn: string; level: number; parentId: string | null; colorHex: string | null; textColorHex: string | null; parent: { colorHex: string | null; textColorHex: string | null } | null };
+type TagOption = { id: string; nameKo: string; name: string; group: string };
+type TagGroupOption = { group: string; nameEn: string; colorHex: string; textColorHex: string };
 
 export type SectionRow = {
   id: string;

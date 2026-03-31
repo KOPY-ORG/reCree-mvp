@@ -88,12 +88,12 @@ export default async function HomeCurationPage({
       prisma.topic.findMany({
         where: { isActive: true },
         orderBy: [{ level: "asc" }, { sortOrder: "asc" }],
-        select: { id: true, nameKo: true, nameEn: true },
+        select: { id: true, nameKo: true, nameEn: true, level: true, parentId: true, colorHex: true, textColorHex: true, parent: { select: { colorHex: true, textColorHex: true } } },
       }),
       prisma.tag.findMany({
         where: { isActive: true },
         orderBy: { sortOrder: "asc" },
-        select: { id: true, nameKo: true, name: true },
+        select: { id: true, nameKo: true, name: true, group: true },
       }),
       prisma.tagGroupConfig.findMany({
         where: { isVisible: true },
