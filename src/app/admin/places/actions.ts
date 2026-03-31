@@ -6,6 +6,9 @@ import { redirect } from "next/navigation";
 import { Prisma } from "@prisma/client";
 import type { PlaceStatus } from "@prisma/client";
 import { resolveGoogleMapsUrl } from "@/lib/google-maps-url";
+import { makeStorageExtractor, deleteStorageFiles } from "@/lib/storage";
+
+const extractStoragePath = makeStorageExtractor("place-images");
 
 export type PlaceFormData = {
   nameKo: string;
@@ -36,6 +39,15 @@ export async function deletePlace(id: string): Promise<{ error?: string }> {
         error: `이 장소를 사용 중인 포스트가 ${postCount}개 있습니다. 먼저 연결을 해제해주세요.`,
       };
     }
+    // Storage 파일 삭제 (best-effort)
+    const images = await prisma.placeImage.findMany({
+      where: { placeId: id },
+      select: { url: true },
+    });
+    const storagePaths = images
+      .map((img) => extractStoragePath(img.url))
+      .filter((p): p is string => p !== null);
+    await deleteStorageFiles("place-images", storagePaths);
     await prisma.place.delete({ where: { id } });
     revalidatePath("/admin/places");
     return {};
@@ -198,6 +210,13 @@ export async function deletePlaceImage(
         await prisma.placeImage.update({ where: { id: first.id }, data: { isThumbnail: true } });
       }
     }
+    // Supabase Storage 파일 삭제 (외부 URL은 스킵)
+    if (img?.url) {
+      const storagePath = extractStoragePath(img.url);
+      if (storagePath) {
+        await deleteStorageFiles("place-images", [storagePath]);
+      }
+    }
     revalidatePath(`/admin/places/${placeId}/edit`);
     return {};
   } catch (e) {
@@ -238,5 +257,26 @@ export async function updatePlaceImageCaption(
   } catch (e) {
     console.error("캡션 수정 오류:", e);
     return { error: "캡션을 수정하는 중 오류가 발생했습니다." };
+  }
+}
+
+export async function reorderPlaceImages(
+  placeId: string,
+  orderedIds: string[],
+): Promise<{ error?: string }> {
+  try {
+    await prisma.$transaction(
+      orderedIds.map((id, index) =>
+        prisma.placeImage.update({
+          where: { id },
+          data: { sortOrder: index },
+        }),
+      ),
+    );
+    revalidatePath(`/admin/places/${placeId}/edit`);
+    return {};
+  } catch (e) {
+    console.error("이미지 순서 변경 오류:", e);
+    return { error: "이미지 순서를 변경하는 중 오류가 발생했습니다." };
   }
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
+import { isExternalImage } from "@/lib/image";
 import Link from "next/link";
 import { labelBackground } from "@/lib/post-labels";
 import { LabelBadge } from "@/components/LabelBadge";
@@ -65,7 +66,7 @@ export function HomeBannerCarousel({ banners }: { banners: BannerItem[] }) {
             src={banner.thumbnailUrl}
             alt={banner.titleEn}
             fill
-            unoptimized
+            unoptimized={isExternalImage(banner.thumbnailUrl)}
             className="object-cover"
             style={{ objectPosition: `${(banner.focalX ?? 0.5) * 100}% ${(banner.focalY ?? 0.5) * 100}%` }}
             sizes="(max-width: 672px) 100vw, 672px"

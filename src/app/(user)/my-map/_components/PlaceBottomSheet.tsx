@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useSheetDrag } from "../_hooks/useSheetDrag";
 import { useToast } from "../../_hooks/useToast";
 import Image from "next/image";
+import { isExternalImage } from "@/lib/image";
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import { CloseButton } from "./CloseButton";
@@ -32,10 +33,13 @@ function PostCard({
   post,
   isSaved,
   tagGroupMap,
+  shownUrls,
 }: {
   post: MapPost;
   isSaved: boolean;
   tagGroupMap: TagGroupColorMap;
+  /** 캐러셀에 이미 표시된 URL Set — PostCard에서는 중복 표시 안 함 */
+  shownUrls: Set<string>;
 }) {
   const topicLabels = post.topics.slice(0, 1).map((topic) => {
     const colors = resolveTopicColors(topic);
@@ -47,12 +51,18 @@ function PostCard({
   });
   const labels = [...topicLabels, ...tagLabels];
 
+  // 캐러셀에 없는 첫 번째 이미지를 썸네일로 사용
+  const cardImageUrl =
+    (post.imageUrl && !shownUrls.has(post.imageUrl) ? post.imageUrl : null) ??
+    post.images.find((url) => !shownUrls.has(url)) ??
+    null;
+
   return (
     <Link href={`/posts/${post.slug}`} className="flex gap-3 items-center bg-white border border-border/50 rounded-2xl px-3 py-3">
       {/* 썸네일 */}
       <div className="relative w-20 h-20 shrink-0 rounded-xl overflow-hidden bg-muted">
-        {post.imageUrl ? (
-          <Image src={post.imageUrl} alt={post.titleEn} fill unoptimized className="object-cover" sizes="80px" />
+        {cardImageUrl ? (
+          <Image src={cardImageUrl} alt={post.titleEn} fill unoptimized={isExternalImage(cardImageUrl)} className="object-cover" sizes="80px" />
         ) : (
           <div className="w-full h-full bg-muted" />
         )}
@@ -200,48 +210,66 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
       </div>
 
       {/* 스크롤 영역 */}
-      <div className="flex-1 overflow-y-auto">
-        {/* 장소 이미지 슬라이더 */}
-        {(place.placeImages.length > 0 || place.imageUrl) && (() => {
-          const urls = place.placeImages.length > 0
-            ? place.placeImages.map((img) => img.url)
-            : [place.imageUrl!];
-          return (
-            <div className="flex gap-2.5 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-3 [scroll-padding-left:20px]">
-              {urls.map((url, i) => (
-                <div
-                  key={i}
-                  className={`relative aspect-[3/2] w-[40%] shrink-0 snap-start rounded-xl overflow-hidden bg-muted ${i === 0 ? "ml-5" : ""} ${i === urls.length - 1 ? "mr-5" : ""}`}
-                >
-                  <Image src={url} alt="" fill unoptimized className="object-cover" sizes="40vw" />
-                </div>
-              ))}
-            </div>
-          );
-        })()}
+      {(() => {
+        // 캐러셀에 표시할 URL 목록: 장소 이미지 → 배너 → 소스 순, URL 기준 중복 제거
+        // PostCard 썸네일도 이 Set을 참조해 전체 시트에서 중복 표시를 막는다
+        const shownUrls = new Set<string>();
+        const carouselUrls: string[] = [];
 
-        {/* 관련 포스트 */}
-        {place.posts.length > 0 && (
-          <>
-            <div className="border-t border-border/50 mx-5" />
-            <div className="px-5 pt-3 pb-2">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                Related Posts{place.posts.length > 1 ? ` · ${place.posts.length}` : ""}
-              </p>
-            </div>
-            <div className="px-5 pb-6 space-y-3">
-              {place.posts.map((post) => (
-                <PostCard
-                  key={post.id}
-                  post={post}
-                  isSaved={savedPostIds.has(post.id)}
-                  tagGroupMap={tagGroupMap}
-                />
-              ))}
-            </div>
-          </>
-        )}
-      </div>
+        const add = (url: string | null | undefined) => {
+          if (url && !shownUrls.has(url)) { shownUrls.add(url); carouselUrls.push(url); }
+        };
+
+        // 1순위: 장소 전용 이미지 (sortOrder 순)
+        place.placeImages.forEach((img) => add(img.url));
+        // 2순위: 장소 imageUrl fallback (placeImages 없을 때)
+        if (carouselUrls.length === 0) add(place.imageUrl);
+        // 3순위: 관련 포스트 배너 이미지
+        place.posts.forEach((post) => add(post.imageUrl));
+        // 4순위: 관련 포스트 소스 이미지
+        place.posts.forEach((post) => post.images.forEach(add));
+
+        return (
+          <div className="flex-1 overflow-y-auto">
+            {/* 이미지 슬라이더 */}
+            {carouselUrls.length > 0 && (
+              <div className="flex gap-2.5 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-3 [scroll-padding-left:20px]">
+                {carouselUrls.map((url, i) => (
+                  <div
+                    key={url}
+                    className={`relative aspect-[3/2] w-[40%] shrink-0 snap-start rounded-xl overflow-hidden bg-muted ${i === 0 ? "ml-5" : ""} ${i === carouselUrls.length - 1 ? "mr-5" : ""}`}
+                  >
+                    <Image src={url} alt="" fill unoptimized={isExternalImage(url)} className="object-cover" sizes="40vw" />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* 관련 포스트 */}
+            {place.posts.length > 0 && (
+              <>
+                <div className="border-t border-border/50 mx-5" />
+                <div className="px-5 pt-3 pb-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Related Posts{place.posts.length > 1 ? ` · ${place.posts.length}` : ""}
+                  </p>
+                </div>
+                <div className="px-5 pb-6 space-y-3">
+                  {place.posts.map((post) => (
+                    <PostCard
+                      key={post.id}
+                      post={post}
+                      isSaved={savedPostIds.has(post.id)}
+                      tagGroupMap={tagGroupMap}
+                      shownUrls={shownUrls}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        );
+      })()}
     </div>
     </>
   );

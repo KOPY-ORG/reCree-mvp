@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import Image from "next/image";
+import { isExternalImage } from "@/lib/image";
 import { MapPin, Check, X, Search, ImageIcon, Tag, Plus } from "lucide-react";
 import { ReCreeshotImage } from "@/components/recreeshot-image";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -360,7 +361,7 @@ export function UploadStep2({
                   >
                     <div className="relative flex-shrink-0 w-16 h-16 bg-muted">
                       {post.thumbnailUrl ? (
-                        <Image src={post.thumbnailUrl} alt={title} fill className="object-cover" sizes="64px" />
+                        <Image src={post.thumbnailUrl} alt={title} fill unoptimized={isExternalImage(post.thumbnailUrl)} className="object-cover" sizes="64px" />
                       ) : (
                         <div className="flex items-center justify-center w-full h-full">
                           <ImageIcon className="size-4 text-muted-foreground/40" />
@@ -821,7 +822,7 @@ function PlaceRow({
       {/* 썸네일 */}
       <div className="relative flex-shrink-0 size-11 rounded-xl overflow-hidden bg-muted">
         {place.imageUrl ? (
-          <Image src={place.imageUrl} alt={name} fill className="object-cover" sizes="44px" />
+          <Image src={place.imageUrl} alt={name} fill unoptimized={isExternalImage(place.imageUrl)} className="object-cover" sizes="44px" />
         ) : (
           <div className="flex items-center justify-center w-full h-full">
             <MapPin className="size-4 text-muted-foreground/40" />
