@@ -37,7 +37,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const ogTitle = post.titleEn.length > 60
     ? post.titleEn.slice(0, 57) + "..."
     : post.titleEn;
-  const imageUrl = "/og-default.png";
+  const imageUrl = "/og-post.png";
   const pageUrl = `https://recree.io/posts/${post.slug}`;
 
   return {
