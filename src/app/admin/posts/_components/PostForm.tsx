@@ -394,12 +394,16 @@ export function PostForm({
   async function handleTranslateAll() {
     const activeEntry = placeEntries[activePlaceIndex];
     setIsTranslating(true);
+    const vibeFields = Object.fromEntries(
+      (activeEntry?.vibe ?? []).map((v, i) => [`vibe_${i}`, v]),
+    );
     const { data, error } = await translateFields({
       title: titleKo,
       body: bodyKo,
       context: activeEntry?.contextKo ?? "",
       mustTry: activeEntry?.mustTryKo ?? "",
       tip: activeEntry?.tipKo ?? "",
+      ...vibeFields,
     });
     if (error) {
       toast.error(error);
@@ -407,6 +411,9 @@ export function PostForm({
       if (data.title) setTitleEn(data.title);
       if (data.body) setBodyEn(data.body);
       if (activeEntry && activePlaceIndex < placeEntries.length) {
+        const translatedVibes = (activeEntry.vibe ?? []).map(
+          (v, i) => data[`vibe_${i}`] ?? v,
+        );
         setPlaceEntries((prev) =>
           prev.map((e, idx) => {
             if (idx !== activePlaceIndex) return e;
@@ -415,6 +422,7 @@ export function PostForm({
               contextEn: data.context ?? e.contextEn,
               mustTryEn: data.mustTry ?? e.mustTryEn,
               tipEn: data.tip ?? e.tipEn,
+              vibe: translatedVibes,
             };
           }),
         );
