@@ -6,8 +6,7 @@ import { redirect } from "next/navigation";
 import { Prisma } from "@prisma/client";
 import type { PlaceStatus } from "@prisma/client";
 import { resolveGoogleMapsUrl } from "@/lib/google-maps-url";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { makeStorageExtractor } from "@/lib/storage";
+import { makeStorageExtractor, deleteStorageFiles } from "@/lib/storage";
 
 const extractStoragePath = makeStorageExtractor("place-images");
 
@@ -48,15 +47,7 @@ export async function deletePlace(id: string): Promise<{ error?: string }> {
     const storagePaths = images
       .map((img) => extractStoragePath(img.url))
       .filter((p): p is string => p !== null);
-    if (storagePaths.length > 0) {
-      try {
-        const supabase = createAdminClient();
-        const { error } = await supabase.storage.from("place-images").remove(storagePaths);
-        if (error) console.error("Place Storage 파일 삭제 오류:", error.message);
-      } catch (e) {
-        console.error("Place Storage 파일 삭제 오류:", e);
-      }
-    }
+    await deleteStorageFiles("place-images", storagePaths);
     await prisma.place.delete({ where: { id } });
     revalidatePath("/admin/places");
     return {};
@@ -223,13 +214,7 @@ export async function deletePlaceImage(
     if (img?.url) {
       const storagePath = extractStoragePath(img.url);
       if (storagePath) {
-        try {
-          const supabase = createAdminClient();
-          const { error } = await supabase.storage.from("place-images").remove([storagePath]);
-          if (error) console.error("Place Storage 파일 삭제 오류:", error.message);
-        } catch (e) {
-          console.error("Place Storage 파일 삭제 오류:", e);
-        }
+        await deleteStorageFiles("place-images", [storagePath]);
       }
     }
     revalidatePath(`/admin/places/${placeId}/edit`);
