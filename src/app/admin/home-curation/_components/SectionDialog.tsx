@@ -45,7 +45,6 @@ type TopicOption = {
   parentId: string | null;
   colorHex: string | null;
   textColorHex: string | null;
-  parent: { colorHex: string | null; textColorHex: string | null } | null;
 };
 type TagOption = { id: string; nameKo: string; name: string; group: string };
 type TagGroupOption = { group: string; nameEn: string; colorHex: string; textColorHex: string };
@@ -112,7 +111,6 @@ type TagGroupNode = {
   textColorHex: string;
   tags: { id: string; label: string }[];
 };
-
 
 function TopicFilterPickerDialog({
   label,
@@ -342,11 +340,13 @@ function TagFilterPickerDialog({
 }) {
   const [open, setOpen] = useState(false);
 
-  const selectedTag = groups.flatMap((g) => g.tags).find((t) => t.id === tagValue);
-  const selectedGroupNode = groups.find((g) => g.group === groupValue);
+  const selectedTag = tagValue ? groups.flatMap((g) => g.tags).find((t) => t.id === tagValue) : null;
+  const selectedTagGroup = tagValue ? groups.find((g) => g.tags.some((t) => t.id === tagValue)) : null;
+  const selectedGroupNode = groupValue ? groups.find((g) => g.group === groupValue) : null;
+  const displayGroup = selectedGroupNode ?? selectedTagGroup ?? null;
   const displayLabel = selectedTag?.label ?? (selectedGroupNode ? `All ${selectedGroupNode.label}` : null);
-  const displayColor = selectedGroupNode?.colorHex ?? groups.find((g) => g.tags.some((t) => t.id === tagValue))?.colorHex ?? null;
-  const displayTextColor = selectedGroupNode?.textColorHex ?? groups.find((g) => g.tags.some((t) => t.id === tagValue))?.textColorHex ?? null;
+  const displayColor = displayGroup?.colorHex ?? null;
+  const displayTextColor = displayGroup?.textColorHex ?? null;
 
   return (
     <div className="space-y-1.5">
@@ -618,10 +618,10 @@ export function SectionDialog({
         textColorHex: root.textColorHex ?? null,
         children: buildChildren(root.id, root.colorHex ?? null, root.textColorHex ?? null),
       }));
-  }, [topics]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [topics]);
 
   // 태그 필터 그룹 (tagGroup → 개별 tags)
-  const tagGroups2 = useMemo((): TagGroupNode[] => {
+  const tagGroupNodes = useMemo((): TagGroupNode[] => {
     return tagGroups.map((g) => ({
       group: g.group,
       label: g.nameEn,
@@ -631,7 +631,7 @@ export function SectionDialog({
         .filter((t) => t.group === g.group)
         .map((t) => ({ id: t.id, label: t.name })),
     }));
-  }, [tagGroups, tags]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tagGroups, tags]);
 
   const typeOptions = form.contentType === "POST" ? POST_TYPE_OPTIONS : RECREESHOT_TYPE_OPTIONS;
   const isManual = form.type === "MANUAL" && form.contentType === "POST";
@@ -783,7 +783,7 @@ export function SectionDialog({
                     />
                     <TagFilterPickerDialog
                       label="태그 필터"
-                      groups={tagGroups2}
+                      groups={tagGroupNodes}
                       tagValue={form.filterTagId || ""}
                       groupValue={form.filterTagGroup || ""}
                       onChange={(tagId, group) => {

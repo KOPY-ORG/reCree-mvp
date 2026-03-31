@@ -88,7 +88,7 @@ export default async function HomeCurationPage({
       prisma.topic.findMany({
         where: { isActive: true },
         orderBy: [{ level: "asc" }, { sortOrder: "asc" }],
-        select: { id: true, nameKo: true, nameEn: true, level: true, parentId: true, colorHex: true, textColorHex: true, parent: { select: { colorHex: true, textColorHex: true } } },
+        select: { id: true, nameKo: true, nameEn: true, level: true, parentId: true, colorHex: true, textColorHex: true },
       }),
       prisma.tag.findMany({
         where: { isActive: true },
