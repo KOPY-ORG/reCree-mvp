@@ -1,11 +1,10 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { calculateMatchScore } from "@/lib/gemini";
-import { makeStorageExtractor } from "@/lib/storage";
+import { makeStorageExtractor, deleteStorageFiles } from "@/lib/storage";
 
 const extractReCreeStoragePath = makeStorageExtractor("recreeshot-images");
 
@@ -386,17 +385,7 @@ export async function deleteReCreeshot(id: string): Promise<{ error?: string }> 
     .filter((url): url is string => !!url)
     .map(extractReCreeStoragePath)
     .filter((p): p is string => p !== null);
-  if (storagePaths.length > 0) {
-    try {
-      const adminClient = createAdminClient();
-      const { error: storageError } = await adminClient.storage
-        .from("recreeshot-images")
-        .remove(storagePaths);
-      if (storageError) console.error("ReCreeshot Storage 파일 삭제 오류:", storageError.message);
-    } catch (e) {
-      console.error("ReCreeshot Storage 파일 삭제 오류:", e);
-    }
-  }
+  await deleteStorageFiles("recreeshot-images", storagePaths);
 
   revalidatePath("/explore");
   return {};

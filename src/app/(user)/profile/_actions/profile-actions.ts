@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { makeStorageExtractor } from "@/lib/storage";
+import { makeStorageExtractor, deleteStorageFiles } from "@/lib/storage";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -89,15 +89,7 @@ export async function updateProfile(data: {
   if (oldUrl && oldUrl !== data.profileImageUrl) {
     const storagePath = extractProfileImageStoragePath(oldUrl);
     if (storagePath) {
-      try {
-        const admin = createAdminClient();
-        const { error: storageError } = await admin.storage
-          .from("profile-images")
-          .remove([storagePath]);
-        if (storageError) console.error("프로필 이미지 Storage 파일 삭제 오류:", storageError.message);
-      } catch (e) {
-        console.error("프로필 이미지 Storage 파일 삭제 오류:", e);
-      }
+      await deleteStorageFiles("profile-images", [storagePath]);
     }
   }
 
@@ -121,15 +113,10 @@ export async function deleteAccount(): Promise<{ error?: string }> {
 
     // profile-images/${userId}/ 폴더 내 파일 삭제 (best-effort)
     try {
-      const { data: files } = await admin.storage
-        .from("profile-images")
-        .list(user.id);
+      const { data: files } = await admin.storage.from("profile-images").list(user.id);
       if (files && files.length > 0) {
         const paths = files.map((f) => `${user.id}/${f.name}`);
-        const { error: storageError } = await admin.storage
-          .from("profile-images")
-          .remove(paths);
-        if (storageError) console.error("프로필 이미지 Storage 폴더 삭제 오류:", storageError.message);
+        await deleteStorageFiles("profile-images", paths);
       }
     } catch (e) {
       console.error("프로필 이미지 Storage 폴더 삭제 오류:", e);
