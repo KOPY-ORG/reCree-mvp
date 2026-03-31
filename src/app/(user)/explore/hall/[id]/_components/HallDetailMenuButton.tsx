@@ -357,18 +357,17 @@ export function HallDetailMenuButton({ id, isOwner, imageUrl, referencePhotoUrl,
           <>
             <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
             <div className="absolute top-10 right-0 z-20 bg-black/50 backdrop-blur-md rounded-lg shadow-lg overflow-hidden w-max">
-              {/* TODO: 테스트용 — Save image 전체 공개, 이후 isOwner 조건으로 복구 필요 */}
-              <button
-                type="button"
-                onClick={handleSaveImage}
-                disabled={isGenerating}
-                className="flex items-center gap-2 w-full px-3.5 py-2.5 text-xs font-medium text-white/90 hover:bg-white/10 transition-colors disabled:opacity-50 border-b border-white/10"
-              >
-                <Download className="size-3.5 shrink-0" />
-                {isGenerating ? "Saving..." : "Save image"}
-              </button>
               {isOwner ? (
                 <>
+                  <button
+                    type="button"
+                    onClick={handleSaveImage}
+                    disabled={isGenerating}
+                    className="flex items-center gap-2 w-full px-3.5 py-2.5 text-xs font-medium text-white/90 hover:bg-white/10 transition-colors disabled:opacity-50 border-b border-white/10"
+                  >
+                    <Download className="size-3.5 shrink-0" />
+                    {isGenerating ? "Saving..." : "Save image"}
+                  </button>
                   <button
                     type="button"
                     onClick={() => { setOpen(false); router.push(`/explore/hall/${id}/edit`); }}
