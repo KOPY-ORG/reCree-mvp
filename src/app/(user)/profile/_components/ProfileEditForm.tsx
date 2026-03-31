@@ -36,14 +36,20 @@ export function ProfileEditForm({
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    setImagePreview((prev) => {
+      if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(file);
+    });
     setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
     setPhotoRemoved(false);
   }
 
   function handleRemovePhoto() {
+    setImagePreview((prev) => {
+      if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
+      return null;
+    });
     setImageFile(null);
-    setImagePreview(null);
     setPhotoRemoved(true);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }

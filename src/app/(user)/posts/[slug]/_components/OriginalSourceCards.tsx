@@ -2,13 +2,16 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { isExternalImage } from "@/lib/image";
+import { isExternalImage, focalStyle } from "@/lib/image";
 import { Play, Camera, Link2 } from "lucide-react";
 
 interface OriginalImage {
   id: string;
   url: string;
   linkUrl?: string | null;
+  focalX?: number | null;
+  focalY?: number | null;
+  zoom?: number | null;
 }
 
 interface Props {
@@ -81,6 +84,7 @@ function SourceCard({ image, onClick }: { image: OriginalImage; onClick?: () => 
           fill
           unoptimized={isExternalImage(image.url)}
           className="object-cover"
+          style={focalStyle(image.focalX, image.focalY, image.zoom)}
           sizes="(min-width: 1024px) 160px, (min-width: 768px) 128px, (min-width: 640px) 96px, 72px"
           onError={() => setError(true)}
         />
@@ -92,11 +96,9 @@ function SourceCard({ image, onClick }: { image: OriginalImage; onClick?: () => 
 export function OriginalSourceCards({ images, originalLinkUrls, className }: Props) {
   if (images.length === 0) return null;
 
-  const displayed = images;
-
   return (
     <div className={className ?? "absolute bottom-3 left-3 sm:bottom-4 sm:left-4 flex gap-2 sm:gap-3 z-10"}>
-      {displayed.map((img, i) => {
+      {images.map((img, i) => {
         const clickUrl = img.linkUrl ?? originalLinkUrls?.[i] ?? null;
         const handleClick = clickUrl
           ? () => window.open(clickUrl, "_blank")

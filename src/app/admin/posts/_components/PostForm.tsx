@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { isExternalImage } from "@/lib/image";
+import { isExternalImage, focalStyle } from "@/lib/image";
 import dynamic from "next/dynamic";
 
 const MapPreview = dynamic(
@@ -991,7 +991,7 @@ export function PostForm({
                     const thumb = images.find((img) => img.isThumbnail);
                     return thumb ? (
                       <div className="relative aspect-[3/2] rounded-lg overflow-hidden border">
-                        <img src={thumb.url} alt="썸네일" className="w-full h-full object-cover" />
+                        <img src={thumb.url} alt="썸네일" className="w-full h-full object-cover" style={focalStyle(thumb.focalX, thumb.focalY, thumb.zoom)} />
                       </div>
                     ) : (
                       <div className="flex items-center justify-center aspect-[3/2] rounded-lg border bg-muted/50 text-xs text-muted-foreground">

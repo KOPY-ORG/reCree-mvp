@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
-import { isExternalImage } from "@/lib/image";
+import { isExternalImage, focalStyle } from "@/lib/image";
 import Link from "next/link";
 import { labelBackground } from "@/lib/post-labels";
 import { LabelBadge } from "@/components/LabelBadge";
@@ -14,6 +14,7 @@ export type BannerItem = {
   thumbnailUrl: string | null;
   focalX?: number | null;
   focalY?: number | null;
+  zoom?: number | null;
   labels: {
     text: string;
     colorHex: string;
@@ -68,7 +69,7 @@ export function HomeBannerCarousel({ banners }: { banners: BannerItem[] }) {
             fill
             unoptimized={isExternalImage(banner.thumbnailUrl)}
             className="object-cover"
-            style={{ objectPosition: `${(banner.focalX ?? 0.5) * 100}% ${(banner.focalY ?? 0.5) * 100}%` }}
+            style={focalStyle(banner.focalX, banner.focalY, banner.zoom)}
             sizes="(max-width: 672px) 100vw, 672px"
             priority
           />

@@ -138,31 +138,31 @@ export function ReCreeshotUploadFlow({ tagGroups, topics, userId, prefillPostId,
     if (!pendingCrop) return;
     const url = URL.createObjectURL(croppedFile);
     if (pendingCrop.type === "shot") {
-      setState((s) => ({ ...s, shotFile: croppedFile, shotPreviewUrl: url, previewScore: null, scoringDone: false }));
+      setState((s) => {
+        if (s.shotPreviewUrl?.startsWith("blob:")) URL.revokeObjectURL(s.shotPreviewUrl);
+        return { ...s, shotFile: croppedFile, shotPreviewUrl: url, previewScore: null, scoringDone: false };
+      });
     } else {
-      setState((s) => ({ ...s, referenceFile: croppedFile, referencePreviewUrl: url, previewScore: null, scoringDone: false }));
+      setState((s) => {
+        if (s.referencePreviewUrl?.startsWith("blob:")) URL.revokeObjectURL(s.referencePreviewUrl);
+        return { ...s, referenceFile: croppedFile, referencePreviewUrl: url, previewScore: null, scoringDone: false };
+      });
     }
     setPendingCrop(null);
   }
 
   function handleReferenceRemove() {
-    setState((s) => ({
-      ...s,
-      referenceFile: null,
-      referencePreviewUrl: null,
-      previewScore: null,
-      scoringDone: false,
-    }));
+    setState((s) => {
+      if (s.referencePreviewUrl?.startsWith("blob:")) URL.revokeObjectURL(s.referencePreviewUrl);
+      return { ...s, referenceFile: null, referencePreviewUrl: null, previewScore: null, scoringDone: false };
+    });
   }
 
   function handleShotRemove() {
-    setState((s) => ({
-      ...s,
-      shotFile: null,
-      shotPreviewUrl: null,
-      previewScore: null,
-      scoringDone: false,
-    }));
+    setState((s) => {
+      if (s.shotPreviewUrl?.startsWith("blob:")) URL.revokeObjectURL(s.shotPreviewUrl);
+      return { ...s, shotFile: null, shotPreviewUrl: null, previewScore: null, scoringDone: false };
+    });
   }
 
   async function uploadToSupabase(file: File): Promise<{ url: string; path: string }> {

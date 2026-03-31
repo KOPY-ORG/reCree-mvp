@@ -33,6 +33,7 @@ export type PostImageInput = {
   isSlotCard?: boolean;
   focalX?: number | null;
   focalY?: number | null;
+  zoom?: number | null;
 };
 
 export type PostSourceInput = {
@@ -213,6 +214,7 @@ export async function createPost(
               isSlotCard: img.isSlotCard ?? false,
               focalX: img.focalX ?? null,
               focalY: img.focalY ?? null,
+              zoom: img.zoom ?? null,
             })),
           },
         }),
@@ -325,6 +327,7 @@ export async function updatePost(
                 isSlotCard: img.isSlotCard ?? false,
                 focalX: img.focalX ?? null,
                 focalY: img.focalY ?? null,
+                zoom: img.zoom ?? null,
               })),
             },
           }),
@@ -537,6 +540,7 @@ export async function getPostEditData(id: string) {
             isSlotCard: true,
             focalX: true,
             focalY: true,
+            zoom: true,
           },
         },
         postSources: {
@@ -642,6 +646,7 @@ export async function getPostEditData(id: string) {
       isSlotCard: img.isSlotCard,
       focalX: img.focalX ?? null,
       focalY: img.focalY ?? null,
+      zoom: img.zoom ?? null,
     })),
     postSources: post.postSources.map((s) => ({
       url: s.url,
