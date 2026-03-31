@@ -164,6 +164,75 @@ export async function getPlaceDetail(id: string) {
   });
 }
 
+// ─── 공통 관계 빌더 ─────────────────────────────────────────────────────────────
+
+function buildPostRelations(data: PostFormData) {
+  return {
+    postTopics: {
+      create: data.topics.map((t) => ({
+        topicId: t.topicId,
+        isVisible: t.isVisible,
+        displayOrder: t.displayOrder,
+      })),
+    },
+    postTags: {
+      create: data.tags.map((t) => ({
+        tagId: t.tagId,
+        isVisible: t.isVisible,
+        displayOrder: t.displayOrder,
+      })),
+    },
+    ...(data.images.length > 0 && {
+      postImages: {
+        create: data.images.map((img) => ({
+          imageType: img.imageType,
+          imageSource: img.imageSource,
+          url: img.url,
+          linkUrl: img.linkUrl ?? null,
+          isThumbnail: img.isThumbnail,
+          sortOrder: img.sortOrder,
+          slotIndex: img.slotIndex ?? null,
+          isSlotCard: img.isSlotCard ?? false,
+          focalX: img.focalX ?? null,
+          focalY: img.focalY ?? null,
+          zoom: img.zoom ?? null,
+        })),
+      },
+    }),
+    ...(data.sources.length > 0 && {
+      postSources: {
+        create: data.sources.map((s, i) => ({
+          url: s.url,
+          sourceType: s.sourceType as SourceType,
+          platform: s.platform || null,
+          sourceNote: s.sourceNote || null,
+          sourcePostDate: s.sourcePostDate || null,
+          isOriginalLink: s.isOriginalLink,
+          sortOrder: i,
+        })),
+      },
+    }),
+    ...(data.places.length > 0 && {
+      postPlaces: {
+        create: data.places.map((p) => ({
+          placeId: p.placeId,
+          context: p.spotInsight?.contextKo || null,
+          vibe: p.spotInsight?.vibe ?? [],
+          mustTry: p.spotInsight?.mustTryKo || null,
+          tip: p.spotInsight?.tipKo || null,
+          insightEn: p.spotInsight
+            ? {
+                context: p.spotInsight.contextEn,
+                mustTry: p.spotInsight.mustTryEn,
+                tip: p.spotInsight.tipEn,
+              }
+            : undefined,
+        })),
+      },
+    }),
+  };
+}
+
 // ─── 포스트 생성 ────────────────────────────────────────────────────────────────
 
 export async function createPost(
@@ -187,68 +256,7 @@ export async function createPost(
         collectedBy: data.collectedBy || null,
         collectedAt: data.collectedAt || null,
         authorId: user?.id ?? null,
-        postTopics: {
-          create: data.topics.map((t) => ({
-            topicId: t.topicId,
-            isVisible: t.isVisible,
-            displayOrder: t.displayOrder,
-          })),
-        },
-        postTags: {
-          create: data.tags.map((t) => ({
-            tagId: t.tagId,
-            isVisible: t.isVisible,
-            displayOrder: t.displayOrder,
-          })),
-        },
-        ...(data.images.length > 0 && {
-          postImages: {
-            create: data.images.map((img) => ({
-              imageType: img.imageType,
-              imageSource: img.imageSource,
-              url: img.url,
-              linkUrl: img.linkUrl ?? null,
-              isThumbnail: img.isThumbnail,
-              sortOrder: img.sortOrder,
-              slotIndex: img.slotIndex ?? null,
-              isSlotCard: img.isSlotCard ?? false,
-              focalX: img.focalX ?? null,
-              focalY: img.focalY ?? null,
-              zoom: img.zoom ?? null,
-            })),
-          },
-        }),
-        ...(data.sources.length > 0 && {
-          postSources: {
-            create: data.sources.map((s, i) => ({
-              url: s.url,
-              sourceType: s.sourceType as SourceType,
-              platform: s.platform || null,
-              sourceNote: s.sourceNote || null,
-              sourcePostDate: s.sourcePostDate || null,
-              isOriginalLink: s.isOriginalLink,
-              sortOrder: i,
-            })),
-          },
-        }),
-        ...(data.places.length > 0 && {
-          postPlaces: {
-            create: data.places.map((p) => ({
-              placeId: p.placeId,
-              context: p.spotInsight?.contextKo || null,
-              vibe: p.spotInsight?.vibe ?? [],
-              mustTry: p.spotInsight?.mustTryKo || null,
-              tip: p.spotInsight?.tipKo || null,
-              insightEn: p.spotInsight
-                ? {
-                    context: p.spotInsight.contextEn,
-                    mustTry: p.spotInsight.mustTryEn,
-                    tip: p.spotInsight.tipEn,
-                  }
-                : undefined,
-            })),
-          },
-        }),
+        ...buildPostRelations(data),
       },
     });
 
@@ -300,68 +308,7 @@ export async function updatePost(
           recreePhotoUrl: data.recreePhotoUrl || null,
           collectedBy: data.collectedBy || null,
           collectedAt: data.collectedAt || null,
-          postTopics: {
-            create: data.topics.map((t) => ({
-              topicId: t.topicId,
-              isVisible: t.isVisible,
-              displayOrder: t.displayOrder,
-            })),
-          },
-          postTags: {
-            create: data.tags.map((t) => ({
-              tagId: t.tagId,
-              isVisible: t.isVisible,
-              displayOrder: t.displayOrder,
-            })),
-          },
-          ...(data.images.length > 0 && {
-            postImages: {
-              create: data.images.map((img) => ({
-                imageType: img.imageType,
-                imageSource: img.imageSource,
-                url: img.url,
-                linkUrl: img.linkUrl ?? null,
-                isThumbnail: img.isThumbnail,
-                sortOrder: img.sortOrder,
-                slotIndex: img.slotIndex ?? null,
-                isSlotCard: img.isSlotCard ?? false,
-                focalX: img.focalX ?? null,
-                focalY: img.focalY ?? null,
-                zoom: img.zoom ?? null,
-              })),
-            },
-          }),
-          ...(data.sources.length > 0 && {
-            postSources: {
-              create: data.sources.map((s, i) => ({
-                url: s.url,
-                sourceType: s.sourceType as SourceType,
-                platform: s.platform || null,
-                sourceNote: s.sourceNote || null,
-                sourcePostDate: s.sourcePostDate || null,
-                isOriginalLink: s.isOriginalLink,
-                sortOrder: i,
-              })),
-            },
-          }),
-          ...(data.places.length > 0 && {
-            postPlaces: {
-              create: data.places.map((p) => ({
-                placeId: p.placeId,
-                context: p.spotInsight?.contextKo || null,
-                vibe: p.spotInsight?.vibe ?? [],
-                mustTry: p.spotInsight?.mustTryKo || null,
-                tip: p.spotInsight?.tipKo || null,
-                insightEn: p.spotInsight
-                  ? {
-                      context: p.spotInsight.contextEn,
-                      mustTry: p.spotInsight.mustTryEn,
-                      tip: p.spotInsight.tipEn,
-                    }
-                  : undefined,
-              })),
-            },
-          }),
+          ...buildPostRelations(data),
         },
       });
     });

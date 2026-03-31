@@ -6,7 +6,7 @@ import { ChevronLeft, MoreVertical, Download, Pencil, Trash2, Flag } from "lucid
 import { showError } from "@/lib/toast";
 import { deleteReCreeshot } from "@/app/(user)/_actions/recreeshot-actions";
 import { ReportDialog } from "@/components/ReportDialog";
-import { coverRect, loadImage } from "@/lib/canvas-utils";
+import { coverRect, loadImage, drawReCreeshotBadge, drawReCreeshotWatermark } from "@/lib/canvas-utils";
 
 interface Props {
   id: string;
@@ -100,38 +100,7 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
           ctx.restore();
         }
 
-        if (showBadge && matchScore !== null) {
-          const badgeText = `${Math.round(matchScore)}% Match`;
-          const fontSize = 32;
-          const badgePadX = 28;
-          const badgePadY = 10;
-          ctx.font = `700 ${fontSize}px -apple-system, Helvetica Neue, sans-serif`;
-          const textW = ctx.measureText(badgeText).width;
-          const badgeW = textW + badgePadX * 2;
-          const badgeH = fontSize + badgePadY * 2;
-          const badgeX = W - badgeW - W * 0.03;
-          const badgeY = W * 0.03;
-          const grad = ctx.createLinearGradient(badgeX, 0, badgeX + badgeW * 1.5, 0);
-          grad.addColorStop(0, "#C8FF09");
-          grad.addColorStop(1, "#ffffff");
-
-          ctx.save();
-          ctx.shadowColor = "rgba(0,0,0,0.15)";
-          ctx.shadowBlur = 12;
-          ctx.shadowOffsetY = 3;
-          ctx.fillStyle = grad;
-          ctx.beginPath();
-          ctx.roundRect(badgeX, badgeY, badgeW, badgeH, badgeH / 2);
-          ctx.fill();
-          ctx.restore();
-
-          ctx.save();
-          ctx.fillStyle = "#000000";
-          ctx.font = `700 ${fontSize}px -apple-system, Helvetica Neue, sans-serif`;
-          ctx.textBaseline = "alphabetic";
-          ctx.fillText(badgeText, badgeX + badgePadX, badgeY + badgePadY + fontSize * 0.82);
-          ctx.restore();
-        }
+        if (showBadge && matchScore !== null) drawReCreeshotBadge(ctx, W, matchScore);
 
         // imageUrl에 워터마크가 이미 포함되어 있으므로 별도 렌더링 불필요
 

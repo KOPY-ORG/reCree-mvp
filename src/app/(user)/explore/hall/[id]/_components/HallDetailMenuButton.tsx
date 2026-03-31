@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { MoreVertical, Download, Pencil, Trash2, Flag } from "lucide-react";
 import { showToast, showError } from "@/lib/toast";
 import { deleteReCreeshot } from "@/app/(user)/_actions/recreeshot-actions";
-import { loadImage } from "@/lib/canvas-utils";
+import { loadImage, drawReCreeshotBadge, drawReCreeshotWatermark } from "@/lib/canvas-utils";
 
 interface Props {
   id: string;
@@ -27,108 +27,73 @@ export function HallDetailMenuButton({ id, isOwner, imageUrl, referencePhotoUrl,
   const preparedFileRef = useRef<File | null>(null);
   const preparedUrlRef = useRef<string | null>(null);
 
+  async function renderToCanvas(canvas: HTMLCanvasElement): Promise<void> {
+    const W = 1080;
+    const H = W * (5 / 4);
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const shotImg = await loadImage(imageUrl);
+    ctx.drawImage(shotImg, 0, 0, W, H);
+
+    if (referencePhotoUrl) {
+      const refImg = await loadImage(referencePhotoUrl);
+      const thumbW = W * 0.18;
+      const thumbH = thumbW * (5 / 4);
+      const thumbX = W * 0.03;
+      const thumbY = W * 0.03;
+      const thumbR = Math.round(thumbW * 0.12);
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
+      ctx.clip();
+      ctx.filter = "blur(12px)";
+      ctx.drawImage(shotImg, 0, 0, W, H);
+      ctx.filter = "none";
+      ctx.fillStyle = "rgba(255,255,255,0.15)";
+      ctx.fillRect(thumbX, thumbY, thumbW, thumbH);
+      ctx.restore();
+
+      ctx.save();
+      ctx.filter = "blur(8px)";
+      ctx.fillStyle = "rgba(255,255,255,0.5)";
+      ctx.beginPath();
+      ctx.roundRect(thumbX - 2, thumbY - 2, thumbW + 4, thumbH + 4, thumbR + 2);
+      ctx.fill();
+      ctx.filter = "none";
+      ctx.restore();
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
+      ctx.clip();
+      ctx.drawImage(refImg, thumbX, thumbY, thumbW, thumbH);
+      ctx.restore();
+
+      ctx.save();
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    if (showBadge && matchScore !== null) drawReCreeshotBadge(ctx, W, matchScore, 20);
+    drawReCreeshotWatermark(ctx, W, H);
+  }
+
   useEffect(() => {
     let objectUrl: string | null = null;
 
     async function prerender() {
       const canvas = canvasRef.current;
       if (!canvas) return;
-      const W = 1080;
-      const H = W * (5 / 4);
-      canvas.width = W;
-      canvas.height = H;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-
       try {
-        const shotImg = await loadImage(imageUrl);
-        ctx.drawImage(shotImg, 0, 0, W, H);
-
-        if (referencePhotoUrl) {
-          const refImg = await loadImage(referencePhotoUrl);
-          const thumbW = W * 0.18;
-          const thumbH = thumbW * (5 / 4);
-          const thumbX = W * 0.03;
-          const thumbY = W * 0.03;
-          const thumbR = Math.round(thumbW * 0.12);
-          ctx.save();
-          ctx.beginPath();
-          ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
-          ctx.clip();
-          ctx.filter = "blur(12px)";
-          ctx.drawImage(shotImg, 0, 0, W, H);
-          ctx.filter = "none";
-          ctx.fillStyle = "rgba(255,255,255,0.15)";
-          ctx.fillRect(thumbX, thumbY, thumbW, thumbH);
-          ctx.restore();
-          ctx.save();
-          ctx.filter = "blur(8px)";
-          ctx.fillStyle = "rgba(255,255,255,0.5)";
-          ctx.beginPath();
-          ctx.roundRect(thumbX - 2, thumbY - 2, thumbW + 4, thumbH + 4, thumbR + 2);
-          ctx.fill();
-          ctx.filter = "none";
-          ctx.restore();
-          ctx.save();
-          ctx.beginPath();
-          ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
-          ctx.clip();
-          ctx.drawImage(refImg, thumbX, thumbY, thumbW, thumbH);
-          ctx.restore();
-          ctx.save();
-          ctx.strokeStyle = "#ffffff";
-          ctx.lineWidth = 3;
-          ctx.beginPath();
-          ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
-          ctx.stroke();
-          ctx.restore();
-        }
-
-        if (showBadge && matchScore !== null) {
-          const badgeText = `${Math.round(matchScore)}% Match`;
-          const fontSize = 32;
-          const badgePadX = 28;
-          const badgePadY = 20;
-          ctx.font = `700 ${fontSize}px -apple-system, Helvetica Neue, sans-serif`;
-          const textW = ctx.measureText(badgeText).width;
-          const badgeW = textW + badgePadX * 2;
-          const badgeH = fontSize + badgePadY * 2;
-          const badgeX = W - badgeW - W * 0.03;
-          const badgeY = W * 0.03;
-          const grad = ctx.createLinearGradient(badgeX, 0, badgeX + badgeW * 1.5, 0);
-          grad.addColorStop(0, "#C8FF09");
-          grad.addColorStop(1, "#ffffff");
-          ctx.save();
-          ctx.shadowColor = "rgba(0,0,0,0.15)";
-          ctx.shadowBlur = 12;
-          ctx.shadowOffsetY = 3;
-          ctx.fillStyle = grad;
-          ctx.beginPath();
-          ctx.roundRect(badgeX, badgeY, badgeW, badgeH, badgeH / 2);
-          ctx.fill();
-          ctx.restore();
-          ctx.save();
-          ctx.fillStyle = "#000000";
-          ctx.font = `700 ${fontSize}px -apple-system, Helvetica Neue, sans-serif`;
-          ctx.textBaseline = "alphabetic";
-          const textY = badgeY + badgePadY + fontSize * 0.82;
-          ctx.fillText(badgeText, badgeX + badgePadX, textY);
-          ctx.restore();
-        }
-
-        ctx.save();
-        ctx.font = `600 28px 'Noto Sans', sans-serif`;
-        ctx.fillStyle = "rgba(255,255,255,0.75)";
-        ctx.textBaseline = "alphabetic";
-        ctx.shadowColor = "rgba(0,0,0,0.75)";
-        ctx.shadowBlur = 8;
-        ctx.shadowOffsetY = 2;
-        const watermarkText = "reCree";
-        const watermarkX = W - ctx.measureText(watermarkText).width - W * 0.03;
-        const watermarkY = H - W * 0.03;
-        ctx.fillText(watermarkText, watermarkX, watermarkY);
-        ctx.restore();
-
+        await renderToCanvas(canvas);
         canvas.toBlob((blob) => {
           if (!blob) return;
           objectUrl = URL.createObjectURL(blob);
@@ -144,6 +109,7 @@ export function HallDetailMenuButton({ id, isOwner, imageUrl, referencePhotoUrl,
     return () => {
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [imageUrl, referencePhotoUrl, matchScore, showBadge]);
 
   async function handleSaveImage() {
@@ -168,118 +134,9 @@ export function HallDetailMenuButton({ id, isOwner, imageUrl, referencePhotoUrl,
 
     // fallback: 미리 준비 안 됐을 때 직접 렌더링
     setIsGenerating(true);
-
     const canvas = canvasRef.current;
     if (!canvas) return;
-
-    const W = 1080;
-    const H = W * (5 / 4);
-    canvas.width = W;
-    canvas.height = H;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const shotImg = await loadImage(imageUrl);
-    ctx.drawImage(shotImg, 0, 0, W, H);
-
-    if (referencePhotoUrl) {
-      const refImg = await loadImage(referencePhotoUrl);
-      const thumbW = W * 0.18;
-      const thumbH = thumbW * (5 / 4);
-      const thumbX = W * 0.03;
-      const thumbY = W * 0.03;
-      const thumbR = Math.round(thumbW * 0.12);
-
-      // frosted glass
-      ctx.save();
-      ctx.beginPath();
-      ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
-      ctx.clip();
-      ctx.filter = "blur(12px)";
-      ctx.drawImage(shotImg, 0, 0, W, H);
-      ctx.filter = "none";
-      ctx.fillStyle = "rgba(255,255,255,0.15)";
-      ctx.fillRect(thumbX, thumbY, thumbW, thumbH);
-      ctx.restore();
-
-      // 글로우 레이어
-      ctx.save();
-      ctx.filter = "blur(8px)";
-      ctx.fillStyle = "rgba(255,255,255,0.5)";
-      ctx.beginPath();
-      ctx.roundRect(thumbX - 2, thumbY - 2, thumbW + 4, thumbH + 4, thumbR + 2);
-      ctx.fill();
-      ctx.filter = "none";
-      ctx.restore();
-
-      // original 이미지
-      ctx.save();
-      ctx.beginPath();
-      ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
-      ctx.clip();
-      ctx.drawImage(refImg, thumbX, thumbY, thumbW, thumbH);
-      ctx.restore();
-
-      // 흰색 테두리
-      ctx.save();
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    // 배지
-    if (showBadge && matchScore !== null) {
-      const badgeText = `${Math.round(matchScore)}% Match`;
-      const fontSize = 32;
-      const badgePadX = 28;
-      const badgePadY = 20;
-      ctx.font = `700 ${fontSize}px -apple-system, Helvetica Neue, sans-serif`;
-      const textW = ctx.measureText(badgeText).width;
-      const badgeW = textW + badgePadX * 2;
-      const badgeH = fontSize + badgePadY * 2;
-      const badgeX = W - badgeW - W * 0.03;
-      const badgeY = W * 0.03;
-
-      const grad = ctx.createLinearGradient(badgeX, 0, badgeX + badgeW * 1.5, 0);
-      grad.addColorStop(0, "#C8FF09");
-      grad.addColorStop(1, "#ffffff");
-
-      ctx.save();
-      ctx.shadowColor = "rgba(0,0,0,0.15)";
-      ctx.shadowBlur = 12;
-      ctx.shadowOffsetY = 3;
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.roundRect(badgeX, badgeY, badgeW, badgeH, badgeH / 2);
-      ctx.fill();
-      ctx.restore();
-
-      ctx.save();
-      ctx.fillStyle = "#000000";
-      ctx.font = `700 ${fontSize}px -apple-system, Helvetica Neue, sans-serif`;
-      ctx.textBaseline = "alphabetic";
-      const textY = badgeY + badgePadY + fontSize * 0.82;
-      ctx.fillText(badgeText, badgeX + badgePadX, textY);
-      ctx.restore();
-    }
-
-    // 워터마크
-    ctx.save();
-    ctx.font = `600 28px 'Noto Sans', sans-serif`;
-    ctx.fillStyle = "rgba(255,255,255,0.75)";
-    ctx.textBaseline = "alphabetic";
-    ctx.shadowColor = "rgba(0,0,0,0.75)";
-    ctx.shadowBlur = 8;
-    ctx.shadowOffsetY = 2;
-    const watermarkText = "reCree";
-    const watermarkX = W - ctx.measureText(watermarkText).width - W * 0.03;
-    const watermarkY = H - W * 0.03;
-    ctx.fillText(watermarkText, watermarkX, watermarkY);
-    ctx.restore();
-
+    await renderToCanvas(canvas);
     canvas.toBlob((blob) => {
       if (!blob) return;
       const url = URL.createObjectURL(blob);
