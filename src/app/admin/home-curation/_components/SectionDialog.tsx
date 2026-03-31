@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect, useId, useMemo } from "react";
+import Image from "next/image";
 import {
   DndContext,
   closestCenter,
@@ -16,7 +17,7 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, X, Plus } from "lucide-react";
+import { GripVertical, X, Plus, Minus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -34,6 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { isExternalImage } from "@/lib/image";
 import {
   createSection,
   updateSection,
@@ -70,16 +72,28 @@ interface SectionDialogProps {
 const INITIAL: SectionFormData = {
   titleEn: "",
   contentType: "POST",
-  type: "AUTO_NEW",
+  type: "MANUAL",
   postIds: [],
   filterTopicId: "",
   filterTagId: "",
   filterTagGroup: "",
-  maxCount: 10,
+  maxCount: 20,
   isActive: true,
 };
 
-// ─── 인라인 선택 포스트 정렬 행 ───────────────────────────────────────────────
+// 콘텐츠 타입별 섹션 타입 옵션
+const POST_TYPE_OPTIONS: { value: SectionType; label: string; description: string }[] = [
+  { value: "MANUAL",   label: "수동 선택",   description: "포스트를 직접 골라 순서를 지정합니다" },
+  { value: "AUTO_NEW", label: "최신순 자동", description: "최근 등록된 포스트를 자동으로 표시합니다" },
+  { value: "AUTO_HOT", label: "인기순 자동", description: "조회수가 높은 포스트를 자동으로 표시합니다" },
+];
+
+const RECREESHOT_TYPE_OPTIONS: { value: SectionType; label: string; description: string }[] = [
+  { value: "AUTO_NEW", label: "최신순 자동", description: "최근 업로드된 recreeshot을 자동으로 표시합니다" },
+  { value: "AUTO_HOT", label: "인기순 자동", description: "좋아요가 많은 recreeshot을 자동으로 표시합니다" },
+];
+
+// ─── 포스트 행 (드래그 가능) ─────────────────────────────────────────────────
 
 function SortablePostRow({
   post,
@@ -94,26 +108,36 @@ function SortablePostRow({
   return (
     <div
       ref={setNodeRef}
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
-        opacity: isDragging ? 0.4 : 1,
-      }}
-      className="flex items-center gap-2 px-2 py-1.5 bg-white rounded border border-border/50 text-sm"
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
+      className="flex items-center gap-3 px-3 py-2.5 border-b border-zinc-100 last:border-b-0 hover:bg-zinc-50 transition-colors"
     >
       <span
         {...listeners}
         {...attributes}
         suppressHydrationWarning
-        className="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-muted-foreground shrink-0"
+        className="cursor-grab active:cursor-grabbing text-zinc-300 hover:text-zinc-500 shrink-0 transition-colors"
       >
         <GripVertical className="size-4" />
       </span>
-      <span className="flex-1 truncate">{post.titleEn}</span>
+      <div className="relative size-9 rounded overflow-hidden shrink-0 bg-zinc-100">
+        {post.thumbnailUrl && (
+          <Image
+            src={post.thumbnailUrl}
+            alt=""
+            fill
+            unoptimized={isExternalImage(post.thumbnailUrl)}
+            className="object-cover"
+          />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium truncate">{post.placeNameKo ?? post.titleKo}</p>
+        <p className="text-xs text-zinc-400 truncate">{post.titleEn}</p>
+      </div>
       <button
         type="button"
         onClick={() => onRemove(post.id)}
-        className="text-muted-foreground hover:text-destructive shrink-0"
+        className="text-zinc-300 hover:text-destructive shrink-0 transition-colors"
         aria-label="제거"
       >
         <X className="size-3.5" />
@@ -142,7 +166,6 @@ export function SectionDialog({
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
 
-  // open/editTarget 변경 시 form 초기화
   useEffect(() => {
     if (open) {
       setForm(
@@ -168,7 +191,24 @@ export function SectionDialog({
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  // dnd 순서 변경
+  function handleTypeChange(type: SectionType) {
+    setForm((prev) => ({
+      ...prev,
+      type,
+      // 자동 타입으로 바꾸면 수동 선택 포스트 초기화
+      ...(type !== "MANUAL" ? { postIds: [] } : {}),
+    }));
+  }
+
+  function handleContentTypeChange(ct: ContentType) {
+    setForm((prev) => ({
+      ...prev,
+      contentType: ct,
+      postIds: [],
+      type: ct === "RECREESHOT" && prev.type === "MANUAL" ? "AUTO_NEW" : prev.type,
+    }));
+  }
+
   function handleDragEnd(e: DragEndEvent) {
     const { active, over } = e;
     if (!over || active.id === over.id) return;
@@ -182,7 +222,6 @@ export function SectionDialog({
     set("postIds", form.postIds.filter((x) => x !== id));
   }
 
-  // 필터 조건에 맞는 포스트만 picker에 표시
   const filteredPosts = useMemo(() => {
     const { filterTopicId, filterTagId, filterTagGroup } = form;
     if (!filterTopicId && !filterTagId && !filterTagGroup) return posts;
@@ -194,29 +233,31 @@ export function SectionDialog({
     });
   }, [posts, form.filterTopicId, form.filterTagId, form.filterTagGroup]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // picker 필터 레이블
   const pickerFilterLabel = useMemo(() => {
     if (form.filterTopicId) {
       const t = topics.find((t) => t.id === form.filterTopicId);
-      return t ? `${t.nameKo} (${t.nameEn})` : form.filterTopicId;
+      return t ? `${t.nameKo} (${t.nameEn})` : undefined;
     }
     if (form.filterTagGroup) {
       const g = tagGroups.find((g) => g.group === form.filterTagGroup);
-      return g ? `${g.nameEn} 전체` : form.filterTagGroup;
+      return g ? `${g.nameEn} 전체` : undefined;
     }
     if (form.filterTagId) {
       const t = tags.find((t) => t.id === form.filterTagId);
-      return t ? `${t.nameKo} (${t.name})` : form.filterTagId;
+      return t ? `${t.nameKo} (${t.name})` : undefined;
     }
     return undefined;
   }, [form.filterTopicId, form.filterTagId, form.filterTagGroup, topics, tags, tagGroups]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 선택된 포스트 객체 (순서 유지)
   const postMap = useMemo(() => new Map(posts.map((p) => [p.id, p])), [posts]);
   const selectedPosts = useMemo(
     () => form.postIds.map((id) => postMap.get(id)).filter((p): p is PickablePost => !!p),
     [form.postIds, postMap]
   );
+
+  const typeOptions = form.contentType === "POST" ? POST_TYPE_OPTIONS : RECREESHOT_TYPE_OPTIONS;
+  const isManual = form.type === "MANUAL" && form.contentType === "POST";
+  const isAuto = form.type !== "MANUAL";
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -234,44 +275,15 @@ export function SectionDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
+        <DialogContent className="sm:w-[calc(100vw_-_300px)] sm:max-w-[900px] left-[calc(50vw_+_120px)] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editTarget ? "섹션 수정" : "섹션 추가"}</DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-            {/* 콘텐츠 유형 선택 */}
-            <div className="space-y-1.5">
-              <Label>콘텐츠 유형</Label>
-              <div className="flex gap-2">
-                {(["POST", "RECREESHOT"] as ContentType[]).map((ct) => (
-                  <button
-                    key={ct}
-                    type="button"
-                    onClick={() => {
-                      setForm((prev) => ({
-                        ...prev,
-                        contentType: ct,
-                        postIds: [],
-                        ...(ct === "RECREESHOT" && prev.type === "MANUAL"
-                          ? { type: "AUTO_NEW" as const }
-                          : {}),
-                      }));
-                    }}
-                    className={`flex-1 py-2 rounded-md text-sm font-medium border transition-colors ${
-                      form.contentType === ct
-                        ? "bg-zinc-900 text-white border-zinc-900"
-                        : "bg-white text-zinc-500 border-border hover:border-zinc-400"
-                    }`}
-                  >
-                    {ct === "POST" ? "포스트" : "recreeshot"}
-                  </button>
-                ))}
-              </div>
-            </div>
+          <form onSubmit={handleSubmit} className="space-y-5 pt-1">
 
-            {/* 제목 + 타입 (한 줄) */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* ① 기본 정보 */}
+            <div className="space-y-3">
               <div className="space-y-1.5">
                 <Label>제목 *</Label>
                 <Input
@@ -281,78 +293,96 @@ export function SectionDialog({
                   required
                 />
               </div>
+
               <div className="space-y-1.5">
-                <Label>섹션 타입</Label>
-                <Select
-                  value={form.type}
-                  onValueChange={(v) => set("type", v as SectionType)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {form.contentType === "POST" && (
-                      <SelectItem value="MANUAL">MANUAL</SelectItem>
-                    )}
-                    <SelectItem value="AUTO_NEW">AUTO_NEW (최신순)</SelectItem>
-                    <SelectItem value="AUTO_HOT">AUTO_HOT (인기순)</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label>콘텐츠 유형</Label>
+                <div className="flex gap-2">
+                  {(["POST", "RECREESHOT"] as ContentType[]).map((ct) => (
+                    <button
+                      key={ct}
+                      type="button"
+                      onClick={() => handleContentTypeChange(ct)}
+                      className={`flex-1 py-2 rounded-md text-sm font-medium border transition-colors ${
+                        form.contentType === ct
+                          ? "bg-zinc-900 text-white border-zinc-900"
+                          : "bg-white text-zinc-500 border-border hover:border-zinc-400"
+                      }`}
+                    >
+                      {ct === "POST" ? "포스트" : "recreeshot"}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
-            {/* 포스트 순서 설정: MANUAL은 필수, AUTO는 선택(고정 순서 적용) */}
-            {form.contentType === "POST" && (
+            {/* ② 섹션 타입 */}
+            <div className="space-y-1.5">
+              <Label>섹션 타입</Label>
+              <div className={`grid gap-2 ${typeOptions.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
+                {typeOptions.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => handleTypeChange(opt.value)}
+                    className={`text-left p-3 rounded-lg border transition-colors ${
+                      form.type === opt.value
+                        ? "border-zinc-900 bg-zinc-900 text-white"
+                        : "border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50"
+                    }`}
+                  >
+                    <p className="text-sm font-semibold">{opt.label}</p>
+                    <p className={`text-xs mt-1 leading-snug ${form.type === opt.value ? "text-zinc-400" : "text-zinc-400"}`}>
+                      {opt.description}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* ③ 포스트 설정 (MANUAL만) */}
+            {isManual && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label>
-                    {form.type === "MANUAL" ? "선택된 포스트" : "고정 포스트 순서"}
-                    {" "}
-                    <span className="text-muted-foreground font-normal">
-                      ({form.postIds.length}개
-                      {form.type !== "MANUAL" && form.postIds.length === 0 && " · 비어있으면 자동 정렬"}
-                      )
+                  <Label>포스트 선택</Label>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-zinc-400">
+                      <span className={selectedPosts.length >= 20 ? "text-zinc-900 font-semibold" : "text-zinc-600 font-medium"}>
+                        {selectedPosts.length}
+                      </span>
+                      <span> / 20</span>
                     </span>
-                  </Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPickerOpen(true)}
-                    className="gap-1.5 h-7 text-xs"
-                  >
-                    <Plus className="size-3" />
-                    포스트 추가
-                  </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPickerOpen(true)}
+                      className="gap-1.5"
+                    >
+                      <Plus className="size-3.5" />
+                      포스트 추가
+                    </Button>
+                  </div>
                 </div>
 
                 {selectedPosts.length === 0 ? (
-                  <div
-                    className="rounded-lg border border-dashed px-4 py-6 text-center text-sm text-muted-foreground cursor-pointer hover:bg-muted/30 transition-colors"
+                  <button
+                    type="button"
                     onClick={() => setPickerOpen(true)}
+                    className="w-full rounded-lg border-2 border-dashed border-zinc-200 py-8 text-sm text-zinc-400 hover:border-zinc-300 hover:text-zinc-500 transition-colors"
                   >
-                    {form.type === "MANUAL"
-                      ? "포스트를 선택해주세요"
-                      : "포스트를 추가하면 해당 순서로 고정됩니다"}
-                  </div>
+                    클릭하여 포스트를 선택해주세요
+                  </button>
                 ) : (
-                  <div className="rounded-lg border bg-muted/20 p-2 space-y-1.5 max-h-64 overflow-y-auto">
+                  <div className="rounded-lg border border-zinc-100 bg-white overflow-hidden max-h-56 overflow-y-auto">
                     <DndContext
                       id={dndId}
                       sensors={sensors}
                       collisionDetection={closestCenter}
                       onDragEnd={handleDragEnd}
                     >
-                      <SortableContext
-                        items={form.postIds}
-                        strategy={verticalListSortingStrategy}
-                      >
+                      <SortableContext items={form.postIds} strategy={verticalListSortingStrategy}>
                         {selectedPosts.map((post) => (
-                          <SortablePostRow
-                            key={post.id}
-                            post={post}
-                            onRemove={removePost}
-                          />
+                          <SortablePostRow key={post.id} post={post} onRemove={removePost} />
                         ))}
                       </SortableContext>
                     </DndContext>
@@ -361,84 +391,109 @@ export function SectionDialog({
               </div>
             )}
 
-            {/* AUTO: maxCount + 필터 */}
-            {(form.contentType === "RECREESHOT" || form.type !== "MANUAL") && (
-              <>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label>토픽 필터</Label>
-                    <Select
-                      value={form.filterTopicId || "none"}
-                      onValueChange={(v) => set("filterTopicId", v === "none" ? "" : v)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="전체" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">전체</SelectItem>
-                        {topics.map((t) => (
-                          <SelectItem key={t.id} value={t.id}>
-                            {t.nameKo} ({t.nameEn})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>태그 필터</Label>
-                    <Select
-                      value={
-                        form.filterTagGroup
-                          ? `group:${form.filterTagGroup}`
-                          : form.filterTagId || "none"
-                      }
-                      onValueChange={(v) => {
-                        if (v === "none") {
-                          set("filterTagId", "");
-                          set("filterTagGroup", "");
-                        } else if (v.startsWith("group:")) {
-                          set("filterTagGroup", v.slice(6));
-                          set("filterTagId", "");
-                        } else {
-                          set("filterTagId", v);
-                          set("filterTagGroup", "");
+            {/* ④ 노출 설정 (AUTO or RECREESHOT) */}
+            {isAuto && (
+              <div className="space-y-2">
+                <Label>노출 설정</Label>
+                <div className="rounded-lg bg-zinc-50 p-3">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1.5">
+                      <p className="text-xs text-zinc-500">토픽 필터</p>
+                      <Select
+                        value={form.filterTopicId || "none"}
+                        onValueChange={(v) => set("filterTopicId", v === "none" ? "" : v)}
+                      >
+                        <SelectTrigger className="bg-white">
+                          <SelectValue placeholder="전체" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">전체</SelectItem>
+                          {topics.map((t) => (
+                            <SelectItem key={t.id} value={t.id}>
+                              {t.nameKo} ({t.nameEn})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <p className="text-xs text-zinc-500">태그 필터</p>
+                      <Select
+                        value={
+                          form.filterTagGroup
+                            ? `group:${form.filterTagGroup}`
+                            : form.filterTagId || "none"
                         }
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="전체" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">전체</SelectItem>
-                        {tagGroups.map((g) => (
-                          <SelectItem key={`group:${g.group}`} value={`group:${g.group}`}>
-                            ▸ {g.nameEn} 전체
-                          </SelectItem>
-                        ))}
-                        {tags.map((t) => (
-                          <SelectItem key={t.id} value={t.id}>
-                            {t.nameKo} ({t.name})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                        onValueChange={(v) => {
+                          if (v === "none") {
+                            set("filterTagId", "");
+                            set("filterTagGroup", "");
+                          } else if (v.startsWith("group:")) {
+                            set("filterTagGroup", v.slice(6));
+                            set("filterTagId", "");
+                          } else {
+                            set("filterTagId", v);
+                            set("filterTagGroup", "");
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="bg-white">
+                          <SelectValue placeholder="전체" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">전체</SelectItem>
+                          {tagGroups.map((g) => (
+                            <SelectItem key={`group:${g.group}`} value={`group:${g.group}`}>
+                              ▸ {g.nameEn} 전체
+                            </SelectItem>
+                          ))}
+                          {tags.map((t) => (
+                            <SelectItem key={t.id} value={t.id}>
+                              {t.nameKo} ({t.name})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {/* 표시 개수 스테퍼 */}
+                    <div className="space-y-1.5">
+                      <p className="text-xs text-zinc-500">표시 개수 <span className="text-zinc-400">(최대 20개)</span></p>
+                      <div className="flex items-center rounded-lg border border-zinc-200 bg-white overflow-hidden h-9">
+                        <button
+                          type="button"
+                          onClick={() => set("maxCount", Math.max(1, form.maxCount - 1))}
+                          disabled={form.maxCount <= 1}
+                          className="px-3 h-full text-zinc-500 hover:bg-zinc-50 disabled:opacity-30 transition-colors"
+                        >
+                          <Minus className="size-3.5" />
+                        </button>
+                        <input
+                          type="number"
+                          min={1}
+                          max={20}
+                          value={form.maxCount}
+                          onChange={(e) => {
+                            const v = Math.min(20, Math.max(1, Number(e.target.value) || 1));
+                            set("maxCount", v);
+                          }}
+                          className="flex-1 text-center text-sm font-semibold border-x border-zinc-200 h-full focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => set("maxCount", Math.min(20, form.maxCount + 1))}
+                          disabled={form.maxCount >= 20}
+                          className="px-3 h-full text-zinc-500 hover:bg-zinc-50 disabled:opacity-30 transition-colors"
+                        >
+                          <Plus className="size-3.5" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-1.5">
-                  <Label>최대 표시 수</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={50}
-                    value={form.maxCount}
-                    onChange={(e) => set("maxCount", Number(e.target.value))}
-                    className="w-32"
-                  />
-                </div>
-              </>
+              </div>
             )}
 
-            {/* 하단: 활성화 + 버튼 */}
+            {/* 하단 */}
             <div className="flex items-center justify-between pt-2 border-t">
               <div className="flex items-center gap-2">
                 <Switch
@@ -452,7 +507,7 @@ export function SectionDialog({
                 <Button type="button" variant="outline" onClick={onClose}>
                   취소
                 </Button>
-                <Button type="submit" disabled={isPending}>
+                <Button type="submit" disabled={isPending || (isManual && selectedPosts.length === 0)}>
                   {isPending ? "저장 중..." : editTarget ? "수정" : "추가"}
                 </Button>
               </div>
@@ -461,14 +516,13 @@ export function SectionDialog({
         </DialogContent>
       </Dialog>
 
-      {/* 포스트 추가 다이얼로그 — 미선택 포스트만 표시, 클릭 시 추가 */}
       <PostPickerDialog
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
         posts={filteredPosts}
         selectedIds={form.postIds}
         onConfirm={(ids) => set("postIds", ids)}
-        maxSelect={10}
+        maxSelect={20}
         filterLabel={pickerFilterLabel}
       />
     </>

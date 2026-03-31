@@ -70,13 +70,18 @@ export default async function HomeCurationPage({
                   id: true,
                   nameEn: true,
                   colorHex: true,
-                  parent: { select: { colorHex: true } },
+                  textColorHex: true,
+                  parent: { select: { colorHex: true, textColorHex: true } },
                 },
               },
             },
           },
           postTags: {
-            select: { tag: { select: { id: true, group: true } } },
+            select: { tag: { select: { id: true, name: true, group: true, colorHex: true, textColorHex: true } } },
+          },
+          postPlaces: {
+            take: 1,
+            select: { place: { select: { nameKo: true } } },
           },
         },
       }),
@@ -93,7 +98,7 @@ export default async function HomeCurationPage({
       prisma.tagGroupConfig.findMany({
         where: { isVisible: true },
         orderBy: { sortOrder: "asc" },
-        select: { group: true, nameEn: true },
+        select: { group: true, nameEn: true, colorHex: true, textColorHex: true },
       }),
     ]);
 
@@ -110,10 +115,13 @@ export default async function HomeCurationPage({
   }));
 
   const sectionRows: SectionRow[] = sections;
+  const tagGroupMap = new Map(tagGroups.map((g) => [g.group, g]));
+
   const pickablePosts: PickablePost[] = publishedPosts.map((p) => ({
     id: p.id,
     titleEn: p.titleEn,
     titleKo: p.titleKo,
+    placeNameKo: p.postPlaces[0]?.place.nameKo ?? null,
     thumbnailUrl: p.postImages[0]?.url ?? null,
     topicLabels: p.postTopics
       .filter((pt) => pt.isVisible)
@@ -122,7 +130,17 @@ export default async function HomeCurationPage({
         id: topic.id,
         nameEn: topic.nameEn,
         colorHex: topic.colorHex ?? topic.parent?.colorHex ?? null,
+        textColorHex: topic.textColorHex ?? topic.parent?.textColorHex ?? null,
       })),
+    tagLabels: p.postTags.slice(0, 2).map(({ tag }) => {
+      const group = tagGroupMap.get(tag.group);
+      return {
+        id: tag.id,
+        nameEn: tag.name,
+        colorHex: tag.colorHex ?? group?.colorHex ?? null,
+        textColorHex: tag.textColorHex ?? group?.textColorHex ?? null,
+      };
+    }),
     allTopicIds: p.postTopics.map(({ topic }) => topic.id),
     tagIds: p.postTags.map(({ tag }) => tag.id),
     tagGroups: [...new Set(p.postTags.map(({ tag }) => tag.group))],

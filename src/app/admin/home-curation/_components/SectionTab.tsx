@@ -16,7 +16,7 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Pencil, Trash2, Plus, FileText, Camera } from "lucide-react";
+import { GripVertical, Pencil, Trash2, Plus, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -48,16 +48,21 @@ export type SectionRow = {
 
 function SortableSectionRow({
   section,
+  topics,
+  tags,
+  tagGroups,
   onEdit,
   onRemove,
   onToggle,
 }: {
   section: SectionRow;
+  topics: TopicOption[];
+  tags: TagOption[];
+  tagGroups: TagGroupOption[];
   onEdit: (s: SectionRow) => void;
   onRemove: (id: string) => void;
   onToggle: (id: string, v: boolean) => void;
 }) {
-  const [handleHovered, setHandleHovered] = useState(false);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: section.id });
 
@@ -67,51 +72,53 @@ function SortableSectionRow({
     opacity: isDragging ? 0.4 : 1,
   };
 
+  function getDescription() {
+    const filterLabel = section.filterTopicId
+      ? (topics.find((t) => t.id === section.filterTopicId)?.nameKo ?? null)
+      : section.filterTagGroup
+      ? (tagGroups.find((g) => g.group === section.filterTagGroup)?.nameEn ?? null)
+      : section.filterTagId
+      ? (tags.find((t) => t.id === section.filterTagId)?.nameKo ?? null)
+      : null;
+
+    if (section.contentType === "RECREESHOT") {
+      const parts = ["recreeshot"];
+      if (filterLabel) parts.push(filterLabel);
+      parts.push(`최대 ${section.maxCount}개`);
+      return parts.join(" · ");
+    }
+    if (section.type === "MANUAL") {
+      return `수동 선택 · 포스트 ${section.postIds.length}개`;
+    }
+    const typeLabel = section.type === "AUTO_NEW" ? "최신순 자동" : "인기순 자동";
+    const parts = [typeLabel, filterLabel ?? "전체", `최대 ${section.maxCount}개`];
+    return parts.join(" · ");
+  }
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`group/row flex items-center gap-3 border-b border-border/30 last:border-0 py-3 px-2 rounded transition-colors ${
-        handleHovered || isDragging ? "bg-muted/40" : ""
-      }`}
+      className="group/row flex items-center gap-3 border-b border-zinc-100 last:border-b-0 py-3 px-4 transition-colors hover:bg-zinc-50"
     >
       <span
         {...listeners}
         {...attributes}
         suppressHydrationWarning
-        onMouseEnter={() => setHandleHovered(true)}
-        onMouseLeave={() => setHandleHovered(false)}
-        className="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+        className="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-muted-foreground transition-colors shrink-0"
       >
         <GripVertical className="size-4" />
       </span>
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <p className="text-sm font-bold truncate">{section.titleEn}</p>
+          <p className="text-sm font-medium truncate">{section.titleEn}</p>
           {section.contentType === "RECREESHOT" && (
             <Camera className="size-3 text-muted-foreground shrink-0" />
           )}
         </div>
-        {section.contentType === "RECREESHOT" ? (
-          <p className="text-xs text-muted-foreground mt-0.5">
-            recreeshot · 최대 {section.maxCount}개
-          </p>
-        ) : section.type === "MANUAL" || section.postIds.length > 0 ? (
-          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-            <FileText className="size-3" />
-            포스트 {section.postIds.length}개{section.type !== "MANUAL" && " (고정)"}
-          </p>
-        ) : (
-          <p className="text-xs text-muted-foreground mt-0.5">
-            최대 {section.maxCount}개
-          </p>
-        )}
+        <p className="text-xs text-muted-foreground mt-0.5 truncate">{getDescription()}</p>
       </div>
-
-      <span className="text-xs text-muted-foreground shrink-0 bg-muted px-1.5 py-0.5 rounded font-mono">
-        {section.type}
-      </span>
 
       <Switch
         checked={section.isActive}
@@ -122,7 +129,7 @@ function SortableSectionRow({
       <button
         type="button"
         onClick={() => onEdit(section)}
-        className="opacity-0 group-hover/row:opacity-100 transition-opacity text-muted-foreground hover:text-foreground shrink-0"
+        className="opacity-30 group-hover/row:opacity-100 transition-opacity text-muted-foreground hover:text-foreground shrink-0"
         aria-label="수정"
       >
         <Pencil className="size-4" />
@@ -131,7 +138,7 @@ function SortableSectionRow({
       <button
         type="button"
         onClick={() => onRemove(section.id)}
-        className="opacity-0 group-hover/row:opacity-100 transition-opacity text-muted-foreground hover:text-destructive shrink-0"
+        className="opacity-30 group-hover/row:opacity-100 transition-opacity text-muted-foreground hover:text-destructive shrink-0"
         aria-label="삭제"
       >
         <Trash2 className="size-4" />
@@ -217,7 +224,15 @@ export function SectionTab({
           큐레이션 섹션이 없습니다.
         </div>
       ) : (
-        <div className="border rounded-lg overflow-hidden">
+        <div className="rounded-xl overflow-hidden shadow-sm bg-white">
+          {/* 헤더 */}
+          <div className="bg-zinc-50 border-b border-zinc-100 flex items-center gap-3 px-4 py-3">
+            <span className="size-4 shrink-0" />
+            <span className="flex-1 text-xs font-medium text-muted-foreground">섹션</span>
+            <span className="shrink-0 text-xs font-medium text-muted-foreground">활성</span>
+            <span className="size-4 shrink-0" />
+            <span className="size-4 shrink-0" />
+          </div>
           <DndContext
             id={dndId}
             sensors={sensors}
@@ -232,6 +247,9 @@ export function SectionTab({
                 <SortableSectionRow
                   key={section.id}
                   section={section}
+                  topics={topics}
+                  tags={tags}
+                  tagGroups={tagGroups}
                   onEdit={openEdit}
                   onRemove={handleRemove}
                   onToggle={handleToggle}
