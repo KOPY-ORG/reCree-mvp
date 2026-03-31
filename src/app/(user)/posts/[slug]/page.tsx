@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const description = post.bodyEn
     ? post.bodyEn.slice(0, 120)
-    : "Discover K-content travel spots on reCree";
+    : "Discover iconic K-content spots";
   const ogTitle = post.titleEn.length > 60
     ? post.titleEn.slice(0, 57) + "..."
     : post.titleEn;

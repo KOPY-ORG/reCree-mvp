@@ -19,10 +19,10 @@ const notoSansKR = Noto_Sans_KR({
 
 export const metadata: Metadata = {
   title: "reCree",
-  description: "Discover iconic K-POP & K-DRAMA spots",
+  description: "Discover iconic K-content spots",
   openGraph: {
     title: "reCree",
-    description: "Discover iconic K-POP & K-DRAMA spots",
+    description: "Discover iconic K-content spots",
     url: "https://recree.io",
     siteName: "reCree",
     images: [{ url: "/og-default.png", width: 1200, height: 630 }],
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "reCree",
-    description: "Discover iconic K-POP & K-DRAMA spots",
+    description: "Discover iconic K-content spots",
     images: ["/og-default.png"],
   },
 };
