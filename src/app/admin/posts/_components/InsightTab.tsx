@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Plus, X, MapPin, ArrowRight, Sparkles, Star, Lightbulb, MessageCircle } from "lucide-react";
+import { Loader2, Plus, X, MapPin, ArrowRight, Sparkles, Star, Lightbulb, MessageCircle, Languages } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -63,6 +63,20 @@ export function InsightTab({
       "vibe",
       activeEntry.vibe.filter((_, idx) => idx !== i),
     );
+  };
+
+  const handleTranslateVibes = async () => {
+    if (!activeEntry || activeEntry.vibe.length === 0) return;
+    setTranslatingField("vibe");
+    const fields = Object.fromEntries(activeEntry.vibe.map((v, i) => [`v${i}`, v]));
+    const { data, error } = await translateFields(fields);
+    setTranslatingField(null);
+    if (error) {
+      toast.error(error);
+    } else if (data) {
+      const translated = activeEntry.vibe.map((_, i) => data[`v${i}`] ?? activeEntry.vibe[i]);
+      updatePlaceInsight(activePlaceIndex, "vibe", translated);
+    }
   };
 
   if (placeEntries.length === 0) {
@@ -154,6 +168,23 @@ export function InsightTab({
         <div className="flex items-center gap-1.5">
           <Star className="h-4 w-4" />
           <span className="text-sm font-semibold">Vibe</span>
+          {activeEntry.vibe.length > 0 && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 ml-auto text-muted-foreground hover:bg-muted"
+              disabled={translatingField === "vibe"}
+              onClick={handleTranslateVibes}
+              title="영어로 번역"
+            >
+              {translatingField === "vibe" ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Languages className="h-3.5 w-3.5" />
+              )}
+            </Button>
+          )}
         </div>
         <div className="flex flex-wrap gap-1.5">
           {activeEntry.vibe.map((v, i) => (
@@ -174,7 +205,7 @@ export function InsightTab({
             value={vibeInput}
             onChange={(e) => setVibeInput(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") {
+              if (e.key === "Enter" && !e.nativeEvent.isComposing) {
                 e.preventDefault();
                 addVibe();
               }

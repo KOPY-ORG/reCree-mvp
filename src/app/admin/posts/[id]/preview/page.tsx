@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Image from "next/image";
-import { isExternalImage } from "@/lib/image";
+import { isExternalImage, focalStyle } from "@/lib/image";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
@@ -19,7 +19,7 @@ export default async function PreviewPostPage({ params }: Props) {
       postTags: { include: { tag: { select: { nameKo: true, colorHex: true } } } },
       postImages: {
         where: { isThumbnail: true },
-        select: { url: true },
+        select: { url: true, focalX: true, focalY: true, zoom: true },
         take: 1,
       },
       postPlaces: {
@@ -60,6 +60,7 @@ export default async function PreviewPostPage({ params }: Props) {
               fill
               unoptimized={isExternalImage(post.postImages[0].url)}
               className="object-cover"
+              style={focalStyle(post.postImages[0].focalX, post.postImages[0].focalY, post.postImages[0].zoom)}
             />
           </div>
         )}

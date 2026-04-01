@@ -22,6 +22,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { createClient } from "@/lib/supabase/client";
+import { focalStyle } from "@/lib/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -111,7 +112,7 @@ function SortableBannerItem({
         src={image.url}
         alt=""
         className="w-full h-full object-cover"
-        style={{ objectPosition: `${(image.focalX ?? 0.5) * 100}% ${(image.focalY ?? 0.5) * 100}%` }}
+        style={focalStyle(image.focalX, image.focalY, image.zoom)}
       />
       <div
         {...attributes}
@@ -248,10 +249,11 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
     url: string;
     focalX: number | null;
     focalY: number | null;
+    zoom: number | null;
   } | null>(null);
 
-  function updateFocal(url: string, focalX: number, focalY: number) {
-    onChange(images.map((img) => img.url === url ? { ...img, focalX, focalY } : img));
+  function updateFocal(url: string, focalX: number, focalY: number, zoom: number) {
+    onChange(images.map((img) => img.url === url ? { ...img, focalX, focalY, zoom } : img));
   }
 
   const sensors = useSensors(
@@ -365,7 +367,7 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
                     image={img}
                     onRemove={() => removeBanner(img.url)}
                     onSetThumb={() => setThumbnail(img.url)}
-                    onEditFocal={() => setFocalDialog({ url: img.url, focalX: img.focalX ?? null, focalY: img.focalY ?? null })}
+                    onEditFocal={() => setFocalDialog({ url: img.url, focalX: img.focalX ?? null, focalY: img.focalY ?? null, zoom: img.zoom ?? null })}
                   />
                 ))}
               </SortableContext>
@@ -465,7 +467,7 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
                   src={originalImage.url}
                   alt=""
                   className="w-full h-full object-cover"
-                  style={{ objectPosition: `${(originalImage.focalX ?? 0.5) * 100}% ${(originalImage.focalY ?? 0.5) * 100}%` }}
+                  style={focalStyle(originalImage.focalX, originalImage.focalY, originalImage.zoom)}
                 />
                 <button
                   type="button"
@@ -477,7 +479,7 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
                 <button
                   type="button"
                   className="absolute bottom-1 right-1 p-0.5 rounded bg-black/40 opacity-0 group-hover:opacity-100 text-white"
-                  onClick={(e) => { e.stopPropagation(); setFocalDialog({ url: originalImage.url, focalX: originalImage.focalX ?? null, focalY: originalImage.focalY ?? null }); }}
+                  onClick={(e) => { e.stopPropagation(); setFocalDialog({ url: originalImage.url, focalX: originalImage.focalX ?? null, focalY: originalImage.focalY ?? null, zoom: originalImage.zoom ?? null }); }}
                   title="초점 설정"
                 >
                   <Crosshair className="h-3 w-3" />
@@ -704,7 +706,7 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
               src={thumbImage.url}
               alt="썸네일"
               className="w-full h-full object-cover"
-              style={{ objectPosition: `${(thumbImage.focalX ?? 0.5) * 100}% ${(thumbImage.focalY ?? 0.5) * 100}%` }}
+              style={focalStyle(thumbImage.focalX, thumbImage.focalY, thumbImage.zoom)}
             />
           </div>
         </div>
@@ -717,8 +719,9 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
           imageUrl={focalDialog.url}
           focalX={focalDialog.focalX}
           focalY={focalDialog.focalY}
-          onConfirm={(x, y) => {
-            updateFocal(focalDialog.url, x, y);
+          zoom={focalDialog.zoom}
+          onConfirm={(x, y, z) => {
+            updateFocal(focalDialog.url, x, y, z);
             setFocalDialog(null);
           }}
           onClose={() => setFocalDialog(null)}

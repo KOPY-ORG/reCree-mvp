@@ -6,7 +6,7 @@ import { Download, Share2, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { updateReCreeshotImageUrl } from "@/app/(user)/_actions/recreeshot-actions";
 import { ReCreeshotImage } from "@/components/recreeshot-image";
-import { coverRect, loadImage } from "@/lib/canvas-utils";
+import { coverRect, loadImage, drawReCreeshotBadge, drawReCreeshotWatermark } from "@/lib/canvas-utils";
 
 interface Props {
   shotPreviewUrl: string;
@@ -98,53 +98,8 @@ export function UploadStep3({
         ctx.restore();
       }
 
-      if (showBadge && matchScore !== null) {
-        const badgeText = `${Math.round(matchScore)}% Match`;
-        const fontSize = 32;
-        const badgePadX = 28;
-        const badgePadY = 10;
-        ctx.font = `700 ${fontSize}px -apple-system, Helvetica Neue, sans-serif`;
-        const textW = ctx.measureText(badgeText).width;
-        const badgeW = textW + badgePadX * 2;
-        const badgeH = fontSize + badgePadY * 2;
-        const badgeX = W - badgeW - W * 0.03;
-        const badgeY = W * 0.03;
-
-        const grad = ctx.createLinearGradient(badgeX, 0, badgeX + badgeW * 1.5, 0);
-        grad.addColorStop(0, "#C8FF09");
-        grad.addColorStop(1, "#ffffff");
-
-        ctx.save();
-        ctx.shadowColor = "rgba(0,0,0,0.15)";
-        ctx.shadowBlur = 12;
-        ctx.shadowOffsetY = 3;
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.roundRect(badgeX, badgeY, badgeW, badgeH, badgeH / 2);
-        ctx.fill();
-        ctx.restore();
-
-        ctx.save();
-        ctx.fillStyle = "#000000";
-        ctx.font = `700 ${fontSize}px -apple-system, Helvetica Neue, sans-serif`;
-        ctx.textBaseline = "alphabetic";
-        const textY = badgeY + badgePadY + fontSize * 0.82;
-        ctx.fillText(badgeText, badgeX + badgePadX, textY);
-        ctx.restore();
-      }
-
-      ctx.save();
-      ctx.font = `600 28px 'Noto Sans', sans-serif`;
-      ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
-      ctx.textBaseline = "alphabetic";
-      ctx.shadowColor = "rgba(0, 0, 0, 0.75)";
-      ctx.shadowBlur = 8;
-      ctx.shadowOffsetY = 2;
-      const watermarkText = "reCree";
-      const watermarkX = W - ctx.measureText(watermarkText).width - W * 0.03;
-      const watermarkY = H - W * 0.03;
-      ctx.fillText(watermarkText, watermarkX, watermarkY);
-      ctx.restore();
+      if (showBadge && matchScore !== null) drawReCreeshotBadge(ctx, W, matchScore);
+      drawReCreeshotWatermark(ctx, W, H);
 
       canvas.toBlob(async (blob) => {
         if (!blob) return;
@@ -156,16 +111,7 @@ export function UploadStep3({
         // DB 저장용 클린 버전 (메인 샷 + 워터마크만, CSS overlay로 배지·소스이미지 표시)
         ctx.clearRect(0, 0, W, H);
         ctx.drawImage(shotImg, sx, sy, sw, sh, 0, 0, W, H);
-        ctx.save();
-        ctx.font = `600 28px 'Noto Sans', sans-serif`;
-        ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
-        ctx.textBaseline = "alphabetic";
-        ctx.shadowColor = "rgba(0, 0, 0, 0.75)";
-        ctx.shadowBlur = 8;
-        ctx.shadowOffsetY = 2;
-        const wText = "reCree";
-        ctx.fillText(wText, W - ctx.measureText(wText).width - W * 0.03, H - W * 0.03);
-        ctx.restore();
+        drawReCreeshotWatermark(ctx, W, H);
 
         await new Promise<void>((resolve) => {
           canvas.toBlob(async (cleanBlob) => {

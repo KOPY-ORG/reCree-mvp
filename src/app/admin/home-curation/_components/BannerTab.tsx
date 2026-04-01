@@ -53,7 +53,6 @@ function SortableBannerRow({
   onToggle: (id: string, v: boolean) => void;
   onEdit: (postId: string) => void;
 }) {
-  const [handleHovered, setHandleHovered] = useState(false);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: banner.id });
 
@@ -67,17 +66,13 @@ function SortableBannerRow({
     <div
       ref={setNodeRef}
       style={style}
-      className={`group/row flex items-center gap-3 border-b border-border/30 last:border-0 py-2 px-2 rounded transition-colors ${
-        handleHovered || isDragging ? "bg-muted/40" : ""
-      }`}
+      className="group/row flex items-center gap-3 border-b border-zinc-100 last:border-b-0 py-3 px-4 transition-colors hover:bg-zinc-50"
     >
       <span
         {...listeners}
         {...attributes}
         suppressHydrationWarning
-        onMouseEnter={() => setHandleHovered(true)}
-        onMouseLeave={() => setHandleHovered(false)}
-        className="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+        className="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-muted-foreground transition-colors shrink-0"
       >
         <GripVertical className="size-4" />
       </span>
@@ -111,7 +106,7 @@ function SortableBannerRow({
       <button
         type="button"
         onClick={() => onRemove(banner.id)}
-        className="opacity-0 group-hover/row:opacity-100 transition-opacity text-muted-foreground hover:text-destructive shrink-0"
+        className="opacity-30 group-hover/row:opacity-100 transition-opacity text-muted-foreground hover:text-destructive shrink-0"
         aria-label="삭제"
       >
         <Trash2 className="size-4" />
@@ -198,7 +193,15 @@ export function BannerTab({
           배너가 없습니다. 포스트를 추가해 주세요.
         </div>
       ) : (
-        <div className="border rounded-lg overflow-hidden">
+        <div className="rounded-xl overflow-hidden shadow-sm bg-white">
+          {/* 헤더 */}
+          <div className="bg-zinc-50 border-b border-zinc-100 flex items-center gap-3 px-4 py-3">
+            <span className="size-4 shrink-0" />
+            <span className="w-14 shrink-0 text-xs font-medium text-muted-foreground">썸네일</span>
+            <span className="flex-1 text-xs font-medium text-muted-foreground">포스트</span>
+            <span className="shrink-0 text-xs font-medium text-muted-foreground">활성</span>
+            <span className="size-4 shrink-0" />
+          </div>
           <DndContext
             id={dndId}
             sensors={sensors}

@@ -274,8 +274,7 @@ export function AIDraftReviewDialog({
                           setEditedValues((prev) => ({ ...prev, [field.key]: e.target.value }))
                         }
                         disabled={!isChecked}
-                        rows={4}
-                        className={`w-full bg-white border rounded-lg px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring min-h-[80px] transition-opacity ${
+                        className={`w-full bg-white border rounded-lg px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring min-h-[80px] [field-sizing:content] transition-opacity ${
                           isChecked ? "opacity-100" : "opacity-40"
                         }`}
                       />
