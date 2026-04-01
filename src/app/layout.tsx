@@ -35,6 +35,9 @@ export const metadata: Metadata = {
     description: "Discover iconic K-content spots",
     images: ["/og-default.png"],
   },
+  verification: {
+    google: "XL4ExE1K15vfuyaO7KZ2dyDkukn2VLpQEpqY7AVxYqc",
+  },
 };
 
 export default function RootLayout({
