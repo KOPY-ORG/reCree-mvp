@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { isExternalImage } from "@/lib/image";
+import { isExternalImage, focalStyle } from "@/lib/image";
 import dynamic from "next/dynamic";
 
 const MapPreview = dynamic(
@@ -394,12 +394,16 @@ export function PostForm({
   async function handleTranslateAll() {
     const activeEntry = placeEntries[activePlaceIndex];
     setIsTranslating(true);
+    const vibeFields = Object.fromEntries(
+      (activeEntry?.vibe ?? []).map((v, i) => [`vibe_${i}`, v]),
+    );
     const { data, error } = await translateFields({
       title: titleKo,
       body: bodyKo,
       context: activeEntry?.contextKo ?? "",
       mustTry: activeEntry?.mustTryKo ?? "",
       tip: activeEntry?.tipKo ?? "",
+      ...vibeFields,
     });
     if (error) {
       toast.error(error);
@@ -407,6 +411,9 @@ export function PostForm({
       if (data.title) setTitleEn(data.title);
       if (data.body) setBodyEn(data.body);
       if (activeEntry && activePlaceIndex < placeEntries.length) {
+        const translatedVibes = (activeEntry.vibe ?? []).map(
+          (v, i) => data[`vibe_${i}`] ?? v,
+        );
         setPlaceEntries((prev) =>
           prev.map((e, idx) => {
             if (idx !== activePlaceIndex) return e;
@@ -415,6 +422,7 @@ export function PostForm({
               contextEn: data.context ?? e.contextEn,
               mustTryEn: data.mustTry ?? e.mustTryEn,
               tipEn: data.tip ?? e.tipEn,
+              vibe: translatedVibes,
             };
           }),
         );
@@ -983,7 +991,7 @@ export function PostForm({
                     const thumb = images.find((img) => img.isThumbnail);
                     return thumb ? (
                       <div className="relative aspect-[3/2] rounded-lg overflow-hidden border">
-                        <img src={thumb.url} alt="썸네일" className="w-full h-full object-cover" />
+                        <img src={thumb.url} alt="썸네일" className="w-full h-full object-cover" style={focalStyle(thumb.focalX, thumb.focalY, thumb.zoom)} />
                       </div>
                     ) : (
                       <div className="flex items-center justify-center aspect-[3/2] rounded-lg border bg-muted/50 text-xs text-muted-foreground">

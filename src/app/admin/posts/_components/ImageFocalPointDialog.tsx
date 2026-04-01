@@ -1,6 +1,14 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
+import ReactCrop, {
+  centerCrop,
+  makeAspectCrop,
+  type Crop,
+  type PercentCrop,
+} from "react-image-crop";
+import "react-image-crop/dist/ReactCrop.css";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -8,145 +16,55 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 
-const CROP_RATIO = 3 / 2;  // width / height
-
-interface DragState {
-  startX: number; startY: number;
-  startBoxX: number; startBoxY: number;
-  boxW: number; boxH: number;
-  iw: number; ih: number;
-}
+const ASPECT = 3 / 2;
 
 interface Props {
   open: boolean;
   imageUrl: string;
   focalX: number | null;
   focalY: number | null;
-  onConfirm: (focalX: number, focalY: number) => void;
+  zoom: number | null;
+  onConfirm: (focalX: number, focalY: number, zoom: number) => void;
   onClose: () => void;
 }
 
 export function ImageFocalPointDialog({
-  open, imageUrl, focalX, focalY, onConfirm, onClose,
+  open, imageUrl, focalX, focalY, zoom, onConfirm, onClose,
 }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
+  const [crop, setCrop] = useState<Crop>();
+  const [completedCrop, setCompletedCrop] = useState<PercentCrop>();
 
-  const [boxPos, setBoxPos] = useState({ x: 0, y: 0 });
-  const [boxSize, setBoxSize] = useState({ w: 0, h: 0 });
-  const [isDragging, setIsDragging] = useState(false);
+  const onImageLoad = useCallback(
+    (e: React.SyntheticEvent<HTMLImageElement>) => {
+      const { width, height } = e.currentTarget;
 
-  const boxPosRef = useRef({ x: 0, y: 0 });
-  const boxSizeRef = useRef({ w: 0, h: 0 });
-  const imgSizeRef = useRef({ w: 0, h: 0 });
-  const initialized = useRef(false);
-  const draggingRef = useRef<DragState | null>(null);
-
-  // open 때마다 리셋
-  useEffect(() => {
-    if (!open) return;
-    initialized.current = false;
-    const img = imgRef.current;
-    const container = containerRef.current;
-    if (img?.complete && img.naturalWidth > 0 && container) {
-      init(container, img);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, imageUrl]);
-
-  function init(container: HTMLDivElement, img: HTMLImageElement) {
-    if (initialized.current) return;
-    const iw = container.clientWidth;
-    if (iw === 0) return;
-    initialized.current = true;
-
-    const ih = Math.round(iw * (img.naturalHeight / img.naturalWidth));
-    imgSizeRef.current = { w: iw, h: ih };
-
-    // 박스 크기: 좌우 100% 또는 상하 100% (3:2 비율 유지)
-    const bw = Math.min(iw, ih * CROP_RATIO);
-    const bh = bw / CROP_RATIO;
-    setBoxSize({ w: bw, h: bh });
-    boxSizeRef.current = { w: bw, h: bh };
-
-    const fx = focalX ?? 0.5;
-    const fy = focalY ?? 0.5;
-    const pos = {
-      x: Math.max(0, Math.min(iw - bw, fx * iw - bw / 2)),
-      y: Math.max(0, Math.min(ih - bh, fy * ih - bh / 2)),
-    };
-    setBoxPos(pos);
-    boxPosRef.current = pos;
-  }
-
-  function onImageLoad() {
-    const img = imgRef.current;
-    const container = containerRef.current;
-    if (img && container) init(container, img);
-  }
-
-  // window 레벨 이동 처리
-  useEffect(() => {
-    function onMove(e: PointerEvent) {
-      const d = draggingRef.current;
-      if (!d) return;
-      const dx = e.clientX - d.startX;
-      const dy = e.clientY - d.startY;
-      const pos = {
-        x: Math.max(0, Math.min(d.iw - d.boxW, d.startBoxX + dx)),
-        y: Math.max(0, Math.min(d.ih - d.boxH, d.startBoxY + dy)),
-      };
-      setBoxPos(pos);
-      boxPosRef.current = pos;
-    }
-
-    function onUp() {
-      draggingRef.current = null;
-      setIsDragging(false);
-    }
-
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-    window.addEventListener("pointercancel", onUp);
-    return () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("pointercancel", onUp);
-    };
-  }, []);
-
-  function startDrag(e: React.PointerEvent) {
-    e.preventDefault();
-    const img = imgRef.current;
-    const container = containerRef.current;
-    if (!img || !container) return;
-    const iw = container.clientWidth;
-    const ih = Math.round(iw * (img.naturalHeight / img.naturalWidth));
-    imgSizeRef.current = { w: iw, h: ih };
-    const { w: bw, h: bh } = boxSizeRef.current;
-    draggingRef.current = {
-      startX: e.clientX, startY: e.clientY,
-      startBoxX: boxPosRef.current.x, startBoxY: boxPosRef.current.y,
-      boxW: bw, boxH: bh,
-      iw, ih,
-    };
-    setIsDragging(true);
-  }
+      if (focalX != null && focalY != null && zoom != null && zoom > 1) {
+        // Restore previous crop from saved focal + zoom
+        const wPct = 100 / zoom;
+        const hPct = (wPct / 100) * width / ASPECT / height * 100;
+        const xPct = Math.max(0, Math.min(100 - wPct, focalX * 100 - wPct / 2));
+        const yPct = Math.max(0, Math.min(100 - hPct, focalY * 100 - hPct / 2));
+        setCrop({ unit: "%", x: xPct, y: yPct, width: wPct, height: hPct });
+      } else {
+        setCrop(centerCrop(makeAspectCrop({ unit: "%", width: 90 }, ASPECT, width, height), width, height));
+      }
+    },
+    // open/imageUrl 변경 시 재실행되도록 — focalX/Y/zoom은 open 시점에 고정됨
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [open, imageUrl, focalX, focalY, zoom],
+  );
 
   function handleConfirm() {
-    const { w: iw, h: ih } = imgSizeRef.current;
-    const { w: bw, h: bh } = boxSizeRef.current;
-    const pos = boxPosRef.current;
-    if (iw === 0 || bw === 0) { onConfirm(focalX ?? 0.5, focalY ?? 0.5); return; }
+    if (!completedCrop?.width) return;
+    const { x, y, width: w, height: h } = completedCrop;
     onConfirm(
-      Math.max(0, Math.min(1, (pos.x + bw / 2) / iw)),
-      Math.max(0, Math.min(1, (pos.y + bh / 2) / ih)),
+      Math.max(0, Math.min(1, (x + w / 2) / 100)),
+      Math.max(0, Math.min(1, (y + h / 2) / 100)),
+      Math.max(1, 100 / w),
     );
   }
-
-  const { w: bw, h: bh } = boxSize;
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -155,51 +73,32 @@ export function ImageFocalPointDialog({
           <DialogTitle>보이는 영역 설정</DialogTitle>
         </DialogHeader>
         <p className="text-xs text-muted-foreground -mt-2">
-          사각형을 드래그해 보이는 영역을 선택하세요.
+          영역을 드래그해 이동하거나 모서리를 드래그해 크기를 조절하세요.
         </p>
-
-        <div ref={containerRef} className="relative select-none overflow-hidden rounded-lg">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            ref={imgRef}
-            src={imageUrl}
-            alt=""
-            className="w-full h-auto block"
-            draggable={false}
-            onLoad={onImageLoad}
-          />
-
-          {bw > 0 && (
-            <>
-              {/* 어두운 오버레이 4분할 */}
-              <div className="absolute inset-x-0 top-0 bg-black/55 pointer-events-none"
-                style={{ height: boxPos.y }} />
-              <div className="absolute inset-x-0 bg-black/55 pointer-events-none"
-                style={{ top: boxPos.y + bh, bottom: 0 }} />
-              <div className="absolute bg-black/55 pointer-events-none"
-                style={{ left: 0, top: boxPos.y, width: boxPos.x, height: bh }} />
-              <div className="absolute bg-black/55 pointer-events-none"
-                style={{ left: boxPos.x + bw, top: boxPos.y, right: 0, height: bh }} />
-
-              {/* 크롭 박스 (이동) */}
-              <div
-                className="absolute"
-                style={{
-                  left: boxPos.x, top: boxPos.y,
-                  width: bw, height: bh,
-                  border: "2px dashed rgba(255,255,255,0.8)",
-                  cursor: isDragging ? "grabbing" : "grab",
-                  touchAction: "none",
-                }}
-                onPointerDown={startDrag}
-              />
-            </>
-          )}
+        <div className="flex justify-center overflow-auto max-h-[60vh] bg-zinc-100 rounded-lg p-2">
+          <ReactCrop
+            crop={crop}
+            onChange={(c) => setCrop(c)}
+            onComplete={(_, pc) => setCompletedCrop(pc)}
+            aspect={ASPECT}
+            minWidth={20}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              ref={imgRef}
+              src={imageUrl}
+              alt=""
+              onLoad={onImageLoad}
+              style={{ maxHeight: "56vh", maxWidth: "100%", objectFit: "contain" }}
+              crossOrigin="anonymous"
+            />
+          </ReactCrop>
         </div>
-
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose}>취소</Button>
-          <Button type="button" onClick={handleConfirm}>적용</Button>
+          <Button type="button" onClick={handleConfirm} disabled={!completedCrop?.width}>
+            적용
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

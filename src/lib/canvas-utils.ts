@@ -23,3 +23,55 @@ export function loadImage(src: string): Promise<HTMLImageElement> {
     img.src = src;
   });
 }
+
+/** 리크리샷 캔버스에 매치 배지를 그립니다 */
+export function drawReCreeshotBadge(
+  ctx: CanvasRenderingContext2D,
+  W: number,
+  matchScore: number,
+  padY = 10,
+) {
+  const badgeText = `${Math.round(matchScore)}% Match`;
+  const fontSize = 32;
+  const badgePadX = 28;
+  ctx.font = `700 ${fontSize}px -apple-system, Helvetica Neue, sans-serif`;
+  const badgeW = ctx.measureText(badgeText).width + badgePadX * 2;
+  const badgeH = fontSize + padY * 2;
+  const badgeX = W - badgeW - W * 0.03;
+  const badgeY = W * 0.03;
+  const grad = ctx.createLinearGradient(badgeX, 0, badgeX + badgeW * 1.5, 0);
+  grad.addColorStop(0, "#C8FF09");
+  grad.addColorStop(1, "#ffffff");
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,0.15)";
+  ctx.shadowBlur = 12;
+  ctx.shadowOffsetY = 3;
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.roundRect(badgeX, badgeY, badgeW, badgeH, badgeH / 2);
+  ctx.fill();
+  ctx.restore();
+  ctx.save();
+  ctx.fillStyle = "#000000";
+  ctx.font = `700 ${fontSize}px -apple-system, Helvetica Neue, sans-serif`;
+  ctx.textBaseline = "alphabetic";
+  ctx.fillText(badgeText, badgeX + badgePadX, badgeY + padY + fontSize * 0.82);
+  ctx.restore();
+}
+
+/** 리크리샷 캔버스에 워터마크를 그립니다 */
+export function drawReCreeshotWatermark(
+  ctx: CanvasRenderingContext2D,
+  W: number,
+  H: number,
+) {
+  ctx.save();
+  ctx.font = `600 28px 'Noto Sans', sans-serif`;
+  ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
+  ctx.textBaseline = "alphabetic";
+  ctx.shadowColor = "rgba(0, 0, 0, 0.75)";
+  ctx.shadowBlur = 8;
+  ctx.shadowOffsetY = 2;
+  ctx.fillText("reCree", W - ctx.measureText("reCree").width - W * 0.03, H - W * 0.03);
+  ctx.restore();
+}

@@ -42,7 +42,7 @@ export function PostEditSheet({
 
   return (
     <Dialog open={!!postId} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-[calc(100vw-240px)] sm:max-w-[calc(100vw-240px)] h-[calc(100vh-48px)] p-0 overflow-y-auto">
+      <DialogContent className="max-w-[calc(100vw-240px)] sm:max-w-[calc(100vw-240px)] h-[calc(100vh-48px)] p-0 overflow-y-auto left-[calc(50vw_+_120px)]">
         <DialogHeader className="sr-only">
           <DialogTitle>포스트 편집</DialogTitle>
         </DialogHeader>
