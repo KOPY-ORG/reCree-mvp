@@ -33,13 +33,10 @@ function PostCard({
   post,
   isSaved,
   tagGroupMap,
-  shownUrls,
 }: {
   post: MapPost;
   isSaved: boolean;
   tagGroupMap: TagGroupColorMap;
-  /** 캐러셀에 이미 표시된 URL Set — PostCard에서는 중복 표시 안 함 */
-  shownUrls: Set<string>;
 }) {
   const topicLabels = post.topics.slice(0, 1).map((topic) => {
     const colors = resolveTopicColors(topic);
@@ -51,11 +48,7 @@ function PostCard({
   });
   const labels = [...topicLabels, ...tagLabels];
 
-  // 캐러셀에 없는 첫 번째 이미지를 썸네일로 사용
-  const cardImageUrl =
-    (post.imageUrl && !shownUrls.has(post.imageUrl) ? post.imageUrl : null) ??
-    post.images.find((url) => !shownUrls.has(url)) ??
-    null;
+  const cardImageUrl = post.imageUrl ?? post.images[0] ?? null;
 
   return (
     <Link href={`/posts/${post.slug}`} className="flex gap-3 items-center bg-white border border-border/50 rounded-2xl px-3 py-3">
@@ -261,7 +254,6 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
                       post={post}
                       isSaved={savedPostIds.has(post.id)}
                       tagGroupMap={tagGroupMap}
-                      shownUrls={shownUrls}
                     />
                   ))}
                 </div>
