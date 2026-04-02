@@ -1,9 +1,5 @@
-interface CreditItem {
-  creditText: string;
-}
-
 interface Props {
-  credits: CreditItem[];
+  credits: string[];
 }
 
 export function ImageCreditSection({ credits }: Props) {
@@ -24,9 +20,9 @@ export function ImageCreditSection({ credits }: Props) {
         </svg>
       </summary>
       <ul className="mt-1.5 space-y-0.5 list-disc list-inside">
-        {credits.map((item, i) => (
+        {credits.map((text, i) => (
           <li key={i} className="text-[11px] text-muted-foreground">
-            {item.creditText}
+            {text}
           </li>
         ))}
       </ul>

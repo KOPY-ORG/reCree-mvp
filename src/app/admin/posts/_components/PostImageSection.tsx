@@ -82,6 +82,49 @@ async function uploadImage(
   return { url: data.publicUrl };
 }
 
+// ─── 이미지 출처 입력 ─────────────────────────────────────────────────────────
+
+function CreditInputs({
+  creditText,
+  creditUrl,
+  onChangeText,
+  onChangeUrl,
+}: {
+  creditText: string;
+  creditUrl: string;
+  onChangeText: (v: string) => void;
+  onChangeUrl: (v: string) => void;
+}) {
+  return (
+    <>
+      <Input
+        value={creditText}
+        onChange={(e) => onChangeText(e.target.value)}
+        placeholder="e.g. Photo by Netflix"
+        className="h-7 text-xs flex-1"
+      />
+      <div className="flex items-center gap-1 flex-1">
+        <Input
+          value={creditUrl}
+          onChange={(e) => onChangeUrl(e.target.value)}
+          placeholder="Reference URL (internal)"
+          className="h-7 text-xs flex-1"
+        />
+        {creditUrl && (
+          <a
+            href={creditUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border bg-background text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        )}
+      </div>
+    </>
+  );
+}
+
 // ─── 배너 아이템 (드래그 정렬) ────────────────────────────────────────────────
 
 function SortableBannerItem({
@@ -458,30 +501,12 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
               {bannerImages.map((img, i) => (
                 <div key={img.url} className="flex items-center gap-2">
                   <span className="text-[11px] text-muted-foreground shrink-0 w-12">이미지 {i + 1}</span>
-                  <Input
-                    value={img.creditText ?? ""}
-                    onChange={(e) => setImageCredit(img.url, "creditText", e.target.value)}
-                    placeholder="e.g. Photo by Netflix"
-                    className="h-7 text-xs flex-1"
+                  <CreditInputs
+                    creditText={img.creditText ?? ""}
+                    creditUrl={img.creditUrl ?? ""}
+                    onChangeText={(v) => setImageCredit(img.url, "creditText", v)}
+                    onChangeUrl={(v) => setImageCredit(img.url, "creditUrl", v)}
                   />
-                  <div className="flex items-center gap-1 flex-1">
-                    <Input
-                      value={img.creditUrl ?? ""}
-                      onChange={(e) => setImageCredit(img.url, "creditUrl", e.target.value)}
-                      placeholder="Reference URL (internal)"
-                      className="h-7 text-xs flex-1"
-                    />
-                    {img.creditUrl && (
-                      <a
-                        href={img.creditUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border bg-background text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </a>
-                    )}
-                  </div>
                 </div>
               ))}
             </div>
@@ -543,29 +568,13 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
                 </div>
                 <div className="space-y-1.5">
                   <p className="text-xs font-medium">이미지 출처 (선택)</p>
-                  <Input
-                    value={originalImage.creditText ?? ""}
-                    onChange={(e) => setImageCredit(originalImage.url, "creditText", e.target.value)}
-                    placeholder="e.g. Photo by Netflix"
-                    className="h-7 text-xs"
-                  />
-                  <div className="flex items-center gap-1">
-                    <Input
-                      value={originalImage.creditUrl ?? ""}
-                      onChange={(e) => setImageCredit(originalImage.url, "creditUrl", e.target.value)}
-                      placeholder="Reference URL (internal)"
-                      className="h-7 text-xs flex-1"
+                  <div className="flex gap-2">
+                    <CreditInputs
+                      creditText={originalImage.creditText ?? ""}
+                      creditUrl={originalImage.creditUrl ?? ""}
+                      onChangeText={(v) => setImageCredit(originalImage.url, "creditText", v)}
+                      onChangeUrl={(v) => setImageCredit(originalImage.url, "creditUrl", v)}
                     />
-                    {originalImage.creditUrl && (
-                      <a
-                        href={originalImage.creditUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border bg-background text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </a>
-                    )}
                   </div>
                 </div>
               </div>

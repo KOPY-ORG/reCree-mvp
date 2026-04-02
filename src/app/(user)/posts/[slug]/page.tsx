@@ -348,7 +348,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
       <ImageCreditSection
         credits={post.postImages
           .filter((img) => img.creditText)
-          .map((img) => ({ creditText: img.creditText! }))}
+          .map((img) => img.creditText!)}
       />
 
       {/* 출처 */}
