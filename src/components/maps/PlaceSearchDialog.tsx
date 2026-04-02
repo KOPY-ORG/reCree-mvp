@@ -212,10 +212,7 @@ function PlaceSearchContent({
           nameEn = /[\uAC00-\uD7A3]/.test(rawNameEn)
             ? Romanize.from(selected.displayName ?? "")
             : rawNameEn;
-          const rawAddressEn = data.formattedAddress ?? "";
-          addressEn = /[\uAC00-\uD7A3]/.test(rawAddressEn)
-            ? Romanize.from(rawAddressEn)
-            : rawAddressEn;
+          addressEn = data.formattedAddress ?? "";
           operatingHours = data.regularOpeningHours?.weekdayDescriptions ?? [];
 
           const bStatus: string = data.businessStatus ?? "";
