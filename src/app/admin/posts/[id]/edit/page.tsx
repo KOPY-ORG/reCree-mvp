@@ -58,6 +58,11 @@ export default async function EditPostPage({ params, searchParams }: Props) {
             sortOrder: true,
             slotIndex: true,
             isSlotCard: true,
+            focalX: true,
+            focalY: true,
+            zoom: true,
+            creditText: true,
+            creditUrl: true,
           },
         },
         postSources: {

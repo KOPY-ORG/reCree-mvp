@@ -213,6 +213,8 @@ model PostImage {
   focalX      Float?      // 0.0 ~ 1.0, null = 0.5 (center)
   focalY      Float?      // 0.0 ~ 1.0, null = 0.5 (center)
   zoom        Float?      // ≥ 1.0, null = 1.0 (no zoom)
+  creditText  String?     // 사용자 화면 표시용 출처 텍스트
+  creditUrl   String?     // 관리자 내부 참조용 링크
   createdAt   DateTime    @default(now())
 
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)

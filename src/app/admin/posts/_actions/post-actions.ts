@@ -34,6 +34,8 @@ export type PostImageInput = {
   focalX?: number | null;
   focalY?: number | null;
   zoom?: number | null;
+  creditText?: string | null;
+  creditUrl?: string | null;
 };
 
 export type PostSourceInput = {
@@ -196,6 +198,8 @@ function buildPostRelations(data: PostFormData) {
           focalX: img.focalX ?? null,
           focalY: img.focalY ?? null,
           zoom: img.zoom ?? null,
+          creditText: img.creditText ?? null,
+          creditUrl: img.creditUrl ?? null,
         })),
       },
     }),
@@ -488,6 +492,8 @@ export async function getPostEditData(id: string) {
             focalX: true,
             focalY: true,
             zoom: true,
+            creditText: true,
+            creditUrl: true,
           },
         },
         postSources: {
@@ -594,6 +600,8 @@ export async function getPostEditData(id: string) {
       focalX: img.focalX ?? null,
       focalY: img.focalY ?? null,
       zoom: img.zoom ?? null,
+      creditText: img.creditText ?? null,
+      creditUrl: img.creditUrl ?? null,
     })),
     postSources: post.postSources.map((s) => ({
       url: s.url,

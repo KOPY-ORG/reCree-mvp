@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { toast } from "sonner";
-import { Upload, Link as LinkIcon, X, GripVertical, ImageIcon, Crosshair, MapPin, Crop } from "lucide-react";
+import { Upload, Link as LinkIcon, X, GripVertical, ImageIcon, Crosshair, MapPin, Crop, ExternalLink } from "lucide-react";
 import { ReCreeshotCropDialog } from "./ReCreeshotCropDialog";
 import {
   DndContext,
@@ -308,6 +308,12 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
     ));
   }
 
+  function setImageCredit(url: string, field: "creditText" | "creditUrl", value: string) {
+    onChange(images.map((img) =>
+      img.url === url ? { ...img, [field]: value || null } : img,
+    ));
+  }
+
   // ─ 배너 핸들러 ─────────────────────────────────────────────────────────────
 
   async function handleBannerUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -443,6 +449,44 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
             </div>
           </div>
         )}
+
+        {/* 배너 이미지 출처 */}
+        {bannerImages.length > 0 && (
+          <div className="space-y-1.5 pt-1 border-t mt-2">
+            <p className="text-[11px] font-medium text-muted-foreground pt-1">배너 이미지 출처 (선택)</p>
+            <div className="space-y-1.5">
+              {bannerImages.map((img, i) => (
+                <div key={img.url} className="flex items-center gap-2">
+                  <span className="text-[11px] text-muted-foreground shrink-0 w-12">이미지 {i + 1}</span>
+                  <Input
+                    value={img.creditText ?? ""}
+                    onChange={(e) => setImageCredit(img.url, "creditText", e.target.value)}
+                    placeholder="e.g. Photo by Netflix"
+                    className="h-7 text-xs flex-1"
+                  />
+                  <div className="flex items-center gap-1 flex-1">
+                    <Input
+                      value={img.creditUrl ?? ""}
+                      onChange={(e) => setImageCredit(img.url, "creditUrl", e.target.value)}
+                      placeholder="Reference URL (internal)"
+                      className="h-7 text-xs flex-1"
+                    />
+                    {img.creditUrl && (
+                      <a
+                        href={img.creditUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border bg-background text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ─ 소스 이미지 (1장) ─────────────────────────────────────────────────── */}
@@ -487,14 +531,43 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
               </div>
 
               {/* 클릭 링크 선택 */}
-              <div className="flex-1 min-w-0 space-y-1.5">
-                <p className="text-xs font-medium">클릭 링크</p>
-                <p className="text-[11px] text-muted-foreground">사용자가 카드 클릭 시 이동할 URL</p>
-                <LinkSelector
-                  linkUrl={originalImage.linkUrl ?? null}
-                  sources={sources}
-                  onChange={setOriginalLinkUrl}
-                />
+              <div className="flex-1 min-w-0 space-y-3">
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium">클릭 링크</p>
+                  <p className="text-[11px] text-muted-foreground">사용자가 카드 클릭 시 이동할 URL</p>
+                  <LinkSelector
+                    linkUrl={originalImage.linkUrl ?? null}
+                    sources={sources}
+                    onChange={setOriginalLinkUrl}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium">이미지 출처 (선택)</p>
+                  <Input
+                    value={originalImage.creditText ?? ""}
+                    onChange={(e) => setImageCredit(originalImage.url, "creditText", e.target.value)}
+                    placeholder="e.g. Photo by Netflix"
+                    className="h-7 text-xs"
+                  />
+                  <div className="flex items-center gap-1">
+                    <Input
+                      value={originalImage.creditUrl ?? ""}
+                      onChange={(e) => setImageCredit(originalImage.url, "creditUrl", e.target.value)}
+                      placeholder="Reference URL (internal)"
+                      className="h-7 text-xs flex-1"
+                    />
+                    {originalImage.creditUrl && (
+                      <a
+                        href={originalImage.creditUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border bg-background text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           ) : originalMode === "idle" ? (
