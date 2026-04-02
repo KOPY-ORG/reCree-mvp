@@ -193,8 +193,8 @@ function LinkSelector({
                     </div>
                   )}
                   <span>출처 {i + 1}</span>
-                  {s.sourceNote && (
-                    <span className="text-muted-foreground text-xs">· {s.sourceNote}</span>
+                  {s.platform && (
+                    <span className="text-muted-foreground text-xs">· {getPlatformShort(s.platform)}</span>
                   )}
                 </div>
               </SelectItem>
