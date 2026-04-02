@@ -11,6 +11,7 @@ const ALLOWED_DOMAINS = [
   "weverse.io",
   "naver.com",
   "namu.wiki",
+  "netflix.com",
 ];
 
 function isAllowedDomain(url: string): boolean {

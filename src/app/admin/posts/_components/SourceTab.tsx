@@ -22,6 +22,7 @@ const PLATFORMS = [
   { value: "INSTAGRAM", label: "Instagram" },
   { value: "X",         label: "X (Twitter)" },
   { value: "PINTEREST", label: "Pinterest" },
+  { value: "NETFLIX",   label: "Netflix" },
   { value: "BLOG",      label: "Blog" },
   { value: "ARTICLE",   label: "기사/뉴스" },
   { value: "OTHER",     label: "기타" },
@@ -33,9 +34,10 @@ function detectPlatform(url: string): string {
   try {
     const hostname = new URL(url).hostname.replace("www.", "");
     if (hostname.includes("youtube.com") || hostname.includes("youtu.be")) return "YOUTUBE";
-    if (hostname.includes("twitter.com") || hostname.includes("x.com")) return "X";
+    if (hostname.includes("twitter.com") || hostname === "x.com") return "X";
     if (hostname.includes("instagram.com")) return "INSTAGRAM";
     if (hostname.includes("pinterest.com") || hostname.includes("pin.it")) return "PINTEREST";
+    if (hostname.includes("netflix.com")) return "NETFLIX";
     if (
       hostname.includes("naver.com") ||
       hostname.includes("tistory.com") ||

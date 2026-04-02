@@ -1,5 +1,6 @@
 import { YouTubeEmbed } from "./YouTubeEmbed";
 import { BookmarkCard } from "./BookmarkCard";
+import { NetflixCard } from "./NetflixCard";
 
 interface PostSource {
   id: string;
@@ -21,6 +22,10 @@ function isYouTube(source: PostSource): boolean {
   );
 }
 
+function isNetflix(source: PostSource): boolean {
+  return source.platform === "NETFLIX" || source.url.includes("netflix.com");
+}
+
 export function SourceSection({ sources }: Props) {
   const visibleSources = sources.filter((s) => s.sourceType === "PRIMARY");
 
@@ -33,6 +38,8 @@ export function SourceSection({ sources }: Props) {
         {visibleSources.map((source) =>
           isYouTube(source) ? (
             <YouTubeEmbed key={source.id} url={source.url} />
+          ) : isNetflix(source) ? (
+            <NetflixCard key={source.id} url={source.url} />
           ) : (
             <BookmarkCard key={source.id} url={source.url} platform={source.platform ?? undefined} />
           )
