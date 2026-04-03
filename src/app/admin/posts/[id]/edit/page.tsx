@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { PostForm } from "../../_components/PostForm";
+import type { SourcePlatform } from "@/types";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -58,6 +59,11 @@ export default async function EditPostPage({ params, searchParams }: Props) {
             sortOrder: true,
             slotIndex: true,
             isSlotCard: true,
+            focalX: true,
+            focalY: true,
+            zoom: true,
+            creditText: true,
+            creditUrl: true,
           },
         },
         postSources: {
@@ -68,6 +74,7 @@ export default async function EditPostPage({ params, searchParams }: Props) {
             sourceType: true,
             platform: true,
             isOriginalLink: true,
+            sourceDetail: true,
             sourceNote: true,
             sourcePostDate: true,
             sortOrder: true,
@@ -160,9 +167,10 @@ export default async function EditPostPage({ params, searchParams }: Props) {
     postImages: post.postImages,
     postSources: post.postSources.map((s) => ({
       url: s.url,
-      sourceType: (s.sourceType ?? "PRIMARY") as "PRIMARY" | "REFERENCE",
-      platform: s.platform ?? "",
+      sourceType: s.sourceType ?? "PRIMARY",
+      platform: (s.platform ?? "") as SourcePlatform | "",
       isOriginalLink: s.isOriginalLink,
+      sourceDetail: s.sourceDetail ?? "",
       sourceNote: s.sourceNote ?? "",
       sourcePostDate: s.sourcePostDate ?? "",
     })),

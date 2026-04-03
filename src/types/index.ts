@@ -3,6 +3,18 @@ import type { User } from "@prisma/client";
 
 export type { User };
 
+export type SourcePlatform =
+  | "YOUTUBE"
+  | "INSTAGRAM"
+  | "X"
+  | "PINTEREST"
+  | "NETFLIX"
+  | "BLOG"
+  | "ARTICLE"
+  | "TIKTOK"
+  | "NEWS"
+  | "OTHER";
+
 // 토픽 필터 공통 타입 (TopicFilterRow에서 re-export)
 export type { TopicBase, Level0Topic, Level1Topic, Level2Topic, Level3Topic } from "@/components/TopicFilterRow";
 

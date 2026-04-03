@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { toast } from "sonner";
-import { Upload, Link as LinkIcon, X, GripVertical, ImageIcon, Crosshair, MapPin, Crop } from "lucide-react";
+import { Upload, Link as LinkIcon, X, GripVertical, ImageIcon, Crosshair, MapPin, Crop, ExternalLink } from "lucide-react";
 import { ReCreeshotCropDialog } from "./ReCreeshotCropDialog";
 import {
   DndContext,
@@ -80,6 +80,49 @@ async function uploadImage(
   if (error) return { error: `업로드 실패: ${error.message}` };
   const { data } = supabase.storage.from("post-images").getPublicUrl(fullPath);
   return { url: data.publicUrl };
+}
+
+// ─── 이미지 출처 입력 ─────────────────────────────────────────────────────────
+
+function CreditInputs({
+  creditText,
+  creditUrl,
+  onChangeText,
+  onChangeUrl,
+}: {
+  creditText: string;
+  creditUrl: string;
+  onChangeText: (v: string) => void;
+  onChangeUrl: (v: string) => void;
+}) {
+  return (
+    <>
+      <Input
+        value={creditText}
+        onChange={(e) => onChangeText(e.target.value)}
+        placeholder="e.g. Photo by Netflix"
+        className="h-7 text-xs flex-1"
+      />
+      <div className="flex items-center gap-1 flex-1">
+        <Input
+          value={creditUrl}
+          onChange={(e) => onChangeUrl(e.target.value)}
+          placeholder="Reference URL (internal)"
+          className="h-7 text-xs flex-1"
+        />
+        {creditUrl && (
+          <a
+            href={creditUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border bg-background text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        )}
+      </div>
+    </>
+  );
 }
 
 // ─── 배너 아이템 (드래그 정렬) ────────────────────────────────────────────────
@@ -193,8 +236,8 @@ function LinkSelector({
                     </div>
                   )}
                   <span>출처 {i + 1}</span>
-                  {s.sourceNote && (
-                    <span className="text-muted-foreground text-xs">· {s.sourceNote}</span>
+                  {s.platform && (
+                    <span className="text-muted-foreground text-xs">· {getPlatformShort(s.platform)}</span>
                   )}
                 </div>
               </SelectItem>
@@ -305,6 +348,12 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
     if (!originalImage) return;
     onChange(images.map((img) =>
       img.imageType === "ORIGINAL" ? { ...img, linkUrl } : img,
+    ));
+  }
+
+  function setImageCredit(url: string, field: "creditText" | "creditUrl", value: string) {
+    onChange(images.map((img) =>
+      img.url === url ? { ...img, [field]: value || null } : img,
     ));
   }
 
@@ -443,6 +492,26 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
             </div>
           </div>
         )}
+
+        {/* 배너 이미지 출처 */}
+        {bannerImages.length > 0 && (
+          <div className="space-y-1.5 pt-1 border-t mt-2">
+            <p className="text-[11px] font-medium text-muted-foreground pt-1">배너 이미지 출처 (선택)</p>
+            <div className="space-y-1.5">
+              {bannerImages.map((img, i) => (
+                <div key={img.url} className="flex items-center gap-2">
+                  <span className="text-[11px] text-muted-foreground shrink-0 w-12">이미지 {i + 1}</span>
+                  <CreditInputs
+                    creditText={img.creditText ?? ""}
+                    creditUrl={img.creditUrl ?? ""}
+                    onChangeText={(v) => setImageCredit(img.url, "creditText", v)}
+                    onChangeUrl={(v) => setImageCredit(img.url, "creditUrl", v)}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ─ 소스 이미지 (1장) ─────────────────────────────────────────────────── */}
@@ -487,14 +556,27 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
               </div>
 
               {/* 클릭 링크 선택 */}
-              <div className="flex-1 min-w-0 space-y-1.5">
-                <p className="text-xs font-medium">클릭 링크</p>
-                <p className="text-[11px] text-muted-foreground">사용자가 카드 클릭 시 이동할 URL</p>
-                <LinkSelector
-                  linkUrl={originalImage.linkUrl ?? null}
-                  sources={sources}
-                  onChange={setOriginalLinkUrl}
-                />
+              <div className="flex-1 min-w-0 space-y-3">
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium">클릭 링크</p>
+                  <p className="text-[11px] text-muted-foreground">사용자가 카드 클릭 시 이동할 URL</p>
+                  <LinkSelector
+                    linkUrl={originalImage.linkUrl ?? null}
+                    sources={sources}
+                    onChange={setOriginalLinkUrl}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium">이미지 출처 (선택)</p>
+                  <div className="flex gap-2">
+                    <CreditInputs
+                      creditText={originalImage.creditText ?? ""}
+                      creditUrl={originalImage.creditUrl ?? ""}
+                      onChangeText={(v) => setImageCredit(originalImage.url, "creditText", v)}
+                      onChangeUrl={(v) => setImageCredit(originalImage.url, "creditUrl", v)}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           ) : originalMode === "idle" ? (

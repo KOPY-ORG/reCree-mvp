@@ -14,39 +14,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { PostSourceInput } from "../_actions/post-actions";
+import type { SourcePlatform } from "@/types";
+import { detectPlatform } from "@/lib/platform";
 
 // ─── 상수 ──────────────────────────────────────────────────────────────────────
 
-const PLATFORMS = [
+const PLATFORMS: { value: SourcePlatform; label: string }[] = [
   { value: "YOUTUBE",   label: "YouTube" },
   { value: "INSTAGRAM", label: "Instagram" },
   { value: "X",         label: "X (Twitter)" },
   { value: "PINTEREST", label: "Pinterest" },
+  { value: "NETFLIX",   label: "Netflix" },
   { value: "BLOG",      label: "Blog" },
   { value: "ARTICLE",   label: "기사/뉴스" },
   { value: "OTHER",     label: "기타" },
 ];
-
-// ─── URL → platform 자동감지 ───────────────────────────────────────────────────
-
-function detectPlatform(url: string): string {
-  try {
-    const hostname = new URL(url).hostname.replace("www.", "");
-    if (hostname.includes("youtube.com") || hostname.includes("youtu.be")) return "YOUTUBE";
-    if (hostname.includes("twitter.com") || hostname.includes("x.com")) return "X";
-    if (hostname.includes("instagram.com")) return "INSTAGRAM";
-    if (hostname.includes("pinterest.com") || hostname.includes("pin.it")) return "PINTEREST";
-    if (
-      hostname.includes("naver.com") ||
-      hostname.includes("tistory.com") ||
-      hostname.includes("velog.io") ||
-      hostname.includes("brunch.co.kr")
-    ) return "BLOG";
-    return "OTHER";
-  } catch {
-    return "";
-  }
-}
 
 // ─── 출처 카드 ─────────────────────────────────────────────────────────────────
 
@@ -62,7 +44,7 @@ function SourceCard({
   onUpdate: (patch: Partial<PostSourceInput>) => void;
 }) {
   const [copied, setCopied] = useState(false);
-  const detectedPlatform = source.url ? detectPlatform(source.url) : "";
+  const detectedPlatform = source.url ? (detectPlatform(source.url) ?? "") : "";
 
   // 기존 소스에 platform이 비어있고 URL에서 감지 가능하면 자동 세팅
   useEffect(() => {
@@ -163,7 +145,7 @@ function SourceCard({
           <Label className="text-xs">플랫폼</Label>
           <Select
             value={source.platform || ""}
-            onValueChange={(v) => onUpdate({ platform: v })}
+            onValueChange={(v) => onUpdate({ platform: v as SourcePlatform })}
           >
             <SelectTrigger className="h-8 text-sm">
               <SelectValue placeholder="선택" />
@@ -206,9 +188,18 @@ function SourceCard({
         </div>
       </div>
 
-      {/* 메모 — 단독 full-width */}
       <div className="space-y-1.5">
-        <Label className="text-xs">메모</Label>
+        <Label className="text-xs">상세정보 <span className="text-muted-foreground font-normal">(사용자 표시)</span></Label>
+        <Input
+          value={source.sourceDetail}
+          onChange={(e) => onUpdate({ sourceDetail: e.target.value })}
+          placeholder="예: 5:10, S1E3 12:40"
+          className="h-8 text-sm w-full"
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-xs">메모 <span className="text-muted-foreground font-normal">(내부용)</span></Label>
         <Input
           value={source.sourceNote}
           onChange={(e) => onUpdate({ sourceNote: e.target.value })}

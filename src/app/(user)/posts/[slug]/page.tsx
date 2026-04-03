@@ -9,8 +9,10 @@ import { PostDetailHeader } from "./_components/PostDetailHeader";
 import { BannerCarousel } from "./_components/BannerCarousel";
 import { OriginalSourceCards } from "./_components/OriginalSourceCards";
 import { SourceSection } from "./_components/SourceSection";
+import { ImageCreditSection } from "./_components/ImageCreditSection";
 import { PostMetaBar } from "./_components/PostMetaBar";
 import { getCurrentUser } from "@/lib/auth";
+import type { SourcePlatform } from "@/types";
 import { PostReCreeshotSection } from "./_components/PostReCreeshotSection";
 
 interface Props {
@@ -117,6 +119,14 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
       },
       postSources: {
         orderBy: { sortOrder: "asc" },
+        select: {
+          id: true,
+          url: true,
+          sourceType: true,
+          platform: true,
+          sourceDetail: true,
+          isOriginalLink: true,
+        },
       },
       postPlaces: {
         select: {
@@ -341,7 +351,14 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
       )}
 
       {/* From the Source */}
-      <SourceSection sources={post.postSources} />
+      <SourceSection sources={post.postSources.map((s) => ({ ...s, platform: s.platform as SourcePlatform | null }))} />
+
+      {/* Photo Credits */}
+      <ImageCreditSection
+        credits={post.postImages
+          .filter((img) => img.creditText)
+          .map((img) => img.creditText!)}
+      />
 
       {/* 출처 */}
       {post.source && (

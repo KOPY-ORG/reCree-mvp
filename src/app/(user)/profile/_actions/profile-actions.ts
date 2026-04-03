@@ -31,21 +31,25 @@ export async function uploadProfileImage(
   const file = formData.get("file") as File | null;
   if (!file) return { error: "No file provided" };
 
-  await ensureProfileImagesBucket();
+  try {
+    await ensureProfileImagesBucket();
 
-  const ext = file.name.split(".").pop() ?? "jpg";
-  const path = `${user.id}/${Date.now()}.${ext}`;
-  const arrayBuffer = await file.arrayBuffer();
+    const ext = file.name.split(".").pop() ?? "jpg";
+    const path = `${user.id}/${Date.now()}.${ext}`;
+    const arrayBuffer = await file.arrayBuffer();
 
-  const admin = createAdminClient();
-  const { error } = await admin.storage
-    .from("profile-images")
-    .upload(path, arrayBuffer, { contentType: file.type, upsert: true });
+    const admin = createAdminClient();
+    const { error } = await admin.storage
+      .from("profile-images")
+      .upload(path, arrayBuffer, { contentType: file.type, upsert: true });
 
-  if (error) return { error: "Failed to upload image." };
+    if (error) return { error: "Failed to upload image." };
 
-  const { data } = admin.storage.from("profile-images").getPublicUrl(path);
-  return { url: data.publicUrl };
+    const { data } = admin.storage.from("profile-images").getPublicUrl(path);
+    return { url: data.publicUrl };
+  } catch {
+    return { error: "Failed to upload image." };
+  }
 }
 
 export async function updateProfile(data: {

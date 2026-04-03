@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { PostStatus, SourceType } from "@prisma/client";
+import type { SourcePlatform } from "@/types";
 import { makeStorageExtractor, deleteStorageFiles } from "@/lib/storage";
 
 const extractPostImageStoragePath = makeStorageExtractor("post-images");
@@ -34,12 +35,15 @@ export type PostImageInput = {
   focalX?: number | null;
   focalY?: number | null;
   zoom?: number | null;
+  creditText?: string | null;
+  creditUrl?: string | null;
 };
 
 export type PostSourceInput = {
   url: string;
-  sourceType: "PRIMARY" | "REFERENCE";
-  platform: string;       // YOUTUBE | X | INSTAGRAM | PINTEREST | BLOG | ARTICLE | OTHER
+  sourceType: SourceType;
+  platform: SourcePlatform | "";
+  sourceDetail: string;   // 사용자에게 표시되는 상세 정보 (예: "5:10", "S1E3 12:40")
   sourceNote: string;
   sourcePostDate: string;
   isOriginalLink: boolean;
@@ -196,6 +200,8 @@ function buildPostRelations(data: PostFormData) {
           focalX: img.focalX ?? null,
           focalY: img.focalY ?? null,
           zoom: img.zoom ?? null,
+          creditText: img.creditText ?? null,
+          creditUrl: img.creditUrl ?? null,
         })),
       },
     }),
@@ -203,8 +209,9 @@ function buildPostRelations(data: PostFormData) {
       postSources: {
         create: data.sources.map((s, i) => ({
           url: s.url,
-          sourceType: s.sourceType as SourceType,
+          sourceType: s.sourceType,
           platform: s.platform || null,
+          sourceDetail: s.sourceDetail || null,
           sourceNote: s.sourceNote || null,
           sourcePostDate: s.sourcePostDate || null,
           isOriginalLink: s.isOriginalLink,
@@ -488,6 +495,8 @@ export async function getPostEditData(id: string) {
             focalX: true,
             focalY: true,
             zoom: true,
+            creditText: true,
+            creditUrl: true,
           },
         },
         postSources: {
@@ -497,6 +506,7 @@ export async function getPostEditData(id: string) {
             url: true,
             sourceType: true,
             platform: true,
+            sourceDetail: true,
             sourceNote: true,
             sourcePostDate: true,
             isOriginalLink: true,
@@ -594,11 +604,14 @@ export async function getPostEditData(id: string) {
       focalX: img.focalX ?? null,
       focalY: img.focalY ?? null,
       zoom: img.zoom ?? null,
+      creditText: img.creditText ?? null,
+      creditUrl: img.creditUrl ?? null,
     })),
     postSources: post.postSources.map((s) => ({
       url: s.url,
-      sourceType: s.sourceType as "PRIMARY" | "REFERENCE",
-      platform: s.platform ?? "",
+      sourceType: s.sourceType,
+      platform: (s.platform ?? "") as SourcePlatform | "",
+      sourceDetail: s.sourceDetail ?? "",
       sourceNote: s.sourceNote ?? "",
       sourcePostDate: s.sourcePostDate ?? "",
       isOriginalLink: s.isOriginalLink,
