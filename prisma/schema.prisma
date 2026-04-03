@@ -213,6 +213,8 @@ model PostImage {
   focalX      Float?      // 0.0 ~ 1.0, null = 0.5 (center)
   focalY      Float?      // 0.0 ~ 1.0, null = 0.5 (center)
   zoom        Float?      // ≥ 1.0, null = 1.0 (no zoom)
+  creditText  String?     // 사용자 화면 표시용 출처 텍스트
+  creditUrl   String?     // 관리자 내부 참조용 링크
   createdAt   DateTime    @default(now())
 
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
@@ -226,6 +228,7 @@ model PostSource {
   url            String
   sourceType     SourceType @default(PRIMARY)
   platform       String?    // YOUTUBE | X | INSTAGRAM | PINTEREST | BLOG | ARTICLE | OTHER
+  sourceDetail   String?    // 사용자에게 표시되는 상세 정보 (예: "5:10", "S1E3 12:40")
   sourceNote     String?
   sourcePostDate String?    // 출처 원본 게시 날짜 (예: "2024-01-15")
   isOriginalLink Boolean    @default(false) // 원본이미지 클릭 시 이동 URL (포스트당 1개만 true)

@@ -199,6 +199,7 @@ const EMPTY_SOURCE: PostSourceInput = {
   url: "",
   sourceType: "PRIMARY",
   platform: "",
+  sourceDetail: "",
   sourceNote: "",
   sourcePostDate: "",
   isOriginalLink: false,

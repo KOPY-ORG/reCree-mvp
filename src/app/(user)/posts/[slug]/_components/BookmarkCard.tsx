@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { Play, Camera, Music, ExternalLink } from "lucide-react";
+import type { SourcePlatform } from "@/types";
 
 interface Props {
   url: string;
-  platform?: string;
+  platform?: SourcePlatform;
+  sourceDetail?: string | null;
 }
 
 interface OgData {
@@ -14,7 +16,7 @@ interface OgData {
   description: string | null;
 }
 
-function PlatformFallback({ platform }: { platform?: string }) {
+function PlatformFallback({ platform }: { platform?: SourcePlatform }) {
   const p = platform?.toUpperCase();
 
   const base = "w-20 shrink-0 self-stretch flex items-center justify-center";
@@ -37,7 +39,7 @@ function PlatformFallback({ platform }: { platform?: string }) {
   );
 }
 
-export function BookmarkCard({ url, platform }: Props) {
+export function BookmarkCard({ url, platform, sourceDetail }: Props) {
   const [og, setOg] = useState<OgData | null>(null);
   const [loading, setLoading] = useState(true);
   const [imgError, setImgError] = useState(false);
@@ -97,6 +99,9 @@ export function BookmarkCard({ url, platform }: Props) {
           >
             {og.description}
           </p>
+        )}
+        {sourceDetail && (
+          <p className="text-[11px] text-muted-foreground/70 mt-1 leading-snug italic">{sourceDetail}</p>
         )}
       </div>
     </a>
