@@ -7,6 +7,7 @@ import { updateProfile, uploadProfileImage } from "../_actions/profile-actions";
 import { useNicknameCheck } from "@/hooks/use-nickname-check";
 import { NicknameInput } from "@/components/NicknameInput";
 import { showToast, showError } from "@/lib/toast";
+import { compressImage } from "@/lib/image";
 
 interface Props {
   email: string;
@@ -60,8 +61,9 @@ export function ProfileEditForm({
         let finalImageUrl: string | null = photoRemoved ? null : imagePreview;
 
         if (imageFile) {
+          const compressed = await compressImage(imageFile, 400, 0.85);
           const formData = new FormData();
-          formData.append("file", imageFile);
+          formData.append("file", compressed);
           const result = await uploadProfileImage(formData);
           if (result.error || !result.url) {
             showError(<>Failed to upload image.<br />Please try again.</>);

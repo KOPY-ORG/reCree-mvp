@@ -181,7 +181,7 @@ export function ImageCropOverlay({ file, onConfirm, onClose }: Props) {
       if (!blob) return;
       const croppedFile = new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" });
       onConfirm(croppedFile);
-    }, "image/jpeg", 0.92);
+    }, "image/jpeg", 0.82);
   }
 
   const { x: bx, y: by, w: bw, h: bh } = box;
