@@ -48,21 +48,41 @@ export function focalStyle(
 }
 
 /**
- * next.config.ts의 remotePatterns에 등록된 도메인인지 확인합니다.
- * false → 미등록 외부 도메인 → <Image unoptimized> 필요
+ * Vercel Image Optimization을 사용하지 않아야 하는 이미지인지 확인합니다.
+ * Supabase Storage 이미지는 Vercel 최적화 한도 소진을 막기 위해 unoptimized 처리합니다.
  */
 export function isExternalImage(src: string): boolean {
   try {
     const { hostname } = new URL(src);
+    // Supabase Storage 이미지는 항상 unoptimized (Vercel 변환 한도 우회)
+    if (hostname.endsWith(".supabase.co")) return true;
     return !(
-      hostname.endsWith(".supabase.co") ||
       hostname === "img.youtube.com" ||
       hostname === "i.ytimg.com" ||
       hostname === "lh3.googleusercontent.com" ||
       hostname === "picsum.photos"
     );
   } catch {
-    // blob:, data: 등 파싱 불가 URL → 최적화 불필요
     return true;
+  }
+}
+
+/**
+ * Supabase Storage URL을 Transform API URL로 변환합니다.
+ * Supabase가 아닌 URL은 그대로 반환합니다.
+ * Supabase Pro 플랜 필요.
+ */
+export function toStorageImageUrl(src: string, width: number, quality = 80): string {
+  try {
+    const url = new URL(src);
+    if (!url.hostname.endsWith(".supabase.co")) return src;
+    const match = url.pathname.match(/^\/storage\/v1\/object\/public\/(.+)$/);
+    if (!match) return src;
+    url.pathname = `/storage/v1/render/image/public/${match[1]}`;
+    url.searchParams.set("width", String(width));
+    url.searchParams.set("quality", String(quality));
+    return url.toString();
+  } catch {
+    return src;
   }
 }
