@@ -56,33 +56,37 @@ export function ProfileEditForm({
 
   function handleSave() {
     startSaving(async () => {
-      let finalImageUrl: string | null = photoRemoved ? null : imagePreview;
+      try {
+        let finalImageUrl: string | null = photoRemoved ? null : imagePreview;
 
-      if (imageFile) {
-        const formData = new FormData();
-        formData.append("file", imageFile);
-        const result = await uploadProfileImage(formData);
-        if (result.error || !result.url) {
-          showError(<>Failed to upload image.<br />Please try again.</>);
+        if (imageFile) {
+          const formData = new FormData();
+          formData.append("file", imageFile);
+          const result = await uploadProfileImage(formData);
+          if (result.error || !result.url) {
+            showError(<>Failed to upload image.<br />Please try again.</>);
+            return;
+          }
+          finalImageUrl = result.url;
+        }
+
+        const result = await updateProfile({
+          nickname: nicknameVal,
+          bio: bioVal,
+          profileImageUrl: finalImageUrl,
+        });
+
+        if (result.error) {
+          showError(result.error);
           return;
         }
-        finalImageUrl = result.url;
+
+        setImageFile(null);
+        showToast("Profile updated.");
+        router.push("/profile");
+      } catch {
+        showError(<>Something went wrong.<br />Please try again.</>);
       }
-
-      const result = await updateProfile({
-        nickname: nicknameVal,
-        bio: bioVal,
-        profileImageUrl: finalImageUrl,
-      });
-
-      if (result.error) {
-        showError(result.error);
-        return;
-      }
-
-      setImageFile(null);
-      showToast("Profile updated.");
-      router.push("/profile");
     });
   }
 
