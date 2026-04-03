@@ -26,8 +26,12 @@ export function useNicknameCheck(nickname: string, currentNickname?: string) {
     setStatus("checking");
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
-      const available = await checkNicknameAvailable(trimmed);
-      setStatus(available ? "available" : "taken");
+      try {
+        const available = await checkNicknameAvailable(trimmed);
+        setStatus(available ? "available" : "taken");
+      } catch {
+        setStatus("idle");
+      }
     }, 500);
 
     return () => {
