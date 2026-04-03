@@ -118,6 +118,14 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
       },
       postSources: {
         orderBy: { sortOrder: "asc" },
+        select: {
+          id: true,
+          url: true,
+          sourceType: true,
+          platform: true,
+          sourceDetail: true,
+          isOriginalLink: true,
+        },
       },
       postPlaces: {
         select: {

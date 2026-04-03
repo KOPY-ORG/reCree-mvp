@@ -46,6 +46,7 @@ export type SheetRow = {
   story: string;
   sourceUrl: string;
   sourceType: string;
+  sourceDetail: string;
   sourceNote: string;
   referenceUrl: string;
   sourcePostDate: string;
@@ -285,6 +286,7 @@ export async function fetchSheetPreview(): Promise<{
       story: (r["story"] ?? "").trim(),
       sourceUrl: (r["source_url"] ?? "").trim(),
       sourceType: (r["source_type"] ?? "").trim(),
+      sourceDetail: (r["source_detail"] ?? "").trim(),
       sourceNote: (r["source_note"] ?? "").trim(),
       referenceUrl: (r["reference_url"] ?? "").trim(),
       sourcePostDate: (r["source_post_date"] ?? "").trim(),
@@ -532,6 +534,7 @@ export async function importSheetRows(rowIds: string[]): Promise<{
       const collectedBy = (r["collected_by"] ?? "").trim() || null;
       const collectedAt = (r["collected_at"] ?? "").trim() || null;
       const srcUrl = (r["source_url"] ?? "").trim() || null;
+      const srcDetail = (r["source_detail"] ?? "").trim() || null;
       const srcNote = (r["source_note"] ?? "").trim() || null;
       const storyVal = (r["story"] ?? "").trim() || null;
       const memoVal = (r["memo"] ?? "").trim() || null;
@@ -624,6 +627,7 @@ export async function importSheetRows(rowIds: string[]): Promise<{
                     sourceType: (mappedSrcType === "REFERENCE" ? "REFERENCE" : "PRIMARY") as "PRIMARY" | "REFERENCE",
                     platform: detectPlatform(url),
                     isOriginalLink: false,
+                    sourceDetail: i === 0 ? srcDetail : null,
                     sourceNote: i === 0 ? srcNote : null,
                     sourcePostDate: i === 0 ? sourcePostDateVal : null,
                     sortOrder: i,
@@ -633,6 +637,7 @@ export async function importSheetRows(rowIds: string[]): Promise<{
                     sourceType: "REFERENCE" as "REFERENCE",
                     platform: detectPlatform(url),
                     isOriginalLink: false,
+                    sourceDetail: null,
                     sourceNote: null,
                     sourcePostDate: null,
                     sortOrder: srcUrls.length + i,

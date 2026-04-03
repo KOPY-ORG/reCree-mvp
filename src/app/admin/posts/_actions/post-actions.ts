@@ -42,6 +42,7 @@ export type PostSourceInput = {
   url: string;
   sourceType: "PRIMARY" | "REFERENCE";
   platform: string;       // YOUTUBE | X | INSTAGRAM | PINTEREST | BLOG | ARTICLE | OTHER
+  sourceDetail: string;   // 사용자에게 표시되는 상세 정보 (예: "5:10", "S1E3 12:40")
   sourceNote: string;
   sourcePostDate: string;
   isOriginalLink: boolean;
@@ -209,6 +210,7 @@ function buildPostRelations(data: PostFormData) {
           url: s.url,
           sourceType: s.sourceType as SourceType,
           platform: s.platform || null,
+          sourceDetail: s.sourceDetail || null,
           sourceNote: s.sourceNote || null,
           sourcePostDate: s.sourcePostDate || null,
           isOriginalLink: s.isOriginalLink,
@@ -503,6 +505,7 @@ export async function getPostEditData(id: string) {
             url: true,
             sourceType: true,
             platform: true,
+            sourceDetail: true,
             sourceNote: true,
             sourcePostDate: true,
             isOriginalLink: true,
@@ -607,6 +610,7 @@ export async function getPostEditData(id: string) {
       url: s.url,
       sourceType: s.sourceType as "PRIMARY" | "REFERENCE",
       platform: s.platform ?? "",
+      sourceDetail: s.sourceDetail ?? "",
       sourceNote: s.sourceNote ?? "",
       sourcePostDate: s.sourcePostDate ?? "",
       isOriginalLink: s.isOriginalLink,

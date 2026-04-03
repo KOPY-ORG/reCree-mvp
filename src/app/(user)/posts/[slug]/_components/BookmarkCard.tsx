@@ -6,6 +6,7 @@ import { Play, Camera, Music, ExternalLink } from "lucide-react";
 interface Props {
   url: string;
   platform?: string;
+  sourceDetail?: string | null;
 }
 
 interface OgData {
@@ -37,7 +38,7 @@ function PlatformFallback({ platform }: { platform?: string }) {
   );
 }
 
-export function BookmarkCard({ url, platform }: Props) {
+export function BookmarkCard({ url, platform, sourceDetail }: Props) {
   const [og, setOg] = useState<OgData | null>(null);
   const [loading, setLoading] = useState(true);
   const [imgError, setImgError] = useState(false);
@@ -97,6 +98,9 @@ export function BookmarkCard({ url, platform }: Props) {
           >
             {og.description}
           </p>
+        )}
+        {sourceDetail && (
+          <p className="text-[11px] text-muted-foreground/70 mt-1 leading-snug italic">{sourceDetail}</p>
         )}
       </div>
     </a>

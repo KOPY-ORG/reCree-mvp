@@ -208,9 +208,18 @@ function SourceCard({
         </div>
       </div>
 
-      {/* 메모 — 단독 full-width */}
       <div className="space-y-1.5">
-        <Label className="text-xs">메모</Label>
+        <Label className="text-xs">상세정보 <span className="text-muted-foreground font-normal">(사용자 표시)</span></Label>
+        <Input
+          value={source.sourceDetail}
+          onChange={(e) => onUpdate({ sourceDetail: e.target.value })}
+          placeholder="예: 5:10, S1E3 12:40"
+          className="h-8 text-sm w-full"
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-xs">메모 <span className="text-muted-foreground font-normal">(내부용)</span></Label>
         <Input
           value={source.sourceNote}
           onChange={(e) => onUpdate({ sourceNote: e.target.value })}

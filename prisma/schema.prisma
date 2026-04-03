@@ -228,6 +228,7 @@ model PostSource {
   url            String
   sourceType     SourceType @default(PRIMARY)
   platform       String?    // YOUTUBE | X | INSTAGRAM | PINTEREST | BLOG | ARTICLE | OTHER
+  sourceDetail   String?    // 사용자에게 표시되는 상세 정보 (예: "5:10", "S1E3 12:40")
   sourceNote     String?
   sourcePostDate String?    // 출처 원본 게시 날짜 (예: "2024-01-15")
   isOriginalLink Boolean    @default(false) // 원본이미지 클릭 시 이동 URL (포스트당 1개만 true)

@@ -1,12 +1,13 @@
 interface Props {
   url: string;
+  sourceDetail?: string | null;
 }
 
 function parseNetflixTitleId(url: string): string | null {
   return url.match(/\/(?:title|watch)\/(\d+)/)?.[1] ?? null;
 }
 
-export function NetflixCard({ url }: Props) {
+export function NetflixCard({ url, sourceDetail }: Props) {
   const titleId = parseNetflixTitleId(url);
 
   return (
@@ -31,6 +32,9 @@ export function NetflixCard({ url }: Props) {
         <p className="text-[13px] font-medium text-foreground mt-0.5 leading-snug">
           Watch on Netflix
         </p>
+        {sourceDetail && (
+          <p className="text-[11px] text-muted-foreground/70 mt-1 leading-snug italic">{sourceDetail}</p>
+        )}
       </div>
     </a>
   );
