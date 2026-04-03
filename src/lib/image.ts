@@ -1,9 +1,9 @@
 /**
- * 브라우저에서 이미지를 리사이즈 + JPEG 압축합니다.
  * maxWidth보다 작은 이미지는 리사이즈하지 않습니다.
  * 실패 시 원본 파일을 그대로 반환합니다.
  */
 export function compressImage(file: File, maxWidth: number, quality: number): Promise<File> {
+  const JPEG = "image/jpeg";
   return new Promise((resolve) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
@@ -19,9 +19,9 @@ export function compressImage(file: File, maxWidth: number, quality: number): Pr
       canvas.toBlob(
         (blob) => {
           if (!blob) { resolve(file); return; }
-          resolve(new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" }));
+          resolve(new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: JPEG }));
         },
-        "image/jpeg",
+        JPEG,
         quality,
       );
     };
