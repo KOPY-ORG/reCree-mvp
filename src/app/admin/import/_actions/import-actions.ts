@@ -4,8 +4,9 @@ import Papa from "papaparse";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { expandGoogleMapsShortUrl, resolveGoogleMapsUrl } from "@/lib/google-maps-url";
+import type { SourcePlatform } from "@/types";
 
-function detectPlatform(url: string): string | null {
+function detectPlatform(url: string): SourcePlatform | null {
   try {
     const hostname = new URL(url).hostname.replace("www.", "");
     if (hostname.includes("youtube.com") || hostname.includes("youtu.be")) return "YOUTUBE";

@@ -14,10 +14,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { PostSourceInput } from "../_actions/post-actions";
+import type { SourcePlatform } from "@/types";
 
 // ─── 상수 ──────────────────────────────────────────────────────────────────────
 
-const PLATFORMS = [
+const PLATFORMS: { value: SourcePlatform; label: string }[] = [
   { value: "YOUTUBE",   label: "YouTube" },
   { value: "INSTAGRAM", label: "Instagram" },
   { value: "X",         label: "X (Twitter)" },
@@ -30,7 +31,7 @@ const PLATFORMS = [
 
 // ─── URL → platform 자동감지 ───────────────────────────────────────────────────
 
-function detectPlatform(url: string): string {
+function detectPlatform(url: string): SourcePlatform | "" {
   try {
     const hostname = new URL(url).hostname.replace("www.", "");
     if (hostname.includes("youtube.com") || hostname.includes("youtu.be")) return "YOUTUBE";
@@ -165,7 +166,7 @@ function SourceCard({
           <Label className="text-xs">플랫폼</Label>
           <Select
             value={source.platform || ""}
-            onValueChange={(v) => onUpdate({ platform: v })}
+            onValueChange={(v) => onUpdate({ platform: v as SourcePlatform })}
           >
             <SelectTrigger className="h-8 text-sm">
               <SelectValue placeholder="선택" />

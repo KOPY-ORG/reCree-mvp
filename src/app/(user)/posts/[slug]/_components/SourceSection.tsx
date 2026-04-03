@@ -1,3 +1,4 @@
+import type { SourcePlatform } from "@/types";
 import { YouTubeEmbed } from "./YouTubeEmbed";
 import { BookmarkCard } from "./BookmarkCard";
 import { NetflixCard } from "./NetflixCard";
@@ -6,7 +7,7 @@ interface PostSource {
   id: string;
   url: string;
   sourceType: string;
-  platform: string | null;
+  platform: SourcePlatform | null;
   sourceDetail: string | null;
   isOriginalLink: boolean;
 }

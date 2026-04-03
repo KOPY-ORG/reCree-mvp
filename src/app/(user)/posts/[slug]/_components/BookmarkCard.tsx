@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { Play, Camera, Music, ExternalLink } from "lucide-react";
+import type { SourcePlatform } from "@/types";
 
 interface Props {
   url: string;
-  platform?: string;
+  platform?: SourcePlatform;
   sourceDetail?: string | null;
 }
 
@@ -15,7 +16,7 @@ interface OgData {
   description: string | null;
 }
 
-function PlatformFallback({ platform }: { platform?: string }) {
+function PlatformFallback({ platform }: { platform?: SourcePlatform }) {
   const p = platform?.toUpperCase();
 
   const base = "w-20 shrink-0 self-stretch flex items-center justify-center";

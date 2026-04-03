@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { PostStatus, SourceType } from "@prisma/client";
+import type { SourcePlatform } from "@/types";
 import { makeStorageExtractor, deleteStorageFiles } from "@/lib/storage";
 
 const extractPostImageStoragePath = makeStorageExtractor("post-images");
@@ -41,7 +42,7 @@ export type PostImageInput = {
 export type PostSourceInput = {
   url: string;
   sourceType: "PRIMARY" | "REFERENCE";
-  platform: string;       // YOUTUBE | X | INSTAGRAM | PINTEREST | BLOG | ARTICLE | OTHER
+  platform: SourcePlatform | "";
   sourceDetail: string;   // 사용자에게 표시되는 상세 정보 (예: "5:10", "S1E3 12:40")
   sourceNote: string;
   sourcePostDate: string;
@@ -609,7 +610,7 @@ export async function getPostEditData(id: string) {
     postSources: post.postSources.map((s) => ({
       url: s.url,
       sourceType: s.sourceType as "PRIMARY" | "REFERENCE",
-      platform: s.platform ?? "",
+      platform: (s.platform ?? "") as SourcePlatform | "",
       sourceDetail: s.sourceDetail ?? "",
       sourceNote: s.sourceNote ?? "",
       sourcePostDate: s.sourcePostDate ?? "",
