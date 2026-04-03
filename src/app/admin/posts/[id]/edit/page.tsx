@@ -167,7 +167,7 @@ export default async function EditPostPage({ params, searchParams }: Props) {
     postImages: post.postImages,
     postSources: post.postSources.map((s) => ({
       url: s.url,
-      sourceType: (s.sourceType ?? "PRIMARY") as "PRIMARY" | "REFERENCE",
+      sourceType: s.sourceType ?? "PRIMARY",
       platform: (s.platform ?? "") as SourcePlatform | "",
       isOriginalLink: s.isOriginalLink,
       sourceDetail: s.sourceDetail ?? "",

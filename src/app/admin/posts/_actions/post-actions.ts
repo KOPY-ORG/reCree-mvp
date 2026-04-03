@@ -41,7 +41,7 @@ export type PostImageInput = {
 
 export type PostSourceInput = {
   url: string;
-  sourceType: "PRIMARY" | "REFERENCE";
+  sourceType: SourceType;
   platform: SourcePlatform | "";
   sourceDetail: string;   // 사용자에게 표시되는 상세 정보 (예: "5:10", "S1E3 12:40")
   sourceNote: string;
@@ -209,7 +209,7 @@ function buildPostRelations(data: PostFormData) {
       postSources: {
         create: data.sources.map((s, i) => ({
           url: s.url,
-          sourceType: s.sourceType as SourceType,
+          sourceType: s.sourceType,
           platform: s.platform || null,
           sourceDetail: s.sourceDetail || null,
           sourceNote: s.sourceNote || null,
@@ -609,7 +609,7 @@ export async function getPostEditData(id: string) {
     })),
     postSources: post.postSources.map((s) => ({
       url: s.url,
-      sourceType: s.sourceType as "PRIMARY" | "REFERENCE",
+      sourceType: s.sourceType,
       platform: (s.platform ?? "") as SourcePlatform | "",
       sourceDetail: s.sourceDetail ?? "",
       sourceNote: s.sourceNote ?? "",

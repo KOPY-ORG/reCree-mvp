@@ -4,26 +4,8 @@ import Papa from "papaparse";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { expandGoogleMapsShortUrl, resolveGoogleMapsUrl } from "@/lib/google-maps-url";
-import type { SourcePlatform } from "@/types";
-
-function detectPlatform(url: string): SourcePlatform | null {
-  try {
-    const hostname = new URL(url).hostname.replace("www.", "");
-    if (hostname.includes("youtube.com") || hostname.includes("youtu.be")) return "YOUTUBE";
-    if (hostname.includes("twitter.com") || hostname.includes("x.com")) return "X";
-    if (hostname.includes("instagram.com")) return "INSTAGRAM";
-    if (hostname.includes("pinterest.com") || hostname.includes("pin.it")) return "PINTEREST";
-    if (
-      hostname.includes("naver.com") ||
-      hostname.includes("tistory.com") ||
-      hostname.includes("velog.io") ||
-      hostname.includes("brunch.co.kr")
-    ) return "BLOG";
-    return "OTHER";
-  } catch {
-    return null;
-  }
-}
+import { detectPlatform } from "@/lib/platform";
+import type { SourceType } from "@prisma/client";
 
 // ─── 타입 ──────────────────────────────────────────────────────────────────────
 
@@ -625,7 +607,7 @@ export async function importSheetRows(rowIds: string[]): Promise<{
                 create: [
                   ...srcUrls.map((url, i) => ({
                     url,
-                    sourceType: (mappedSrcType === "REFERENCE" ? "REFERENCE" : "PRIMARY") as "PRIMARY" | "REFERENCE",
+                    sourceType: (mappedSrcType === "REFERENCE" ? "REFERENCE" : "PRIMARY") as SourceType,
                     platform: detectPlatform(url),
                     isOriginalLink: false,
                     sourceDetail: i === 0 ? srcDetail : null,
@@ -635,7 +617,7 @@ export async function importSheetRows(rowIds: string[]): Promise<{
                   })),
                   ...refUrls.map((url, i) => ({
                     url,
-                    sourceType: "REFERENCE" as "REFERENCE",
+                    sourceType: "REFERENCE" as SourceType,
                     platform: detectPlatform(url),
                     isOriginalLink: false,
                     sourceDetail: null,

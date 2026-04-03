@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import type { PostSourceInput } from "../_actions/post-actions";
 import type { SourcePlatform } from "@/types";
+import { detectPlatform } from "@/lib/platform";
 
 // ─── 상수 ──────────────────────────────────────────────────────────────────────
 
@@ -28,28 +29,6 @@ const PLATFORMS: { value: SourcePlatform; label: string }[] = [
   { value: "ARTICLE",   label: "기사/뉴스" },
   { value: "OTHER",     label: "기타" },
 ];
-
-// ─── URL → platform 자동감지 ───────────────────────────────────────────────────
-
-function detectPlatform(url: string): SourcePlatform | "" {
-  try {
-    const hostname = new URL(url).hostname.replace("www.", "");
-    if (hostname.includes("youtube.com") || hostname.includes("youtu.be")) return "YOUTUBE";
-    if (hostname.includes("twitter.com") || hostname === "x.com") return "X";
-    if (hostname.includes("instagram.com")) return "INSTAGRAM";
-    if (hostname.includes("pinterest.com") || hostname.includes("pin.it")) return "PINTEREST";
-    if (hostname.includes("netflix.com")) return "NETFLIX";
-    if (
-      hostname.includes("naver.com") ||
-      hostname.includes("tistory.com") ||
-      hostname.includes("velog.io") ||
-      hostname.includes("brunch.co.kr")
-    ) return "BLOG";
-    return "OTHER";
-  } catch {
-    return "";
-  }
-}
 
 // ─── 출처 카드 ─────────────────────────────────────────────────────────────────
 
@@ -65,7 +44,7 @@ function SourceCard({
   onUpdate: (patch: Partial<PostSourceInput>) => void;
 }) {
   const [copied, setCopied] = useState(false);
-  const detectedPlatform = source.url ? detectPlatform(source.url) : "";
+  const detectedPlatform = source.url ? (detectPlatform(source.url) ?? "") : "";
 
   // 기존 소스에 platform이 비어있고 URL에서 감지 가능하면 자동 세팅
   useEffect(() => {
