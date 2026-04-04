@@ -3,6 +3,9 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import type { ReCreeshotStatus } from "@prisma/client";
+import { makeStorageExtractor, deleteStorageFiles } from "@/lib/storage";
+
+const extractReCreeStoragePath = makeStorageExtractor("recreeshot-images");
 
 function revalidate() {
   revalidatePath("/admin/recreeshots");
@@ -52,6 +55,27 @@ export async function resolveReport(reportId: string) {
       });
     }
   });
+  revalidate();
+}
+
+// 관리자 삭제 — 소프트 딜리트 + Storage 파일 삭제
+export async function adminDeleteRecreeshot(id: string) {
+  const shot = await prisma.reCreeshot.findUnique({
+    where: { id },
+    select: { imageUrl: true, referencePhotoUrl: true },
+  });
+  if (!shot) return;
+
+  await prisma.reCreeshot.update({ where: { id }, data: { status: "DELETED" } });
+
+  const storagePaths = [shot.imageUrl, shot.referencePhotoUrl]
+    .filter((url): url is string => !!url)
+    .map(extractReCreeStoragePath)
+    .filter((p): p is string => p !== null);
+  if (storagePaths.length > 0) {
+    await deleteStorageFiles("recreeshot-images", storagePaths);
+  }
+
   revalidate();
 }
 

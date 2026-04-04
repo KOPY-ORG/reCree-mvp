@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 import type { Metadata } from "next";
-import { Sparkles, Waves, Flame, MapPin, Lightbulb } from "lucide-react";
+import { Sparkles, Waves, Flame, Lightbulb } from "lucide-react";
 import { LocationCard } from "./_components/LocationCard";
 import { prisma } from "@/lib/prisma";
 import { resolveTopicColors, resolveTagColors, type ResolvedLabel } from "@/lib/post-labels";
@@ -161,6 +162,15 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
   ]);
 
   if (!post || (!isPreview && post.status !== "PUBLISHED")) notFound();
+
+  if (!isPreview) {
+    after(async () => {
+      await prisma.post.update({
+        where: { id: post.id },
+        data: { viewCount: { increment: 1 } },
+      }).catch(() => {});
+    });
+  }
 
   const reCreeshorts = await prisma.reCreeshot.findMany({
     where: { linkedPostId: post.id, status: "ACTIVE" },

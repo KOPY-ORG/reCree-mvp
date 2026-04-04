@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, useRef, Suspense } from "react";
 import { Search, X, ChevronLeft, MapPin, ChevronRight } from "lucide-react";
-import { searchSuggestions, getPopularSearches, type Suggestion } from "./_actions/search-actions";
+import { searchSuggestions, getPopularSearches, logSearch, type Suggestion } from "./_actions/search-actions";
 import { SearchBar } from "../_components/SearchBar";
 
 const RECENT_KEY = "recree_recent_searches";
@@ -104,6 +104,7 @@ function SearchPageContent() {
 
   function navigateKeyword(text: string) {
     saveRecent(text);
+    logSearch(text).catch(() => {});
     if (from === "map") {
       router.push(`/my-map?q=${encodeURIComponent(text)}`);
     } else {

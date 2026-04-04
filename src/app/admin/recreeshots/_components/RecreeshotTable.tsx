@@ -5,7 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
-import { setRecreeshotStatus } from "../_actions/recreeshot-actions";
+import { setRecreeshotStatus, adminDeleteRecreeshot } from "../_actions/recreeshot-actions";
+import { RECREESHOT_STATUS_BADGE, RECREESHOT_STATUS_LABEL } from "../_constants";
 import type { ReCreeshotStatus } from "@prisma/client";
 
 export type RecreeshotRow = {
@@ -21,25 +22,10 @@ export type RecreeshotRow = {
   labelNames: string[];
 };
 
-const STATUS_BADGE: Record<ReCreeshotStatus, string> = {
-  ACTIVE:       "bg-green-100 text-green-700",
-  REPORTED:     "bg-orange-100 text-orange-700",
-  HIDDEN:       "bg-zinc-100 text-zinc-500",
-  REPORT_HIDDEN:"bg-red-100 text-red-600",
-  DELETED:      "bg-zinc-100 text-zinc-400",
-};
-
-const STATUS_LABEL: Record<ReCreeshotStatus, string> = {
-  ACTIVE:       "공개",
-  REPORTED:     "신고됨",
-  HIDDEN:       "숨김",
-  REPORT_HIDDEN:"신고로 숨김",
-  DELETED:      "삭제됨",
-};
-
 export function RecreeshotTable({ rows }: { rows: RecreeshotRow[] }) {
   const [isPending, startTransition] = useTransition();
   const [localRows, setLocalRows] = useState(rows);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   function optimisticUpdate(id: string, status: ReCreeshotStatus) {
     setLocalRows((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
@@ -55,8 +41,42 @@ export function RecreeshotTable({ rows }: { rows: RecreeshotRow[] }) {
     startTransition(() => setRecreeshotStatus(id, "ACTIVE"));
   }
 
+  function handleDelete(id: string) {
+    setDeleteTarget(null);
+    setLocalRows((prev) => prev.filter((r) => r.id !== id));
+    startTransition(() => adminDeleteRecreeshot(id));
+  }
+
   return (
     <div className="mt-4 rounded-xl overflow-hidden shadow-sm bg-white">
+      {/* 삭제 확인 다이얼로그 */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setDeleteTarget(null)} />
+          <div className="relative bg-background rounded-2xl w-full max-w-sm p-5 flex flex-col gap-4">
+            <div className="flex flex-col gap-1">
+              <p className="font-semibold text-base">리크리샷을 삭제하시겠습니까?</p>
+              <p className="text-sm text-muted-foreground">이미지 파일도 함께 삭제되며 복구할 수 없습니다.</p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                onClick={() => setDeleteTarget(null)}
+                className="flex-1 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 border-0"
+              >
+                취소
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => handleDelete(deleteTarget)}
+                className="flex-1 bg-red-500 hover:bg-red-600 text-white border-0"
+              >
+                삭제
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-zinc-50 border-b border-zinc-100">
@@ -96,8 +116,8 @@ export function RecreeshotTable({ rows }: { rows: RecreeshotRow[] }) {
 
                 {/* 상태 — 앞으로 이동해 한눈에 파악 */}
                 <td className="px-4 py-3">
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${STATUS_BADGE[row.status]}`}>
-                    {STATUS_LABEL[row.status]}
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${RECREESHOT_STATUS_BADGE[row.status]}`}>
+                    {RECREESHOT_STATUS_LABEL[row.status]}
                   </span>
                   {row.status === "REPORTED" && (
                     <p className="text-[10px] text-orange-500 mt-0.5 whitespace-nowrap">신고 처리 탭에서 조치</p>
@@ -171,8 +191,8 @@ export function RecreeshotTable({ rows }: { rows: RecreeshotRow[] }) {
 
                 {/* 액션 */}
                 <td className="px-4 py-3">
-                  <div className="flex items-center justify-end">
-                    {(row.status === "ACTIVE" || row.status === "REPORTED") && (
+                  <div className="flex items-center justify-end gap-1.5">
+                    {row.status === "ACTIVE" && (
                       <Button
                         size="sm"
                         disabled={isPending}
@@ -192,6 +212,14 @@ export function RecreeshotTable({ rows }: { rows: RecreeshotRow[] }) {
                         공개 복원
                       </Button>
                     )}
+                    <Button
+                      size="sm"
+                      disabled={isPending}
+                      onClick={() => setDeleteTarget(row.id)}
+                      className="text-xs h-7 px-2.5 bg-red-50 hover:bg-red-100 text-red-600 border-0"
+                    >
+                      삭제
+                    </Button>
                   </div>
                 </td>
               </tr>

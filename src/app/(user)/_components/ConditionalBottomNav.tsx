@@ -7,7 +7,7 @@ export function ConditionalBottomNav() {
   const pathname = usePathname();
   if (
     pathname === "/search" ||
-    pathname === "/explore/hall/new" ||
+    pathname.startsWith("/explore/hall/") ||
     pathname.endsWith("/edit") ||
     pathname.startsWith("/policy/") ||
     pathname === "/onboarding"
