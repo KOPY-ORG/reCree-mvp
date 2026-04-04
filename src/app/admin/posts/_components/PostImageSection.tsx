@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { Upload, Link as LinkIcon, X, GripVertical, ImageIcon, Crosshair, MapPin, Crop, ExternalLink } from "lucide-react";
 import { ReCreeshotCropDialog } from "./ReCreeshotCropDialog";
@@ -277,6 +277,10 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
   const bannerImages   = images.filter((img) => img.imageType === "BANNER");
   const originalImage  = images.find((img) => img.imageType === "ORIGINAL") ?? null;
 
+  const bannerFileRef   = useRef<HTMLInputElement>(null);
+  const originalFileRef = useRef<HTMLInputElement>(null);
+  const recreeFileRef   = useRef<HTMLInputElement>(null);
+
   const [bannerUploading, setBannerUploading] = useState(false);
   const [originalMode, setOriginalMode] = useState<OriginalMode>("idle");
   const [reCreeCropSrc, setReCreeCropSrc] = useState<string | null>(null);
@@ -428,17 +432,22 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
           )}
 
           {bannerImages.length < MAX_BANNER && (
-            <label className={cn(
-              "flex flex-col items-center justify-center w-32 aspect-[3/2] rounded-lg border-2 border-dashed cursor-pointer shrink-0 transition-colors",
-              bannerUploading ? "opacity-50 cursor-not-allowed" : "hover:border-zinc-400",
-            )}>
+            <button
+              type="button"
+              disabled={bannerUploading}
+              onClick={() => bannerFileRef.current?.click()}
+              className={cn(
+                "flex flex-col items-center justify-center w-32 aspect-[3/2] rounded-lg border-2 border-dashed cursor-pointer shrink-0 transition-colors",
+                bannerUploading ? "opacity-50 cursor-not-allowed" : "hover:border-zinc-400",
+              )}
+            >
               {bannerUploading
                 ? <div className="h-5 w-5 rounded-full border-2 border-t-transparent border-zinc-400 animate-spin" />
                 : <><Upload className="h-4 w-4 text-muted-foreground mb-1" /><span className="text-[10px] text-muted-foreground">추가</span></>
               }
-              <input type="file" accept="image/jpeg,image/png,image/webp" multiple className="sr-only" disabled={bannerUploading} onChange={handleBannerUpload} />
-            </label>
+            </button>
           )}
+          <input ref={bannerFileRef} type="file" accept="image/jpeg,image/png,image/webp" multiple tabIndex={-1} className="sr-only" disabled={bannerUploading} onChange={handleBannerUpload} />
         </div>
         <p className="text-[11px] text-muted-foreground">드래그로 순서 변경 · 클릭 시 썸네일 지정</p>
 
@@ -600,23 +609,29 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
                   YouTube {i + 1}
                 </button>
               ))}
-              <label className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border cursor-pointer hover:bg-muted transition-colors">
+              <button
+                type="button"
+                onClick={() => originalFileRef.current?.click()}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border hover:bg-muted transition-colors"
+              >
                 <Upload className="h-3.5 w-3.5" />
                 파일 업로드
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  className="sr-only"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    e.target.value = "";
-                    if (!file) return;
-                    const result = await uploadImage(file, `original/${postId ?? "new"}`);
-                    if ("error" in result) { toast.error(result.error); return; }
-                    setOriginal({ imageType: "ORIGINAL", imageSource: "UPLOAD", url: result.url, linkUrl: null, isThumbnail: false, sortOrder: 0 });
-                  }}
-                />
-              </label>
+              </button>
+              <input
+                ref={originalFileRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                tabIndex={-1}
+                className="sr-only"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!file) return;
+                  const result = await uploadImage(file, `original/${postId ?? "new"}`);
+                  if ("error" in result) { toast.error(result.error); return; }
+                  setOriginal({ imageType: "ORIGINAL", imageSource: "UPLOAD", url: result.url, linkUrl: null, isThumbnail: false, sortOrder: 0 });
+                }}
+              />
               <button
                 type="button"
                 onClick={() => setOriginalMode("url")}
@@ -721,28 +736,35 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
               </div>
             )}
             {/* 새 파일 업로드 */}
-            <label className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border cursor-pointer transition-colors",
-              recreeUploading ? "opacity-50 cursor-not-allowed" : "hover:bg-muted",
-            )}>
+            <button
+              type="button"
+              disabled={recreeUploading}
+              onClick={() => recreeFileRef.current?.click()}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border transition-colors",
+                recreeUploading ? "opacity-50 cursor-not-allowed" : "hover:bg-muted cursor-pointer",
+              )}
+            >
               {recreeUploading
                 ? <><div className="h-3.5 w-3.5 rounded-full border-2 border-t-transparent border-zinc-400 animate-spin" />업로드 중...</>
                 : <><Upload className="h-3.5 w-3.5" />새 파일 업로드</>
               }
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="sr-only"
-                disabled={recreeUploading}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  e.target.value = "";
-                  if (!file) return;
-                  // blob URL은 크롭 완료/취소 시 revoke됨
-                  setReCreeCropSrc(URL.createObjectURL(file));
-                }}
-              />
-            </label>
+            </button>
+            <input
+              ref={recreeFileRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              tabIndex={-1}
+              className="sr-only"
+              disabled={recreeUploading}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (!file) return;
+                // blob URL은 크롭 완료/취소 시 revoke됨
+                setReCreeCropSrc(URL.createObjectURL(file));
+              }}
+            />
           </div>
         </div>
       </div>
