@@ -53,6 +53,9 @@ export function ProfileView({
 
   const initial = email[0].toUpperCase();
   const displayName = nickname || email.split("@")[0];
+  const activeRecreeshotCount = recreeshots.filter(
+    (s) => s.status === "ACTIVE" || s.status === "REPORTED"
+  ).length;
 
   async function handleDeleteAccount() {
     setIsDeleting(true);
@@ -98,7 +101,7 @@ export function ProfileView({
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
-              <span className="font-bold text-lg">{recreeshots.length}</span>
+              <span className="font-bold text-lg">{activeRecreeshotCount}</span>
               <span className="text-xs text-muted-foreground">recreeshots</span>
             </div>
             <Link
@@ -166,9 +169,8 @@ export function ProfileView({
               <button
                 key={shot.id}
                 type="button"
-                onClick={() => !isHidden && router.push(`/explore/hall/${shot.id}?from=profile`)}
-                disabled={isHidden}
-                className="relative block w-full disabled:cursor-default"
+                onClick={() => router.push(`/explore/hall/${shot.id}?from=profile`)}
+                className="relative block w-full"
               >
                 <ReCreeshotImage
                   shotUrl={shot.imageUrl}
@@ -182,9 +184,10 @@ export function ProfileView({
                   sizes="50vw"
                 />
                 {isHidden && (
-                  <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-1.5">
+                  <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-2">
                     <EyeOff className="size-5 text-white/80" />
                     <span className="text-[11px] text-white/70 font-medium">Hidden</span>
+                    <span className="text-[10px] text-white/50">Tap to delete</span>
                   </div>
                 )}
               </button>

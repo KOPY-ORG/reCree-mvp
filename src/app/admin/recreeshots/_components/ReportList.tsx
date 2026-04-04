@@ -6,6 +6,7 @@ import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 import { dismissReport, resolveReport, restoreReport } from "../_actions/recreeshot-actions";
 import { REASON_LABEL, REPORT_STATUS_BADGE } from "@/lib/report-constants";
+import { RECREESHOT_STATUS_BADGE, RECREESHOT_STATUS_LABEL } from "../_constants";
 import type { ReportReason, ReportStatus, ReCreeshotStatus } from "@prisma/client";
 
 export type ReportRow = {
@@ -29,26 +30,11 @@ const REPORT_STATUS_LABEL: Record<ReportStatus, string> = {
   RESOLVED:  "숨김 처리됨",
 };
 
-const SHOT_STATUS_BADGE: Record<ReCreeshotStatus, string> = {
-  ACTIVE:       "bg-green-50 text-green-600",
-  REPORTED:     "bg-orange-50 text-orange-600",
-  HIDDEN:       "bg-zinc-100 text-zinc-500",
-  REPORT_HIDDEN:"bg-red-100 text-red-600",
-  DELETED:      "bg-zinc-100 text-zinc-400",
-};
-
-const SHOT_STATUS_LABEL: Record<ReCreeshotStatus, string> = {
-  ACTIVE:       "공개",
-  REPORTED:     "신고됨",
-  HIDDEN:       "숨김",
-  REPORT_HIDDEN:"신고로 숨김",
-  DELETED:      "삭제됨",
-};
-
 export function ReportList({ rows }: { rows: ReportRow[] }) {
   const [isPending, startTransition] = useTransition();
   const [localRows, setLocalRows] = useState(rows);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [expandedDescription, setExpandedDescription] = useState<string | null>(null);
 
   function optimisticUpdate(id: string, updates: Partial<ReportRow>) {
     setLocalRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...updates } : r)));
@@ -61,34 +47,79 @@ export function ReportList({ rows }: { rows: ReportRow[] }) {
 
   function handleResolveConfirm(id: string) {
     setConfirmingId(null);
+    const currentShot = localRows.find((r) => r.id === id)?.reCreeshot ?? null;
     optimisticUpdate(id, {
       status: "RESOLVED",
       resolvedAt: new Date(),
-      reCreeshot: localRows.find((r) => r.id === id)?.reCreeshot
-        ? { ...localRows.find((r) => r.id === id)!.reCreeshot!, status: "REPORT_HIDDEN" }
-        : null,
+      reCreeshot: currentShot ? { ...currentShot, status: "REPORT_HIDDEN" } : null,
     });
     startTransition(() => resolveReport(id));
   }
 
   function handleRestore(id: string) {
+    const currentShot = localRows.find((r) => r.id === id)?.reCreeshot ?? null;
     optimisticUpdate(id, {
       status: "PENDING",
       resolvedAt: null,
-      reCreeshot: localRows.find((r) => r.id === id)?.reCreeshot
-        ? { ...localRows.find((r) => r.id === id)!.reCreeshot!, status: "REPORTED" }
-        : null,
+      reCreeshot: currentShot ? { ...currentShot, status: "REPORTED" } : null,
     });
     startTransition(() => restoreReport(id));
   }
 
   return (
     <div className="mt-4 rounded-xl overflow-hidden shadow-sm bg-white">
+      {/* 숨김 확인 모달 */}
+      {confirmingId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setConfirmingId(null)} />
+          <div className="relative bg-background rounded-2xl w-full max-w-sm p-5 flex flex-col gap-4">
+            <div className="flex flex-col gap-1">
+              <p className="font-semibold text-base">신고 처리 — 콘텐츠 숨김</p>
+              <p className="text-sm text-muted-foreground">해당 리크리샷이 숨김 처리되며 사용자에게 노출되지 않습니다.</p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmingId(null)}
+                className="flex-1 py-2.5 rounded-full text-sm font-medium border border-border"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={() => handleResolveConfirm(confirmingId)}
+                className="flex-1 py-2.5 rounded-full text-sm font-semibold bg-red-500 text-white disabled:opacity-50"
+              >
+                숨김 확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 상세 내용 모달 */}
+      {expandedDescription !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setExpandedDescription(null)} />
+          <div className="relative bg-background rounded-2xl w-full max-w-sm p-5 flex flex-col gap-3">
+            <p className="font-semibold text-sm">신고 상세 내용</p>
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">{expandedDescription}</p>
+            <button
+              type="button"
+              onClick={() => setExpandedDescription(null)}
+              className="mt-1 py-2.5 rounded-full text-sm font-medium border border-border"
+            >
+              닫기
+            </button>
+          </div>
+        </div>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-zinc-50 border-b border-zinc-100">
             <tr>
-              <th className="text-left px-4 py-3 font-medium text-muted-foreground w-[72px]">리크리샷</th>
+              <th className="text-left px-4 py-3 font-medium text-muted-foreground w-[88px]">리크리샷</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">콘텐츠 상태</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">신고자</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">신고 사유</th>
@@ -128,8 +159,8 @@ export function ReportList({ rows }: { rows: ReportRow[] }) {
                 {/* 콘텐츠 현재 상태 */}
                 <td className="px-4 py-3">
                   {row.reCreeshot ? (
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${SHOT_STATUS_BADGE[row.reCreeshot.status]}`}>
-                      {SHOT_STATUS_LABEL[row.reCreeshot.status]}
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${RECREESHOT_STATUS_BADGE[row.reCreeshot.status]}`}>
+                      {RECREESHOT_STATUS_LABEL[row.reCreeshot.status]}
                     </span>
                   ) : (
                     <span className="text-xs text-muted-foreground/40">—</span>
@@ -148,10 +179,22 @@ export function ReportList({ rows }: { rows: ReportRow[] }) {
 
                 {/* 상세 내용 */}
                 <td className="px-4 py-3 max-w-[180px]">
-                  {row.description
-                    ? <p className="text-xs text-muted-foreground line-clamp-2">{row.description}</p>
-                    : <span className="text-xs text-muted-foreground/40">—</span>
-                  }
+                  {row.description ? (
+                    <div className="flex flex-col gap-0.5">
+                      <p className="text-xs text-muted-foreground line-clamp-1">{row.description}</p>
+                      {row.description.length > 20 && (
+                        <button
+                          type="button"
+                          onClick={() => setExpandedDescription(row.description)}
+                          className="text-[10px] text-blue-500 hover:underline text-left"
+                        >
+                          자세히 보기
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-muted-foreground/40">—</span>
+                  )}
                 </td>
 
                 {/* 신고일 */}
@@ -172,46 +215,26 @@ export function ReportList({ rows }: { rows: ReportRow[] }) {
                 {/* 액션 */}
                 <td className="px-4 py-3">
                   {row.status === "PENDING" && (
-                    confirmingId === row.id ? (
-                      <div className="flex items-center justify-end gap-1.5">
-                        <span className="text-xs text-zinc-500 mr-1">콘텐츠가 숨김 처리됩니다.</span>
-                        <button
-                          type="button"
-                          onClick={() => setConfirmingId(null)}
-                          className="px-2.5 py-1.5 rounded-md text-xs font-medium text-zinc-500 bg-zinc-100 hover:bg-zinc-200 transition-colors"
-                        >
-                          취소
-                        </button>
-                        <button
-                          type="button"
-                          disabled={isPending}
-                          onClick={() => handleResolveConfirm(row.id)}
-                          className="px-2.5 py-1.5 rounded-md text-xs font-medium text-white bg-red-500 hover:bg-red-600 transition-colors disabled:opacity-50"
-                        >
-                          숨김 확인
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          type="button"
-                          disabled={isPending}
-                          onClick={() => handleDismiss(row.id)}
-                          className="px-3 py-1.5 rounded-md text-xs font-medium text-zinc-500 bg-zinc-100 hover:bg-zinc-200 transition-colors disabled:opacity-50"
-                        >
-                          신고 기각
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setConfirmingId(row.id)}
-                          className="px-3 py-1.5 rounded-md text-xs font-medium text-white bg-red-500 hover:bg-red-600 transition-colors"
-                        >
-                          숨김 처리
-                        </button>
-                      </div>
-                    )
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        type="button"
+                        disabled={isPending}
+                        onClick={() => handleDismiss(row.id)}
+                        className="px-3 py-1.5 rounded-md text-xs font-medium text-zinc-500 bg-zinc-100 hover:bg-zinc-200 transition-colors disabled:opacity-50"
+                      >
+                        신고 기각
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isPending}
+                        onClick={() => setConfirmingId(row.id)}
+                        className="px-3 py-1.5 rounded-md text-xs font-medium text-white bg-red-500 hover:bg-red-600 transition-colors disabled:opacity-50"
+                      >
+                        숨김 처리
+                      </button>
+                    </div>
                   )}
-                  {(row.status === "DISMISSED" || row.status === "RESOLVED") && (
+                  {(row.status === "DISMISSED" || row.status === "RESOLVED") && row.reCreeshot?.status !== "DELETED" && (
                     <div className="flex items-center justify-end">
                       <button
                         type="button"

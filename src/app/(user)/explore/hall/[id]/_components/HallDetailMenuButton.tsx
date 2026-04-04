@@ -6,6 +6,7 @@ import { MoreVertical, Download, Pencil, Trash2, Flag } from "lucide-react";
 import { showToast, showError } from "@/lib/toast";
 import { deleteReCreeshot } from "@/app/(user)/_actions/recreeshot-actions";
 import { loadImage, drawReCreeshotBadge, drawReCreeshotWatermark } from "@/lib/canvas-utils";
+import { ReCreeshotDeleteConfirm } from "./ReCreeshotDeleteConfirm";
 
 interface Props {
   id: string;
@@ -170,34 +171,12 @@ export function HallDetailMenuButton({ id, isOwner, imageUrl, referencePhotoUrl,
     <>
       <canvas ref={canvasRef} className="hidden" />
 
-      {/* 삭제 확인 다이얼로그 */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setShowDeleteConfirm(false)} />
-          <div className="relative bg-background rounded-2xl w-full max-w-xs p-5 flex flex-col gap-4">
-            <div className="flex flex-col gap-1">
-              <p className="font-semibold text-base">Delete recreeshot?</p>
-              <p className="text-sm text-muted-foreground">This action cannot be undone.</p>
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 py-2.5 rounded-full text-sm font-medium border border-border"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="flex-1 py-2.5 rounded-full text-sm font-semibold bg-red-500 text-white disabled:opacity-50"
-              >
-                {isDeleting ? "Deleting..." : "Delete"}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ReCreeshotDeleteConfirm
+          onConfirm={handleDelete}
+          onCancel={() => setShowDeleteConfirm(false)}
+          isDeleting={isDeleting}
+        />
       )}
 
       <div className="relative">

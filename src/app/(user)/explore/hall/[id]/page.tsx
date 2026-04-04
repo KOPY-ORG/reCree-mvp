@@ -1,12 +1,14 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, MapPin, EyeOff } from "lucide-react";
+import { ChevronRight, MapPin, EyeOff } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { resolveTopicColors, resolveTagColors, type TagGroupColorMap } from "@/lib/post-labels";
 import { HallDetailClient } from "./_components/HallDetailClient";
 import { HallDetailTopSection } from "./_components/HallDetailTopSection";
+import { HallDetailOwnerDeleteButton } from "./_components/HallDetailOwnerDeleteButton";
+import { HallDetailBackButton } from "./_components/HallDetailBackButton";
 
 export default async function HallDetailPage({
   params,
@@ -51,16 +53,16 @@ export default async function HallDetailPage({
 
   if (!shot || shot.status === "DELETED") notFound();
 
+  const isOwner = currentUser?.id === shot.user.id;
+
   // 숨김 처리된 리크리샷 안내 페이지 (직접 숨김 또는 신고로 인한 숨김)
   if (shot.status === "HIDDEN" || shot.status === "REPORT_HIDDEN") {
     return (
-      <div className="max-w-2xl mx-auto">
-        <div className="flex items-center h-12 px-2 bg-white border-b border-gray-100">
-          <Link href="/explore?tab=hall" className="p-2 rounded-full">
-            <ChevronLeft className="size-5 text-black" />
-          </Link>
+      <div className="max-w-2xl mx-auto min-h-dvh flex flex-col">
+        <div className="flex items-center h-12 px-2 bg-white border-b border-gray-100 shrink-0">
+          <HallDetailBackButton />
         </div>
-        <div className="flex flex-col items-center justify-center py-24 px-8 gap-4 text-center">
+        <div className="flex-1 flex flex-col items-center justify-center px-8 gap-4 text-center">
           <div className="size-14 rounded-full bg-muted flex items-center justify-center">
             <EyeOff className="size-6 text-muted-foreground" />
           </div>
@@ -72,6 +74,7 @@ export default async function HallDetailPage({
                 : "This recreeshot has been hidden by an administrator."}
             </p>
           </div>
+          {isOwner && <HallDetailOwnerDeleteButton id={id} />}
         </div>
       </div>
     );
@@ -94,8 +97,6 @@ export default async function HallDetailPage({
         where: { userId_targetType_targetId: { userId: currentUser.id, targetType: "RECREESHOT", targetId: id } },
       }))
     : false;
-
-  const isOwner = currentUser?.id === shot.user.id;
 
   return (
     <div className="max-w-2xl mx-auto pb-20">

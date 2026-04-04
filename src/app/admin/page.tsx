@@ -283,7 +283,7 @@ export default async function AdminPage() {
         <KpiCard label="DAU / MAU" value={`${dauMauRatio}%`} sub={dauMauRatio >= 20 ? "참여도 양호" : dauMauRatio >= 10 ? "참여도 보통" : "참여도 낮음"} />
         <KpiCard label="주간 신규 가입" value={newUsersWeekTotal} sub="최근 7일" />
         <KpiCard label="활성 리크리샷" value={totalRecreeshots} sub={`이번 주 +${newRecreeshotsWeek}`} href="/admin/recreeshots" />
-        <KpiCard label="신고 대기" value={pendingReports} sub={pendingReports > 0 ? "즉시 확인 필요" : "이상 없음"} href="/admin/reports" danger={pendingReports > 0} />
+        <KpiCard label="신고 대기" value={pendingReports} sub={pendingReports > 0 ? "즉시 확인 필요" : "이상 없음"} href="/admin/recreeshots?status=reports" danger={pendingReports > 0} />
         <KpiCard label="발행 포스트" value={publishedPosts} sub="Published" href="/admin/posts" />
       </div>
 
