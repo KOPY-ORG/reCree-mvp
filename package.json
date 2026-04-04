@@ -47,7 +47,10 @@
     "onlyBuiltDependencies": [
       "@prisma/engines",
       "prisma"
-    ]
+    ],
+    "overrides": {
+      "defu": "^6.1.6"
+    }
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
