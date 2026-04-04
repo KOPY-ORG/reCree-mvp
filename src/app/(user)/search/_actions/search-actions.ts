@@ -3,6 +3,12 @@
 import { prisma } from "@/lib/prisma";
 import { parseSearchWords } from "@/lib/search-utils";
 
+export async function logSearch(query: string): Promise<void> {
+  const trimmed = query.trim().toLowerCase();
+  if (!trimmed || trimmed.length < 2) return;
+  await prisma.searchLog.create({ data: { query: trimmed } }).catch(() => {});
+}
+
 export async function getPopularSearches(): Promise<string[]> {
   const items = await prisma.popularSearch.findMany({
     where: { isActive: true },

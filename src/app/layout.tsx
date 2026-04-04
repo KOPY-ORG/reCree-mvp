@@ -3,6 +3,7 @@ import { Noto_Sans, Noto_Sans_KR } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ToastProvider } from "@/components/toast-provider";
+import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import "./globals.css";
 
 const notoSans = Noto_Sans({
@@ -48,6 +49,7 @@ export default function RootLayout({
   return (
     <html lang="ko" suppressHydrationWarning>
       <body className={`${notoSans.variable} ${notoSansKR.variable} font-sans antialiased`} suppressHydrationWarning>
+        <GoogleAnalytics />
         <ToastProvider>{children}</ToastProvider>
         <Analytics />
         <SpeedInsights />
