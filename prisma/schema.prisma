@@ -518,3 +518,13 @@ model DailyActiveUser {
   @@id([userId, date])
   @@index([date])
 }
+
+model SearchLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  query     String
+  userId    String?  @db.Uuid
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([query])
+}
