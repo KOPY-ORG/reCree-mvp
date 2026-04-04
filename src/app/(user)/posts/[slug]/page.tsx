@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { after } from "next/server";
 import type { Metadata } from "next";
-import { Sparkles, Waves, Flame, MapPin, Lightbulb } from "lucide-react";
+import { Sparkles, Waves, Flame, Lightbulb } from "lucide-react";
 import { LocationCard } from "./_components/LocationCard";
 import { prisma } from "@/lib/prisma";
 import { resolveTopicColors, resolveTagColors, type ResolvedLabel } from "@/lib/post-labels";
