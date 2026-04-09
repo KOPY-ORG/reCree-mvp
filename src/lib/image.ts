@@ -49,12 +49,14 @@ export function focalStyle(
 
 /**
  * Vercel Image Optimization을 사용하지 않아야 하는 이미지인지 확인합니다.
- * Supabase Storage 이미지는 Vercel 최적화 한도 소진을 막기 위해 unoptimized 처리합니다.
+ * R2 CDN 이미지와 Supabase 이미지(마이그레이션 기간)는 unoptimized 처리합니다.
  */
 export function isExternalImage(src: string): boolean {
   try {
     const { hostname } = new URL(src);
-    // Supabase Storage 이미지는 항상 unoptimized (Vercel 변환 한도 우회)
+    // R2 CDN 이미지는 Cloudflare에서 이미 최적화됨 → Vercel 변환 불필요
+    if (hostname === "cdn.recree.io") return true;
+    // 마이그레이션 기간 중 기존 Supabase 이미지도 unoptimized 처리
     if (hostname.endsWith(".supabase.co")) return true;
     return !(
       hostname === "img.youtube.com" ||
@@ -64,25 +66,5 @@ export function isExternalImage(src: string): boolean {
     );
   } catch {
     return true;
-  }
-}
-
-/**
- * Supabase Storage URL을 Transform API URL로 변환합니다.
- * Supabase가 아닌 URL은 그대로 반환합니다.
- * Supabase Pro 플랜 필요.
- */
-export function toStorageImageUrl(src: string, width: number, quality = 80): string {
-  try {
-    const url = new URL(src);
-    if (!url.hostname.endsWith(".supabase.co")) return src;
-    const match = url.pathname.match(/^\/storage\/v1\/object\/public\/(.+)$/);
-    if (!match) return src;
-    url.pathname = `/storage/v1/render/image/public/${match[1]}`;
-    url.searchParams.set("width", String(width));
-    url.searchParams.set("quality", String(quality));
-    return url.toString();
-  } catch {
-    return src;
   }
 }

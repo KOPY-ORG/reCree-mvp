@@ -3,11 +3,14 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import {
   createReCreeshot,
   previewMatchScore,
 } from "@/app/(user)/_actions/recreeshot-actions";
+import {
+  uploadReCreeshotImage,
+  deleteReCreeshotImages,
+} from "@/lib/actions/upload-actions";
 import { UploadStep1 } from "./UploadStep1";
 import { UploadStep2 } from "./UploadStep2";
 import { UploadStep3 } from "./UploadStep3";
@@ -165,19 +168,12 @@ export function ReCreeshotUploadFlow({ tagGroups, topics, userId, prefillPostId,
     });
   }
 
-  async function uploadToSupabase(file: File): Promise<{ url: string; path: string }> {
-    const supabase = createClient();
-    const ext = file.name.split(".").pop() ?? "jpg";
-    const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-
-    const { error } = await supabase.storage
-      .from("recreeshot-images")
-      .upload(path, file, { upsert: false });
-
-    if (error) throw error;
-
-    const { data } = supabase.storage.from("recreeshot-images").getPublicUrl(path);
-    return { url: data.publicUrl, path };
+  async function uploadToR2(file: File): Promise<{ url: string; path: string }> {
+    const formData = new FormData();
+    formData.append("file", file);
+    const result = await uploadReCreeshotImage(formData);
+    if ("error" in result) throw new Error(result.error);
+    return result;
   }
 
   async function deleteOrphanedFiles() {
@@ -185,9 +181,7 @@ export function ReCreeshotUploadFlow({ tagGroups, topics, userId, prefillPostId,
     if (state.uploadedShotPath) paths.push(state.uploadedShotPath);
     if (state.uploadedReferencePath) paths.push(state.uploadedReferencePath);
     if (paths.length === 0) return;
-
-    const supabase = createClient();
-    await supabase.storage.from("recreeshot-images").remove(paths);
+    await deleteReCreeshotImages(paths);
   }
 
   // 이탈 확인 → 고아 파일 정리 후 이동
@@ -225,8 +219,8 @@ export function ReCreeshotUploadFlow({ tagGroups, topics, userId, prefillPostId,
     try {
       // shot은 항상 업로드, reference는 이미 URL 있으면 재사용
       const [shot, refUpload] = await Promise.all([
-        uploadToSupabase(state.shotFile),
-        state.referenceFile ? uploadToSupabase(state.referenceFile) : Promise.resolve(null),
+        uploadToR2(state.shotFile),
+        state.referenceFile ? uploadToR2(state.referenceFile) : Promise.resolve(null),
       ]);
 
       const refUrl = refUpload?.url ?? state.uploadedReferenceUrl!;
@@ -273,7 +267,7 @@ export function ReCreeshotUploadFlow({ tagGroups, topics, userId, prefillPostId,
     setState((s) => ({ ...s, isUploading: true, error: null }));
 
     try {
-      const shot = await uploadToSupabase(state.shotFile);
+      const shot = await uploadToR2(state.shotFile);
 
       setState((s) => ({
         ...s,

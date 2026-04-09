@@ -21,8 +21,8 @@ import {
   horizontalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { createClient } from "@/lib/supabase/client";
 import { focalStyle } from "@/lib/image";
+import { uploadPostImage } from "@/lib/actions/upload-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -39,8 +39,6 @@ import { ImageFocalPointDialog } from "./ImageFocalPointDialog";
 
 type PlaceImageItem = { id: string; url: string; isThumbnail: boolean; caption: string | null };
 
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
-const MAX_SIZE = 5 * 1024 * 1024;
 const MAX_BANNER = 5;
 const NONE_VALUE = "__none__";
 const CUSTOM_VALUE = "__custom__";
@@ -67,19 +65,9 @@ async function uploadImage(
   file: File,
   path: string,
 ): Promise<{ url: string } | { error: string }> {
-  if (!ALLOWED_TYPES.includes(file.type)) {
-    return { error: `${file.name}: jpg, png, webp 형식만 지원합니다.` };
-  }
-  if (file.size > MAX_SIZE) {
-    return { error: `${file.name}: 파일 크기가 5MB를 초과합니다.` };
-  }
-  const supabase = createClient();
-  const ext = file.name.split(".").pop();
-  const fullPath = `${path}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-  const { error } = await supabase.storage.from("post-images").upload(fullPath, file);
-  if (error) return { error: `업로드 실패: ${error.message}` };
-  const { data } = supabase.storage.from("post-images").getPublicUrl(fullPath);
-  return { url: data.publicUrl };
+  const formData = new FormData();
+  formData.append("file", file);
+  return uploadPostImage(formData, path);
 }
 
 // ─── 이미지 출처 입력 ─────────────────────────────────────────────────────────
@@ -783,12 +771,12 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
             setReCreeCropSrc(null);
             setRecreeUploading(true);
             try {
-              const supabase = createClient();
-              const path = `recree/${postId ?? "new"}/${Date.now()}.jpg`;
-              const { error } = await supabase.storage.from("post-images").upload(path, blob, { contentType: "image/jpeg", upsert: false });
-              if (error) { toast.error("업로드 실패: " + error.message); return; }
-              const { data } = supabase.storage.from("post-images").getPublicUrl(path);
-              onRecreePhotoChange(data.publicUrl);
+              const file = new File([blob], `recree-${Date.now()}.jpg`, { type: "image/jpeg" });
+              const formData = new FormData();
+              formData.append("file", file);
+              const result = await uploadPostImage(formData, `recree/${postId ?? "new"}`);
+              if ("error" in result) { toast.error(result.error); return; }
+              onRecreePhotoChange(result.url);
             } finally {
               setRecreeUploading(false);
             }
