@@ -39,7 +39,7 @@ import Image from "next/image";
 import { isExternalImage } from "@/lib/image";
 import type { PlaceStatus } from "@prisma/client";
 import { STATUS_LABELS } from "../_constants";
-import { createClient } from "@/lib/supabase/client";
+import { uploadPlaceImageAction } from "@/lib/actions/upload-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -139,27 +139,15 @@ interface PlaceFormProps {
 
 // ─── 상수 / 업로드 유틸 ────────────────────────────────────────────────────────
 
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
-const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 const MAX_IMAGES = 5;
 
 async function uploadPlaceImage(
   file: File,
   placeId: string,
 ): Promise<{ url: string } | { error: string }> {
-  if (!ALLOWED_TYPES.includes(file.type)) {
-    return { error: `${file.name}: jpg, png, webp 형식만 지원합니다.` };
-  }
-  if (file.size > MAX_SIZE) {
-    return { error: `${file.name}: 파일 크기가 5MB를 초과합니다.` };
-  }
-  const supabase = createClient();
-  const ext = file.name.split(".").pop();
-  const path = `${placeId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-  const { error } = await supabase.storage.from("place-images").upload(path, file);
-  if (error) return { error: `업로드 실패: ${error.message}` };
-  const { data } = supabase.storage.from("place-images").getPublicUrl(path);
-  return { url: data.publicUrl };
+  const formData = new FormData();
+  formData.append("file", file);
+  return uploadPlaceImageAction(formData, placeId);
 }
 
 // ─── 정렬 가능한 이미지 아이템 ──────────────────────────────────────────────────
