@@ -78,7 +78,7 @@ export function BannerCarousel({ images, children }: Props) {
 
   return (
     <div
-      className="group relative w-full aspect-[3/2] bg-muted overflow-hidden select-none touch-pan-y"
+      className="group relative w-full aspect-[4/3] bg-muted overflow-hidden select-none touch-pan-y"
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
