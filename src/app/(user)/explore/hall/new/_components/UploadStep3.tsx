@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Download, Share2, CheckCircle2 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import { updateReCreeshotImageUrl } from "@/app/(user)/_actions/recreeshot-actions";
+import { uploadReCreeshotImage, deleteReCreeshotImages } from "@/lib/actions/upload-actions";
 import { ReCreeshotImage } from "@/components/recreeshot-image";
 import { coverRect, loadImage, drawReCreeshotBadge, drawReCreeshotWatermark } from "@/lib/canvas-utils";
 
@@ -117,17 +117,14 @@ export function UploadStep3({
           canvas.toBlob(async (cleanBlob) => {
             if (!cleanBlob) { resolve(); return; }
             try {
-              const supabase = createClient();
-              const cleanPath = `${userId}/${Date.now()}-shot.jpg`;
-              const { error: uploadError } = await supabase.storage
-                .from("recreeshot-images")
-                .upload(cleanPath, cleanBlob, { contentType: "image/jpeg", upsert: false });
-
-              if (!uploadError) {
-                const { data } = supabase.storage.from("recreeshot-images").getPublicUrl(cleanPath);
-                await updateReCreeshotImageUrl(createdId, data.publicUrl);
+              const cleanFile = new File([cleanBlob], `${userId}-${Date.now()}-shot.jpg`, { type: "image/jpeg" });
+              const formData = new FormData();
+              formData.append("file", cleanFile);
+              const result = await uploadReCreeshotImage(formData);
+              if (!("error" in result)) {
+                await updateReCreeshotImageUrl(createdId, result.url);
                 if (uploadedShotPath) {
-                  await supabase.storage.from("recreeshot-images").remove([uploadedShotPath]);
+                  await deleteReCreeshotImages([uploadedShotPath]);
                 }
               }
             } catch {
