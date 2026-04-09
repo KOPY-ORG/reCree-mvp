@@ -40,7 +40,7 @@ export async function uploadFile(
   contentType: string,
 ): Promise<string> {
   const key = `${bucket}/${path}`;
-  await r2.send(
+await r2.send(
     new PutObjectCommand({
       Bucket: BUCKET,
       Key: key,
