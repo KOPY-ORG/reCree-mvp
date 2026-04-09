@@ -6,7 +6,7 @@
 import { S3Client, PutObjectCommand, DeleteObjectsCommand } from "@aws-sdk/client-s3";
 
 const r2 = new S3Client({
-  region: "auto",
+  region: "us-east-1", // R2는 실제 라우팅에 region을 사용하지 않음 — "auto"는 일부 SDK 버전에서 SigV4 오류 발생
   endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
   credentials: {
     accessKeyId: process.env.R2_ACCESS_KEY_ID!,
