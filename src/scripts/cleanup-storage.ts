@@ -1,7 +1,7 @@
 /**
- * Supabase Storage 좀비 파일 정리 스크립트
+ * R2 스토리지 좀비 파일 정리 스크립트
  *
- * Storage에는 있지만 DB에 없는 파일을 탐지하고 삭제합니다.
+ * R2에는 있지만 DB에 없는 파일을 탐지하고 삭제합니다.
  * 대상 버킷: place-images, post-images, recreeshot-images, profile-images
  *
  * 사용법:
@@ -9,82 +9,78 @@
  *   npx tsx src/scripts/cleanup-storage.ts --execute  # 실제 삭제
  */
 
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import {
+  S3Client,
+  ListObjectsV2Command,
+  DeleteObjectsCommand,
+  type ListObjectsV2CommandOutput,
+} from "@aws-sdk/client-s3";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
-// tsx는 .env.local을 자동으로 읽지 않으므로 명시적으로 로드
 try {
   process.loadEnvFile(".env.local");
 } catch {
-  // .env.local이 없으면 무시 (환경변수가 직접 주입된 경우)
+  // .env.local이 없으면 무시
 }
 
 const BUCKETS = ["place-images", "post-images", "recreeshot-images", "profile-images"] as const;
 type Bucket = (typeof BUCKETS)[number];
 
-const BATCH_SIZE = 100; // Storage.remove() 한 번에 처리할 파일 수
+const BATCH_SIZE = 100;
 
-// ── Storage 유틸 ────────────────────────────────────────────────────────────
+// ── R2 유틸 ────────────────────────────────────────────────────────────────
 
-function toPublicUrl(supabaseUrl: string, bucket: string, path: string): string {
-  return `${supabaseUrl}/storage/v1/object/public/${bucket}/${path}`;
+function toCdnUrl(cdnUrl: string, key: string): string {
+  return `${cdnUrl}/${key}`;
 }
 
 /**
- * 버킷 내 모든 파일 경로를 재귀적으로 수집합니다.
- * Supabase Storage는 파일을 flat하게 저장하지만 가상 폴더 구조를 가집니다.
+ * R2에서 특정 prefix로 시작하는 모든 파일 키를 수집합니다.
+ * ContinuationToken으로 페이징 처리합니다.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function listAllFiles(
-  supabase: SupabaseClient<any, any, any>,
-  bucket: string,
-  prefix = "",
-): Promise<string[]> {
-  const PAGE_SIZE = 1000;
-  let offset = 0;
-  const result: string[] = [];
+async function listAllR2Files(r2: S3Client, bucketName: string, prefix: string): Promise<string[]> {
+  const keys: string[] = [];
+  let continuationToken: string | undefined;
 
-  while (true) {
-    const { data, error } = await supabase.storage
-      .from(bucket)
-      .list(prefix, { limit: PAGE_SIZE, offset });
+  do {
+    const res: ListObjectsV2CommandOutput = await r2.send(
+      new ListObjectsV2Command({
+        Bucket: bucketName,
+        Prefix: prefix,
+        MaxKeys: 1000,
+        ContinuationToken: continuationToken,
+      }),
+    );
 
-    if (error) {
-      throw new Error(`Storage 목록 조회 실패 [${bucket}/${prefix || ""}]: ${error.message}`);
-    }
-    if (!data || data.length === 0) break;
-
-    for (const item of data) {
-      const fullPath = prefix ? `${prefix}/${item.name}` : item.name;
-      // id가 null이면 가상 폴더 → 재귀 탐색
-      if (item.id === null) {
-        const children = await listAllFiles(supabase, bucket, fullPath);
-        result.push(...children);
-      } else {
-        result.push(fullPath);
-      }
+    for (const obj of res.Contents ?? []) {
+      if (obj.Key) keys.push(obj.Key);
     }
 
-    if (data.length < PAGE_SIZE) break;
-    offset += PAGE_SIZE;
-  }
+    continuationToken = res.IsTruncated ? res.NextContinuationToken : undefined;
+  } while (continuationToken);
 
-  return result;
+  return keys;
 }
 
 // ── 메인 로직 ───────────────────────────────────────────────────────────────
 
 async function main() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const r2AccountId = process.env.R2_ACCOUNT_ID;
+  const r2AccessKeyId = process.env.R2_ACCESS_KEY_ID;
+  const r2SecretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+  const r2BucketName = process.env.R2_BUCKET_NAME;
+  const cdnUrl = process.env.NEXT_PUBLIC_CDN_URL;
   const databaseUrl = process.env.DATABASE_URL;
 
-  if (!supabaseUrl || !serviceRoleKey || !databaseUrl) {
+  if (!r2AccountId || !r2AccessKeyId || !r2SecretAccessKey || !r2BucketName || !cdnUrl || !databaseUrl) {
     console.error(
       "❌ 환경변수가 설정되지 않았습니다. .env.local에 아래 값이 필요합니다:\n" +
-        "   NEXT_PUBLIC_SUPABASE_URL\n" +
-        "   SUPABASE_SERVICE_ROLE_KEY\n" +
+        "   R2_ACCOUNT_ID\n" +
+        "   R2_ACCESS_KEY_ID\n" +
+        "   R2_SECRET_ACCESS_KEY\n" +
+        "   R2_BUCKET_NAME\n" +
+        "   NEXT_PUBLIC_CDN_URL\n" +
         "   DATABASE_URL",
     );
     process.exit(1);
@@ -93,17 +89,22 @@ async function main() {
   const isDryRun = !process.argv.includes("--execute");
 
   console.log("━".repeat(60));
-  console.log(`🧹 Storage 좀비 파일 정리  [${isDryRun ? "DRY RUN" : "⚡ EXECUTE"}]`);
+  console.log(`🧹 R2 스토리지 좀비 파일 정리  [${isDryRun ? "DRY RUN" : "⚡ EXECUTE"}]`);
   console.log(`📦 대상 버킷: ${BUCKETS.join(", ")}`);
   console.log("━".repeat(60));
 
-  const supabase = createClient(supabaseUrl, serviceRoleKey);
+  const r2 = new S3Client({
+    region: "us-east-1",
+    endpoint: `https://${r2AccountId}.r2.cloudflarestorage.com`,
+    credentials: { accessKeyId: r2AccessKeyId, secretAccessKey: r2SecretAccessKey },
+  });
+
   const prisma = new PrismaClient({
     adapter: new PrismaPg({ connectionString: databaseUrl }),
   });
 
   try {
-    // ── 1. DB에서 모든 이미지 URL 수집 ──────────────────────────────────
+    // ── 1. DB에서 모든 이미지 CDN URL 수집 ──────────────────────────────────
     console.log("\n📋 DB 이미지 URL 수집 중...");
 
     const [
@@ -141,7 +142,7 @@ async function main() {
     console.log(`  PlaceImage           : ${placeImageRows.length}개`);
     console.log(`  PostImage            : ${postImageRows.length}개`);
     console.log(`  Post.recreePhoto     : ${postRecreeRows.length}개`);
-    console.log(`  ReCreeshot 이미지     : ${reCreeshotRows.length}개 (imageUrl + referencePhotoUrl)`);
+    console.log(`  ReCreeshot 이미지    : ${reCreeshotRows.length}개 (imageUrl + referencePhotoUrl)`);
     console.log(`  User.profileImage    : ${userProfileRows.length}개`);
     console.log(`  총 DB URL            : ${dbUrls.size}개`);
 
@@ -150,13 +151,13 @@ async function main() {
     const zombiesByBucket = new Map<Bucket, string[]>();
 
     for (const bucket of BUCKETS) {
-      console.log(`\n🪣  [${bucket}] Storage 목록 조회 중...`);
+      console.log(`\n🪣  [${bucket}] R2 파일 목록 조회 중...`);
 
-      const storagePaths = await listAllFiles(supabase, bucket);
-      console.log(`  Storage 파일 수: ${storagePaths.length}개`);
+      const r2Keys = await listAllR2Files(r2, r2BucketName, `${bucket}/`);
+      console.log(`  R2 파일 수: ${r2Keys.length}개`);
 
-      const zombies = storagePaths.filter(
-        (path) => !dbUrls.has(toPublicUrl(supabaseUrl, bucket, path)),
+      const zombies = r2Keys.filter(
+        (key) => !dbUrls.has(toCdnUrl(cdnUrl, key)),
       );
 
       zombiesByBucket.set(bucket, zombies);
@@ -166,7 +167,7 @@ async function main() {
         console.log(`  ✅ 좀비 파일 없음`);
       } else {
         console.log(`  ⚠️  좀비 파일 ${zombies.length}개:`);
-        zombies.forEach((p) => console.log(`    - ${p}`));
+        zombies.forEach((k) => console.log(`    - ${k}`));
       }
     }
 
@@ -196,11 +197,15 @@ async function main() {
 
       for (let i = 0; i < zombies.length; i += BATCH_SIZE) {
         const batch = zombies.slice(i, i + BATCH_SIZE);
-        const { error } = await supabase.storage.from(bucket).remove(batch);
-        if (error) {
-          console.error(`  ❌ [${bucket}] 배치 삭제 실패 (offset ${i}): ${error.message}`);
-        } else {
-          deletedCount += batch.length;
+        const { Deleted, Errors } = await r2.send(
+          new DeleteObjectsCommand({
+            Bucket: r2BucketName,
+            Delete: { Objects: batch.map((Key) => ({ Key })) },
+          }),
+        );
+        deletedCount += Deleted?.length ?? 0;
+        if (Errors?.length) {
+          console.error(`  ❌ [${bucket}] 삭제 오류:`, Errors);
         }
       }
 
