@@ -39,7 +39,7 @@ import Image from "next/image";
 import { isExternalImage } from "@/lib/image";
 import type { PlaceStatus } from "@prisma/client";
 import { STATUS_LABELS } from "../_constants";
-import { uploadPlaceImageAction } from "@/lib/actions/upload-actions";
+import { uploadPlaceImage as uploadPlaceImageToR2 } from "@/lib/actions/upload-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -149,7 +149,7 @@ async function uploadPlaceImage(
 ): Promise<{ url: string } | { error: string }> {
   const formData = new FormData();
   formData.append("file", file);
-  return uploadPlaceImageAction(formData, placeId);
+  return uploadPlaceImageToR2(formData, placeId);
 }
 
 // ─── 정렬 가능한 이미지 아이템 ──────────────────────────────────────────────────

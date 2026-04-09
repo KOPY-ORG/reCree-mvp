@@ -38,7 +38,7 @@ export async function deleteReCreeshotImages(paths: string[]): Promise<void> {
 }
 
 /** 장소 이미지 R2 업로드 */
-export async function uploadPlaceImageAction(
+export async function uploadPlaceImage(
   formData: FormData,
   placeId: string,
 ): Promise<{ url: string } | { error: string }> {
@@ -52,7 +52,7 @@ export async function uploadPlaceImageAction(
     return { error: `${file.name}: 파일 크기가 5MB를 초과합니다.` };
   }
 
-  const ext = file.name.split(".").pop();
+  const ext = file.name.split(".").pop() ?? "jpg";
   const path = `${placeId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
   const buffer = Buffer.from(await file.arrayBuffer());
 
@@ -80,7 +80,7 @@ export async function uploadPostImage(
     return { error: `${file.name}: 파일 크기가 5MB를 초과합니다.` };
   }
 
-  const ext = file.name.split(".").pop();
+  const ext = file.name.split(".").pop() ?? "jpg";
   const path = `${folderPath}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
   const buffer = Buffer.from(await file.arrayBuffer());
 
