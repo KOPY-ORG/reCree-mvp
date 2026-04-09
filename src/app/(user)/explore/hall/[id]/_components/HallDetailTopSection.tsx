@@ -45,12 +45,13 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
     canvas.height = H;
     const ctx = canvas.getContext("2d")!;
 
-    const shotImg = await loadImage(imageUrl);
+    const proxy = (url: string) => `/api/proxy-image?url=${encodeURIComponent(url)}`;
+    const shotImg = await loadImage(proxy(imageUrl));
     const { sx, sy, sw, sh } = coverRect(shotImg.naturalWidth, shotImg.naturalHeight, W, H);
     ctx.drawImage(shotImg, sx, sy, sw, sh, 0, 0, W, H);
 
     if (referencePhotoUrl) {
-      const refImg = await loadImage(referencePhotoUrl);
+      const refImg = await loadImage(proxy(referencePhotoUrl));
       const thumbW = W * 0.18;
       const thumbH = thumbW * (5 / 4);
       const thumbX = W * 0.03;
@@ -114,9 +115,9 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
       // blob URL은 짧은 지연 후 해제
       if (url.startsWith("blob:")) setTimeout(() => URL.revokeObjectURL(url), 5000);
     } catch {
-      // CORS 실패 시 원본 이미지 다운로드 fallback
+      // 합성 실패 시 프록시 경유 원본 이미지 다운로드
       const a = document.createElement("a");
-      a.href = imageUrl;
+      a.href = `/api/proxy-image?url=${encodeURIComponent(imageUrl)}`;
       a.download = "recreeshot.jpg";
       a.click();
     }
