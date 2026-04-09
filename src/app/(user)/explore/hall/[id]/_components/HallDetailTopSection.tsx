@@ -1,12 +1,12 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, MoreVertical, Download, Pencil, Trash2, Flag } from "lucide-react";
 import { showError } from "@/lib/toast";
 import { deleteReCreeshot } from "@/app/(user)/_actions/recreeshot-actions";
 import { ReportDialog } from "@/components/ReportDialog";
-import { coverRect, loadImage, drawReCreeshotBadge, drawReCreeshotWatermark } from "@/lib/canvas-utils";
+import { coverRect, loadImage, drawReCreeshotBadge } from "@/lib/canvas-utils";
 
 interface Props {
   id: string;
@@ -31,100 +31,95 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
     else router.back();
   }
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [compositeUrl, setCompositeUrl] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
 
-  useEffect(() => {
-    let objectUrl: string | null = null;
+  /** 다운로드 시에만 캔버스 합성 실행 */
+  async function composeForDownload(): Promise<string> {
+    const canvas = canvasRef.current!;
+    const W = 1080;
+    const H = W * (5 / 4);
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext("2d")!;
 
-    async function compose() {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const W = 1080;
-      const H = W * (5 / 4);
-      canvas.width = W;
-      canvas.height = H;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
+    const shotImg = await loadImage(imageUrl);
+    const { sx, sy, sw, sh } = coverRect(shotImg.naturalWidth, shotImg.naturalHeight, W, H);
+    ctx.drawImage(shotImg, sx, sy, sw, sh, 0, 0, W, H);
 
-      try {
-        const shotImg = await loadImage(imageUrl);
-        // object-cover 방식: 비율 유지하며 캔버스를 채움 (찌부 방지)
-        const { sx, sy, sw, sh } = coverRect(shotImg.naturalWidth, shotImg.naturalHeight, W, H);
-        ctx.drawImage(shotImg, sx, sy, sw, sh, 0, 0, W, H);
+    if (referencePhotoUrl) {
+      const refImg = await loadImage(referencePhotoUrl);
+      const thumbW = W * 0.18;
+      const thumbH = thumbW * (5 / 4);
+      const thumbX = W * 0.03;
+      const thumbY = W * 0.03;
+      const thumbR = Math.round(thumbW * 0.12);
 
-        if (referencePhotoUrl) {
-          const refImg = await loadImage(referencePhotoUrl);
-          const thumbW = W * 0.18;
-          const thumbH = thumbW * (5 / 4);
-          const thumbX = W * 0.03;
-          const thumbY = W * 0.03;
-          const thumbR = Math.round(thumbW * 0.12);
+      ctx.save();
+      ctx.shadowColor = "rgba(255,255,255,0.75)";
+      ctx.shadowBlur = 60;
+      ctx.fillStyle = "rgba(255,255,255,0.5)";
+      ctx.beginPath();
+      ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
+      ctx.fill();
+      ctx.restore();
 
-          ctx.save();
-          ctx.shadowColor = "rgba(255,255,255,0.75)";
-          ctx.shadowBlur = 60;
-          ctx.fillStyle = "rgba(255,255,255,0.5)";
-          ctx.beginPath();
-          ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
-          ctx.fill();
-          ctx.restore();
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
+      ctx.clip();
+      ctx.filter = "blur(12px)";
+      ctx.drawImage(shotImg, sx, sy, sw, sh, 0, 0, W, H);
+      ctx.filter = "none";
+      ctx.fillStyle = "rgba(255,255,255,0.15)";
+      ctx.fillRect(thumbX, thumbY, thumbW, thumbH);
+      ctx.restore();
 
-          ctx.save();
-          ctx.beginPath();
-          ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
-          ctx.clip();
-          ctx.filter = "blur(12px)";
-          ctx.drawImage(shotImg, sx, sy, sw, sh, 0, 0, W, H);
-          ctx.filter = "none";
-          ctx.fillStyle = "rgba(255,255,255,0.15)";
-          ctx.fillRect(thumbX, thumbY, thumbW, thumbH);
-          ctx.restore();
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
+      ctx.clip();
+      ctx.drawImage(refImg, thumbX, thumbY, thumbW, thumbH);
+      ctx.restore();
 
-          ctx.save();
-          ctx.beginPath();
-          ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
-          ctx.clip();
-          ctx.drawImage(refImg, thumbX, thumbY, thumbW, thumbH);
-          ctx.restore();
-
-          ctx.save();
-          ctx.strokeStyle = "#ffffff";
-          ctx.lineWidth = 3;
-          ctx.beginPath();
-          ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
-          ctx.stroke();
-          ctx.restore();
-        }
-
-        if (showBadge && matchScore !== null) drawReCreeshotBadge(ctx, W, matchScore);
-
-        // imageUrl에 워터마크가 이미 포함되어 있으므로 별도 렌더링 불필요
-
-        canvas.toBlob((blob) => {
-          if (!blob) return;
-          objectUrl = URL.createObjectURL(blob);
-          setCompositeUrl(objectUrl);
-        }, "image/jpeg", 0.92);
-      } catch {
-        // CORS 실패 등 → compositeUrl 없이 imageUrl fallback
-      }
+      ctx.save();
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
+      ctx.stroke();
+      ctx.restore();
     }
 
-    compose();
-    return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
-  }, [imageUrl, referencePhotoUrl, matchScore, showBadge]);
+    if (showBadge && matchScore !== null) drawReCreeshotBadge(ctx, W, matchScore);
 
-  function handleSave() {
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        if (!blob) { resolve(imageUrl); return; }
+        resolve(URL.createObjectURL(blob));
+      }, "image/jpeg", 0.92);
+    });
+  }
+
+  async function handleSave() {
     setMenuOpen(false);
-    const url = compositeUrl ?? imageUrl;
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "recreeshot.jpg";
-    a.click();
+    try {
+      const url = await composeForDownload();
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "recreeshot.jpg";
+      a.click();
+      // blob URL은 짧은 지연 후 해제
+      if (url.startsWith("blob:")) setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch {
+      // CORS 실패 시 원본 이미지 다운로드 fallback
+      const a = document.createElement("a");
+      a.href = imageUrl;
+      a.download = "recreeshot.jpg";
+      a.click();
+    }
   }
 
   async function handleDelete() {
@@ -252,13 +247,59 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
         </div>
       </div>
 
-      {/* 이미지 — canvas 합성본 표시 (꾹 눌러 저장 시 동일 이미지) */}
-      <div className="relative aspect-[4/5] bg-muted">
+      {/* 이미지 — HTML 오버레이 방식 (CORS 불필요) */}
+      <div className="relative aspect-[4/5] bg-muted overflow-hidden">
         <img
-          src={compositeUrl ?? imageUrl}
+          src={imageUrl}
           alt="recreeshot"
           className="w-full h-full object-cover"
         />
+
+        {/* 레퍼런스 사진 오버레이 (좌상단) */}
+        {referencePhotoUrl && (
+          <div
+            className="absolute"
+            style={{ top: "3%", left: "3%", width: "18%", aspectRatio: "4/5", zIndex: 10 }}
+          >
+            <div
+              style={{
+                position: "absolute",
+                inset: "-25%",
+                borderRadius: "16%",
+                background: "rgba(255,255,255,0.55)",
+                filter: "blur(8px)",
+                zIndex: -1,
+              }}
+            />
+            <div
+              style={{
+                position: "relative",
+                width: "100%",
+                height: "100%",
+                borderRadius: "12%",
+                overflow: "hidden",
+                outline: "1px solid white",
+              }}
+            >
+              <img src={referencePhotoUrl} alt="original" className="w-full h-full object-cover" />
+            </div>
+          </div>
+        )}
+
+        {/* 매치 스코어 배지 (우상단) */}
+        {showBadge && matchScore !== null && (
+          <div
+            className="absolute text-xs font-bold px-2.5 py-[3px] rounded-full text-black"
+            style={{
+              top: "3%",
+              right: "3%",
+              background: "linear-gradient(to right, #C8FF09, white 150%)",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+            }}
+          >
+            {Math.round(matchScore)}% Match
+          </div>
+        )}
       </div>
     </>
   );
