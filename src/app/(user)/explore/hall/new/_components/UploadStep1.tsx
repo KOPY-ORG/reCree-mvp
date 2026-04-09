@@ -105,7 +105,7 @@ export function UploadStep1({
           className={`relative w-full h-full flex flex-col items-center justify-center gap-2 rounded-xl overflow-hidden ${shotPreviewUrl ? "" : "border-2 border-dashed border-border bg-muted/20"}`}
         >
           {shotPreviewUrl ? (
-            <Image src={shotPreviewUrl} alt="my shot" fill className="object-cover" />
+            <Image src={shotPreviewUrl} alt="my shot" fill unoptimized className="object-cover" />
           ) : (
             <>
               <Camera className="size-8 text-muted-foreground" />
@@ -134,7 +134,7 @@ export function UploadStep1({
             className={`relative w-full h-full flex flex-col items-center justify-center gap-1 rounded-lg overflow-hidden ${referencePreviewUrl ? "" : "border-2 border-dashed border-border bg-background/80 backdrop-blur-sm"}`}
           >
             {referencePreviewUrl ? (
-              <Image src={referencePreviewUrl} alt="original" fill className="object-cover" />
+              <Image src={referencePreviewUrl} alt="original" fill unoptimized className="object-cover" />
             ) : (
               <>
                 <Camera className="size-5 text-muted-foreground" />
