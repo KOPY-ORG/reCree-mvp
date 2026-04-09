@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Image from "next/image";
+import { isExternalImage } from "@/lib/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
@@ -109,7 +110,7 @@ export function RecreeshotTable({ rows }: { rows: RecreeshotRow[] }) {
                 <td className="px-4 py-3">
                   <Link href={`/explore/hall/${row.id}`} target="_blank" rel="noopener noreferrer">
                     <div className="relative w-10 aspect-[4/5] rounded overflow-hidden bg-muted hover:opacity-80 transition-opacity">
-                      <Image src={row.imageUrl} alt="recreeshot" fill className="object-cover" sizes="40px" />
+                      <Image src={row.imageUrl} alt="recreeshot" fill unoptimized={isExternalImage(row.imageUrl)} className="object-cover" sizes="40px" />
                     </div>
                   </Link>
                 </td>

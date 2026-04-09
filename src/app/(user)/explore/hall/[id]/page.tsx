@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
+import { isExternalImage } from "@/lib/image";
 import Link from "next/link";
 import { ChevronRight, MapPin, EyeOff } from "lucide-react";
 import { prisma } from "@/lib/prisma";
@@ -124,6 +125,7 @@ export default async function HallDetailPage({
                   alt={shot.user.nickname ?? "user"}
                   width={32}
                   height={32}
+                  unoptimized={isExternalImage(shot.user.profileImageUrl)}
                   className="object-cover w-full h-full"
                 />
               ) : (

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Image from "next/image";
+import { isExternalImage } from "@/lib/image";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 import { dismissReport, resolveReport, restoreReport } from "../_actions/recreeshot-actions";
@@ -148,7 +149,7 @@ export function ReportList({ rows }: { rows: ReportRow[] }) {
                   {row.reCreeshot ? (
                     <Link href={`/explore/hall/${row.reCreeshot.id}`} target="_blank" rel="noopener noreferrer">
                       <div className="relative w-10 aspect-[4/5] rounded overflow-hidden bg-muted hover:opacity-80 transition-opacity">
-                        <Image src={row.reCreeshot.imageUrl} alt="recreeshot" fill className="object-cover" sizes="40px" />
+                        <Image src={row.reCreeshot.imageUrl} alt="recreeshot" fill unoptimized={isExternalImage(row.reCreeshot.imageUrl)} className="object-cover" sizes="40px" />
                       </div>
                     </Link>
                   ) : (

@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { isExternalImage } from "@/lib/image";
 
 /**
  * "preview"  — 업로드 미리보기: blur 글로우, rounded-2xl, "Match" 텍스트 기본 포함
@@ -82,6 +83,7 @@ export function ReCreeshotImage({
         src={shotUrl}
         alt="recreeshot"
         fill
+        unoptimized={isExternalImage(shotUrl)}
         className="object-cover"
         sizes={sizes}
         priority={priority}
@@ -142,6 +144,7 @@ export function ReCreeshotImage({
               src={referenceUrl}
               alt="original"
               fill
+              unoptimized={isExternalImage(referenceUrl)}
               className="object-cover"
               sizes="25vw"
             />
