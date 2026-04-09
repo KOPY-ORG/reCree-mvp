@@ -264,10 +264,10 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
             <div
               style={{
                 position: "absolute",
-                inset: "-25%",
+                inset: "-12%",
                 borderRadius: "16%",
-                background: "rgba(255,255,255,0.55)",
-                filter: "blur(8px)",
+                background: "rgba(255,255,255,0.3)",
+                filter: "blur(5px)",
                 zIndex: -1,
               }}
             />
