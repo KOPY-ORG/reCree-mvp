@@ -60,7 +60,10 @@ export default async function PlacesPage({
         isVerified: true,
         createdAt: true,
         _count: {
-          select: { postPlaces: true, reCreeshots: true },
+          select: {
+            postPlaces: true,
+            reCreeshots: { where: { status: { not: "DELETED" } } },
+          },
         },
         postPlaces: {
           select: { post: { select: { saveCount: true } } },
