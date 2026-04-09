@@ -139,6 +139,8 @@ interface PlaceFormProps {
 
 // ─── 상수 / 업로드 유틸 ────────────────────────────────────────────────────────
 
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 const MAX_IMAGES = 5;
 
 async function uploadPlaceImage(
