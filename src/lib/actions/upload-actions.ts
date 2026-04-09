@@ -37,6 +37,34 @@ export async function deleteReCreeshotImages(paths: string[]): Promise<void> {
   await deleteStorageFiles("recreeshot-images", paths);
 }
 
+/** 장소 이미지 R2 업로드 */
+export async function uploadPlaceImage(
+  formData: FormData,
+  placeId: string,
+): Promise<{ url: string } | { error: string }> {
+  const file = formData.get("file") as File | null;
+  if (!file) return { error: "No file provided" };
+
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    return { error: `${file.name}: jpg, png, webp 형식만 지원합니다.` };
+  }
+  if (file.size > MAX_IMAGE_SIZE) {
+    return { error: `${file.name}: 파일 크기가 5MB를 초과합니다.` };
+  }
+
+  const ext = file.name.split(".").pop() ?? "jpg";
+  const path = `${placeId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  try {
+    const url = await uploadFile("place-images", path, buffer, file.type);
+    return { url };
+  } catch (e) {
+    console.error("장소 이미지 업로드 오류:", e);
+    return { error: "업로드 실패" };
+  }
+}
+
 /** 포스트 이미지 R2 업로드 */
 export async function uploadPostImage(
   formData: FormData,
@@ -52,7 +80,7 @@ export async function uploadPostImage(
     return { error: `${file.name}: 파일 크기가 5MB를 초과합니다.` };
   }
 
-  const ext = file.name.split(".").pop();
+  const ext = file.name.split(".").pop() ?? "jpg";
   const path = `${folderPath}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
   const buffer = Buffer.from(await file.arrayBuffer());
 

@@ -49,15 +49,12 @@ export function focalStyle(
 
 /**
  * Vercel Image Optimization을 사용하지 않아야 하는 이미지인지 확인합니다.
- * R2 CDN 이미지와 Supabase 이미지(마이그레이션 기간)는 unoptimized 처리합니다.
+ * R2 CDN 이미지는 Cloudflare에서 이미 최적화됩니다.
  */
 export function isExternalImage(src: string): boolean {
   try {
     const { hostname } = new URL(src);
-    // R2 CDN 이미지는 Cloudflare에서 이미 최적화됨 → Vercel 변환 불필요
     if (hostname === "cdn.recree.io") return true;
-    // 마이그레이션 기간 중 기존 Supabase 이미지도 unoptimized 처리
-    if (hostname.endsWith(".supabase.co")) return true;
     return !(
       hostname === "img.youtube.com" ||
       hostname === "i.ytimg.com" ||

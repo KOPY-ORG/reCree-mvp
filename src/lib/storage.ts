@@ -19,15 +19,12 @@ const CDN_URL = process.env.NEXT_PUBLIC_CDN_URL!;
 
 /**
  * CDN URL에서 버킷 하위 경로를 추출하는 헬퍼 생성.
- * 마이그레이션 기간 중 기존 Supabase URL도 처리 가능.
  */
 export function makeStorageExtractor(bucket: string) {
   const cdnPrefix = `${CDN_URL}/${bucket}/`;
-  const supabasePrefix = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${bucket}/`;
 
   return function extractStoragePath(url: string): string | null {
     if (url.startsWith(cdnPrefix)) return url.slice(cdnPrefix.length);
-    if (url.startsWith(supabasePrefix)) return url.slice(supabasePrefix.length);
     return null;
   };
 }
