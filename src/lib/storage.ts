@@ -40,11 +40,7 @@ export async function uploadFile(
   contentType: string,
 ): Promise<string> {
   const key = `${bucket}/${path}`;
-  console.log("[R2 Debug] ACCOUNT_ID:", process.env.R2_ACCOUNT_ID?.slice(0, 8));
-  console.log("[R2 Debug] ACCESS_KEY_ID:", process.env.R2_ACCESS_KEY_ID?.slice(0, 8));
-  console.log("[R2 Debug] SECRET exists:", !!process.env.R2_SECRET_ACCESS_KEY);
-  console.log("[R2 Debug] BUCKET:", process.env.R2_BUCKET_NAME);
-  await r2.send(
+await r2.send(
     new PutObjectCommand({
       Bucket: BUCKET,
       Key: key,
