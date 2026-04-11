@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Camera } from "lucide-react";
 import { updateProfile } from "../_actions/profile-actions";
 import { getProfileImagePresignedUrl } from "@/lib/actions/upload-actions";
+import { MAX_PROFILE_IMAGE_SIZE } from "@/lib/upload-constants";
 import { useNicknameCheck } from "@/hooks/use-nickname-check";
 import { NicknameInput } from "@/components/NicknameInput";
 import { showToast, showError } from "@/lib/toast";
@@ -38,6 +39,11 @@ export function ProfileEditForm({
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > MAX_PROFILE_IMAGE_SIZE) {
+      showError("Image size must be 10MB or less.");
+      e.target.value = "";
+      return;
+    }
     setImagePreview((prev) => {
       if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
       return URL.createObjectURL(file);
