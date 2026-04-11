@@ -4,6 +4,7 @@
  */
 
 import { S3Client, PutObjectCommand, DeleteObjectsCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const r2 = new S3Client({
   region: "us-east-1", // R2는 실제 라우팅에 region을 사용하지 않음 — "auto"는 일부 SDK 버전에서 SigV4 오류 발생
@@ -46,6 +47,22 @@ await r2.send(
     }),
   );
   return `${CDN_URL}/${key}`;
+}
+
+/** 브라우저 직접 업로드용 Presigned PUT URL 생성. expiresIn: 초 단위 (기본 300초) */
+export async function getPresignedPutUrl(
+  bucket: string,
+  path: string,
+  contentType: string,
+  expiresIn = 300,
+): Promise<{ presignedUrl: string; cdnUrl: string }> {
+  const key = `${bucket}/${path}`;
+  const presignedUrl = await getSignedUrl(
+    r2,
+    new PutObjectCommand({ Bucket: BUCKET, Key: key, ContentType: contentType }),
+    { expiresIn },
+  );
+  return { presignedUrl, cdnUrl: `${CDN_URL}/${key}` };
 }
 
 /** R2 파일 삭제 (best-effort). 실패해도 에러를 throw하지 않음. */
