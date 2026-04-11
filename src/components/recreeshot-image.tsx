@@ -67,8 +67,8 @@ export function ReCreeshotImage({
   const thumbOffset = isThumbSm ? "4%" : "3%";
   const thumbRefWidth = isThumbSm ? "22%" : "18%";
   const thumbOutline = isThumbSm
-    ? "1px solid rgba(255,255,255,0.9)"
-    : "1.5px solid rgba(255,255,255,0.9)";
+    ? "0.5px solid rgba(255,255,255,0.8)"
+    : "0.75px solid rgba(255,255,255,0.8)";
   const thumbGlow = isThumbSm
     ? "0 0 8px 4px rgba(255,255,255,0.6)"
     : "0 0 12px 5px rgba(255,255,255,0.6)";
@@ -123,10 +123,10 @@ export function ReCreeshotImage({
           <div
             style={{
               position: "absolute",
-              inset: "-25%",
+              inset: "-8%",
               borderRadius: "16%",
-              background: "rgba(255,255,255,0.55)",
-              filter: "blur(8px)",
+              background: "rgba(255,255,255,0.3)",
+              filter: "blur(0.6vw)",
               zIndex: -1,
             }}
           />
@@ -137,7 +137,7 @@ export function ReCreeshotImage({
               height: "100%",
               borderRadius: "12%",
               overflow: "hidden",
-              outline: "1px solid white",
+              outline: "0.5px solid rgba(255,255,255,0.8)",
             }}
           >
             <Image

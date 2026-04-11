@@ -61,11 +61,11 @@ export function UploadStep3({
         const thumbR = Math.round(thumbW * 0.12);
 
         ctx.save();
-        ctx.shadowColor = "rgba(255,255,255,0.75)";
-        ctx.shadowBlur = 60;
+        ctx.shadowColor = "rgba(255,255,255,0.4)";
+        ctx.shadowBlur = 30;
         ctx.shadowOffsetX = 0;
         ctx.shadowOffsetY = 0;
-        ctx.fillStyle = "rgba(255,255,255,0.5)";
+        ctx.fillStyle = "rgba(255,255,255,0.2)";
         ctx.beginPath();
         ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
         ctx.fill();
@@ -90,8 +90,8 @@ export function UploadStep3({
         ctx.restore();
 
         ctx.save();
-        ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = "rgba(255,255,255,0.8)";
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
         ctx.stroke();
