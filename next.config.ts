@@ -4,6 +4,7 @@ const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
       bodySizeLimit: "20mb",
+      allowedOrigins: ["recree.io", "dev.recree.io"],
     },
   },
   images: {
