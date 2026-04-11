@@ -3,7 +3,8 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Camera } from "lucide-react";
-import { updateProfile, uploadProfileImage } from "../_actions/profile-actions";
+import { updateProfile } from "../_actions/profile-actions";
+import { getProfileImagePresignedUrl } from "@/lib/actions/upload-actions";
 import { useNicknameCheck } from "@/hooks/use-nickname-check";
 import { NicknameInput } from "@/components/NicknameInput";
 import { showToast, showError } from "@/lib/toast";
@@ -62,14 +63,21 @@ export function ProfileEditForm({
 
         if (imageFile) {
           const compressed = await compressImage(imageFile, 400, 0.85);
-          const formData = new FormData();
-          formData.append("file", compressed);
-          const result = await uploadProfileImage(formData);
-          if (result.error || !result.url) {
+          const presigned = await getProfileImagePresignedUrl(compressed.name, compressed.type);
+          if ("error" in presigned) {
             showError(<>Failed to upload image.<br />Please try again.</>);
             return;
           }
-          finalImageUrl = result.url;
+          const res = await fetch(presigned.presignedUrl, {
+            method: "PUT",
+            body: compressed,
+            headers: { "Content-Type": compressed.type },
+          });
+          if (!res.ok) {
+            showError(<>Failed to upload image.<br />Please try again.</>);
+            return;
+          }
+          finalImageUrl = presigned.cdnUrl;
         }
 
         const result = await updateProfile({

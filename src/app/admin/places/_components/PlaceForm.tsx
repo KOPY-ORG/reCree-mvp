@@ -39,7 +39,7 @@ import Image from "next/image";
 import { isExternalImage } from "@/lib/image";
 import type { PlaceStatus } from "@prisma/client";
 import { STATUS_LABELS } from "../_constants";
-import { uploadPlaceImage as uploadPlaceImageToR2 } from "@/lib/actions/upload-actions";
+import { getPlaceImagePresignedUrl } from "@/lib/actions/upload-actions";
 import { ALLOWED_IMAGE_TYPES, ALLOWED_IMAGE_ACCEPT, MAX_PLACE_IMAGE_SIZE } from "@/lib/upload-constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -146,9 +146,15 @@ async function uploadPlaceImage(
   file: File,
   placeId: string,
 ): Promise<{ url: string } | { error: string }> {
-  const formData = new FormData();
-  formData.append("file", file);
-  return uploadPlaceImageToR2(formData, placeId);
+  const result = await getPlaceImagePresignedUrl(file.name, file.type, placeId);
+  if ("error" in result) return result;
+  const res = await fetch(result.presignedUrl, {
+    method: "PUT",
+    body: file,
+    headers: { "Content-Type": file.type },
+  });
+  if (!res.ok) return { error: `업로드 실패 (${res.status})` };
+  return { url: result.cdnUrl };
 }
 
 // ─── 정렬 가능한 이미지 아이템 ──────────────────────────────────────────────────

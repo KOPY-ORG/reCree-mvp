@@ -2,36 +2,13 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { makeStorageExtractor, deleteStorageFiles, uploadFile } from "@/lib/storage";
+import { makeStorageExtractor, deleteStorageFiles } from "@/lib/storage";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { checkNicknameAvailable } from "@/lib/actions/user-actions";
 
 const extractProfileImageStoragePath = makeStorageExtractor("profile-images");
-
-export async function uploadProfileImage(
-  formData: FormData
-): Promise<{ url?: string; error?: string }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "Not authenticated" };
-
-  const file = formData.get("file") as File | null;
-  if (!file) return { error: "No file provided" };
-
-  try {
-    const ext = file.name.split(".").pop() ?? "jpg";
-    const path = `${user.id}/${Date.now()}.${ext}`;
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const url = await uploadFile("profile-images", path, buffer, file.type);
-    return { url };
-  } catch {
-    return { error: "Failed to upload image." };
-  }
-}
 
 export async function updateProfile(data: {
   nickname: string;
