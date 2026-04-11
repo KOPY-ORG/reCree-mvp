@@ -29,9 +29,10 @@ export default async function PolicyPage({
         </div>
       </header>
 
-      <div className="px-5 pt-2 pb-6">
+      <main className="px-5 pt-2 pb-6 max-w-3xl mx-auto">
+        <h1 className="text-2xl font-bold mb-6">{TITLES[type]}</h1>
         <PolicyContent content={policy.content} />
-      </div>
+      </main>
     </div>
   );
 }
