@@ -176,7 +176,7 @@ export function ReCreeshotUploadFlow({ tagGroups, topics, userId, prefillPostId,
       body: file,
       headers: { "Content-Type": file.type },
     });
-    if (!res.ok) throw new Error(`업로드 실패 (${res.status})`);
+    if (!res.ok) throw new Error(`Upload failed (${res.status})`);
     return { url: result.cdnUrl, path: result.path };
   }
 
@@ -260,7 +260,7 @@ export function ReCreeshotUploadFlow({ tagGroups, topics, userId, prefillPostId,
       }));
     } catch (e) {
       console.error(e);
-      setState((s) => ({ ...s, isScoringPreview: false, error: "업로드 실패. 다시 시도해주세요." }));
+      setState((s) => ({ ...s, isScoringPreview: false, error: "Upload failed. Please try again." }));
     }
   }
 
@@ -282,7 +282,7 @@ export function ReCreeshotUploadFlow({ tagGroups, topics, userId, prefillPostId,
       }));
     } catch (e) {
       console.error(e);
-      setState((s) => ({ ...s, isUploading: false, error: "업로드 실패. 다시 시도해주세요." }));
+      setState((s) => ({ ...s, isUploading: false, error: "Upload failed. Please try again." }));
     }
   }
 

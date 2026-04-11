@@ -11,7 +11,7 @@ export async function getPostImagePresignedUrl(
   folderPath: string,
 ): Promise<{ presignedUrl: string; cdnUrl: string } | { error: string }> {
   if (!ALLOWED_IMAGE_TYPES.includes(contentType)) {
-    return { error: `jpg, png, webp 형식만 지원합니다.` };
+    return { error: `Only jpg, png, and webp formats are supported.` };
   }
   const ext = filename.split(".").pop() ?? "jpg";
   const path = `${folderPath}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
@@ -19,7 +19,7 @@ export async function getPostImagePresignedUrl(
     return await getPresignedPutUrl("post-images", path, contentType);
   } catch (e) {
     console.error("Presigned URL 생성 오류:", e);
-    return { error: "업로드 준비 실패. 다시 시도해주세요." };
+    return { error: "Failed to prepare upload. Please try again." };
   }
 }
 
@@ -30,7 +30,7 @@ export async function getPlaceImagePresignedUrl(
   placeId: string,
 ): Promise<{ presignedUrl: string; cdnUrl: string } | { error: string }> {
   if (!ALLOWED_IMAGE_TYPES.includes(contentType)) {
-    return { error: `jpg, png, webp 형식만 지원합니다.` };
+    return { error: `Only jpg, png, and webp formats are supported.` };
   }
   const ext = filename.split(".").pop() ?? "jpg";
   const path = `${placeId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
@@ -38,7 +38,7 @@ export async function getPlaceImagePresignedUrl(
     return await getPresignedPutUrl("place-images", path, contentType);
   } catch (e) {
     console.error("장소 이미지 Presigned URL 생성 오류:", e);
-    return { error: "업로드 준비 실패. 다시 시도해주세요." };
+    return { error: "Failed to prepare upload. Please try again." };
   }
 }
 
@@ -58,7 +58,7 @@ export async function getReCreeshotPresignedUrl(
     return { presignedUrl, cdnUrl, path };
   } catch (e) {
     console.error("리크리샷 Presigned URL 생성 오류:", e);
-    return { error: "업로드 준비 실패. 다시 시도해주세요." };
+    return { error: "Failed to prepare upload. Please try again." };
   }
 }
 
@@ -77,7 +77,7 @@ export async function getProfileImagePresignedUrl(
     return await getPresignedPutUrl("profile-images", path, contentType);
   } catch (e) {
     console.error("프로필 이미지 Presigned URL 생성 오류:", e);
-    return { error: "업로드 준비 실패. 다시 시도해주세요." };
+    return { error: "Failed to prepare upload. Please try again." };
   }
 }
 

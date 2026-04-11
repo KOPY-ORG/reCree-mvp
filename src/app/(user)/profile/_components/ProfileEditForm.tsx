@@ -40,7 +40,7 @@ export function ProfileEditForm({
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > MAX_PROFILE_IMAGE_SIZE) {
-      showError("Image size must be 10MB or less.");
+      showError("Image is too large.");
       e.target.value = "";
       return;
     }

@@ -3,6 +3,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { makeStorageExtractor, deleteStorageFiles } from "@/lib/storage";
+
+const extractReCreeshotStoragePath = makeStorageExtractor("recreeshot-images");
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -67,10 +69,13 @@ export async function deleteAccount(): Promise<{ error?: string }> {
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
-  // 삭제 전에 프로필 이미지 URL 조회
+  // 삭제 전에 프로필 이미지 + 리크리샷 URL 조회
   const profile = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { profileImageUrl: true },
+    select: {
+      profileImageUrl: true,
+      reCreeshots: { select: { imageUrl: true, referencePhotoUrl: true } },
+    },
   });
 
   try {
@@ -83,6 +88,16 @@ export async function deleteAccount(): Promise<{ error?: string }> {
     if (profile?.profileImageUrl) {
       const path = extractProfileImageStoragePath(profile.profileImageUrl);
       if (path) await deleteStorageFiles("profile-images", [path]);
+    }
+
+    // 리크리샷 이미지 R2 파일 삭제 (best-effort)
+    if (profile?.reCreeshots?.length) {
+      const paths = profile.reCreeshots
+        .flatMap((s) => [s.imageUrl, s.referencePhotoUrl])
+        .filter((url): url is string => !!url)
+        .map(extractReCreeshotStoragePath)
+        .filter((p): p is string => p !== null);
+      if (paths.length > 0) await deleteStorageFiles("recreeshot-images", paths);
     }
   } catch {
     return { error: "Failed to delete account. Please try again." };

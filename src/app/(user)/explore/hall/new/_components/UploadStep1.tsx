@@ -214,7 +214,7 @@ export function UploadStep1({
           const file = e.target.files?.[0];
           if (file) {
             if (file.size > MAX_RECREESHOT_IMAGE_SIZE) {
-              showError("Image size must be 20MB or less.");
+              showError("Image is too large.");
             } else {
               onReferenceChange(file);
             }
@@ -231,7 +231,7 @@ export function UploadStep1({
           const file = e.target.files?.[0];
           if (file) {
             if (file.size > MAX_RECREESHOT_IMAGE_SIZE) {
-              showError("Image size must be 20MB or less.");
+              showError("Image is too large.");
             } else {
               onShotChange(file);
             }

@@ -533,7 +533,7 @@ export function PlaceForm({
           continue;
         }
         if (file.size > MAX_PLACE_IMAGE_SIZE) {
-          toast.error(`${file.name}: 파일 크기가 5MB를 초과합니다.`);
+          toast.error(`${file.name}: 파일 크기가 너무 큽니다.`);
           continue;
         }
         newPending.push({
