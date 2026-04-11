@@ -3,7 +3,9 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Camera } from "lucide-react";
-import { updateProfile, uploadProfileImage } from "../_actions/profile-actions";
+import { updateProfile } from "../_actions/profile-actions";
+import { getProfileImagePresignedUrl } from "@/lib/actions/upload-actions";
+import { MAX_PROFILE_IMAGE_SIZE, ALLOWED_IMAGE_ACCEPT } from "@/lib/upload-constants";
 import { useNicknameCheck } from "@/hooks/use-nickname-check";
 import { NicknameInput } from "@/components/NicknameInput";
 import { showToast, showError } from "@/lib/toast";
@@ -37,6 +39,11 @@ export function ProfileEditForm({
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > MAX_PROFILE_IMAGE_SIZE) {
+      showError("Image is too large.");
+      e.target.value = "";
+      return;
+    }
     setImagePreview((prev) => {
       if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
       return URL.createObjectURL(file);
@@ -62,14 +69,21 @@ export function ProfileEditForm({
 
         if (imageFile) {
           const compressed = await compressImage(imageFile, 400, 0.85);
-          const formData = new FormData();
-          formData.append("file", compressed);
-          const result = await uploadProfileImage(formData);
-          if (result.error || !result.url) {
+          const presigned = await getProfileImagePresignedUrl(compressed.name, compressed.type);
+          if ("error" in presigned) {
             showError(<>Failed to upload image.<br />Please try again.</>);
             return;
           }
-          finalImageUrl = result.url;
+          const res = await fetch(presigned.presignedUrl, {
+            method: "PUT",
+            body: compressed,
+            headers: { "Content-Type": compressed.type },
+          });
+          if (!res.ok) {
+            showError(<>Failed to upload image.<br />Please try again.</>);
+            return;
+          }
+          finalImageUrl = presigned.cdnUrl;
         }
 
         const result = await updateProfile({
@@ -134,7 +148,7 @@ export function ProfileEditForm({
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept={ALLOWED_IMAGE_ACCEPT}
           className="hidden"
           onChange={handleFileChange}
         />

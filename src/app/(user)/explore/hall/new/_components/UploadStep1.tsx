@@ -3,6 +3,8 @@
 import { useRef, useState, useEffect } from "react";
 import Image from "next/image";
 import { Camera, X } from "lucide-react";
+import { showError } from "@/lib/toast";
+import { MAX_RECREESHOT_IMAGE_SIZE, ALLOWED_IMAGE_ACCEPT } from "@/lib/upload-constants";
 
 interface Props {
   referencePreviewUrl: string | null;
@@ -206,22 +208,34 @@ export function UploadStep1({
       <input
         ref={refInputRef}
         type="file"
-        accept="image/*"
+        accept={ALLOWED_IMAGE_ACCEPT}
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];
-          if (file) onReferenceChange(file);
+          if (file) {
+            if (file.size > MAX_RECREESHOT_IMAGE_SIZE) {
+              showError("Image is too large.");
+            } else {
+              onReferenceChange(file);
+            }
+          }
           e.target.value = "";
         }}
       />
       <input
         ref={shotInputRef}
         type="file"
-        accept="image/*"
+        accept={ALLOWED_IMAGE_ACCEPT}
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];
-          if (file) onShotChange(file);
+          if (file) {
+            if (file.size > MAX_RECREESHOT_IMAGE_SIZE) {
+              showError("Image is too large.");
+            } else {
+              onShotChange(file);
+            }
+          }
           e.target.value = "";
         }}
       />

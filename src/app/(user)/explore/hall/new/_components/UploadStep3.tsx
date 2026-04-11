@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Download, Share2, CheckCircle2 } from "lucide-react";
 import { updateReCreeshotImageUrl } from "@/app/(user)/_actions/recreeshot-actions";
-import { uploadReCreeshotImage, deleteReCreeshotImages } from "@/lib/actions/upload-actions";
+import { getReCreeshotPresignedUrl, deleteReCreeshotImages } from "@/lib/actions/upload-actions";
 import { ReCreeshotImage } from "@/components/recreeshot-image";
 import { coverRect, loadImage, drawReCreeshotBadge, drawReCreeshotWatermark } from "@/lib/canvas-utils";
 
@@ -61,11 +61,11 @@ export function UploadStep3({
         const thumbR = Math.round(thumbW * 0.12);
 
         ctx.save();
-        ctx.shadowColor = "rgba(255,255,255,0.75)";
-        ctx.shadowBlur = 60;
+        ctx.shadowColor = "rgba(255,255,255,0.4)";
+        ctx.shadowBlur = 30;
         ctx.shadowOffsetX = 0;
         ctx.shadowOffsetY = 0;
-        ctx.fillStyle = "rgba(255,255,255,0.5)";
+        ctx.fillStyle = "rgba(255,255,255,0.2)";
         ctx.beginPath();
         ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
         ctx.fill();
@@ -90,8 +90,8 @@ export function UploadStep3({
         ctx.restore();
 
         ctx.save();
-        ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = "rgba(255,255,255,0.8)";
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.roundRect(thumbX, thumbY, thumbW, thumbH, thumbR);
         ctx.stroke();
@@ -118,13 +118,18 @@ export function UploadStep3({
             if (!cleanBlob) { resolve(); return; }
             try {
               const cleanFile = new File([cleanBlob], `${userId}-${Date.now()}-shot.jpg`, { type: "image/jpeg" });
-              const formData = new FormData();
-              formData.append("file", cleanFile);
-              const result = await uploadReCreeshotImage(formData);
-              if (!("error" in result)) {
-                await updateReCreeshotImageUrl(createdId, result.url);
-                if (uploadedShotPath) {
-                  await deleteReCreeshotImages([uploadedShotPath]);
+              const presigned = await getReCreeshotPresignedUrl(cleanFile.name, cleanFile.type);
+              if (!("error" in presigned)) {
+                const res = await fetch(presigned.presignedUrl, {
+                  method: "PUT",
+                  body: cleanFile,
+                  headers: { "Content-Type": cleanFile.type },
+                });
+                if (res.ok) {
+                  await updateReCreeshotImageUrl(createdId, presigned.cdnUrl);
+                  if (uploadedShotPath) {
+                    await deleteReCreeshotImages([uploadedShotPath]);
+                  }
                 }
               }
             } catch {

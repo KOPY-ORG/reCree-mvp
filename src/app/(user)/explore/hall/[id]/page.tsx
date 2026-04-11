@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import { isExternalImage } from "@/lib/image";
 import Link from "next/link";
-import { ChevronRight, MapPin, EyeOff } from "lucide-react";
+import { ChevronRight, MapPin, EyeOff, Trash2 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { resolveTopicColors, resolveTagColors, type TagGroupColorMap } from "@/lib/post-labels";
@@ -52,9 +52,28 @@ export default async function HallDetailPage({
     },
   });
 
-  if (!shot || shot.status === "DELETED") notFound();
+  if (!shot) notFound();
 
   const isOwner = currentUser?.id === shot.user.id;
+
+  if (shot.status === "DELETED") {
+    return (
+      <div className="max-w-2xl mx-auto min-h-dvh flex flex-col">
+        <div className="flex items-center h-12 px-2 bg-white border-b border-gray-100 shrink-0">
+          <HallDetailBackButton />
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center px-8 gap-4 text-center">
+          <div className="size-14 rounded-full bg-muted flex items-center justify-center">
+            <Trash2 className="size-6 text-muted-foreground" />
+          </div>
+          <div className="space-y-1.5">
+            <p className="font-semibold text-base">This recreeshot is no longer available.</p>
+            <p className="text-sm text-muted-foreground">It may have been deleted by the creator.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // 숨김 처리된 리크리샷 안내 페이지 (직접 숨김 또는 신고로 인한 숨김)
   if (shot.status === "HIDDEN" || shot.status === "REPORT_HIDDEN") {

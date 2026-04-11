@@ -368,7 +368,7 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
       return;
     }
     const validFiles = files.slice(0, remaining).filter((file) => {
-      if (file.size > MAX_POST_IMAGE_SIZE) { toast.error(`${file.name}: 파일 크기가 10MB를 초과합니다.`); return false; }
+      if (file.size > MAX_POST_IMAGE_SIZE) { toast.error(`${file.name}: 파일 크기가 너무 큽니다.`); return false; }
       return true;
     });
     if (!validFiles.length) return;
@@ -632,7 +632,7 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
                   const file = e.target.files?.[0];
                   e.target.value = "";
                   if (!file) return;
-                  if (file.size > MAX_POST_IMAGE_SIZE) { toast.error(`${file.name}: 파일 크기가 10MB를 초과합니다.`); return; }
+                  if (file.size > MAX_POST_IMAGE_SIZE) { toast.error(`${file.name}: 파일 크기가 너무 큽니다.`); return; }
                   try {
                     const result = await uploadImage(file, `original/${postId ?? "new"}`);
                     if ("error" in result) { toast.error(result.error); return; }
