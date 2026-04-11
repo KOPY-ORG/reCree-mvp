@@ -3,7 +3,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
-      bodySizeLimit: "5mb",
+      bodySizeLimit: "20mb",
+      allowedOrigins: ["recree.io", "dev.recree.io"],
     },
   },
   images: {

@@ -2,9 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { uploadFile, deleteStorageFiles } from "@/lib/storage";
-
-const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+import { ALLOWED_IMAGE_TYPES, MAX_POST_IMAGE_SIZE, MAX_PLACE_IMAGE_SIZE } from "@/lib/upload-constants";
 
 /** 리크리샷 이미지 R2 업로드 */
 export async function uploadReCreeshotImage(
@@ -48,7 +46,7 @@ export async function uploadPlaceImage(
   if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
     return { error: `${file.name}: jpg, png, webp 형식만 지원합니다.` };
   }
-  if (file.size > MAX_IMAGE_SIZE) {
+  if (file.size > MAX_PLACE_IMAGE_SIZE) {
     return { error: `${file.name}: 파일 크기가 5MB를 초과합니다.` };
   }
 
@@ -76,8 +74,8 @@ export async function uploadPostImage(
   if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
     return { error: `${file.name}: jpg, png, webp 형식만 지원합니다.` };
   }
-  if (file.size > MAX_IMAGE_SIZE) {
-    return { error: `${file.name}: 파일 크기가 5MB를 초과합니다.` };
+  if (file.size > MAX_POST_IMAGE_SIZE) {
+    return { error: `${file.name}: 파일 크기가 10MB를 초과합니다.` };
   }
 
   const ext = file.name.split(".").pop() ?? "jpg";

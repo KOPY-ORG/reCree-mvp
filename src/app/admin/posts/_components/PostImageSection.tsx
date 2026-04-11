@@ -23,6 +23,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { focalStyle } from "@/lib/image";
 import { uploadPostImage } from "@/lib/actions/upload-actions";
+import { MAX_POST_IMAGE_SIZE } from "@/lib/upload-constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -363,6 +364,7 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
     const newBanners = [...bannerImages];
     try {
       for (const file of files) {
+        if (file.size > MAX_POST_IMAGE_SIZE) { toast.error(`${file.name}: 파일 크기가 10MB를 초과합니다.`); continue; }
         const result = await uploadImage(file, `banner/${postId ?? "new"}`);
         if ("error" in result) { toast.error(result.error); continue; }
         newBanners.push({ imageType: "BANNER", imageSource: "UPLOAD", url: result.url, isThumbnail: false, sortOrder: newBanners.length });
@@ -615,6 +617,7 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
                   const file = e.target.files?.[0];
                   e.target.value = "";
                   if (!file) return;
+                  if (file.size > MAX_POST_IMAGE_SIZE) { toast.error(`${file.name}: 파일 크기가 10MB를 초과합니다.`); return; }
                   const result = await uploadImage(file, `original/${postId ?? "new"}`);
                   if ("error" in result) { toast.error(result.error); return; }
                   setOriginal({ imageType: "ORIGINAL", imageSource: "UPLOAD", url: result.url, linkUrl: null, isThumbnail: false, sortOrder: 0 });

@@ -40,6 +40,7 @@ import { isExternalImage } from "@/lib/image";
 import type { PlaceStatus } from "@prisma/client";
 import { STATUS_LABELS } from "../_constants";
 import { uploadPlaceImage as uploadPlaceImageToR2 } from "@/lib/actions/upload-actions";
+import { ALLOWED_IMAGE_TYPES, MAX_PLACE_IMAGE_SIZE } from "@/lib/upload-constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -139,8 +140,6 @@ interface PlaceFormProps {
 
 // ─── 상수 / 업로드 유틸 ────────────────────────────────────────────────────────
 
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
-const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 const MAX_IMAGES = 5;
 
 async function uploadPlaceImage(
@@ -523,11 +522,11 @@ export function PlaceForm({
           toast.error(`최대 ${MAX_IMAGES}장까지만 추가할 수 있습니다.`);
           break;
         }
-        if (!ALLOWED_TYPES.includes(file.type)) {
+        if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
           toast.error(`${file.name}: jpg, png, webp 형식만 지원합니다.`);
           continue;
         }
-        if (file.size > MAX_SIZE) {
+        if (file.size > MAX_PLACE_IMAGE_SIZE) {
           toast.error(`${file.name}: 파일 크기가 5MB를 초과합니다.`);
           continue;
         }
@@ -588,7 +587,7 @@ export function PlaceForm({
     e.preventDefault();
     setIsDragOver(false);
     const files = Array.from(e.dataTransfer.files).filter((f) =>
-      ALLOWED_TYPES.includes(f.type),
+      ALLOWED_IMAGE_TYPES.includes(f.type),
     );
     processFiles(files);
   }
