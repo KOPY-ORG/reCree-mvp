@@ -23,7 +23,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { focalStyle } from "@/lib/image";
 import { uploadPostImage } from "@/lib/actions/upload-actions";
-import { MAX_POST_IMAGE_SIZE } from "@/lib/upload-constants";
+import { MAX_POST_IMAGE_SIZE, ALLOWED_IMAGE_ACCEPT } from "@/lib/upload-constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -356,19 +356,26 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
     const files = Array.from(e.target.files ?? []);
     e.target.value = "";
     if (!files.length) return;
-    if (bannerImages.length + files.length > MAX_BANNER) {
+    const remaining = MAX_BANNER - bannerImages.length;
+    if (remaining <= 0) {
       toast.error(`배너 이미지는 최대 ${MAX_BANNER}장까지 등록할 수 있습니다.`);
       return;
     }
+    const validFiles = files.slice(0, remaining).filter((file) => {
+      if (file.size > MAX_POST_IMAGE_SIZE) { toast.error(`${file.name}: 파일 크기가 10MB를 초과합니다.`); return false; }
+      return true;
+    });
+    if (!validFiles.length) return;
     setBannerUploading(true);
-    const newBanners = [...bannerImages];
     try {
-      for (const file of files) {
-        if (file.size > MAX_POST_IMAGE_SIZE) { toast.error(`${file.name}: 파일 크기가 10MB를 초과합니다.`); continue; }
-        const result = await uploadImage(file, `banner/${postId ?? "new"}`);
-        if ("error" in result) { toast.error(result.error); continue; }
+      const results = await Promise.all(
+        validFiles.map((file) => uploadImage(file, `banner/${postId ?? "new"}`))
+      );
+      const newBanners = [...bannerImages];
+      results.forEach((result) => {
+        if ("error" in result) { toast.error(result.error); return; }
         newBanners.push({ imageType: "BANNER", imageSource: "UPLOAD", url: result.url, isThumbnail: false, sortOrder: newBanners.length });
-      }
+      });
       replaceImages(newBanners, originalImage);
     } finally {
       setBannerUploading(false);
@@ -437,7 +444,7 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
               }
             </button>
           )}
-          <input ref={bannerFileRef} type="file" accept="image/jpeg,image/png,image/webp" multiple tabIndex={-1} className="sr-only" disabled={bannerUploading} onChange={handleBannerUpload} />
+          <input ref={bannerFileRef} type="file" accept={ALLOWED_IMAGE_ACCEPT} multiple tabIndex={-1} className="sr-only" disabled={bannerUploading} onChange={handleBannerUpload} />
         </div>
         <p className="text-[11px] text-muted-foreground">드래그로 순서 변경 · 클릭 시 썸네일 지정</p>
 
@@ -610,7 +617,7 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
               <input
                 ref={originalFileRef}
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept={ALLOWED_IMAGE_ACCEPT}
                 tabIndex={-1}
                 className="sr-only"
                 onChange={async (e) => {
@@ -744,7 +751,7 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
             <input
               ref={recreeFileRef}
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              accept={ALLOWED_IMAGE_ACCEPT}
               tabIndex={-1}
               className="sr-only"
               disabled={recreeUploading}

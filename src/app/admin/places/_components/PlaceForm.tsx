@@ -40,7 +40,7 @@ import { isExternalImage } from "@/lib/image";
 import type { PlaceStatus } from "@prisma/client";
 import { STATUS_LABELS } from "../_constants";
 import { uploadPlaceImage as uploadPlaceImageToR2 } from "@/lib/actions/upload-actions";
-import { ALLOWED_IMAGE_TYPES, MAX_PLACE_IMAGE_SIZE } from "@/lib/upload-constants";
+import { ALLOWED_IMAGE_TYPES, ALLOWED_IMAGE_ACCEPT, MAX_PLACE_IMAGE_SIZE } from "@/lib/upload-constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1024,7 +1024,7 @@ export function PlaceForm({
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept="image/jpeg,image/png,image/webp"
+                      accept={ALLOWED_IMAGE_ACCEPT}
                       multiple
                       className="hidden"
                       onChange={handleFileChange}
