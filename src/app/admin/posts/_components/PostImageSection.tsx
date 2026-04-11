@@ -360,15 +360,21 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
       toast.error(`배너 이미지는 최대 ${MAX_BANNER}장까지 등록할 수 있습니다.`);
       return;
     }
+    const validFiles = files.filter((file) => {
+      if (file.size > MAX_POST_IMAGE_SIZE) { toast.error(`${file.name}: 파일 크기가 10MB를 초과합니다.`); return false; }
+      return true;
+    });
+    if (!validFiles.length) return;
     setBannerUploading(true);
-    const newBanners = [...bannerImages];
     try {
-      for (const file of files) {
-        if (file.size > MAX_POST_IMAGE_SIZE) { toast.error(`${file.name}: 파일 크기가 10MB를 초과합니다.`); continue; }
-        const result = await uploadImage(file, `banner/${postId ?? "new"}`);
-        if ("error" in result) { toast.error(result.error); continue; }
+      const results = await Promise.all(
+        validFiles.map((file) => uploadImage(file, `banner/${postId ?? "new"}`))
+      );
+      const newBanners = [...bannerImages];
+      results.forEach((result) => {
+        if ("error" in result) { toast.error(result.error); return; }
         newBanners.push({ imageType: "BANNER", imageSource: "UPLOAD", url: result.url, isThumbnail: false, sortOrder: newBanners.length });
-      }
+      });
       replaceImages(newBanners, originalImage);
     } finally {
       setBannerUploading(false);
