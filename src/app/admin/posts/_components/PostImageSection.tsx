@@ -22,7 +22,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { focalStyle } from "@/lib/image";
-import { uploadPostImage } from "@/lib/actions/upload-actions";
+import { getPostImagePresignedUrl } from "@/lib/actions/upload-actions";
 import { MAX_POST_IMAGE_SIZE, ALLOWED_IMAGE_ACCEPT } from "@/lib/upload-constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,9 +66,15 @@ async function uploadImage(
   file: File,
   path: string,
 ): Promise<{ url: string } | { error: string }> {
-  const formData = new FormData();
-  formData.append("file", file);
-  return uploadPostImage(formData, path);
+  const result = await getPostImagePresignedUrl(file.name, file.type, path);
+  if ("error" in result) return result;
+  const res = await fetch(result.presignedUrl, {
+    method: "PUT",
+    body: file,
+    headers: { "Content-Type": file.type },
+  });
+  if (!res.ok) return { error: `업로드 실패 (${res.status})` };
+  return { url: result.cdnUrl };
 }
 
 // ─── 이미지 출처 입력 ─────────────────────────────────────────────────────────
@@ -377,6 +383,8 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
         newBanners.push({ imageType: "BANNER", imageSource: "UPLOAD", url: result.url, isThumbnail: false, sortOrder: newBanners.length });
       });
       replaceImages(newBanners, originalImage);
+    } catch {
+      toast.error("이미지 업로드 중 오류가 발생했습니다.");
     } finally {
       setBannerUploading(false);
     }
@@ -625,9 +633,13 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
                   e.target.value = "";
                   if (!file) return;
                   if (file.size > MAX_POST_IMAGE_SIZE) { toast.error(`${file.name}: 파일 크기가 10MB를 초과합니다.`); return; }
-                  const result = await uploadImage(file, `original/${postId ?? "new"}`);
-                  if ("error" in result) { toast.error(result.error); return; }
-                  setOriginal({ imageType: "ORIGINAL", imageSource: "UPLOAD", url: result.url, linkUrl: null, isThumbnail: false, sortOrder: 0 });
+                  try {
+                    const result = await uploadImage(file, `original/${postId ?? "new"}`);
+                    if ("error" in result) { toast.error(result.error); return; }
+                    setOriginal({ imageType: "ORIGINAL", imageSource: "UPLOAD", url: result.url, linkUrl: null, isThumbnail: false, sortOrder: 0 });
+                  } catch {
+                    toast.error("이미지 업로드 중 오류가 발생했습니다.");
+                  }
                 }}
               />
               <button
@@ -782,11 +794,11 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
             setRecreeUploading(true);
             try {
               const file = new File([blob], `recree-${Date.now()}.jpg`, { type: "image/jpeg" });
-              const formData = new FormData();
-              formData.append("file", file);
-              const result = await uploadPostImage(formData, `recree/${postId ?? "new"}`);
+              const result = await uploadImage(file, `recree/${postId ?? "new"}`);
               if ("error" in result) { toast.error(result.error); return; }
               onRecreePhotoChange(result.url);
+            } catch {
+              toast.error("이미지 업로드 중 오류가 발생했습니다.");
             } finally {
               setRecreeUploading(false);
             }

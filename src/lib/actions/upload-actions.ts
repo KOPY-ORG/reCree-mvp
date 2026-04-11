@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { uploadFile, deleteStorageFiles } from "@/lib/storage";
+import { uploadFile, deleteStorageFiles, getPresignedPutUrl } from "@/lib/storage";
 import { ALLOWED_IMAGE_TYPES, MAX_POST_IMAGE_SIZE, MAX_PLACE_IMAGE_SIZE } from "@/lib/upload-constants";
 
 /** 리크리샷 이미지 R2 업로드 */
@@ -27,6 +27,25 @@ export async function uploadReCreeshotImage(
   } catch (e) {
     console.error("리크리샷 이미지 업로드 오류:", e);
     return { error: "업로드 실패. 다시 시도해주세요." };
+  }
+}
+
+/** 포스트 이미지 브라우저 직접 업로드용 Presigned URL 발급 */
+export async function getPostImagePresignedUrl(
+  filename: string,
+  contentType: string,
+  folderPath: string,
+): Promise<{ presignedUrl: string; cdnUrl: string } | { error: string }> {
+  if (!ALLOWED_IMAGE_TYPES.includes(contentType)) {
+    return { error: `jpg, png, webp 형식만 지원합니다.` };
+  }
+  const ext = filename.split(".").pop() ?? "jpg";
+  const path = `${folderPath}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  try {
+    return await getPresignedPutUrl("post-images", path, contentType);
+  } catch (e) {
+    console.error("Presigned URL 생성 오류:", e);
+    return { error: "업로드 준비 실패. 다시 시도해주세요." };
   }
 }
 
