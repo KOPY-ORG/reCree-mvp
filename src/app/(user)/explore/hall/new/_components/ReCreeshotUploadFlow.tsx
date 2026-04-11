@@ -8,7 +8,7 @@ import {
   previewMatchScore,
 } from "@/app/(user)/_actions/recreeshot-actions";
 import {
-  uploadReCreeshotImage,
+  getReCreeshotPresignedUrl,
   deleteReCreeshotImages,
 } from "@/lib/actions/upload-actions";
 import { UploadStep1 } from "./UploadStep1";
@@ -169,11 +169,15 @@ export function ReCreeshotUploadFlow({ tagGroups, topics, userId, prefillPostId,
   }
 
   async function uploadToR2(file: File): Promise<{ url: string; path: string }> {
-    const formData = new FormData();
-    formData.append("file", file);
-    const result = await uploadReCreeshotImage(formData);
+    const result = await getReCreeshotPresignedUrl(file.name, file.type);
     if ("error" in result) throw new Error(result.error);
-    return result;
+    const res = await fetch(result.presignedUrl, {
+      method: "PUT",
+      body: file,
+      headers: { "Content-Type": file.type },
+    });
+    if (!res.ok) throw new Error(`Upload failed (${res.status})`);
+    return { url: result.cdnUrl, path: result.path };
   }
 
   async function deleteOrphanedFiles() {
@@ -256,7 +260,7 @@ export function ReCreeshotUploadFlow({ tagGroups, topics, userId, prefillPostId,
       }));
     } catch (e) {
       console.error(e);
-      setState((s) => ({ ...s, isScoringPreview: false, error: "업로드 실패. 다시 시도해주세요." }));
+      setState((s) => ({ ...s, isScoringPreview: false, error: "Upload failed. Please try again." }));
     }
   }
 
@@ -278,7 +282,7 @@ export function ReCreeshotUploadFlow({ tagGroups, topics, userId, prefillPostId,
       }));
     } catch (e) {
       console.error(e);
-      setState((s) => ({ ...s, isUploading: false, error: "업로드 실패. 다시 시도해주세요." }));
+      setState((s) => ({ ...s, isUploading: false, error: "Upload failed. Please try again." }));
     }
   }
 

@@ -3,7 +3,7 @@
  * @aws-sdk/client-s3 (S3 호환 API) 사용
  */
 
-import { S3Client, PutObjectCommand, DeleteObjectsCommand } from "@aws-sdk/client-s3";
+import { S3Client, DeleteObjectsCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const r2 = new S3Client({
@@ -28,25 +28,6 @@ export function makeStorageExtractor(bucket: string) {
     if (url.startsWith(cdnPrefix)) return url.slice(cdnPrefix.length);
     return null;
   };
-}
-
-/** R2에 파일 업로드. 업로드된 CDN URL 반환. */
-export async function uploadFile(
-  bucket: string,
-  path: string,
-  body: Buffer | Uint8Array,
-  contentType: string,
-): Promise<string> {
-  const key = `${bucket}/${path}`;
-await r2.send(
-    new PutObjectCommand({
-      Bucket: BUCKET,
-      Key: key,
-      Body: body,
-      ContentType: contentType,
-    }),
-  );
-  return `${CDN_URL}/${key}`;
 }
 
 /** 브라우저 직접 업로드용 Presigned PUT URL 생성. expiresIn: 초 단위 (기본 300초) */
