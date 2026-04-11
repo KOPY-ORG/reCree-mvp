@@ -320,6 +320,16 @@ export default async function HomePage() {
           </HScrollSection>
         );
       })}
+        <footer className="px-4 pt-8 pb-6 text-sm text-muted-foreground">
+        <div className="flex flex-wrap gap-4 justify-center">
+          <Link href="/policy/privacy" className="hover:text-foreground underline underline-offset-4">
+            Privacy Policy
+          </Link>
+          <Link href="/policy/terms" className="hover:text-foreground underline underline-offset-4">
+            Terms of Service
+          </Link>
+        </div>
+      </footer>
     </div>
   );
 }
