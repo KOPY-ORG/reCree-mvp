@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Camera } from "lucide-react";
 import { updateProfile } from "../_actions/profile-actions";
 import { getProfileImagePresignedUrl } from "@/lib/actions/upload-actions";
-import { MAX_PROFILE_IMAGE_SIZE } from "@/lib/upload-constants";
+import { MAX_PROFILE_IMAGE_SIZE, ALLOWED_IMAGE_ACCEPT } from "@/lib/upload-constants";
 import { useNicknameCheck } from "@/hooks/use-nickname-check";
 import { NicknameInput } from "@/components/NicknameInput";
 import { showToast, showError } from "@/lib/toast";
@@ -148,7 +148,7 @@ export function ProfileEditForm({
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept={ALLOWED_IMAGE_ACCEPT}
           className="hidden"
           onChange={handleFileChange}
         />
