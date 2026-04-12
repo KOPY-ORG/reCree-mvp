@@ -7,19 +7,29 @@ import { formatDate } from "@/lib/utils";
 import { PostStatus } from "@prisma/client";
 import { DashboardTrendChart } from "./_components/DashboardTrendChart";
 
+export const dynamic = "force-dynamic";
+
 // ─── 유틸 ─────────────────────────────────────────────────────────────────────
+
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+/** UTC Date → KST 날짜 문자열 (YYYY-MM-DD) */
+function toKSTDateKey(date: Date): string {
+  return new Date(date.getTime() + KST_OFFSET_MS).toISOString().slice(0, 10);
+}
 
 function groupByDate(items: { createdAt: Date }[], base: Date, days = 7) {
   const map = new Map<string, number>();
   for (const item of items) {
-    const key = item.createdAt.toISOString().slice(0, 10);
+    const key = toKSTDateKey(item.createdAt);
     map.set(key, (map.get(key) ?? 0) + 1);
   }
   return Array.from({ length: days }, (_, i) => {
     const d = new Date(base);
     d.setDate(d.getDate() + i);
-    const key = d.toISOString().slice(0, 10);
-    const label = `${d.getMonth() + 1}/${d.getDate()}`;
+    const kst = new Date(d.getTime() + KST_OFFSET_MS);
+    const key = kst.toISOString().slice(0, 10);
+    const label = `${kst.getUTCMonth() + 1}/${kst.getUTCDate()}`;
     return { label, count: map.get(key) ?? 0 };
   });
 }
@@ -111,14 +121,15 @@ function RankList({ items, icon: Icon, countColor }: {
 // ─── 페이지 ────────────────────────────────────────────────────────────────────
 
 export default async function AdminPage() {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // KST 기준 오늘 자정을 UTC Date로 계산
+  const nowKST = new Date(Date.now() + KST_OFFSET_MS);
+  const kstYear = nowKST.getUTCFullYear();
+  const kstMonth = nowKST.getUTCMonth();
+  const kstDate = nowKST.getUTCDate();
 
-  const sevenDaysAgo = new Date(today);
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-
-  const thirtyDaysAgo = new Date(today);
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
+  const today = new Date(Date.UTC(kstYear, kstMonth, kstDate) - KST_OFFSET_MS);
+  const sevenDaysAgo = new Date(Date.UTC(kstYear, kstMonth, kstDate - 6) - KST_OFFSET_MS);
+  const thirtyDaysAgo = new Date(Date.UTC(kstYear, kstMonth, kstDate - 29) - KST_OFFSET_MS);
 
   const [
     totalUsers, newUsersToday,
@@ -193,12 +204,13 @@ export default async function AdminPage() {
   ]);
 
   // ── 차트 데이터 ──
-  const dauMap = new Map(dauRaw.map((r) => [r.date.toISOString().slice(0, 10), r._count.userId]));
+  const dauMap = new Map(dauRaw.map((r) => [toKSTDateKey(r.date), r._count.userId]));
   const dauDays = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(sevenDaysAgo);
     d.setDate(d.getDate() + i);
-    const key = d.toISOString().slice(0, 10);
-    return { label: `${d.getMonth() + 1}/${d.getDate()}`, count: dauMap.get(key) ?? 0 };
+    const kst = new Date(d.getTime() + KST_OFFSET_MS);
+    const key = kst.toISOString().slice(0, 10);
+    return { label: `${kst.getUTCMonth() + 1}/${kst.getUTCDate()}`, count: dauMap.get(key) ?? 0 };
   });
   const newUsersDays = groupByDate(newUsersRaw, sevenDaysAgo);
   const savesDays = groupByDate(savesRaw, sevenDaysAgo);
@@ -241,6 +253,7 @@ export default async function AdminPage() {
 
   const todayLabel = new Date().toLocaleDateString("ko-KR", {
     year: "numeric", month: "long", day: "numeric",
+    timeZone: "Asia/Seoul",
   });
 
   const externalTools = [

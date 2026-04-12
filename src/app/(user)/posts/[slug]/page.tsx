@@ -308,13 +308,15 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
       />
 
       {/* 제목 */}
-      <div className="px-4 pb-2 space-y-1.5">
-        <h1 className="text-xl font-bold leading-tight">{post.titleEn}</h1>
+      <div className="px-4 pb-2 space-y-1">
         {spotInsight && (
-          <p className="text-sm text-muted-foreground leading-snug">
+          <h1 className="text-xl font-bold leading-tight">
             {spotInsight.place.nameEn ?? spotInsight.place.nameKo}
-          </p>
+          </h1>
         )}
+        <p className={spotInsight ? "text-sm text-muted-foreground leading-snug" : "text-xl font-bold leading-tight"}>
+          {post.titleEn}
+        </p>
       </div>
 
       {/* Spot Insight */}
