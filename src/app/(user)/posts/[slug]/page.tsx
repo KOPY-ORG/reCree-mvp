@@ -37,7 +37,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       },
       postImages: {
         where: { imageType: "BANNER" },
-        orderBy: { sortOrder: "asc" },
+        orderBy: [{ isThumbnail: "desc" }, { sortOrder: "asc" }],
         take: 1,
         select: { url: true },
       },

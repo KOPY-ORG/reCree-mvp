@@ -23,17 +23,30 @@ export async function generateMetadata({
     select: {
       locationName: true,
       story: true,
+      tips: true,
       imageUrl: true,
+      linkedPostId: true,
     },
   });
 
   if (!shot) return {};
 
-  const title = shot.locationName
-    ? `recreeshot at ${shot.locationName}`
-    : "recreeshot";
-  const description = shot.story
-    ? shot.story.slice(0, 160)
+  const linkedPost = shot.linkedPostId
+    ? await prisma.post.findUnique({
+        where: { id: shot.linkedPostId },
+        select: { titleEn: true },
+      })
+    : null;
+
+  // "recreeshot at Bukhangang Bridge — ATEEZ Aurora MV Filming Location"
+  const title = [
+    shot.locationName ? `recreeshot at ${shot.locationName}` : "recreeshot",
+    linkedPost?.titleEn,
+  ].filter(Boolean).join(" — ");
+
+  const rawDescription = [shot.story, shot.tips].filter(Boolean).join(" | ");
+  const description = rawDescription
+    ? rawDescription.slice(0, 160)
     : shot.locationName
       ? `Check out this recreeshot taken at ${shot.locationName} on reCree.`
       : "Check out this recreeshot on reCree.";
