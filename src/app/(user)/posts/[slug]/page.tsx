@@ -237,8 +237,40 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
     tip?: string;
   } | null;
 
+  const placeLabel = spotInsight?.place.nameEn ?? spotInsight?.place.nameKo;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": post.titleEn,
+    "description": post.bodyEn?.slice(0, 160) ?? (placeLabel
+      ? `Visit ${placeLabel}, the exact filming location from ${post.titleEn}. Discover iconic K-content spots with reCree.`
+      : "Discover iconic K-content spots with reCree."),
+    "image": bannerImages.map((img) => ({
+      "@type": "ImageObject",
+      "url": img.url,
+      "contentUrl": img.url,
+    })),
+    "url": `https://recree.io/posts/${post.slug}`,
+    "publisher": {
+      "@type": "Organization",
+      "name": "reCree",
+      "url": "https://recree.io",
+    },
+    ...(spotInsight && {
+      "about": {
+        "@type": "TouristAttraction",
+        "name": placeLabel,
+        "address": spotInsight.place.addressEn ?? undefined,
+      },
+    }),
+  };
+
   return (
     <article className="pb-8 max-w-2xl mx-auto">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {!isPreview && <PostDetailHeader postId={post.id} isLoggedIn={!!currentUser} />}
       {isPreview && (
         <div className="bg-amber-100 text-amber-800 text-xs text-center py-2 font-medium">
