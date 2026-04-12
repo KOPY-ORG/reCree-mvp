@@ -29,33 +29,56 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       slug: true,
       titleEn: true,
       bodyEn: true,
+      postPlaces: {
+        take: 1,
+        select: {
+          place: { select: { nameEn: true, nameKo: true } },
+        },
+      },
+      postImages: {
+        where: { imageType: "BANNER" },
+        orderBy: { sortOrder: "asc" },
+        take: 1,
+        select: { url: true },
+      },
     },
   });
 
   if (!post) return {};
 
-  const description = post.bodyEn
-    ? post.bodyEn.slice(0, 120)
-    : "Discover iconic K-content spots";
-  const ogTitle = post.titleEn.length > 60
-    ? post.titleEn.slice(0, 57) + "..."
+  const place = post.postPlaces[0]?.place;
+  const placeLabel = place?.nameEn ?? place?.nameKo;
+
+  // "ATEEZ Aurora MV Filming Location | Bukhangang Bridge Seoul"
+  // layout.tsx template이 "| reCree" 자동 부착
+  const title = placeLabel
+    ? `${post.titleEn} | ${placeLabel}`
     : post.titleEn;
-  const imageUrl = "/og-post.png";
+
+  const description = post.bodyEn
+    ? post.bodyEn.slice(0, 160)
+    : placeLabel
+      ? `Visit ${placeLabel}, the exact filming location from ${post.titleEn}. Discover iconic K-content spots with reCree.`
+      : "Discover iconic K-content spots with reCree.";
+
+  const imageUrl = post.postImages[0]?.url ?? "https://recree.io/og-default.png";
   const pageUrl = `https://recree.io/posts/${post.slug}`;
+  const fullTitle = `${title} | reCree`;
 
   return {
-    title: post.titleEn,
+    title,
     description,
     openGraph: {
-      title: ogTitle,
+      title: fullTitle,
       description,
       url: pageUrl,
       siteName: "reCree",
-      images: [{ url: imageUrl }],
+      images: [{ url: imageUrl, width: 1200, height: 630 }],
+      type: "article",
     },
     twitter: {
       card: "summary_large_image",
-      title: ogTitle,
+      title: fullTitle,
       description,
       images: [imageUrl],
     },
