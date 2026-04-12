@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
+import type { Metadata } from "next";
 import { isExternalImage } from "@/lib/image";
 import Link from "next/link";
 import { ChevronRight, MapPin, EyeOff, Trash2 } from "lucide-react";
@@ -10,6 +11,64 @@ import { HallDetailClient } from "./_components/HallDetailClient";
 import { HallDetailTopSection } from "./_components/HallDetailTopSection";
 import { HallDetailOwnerDeleteButton } from "./_components/HallDetailOwnerDeleteButton";
 import { HallDetailBackButton } from "./_components/HallDetailBackButton";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const shot = await prisma.reCreeshot.findUnique({
+    where: { id },
+    select: {
+      locationName: true,
+      story: true,
+      tips: true,
+      imageUrl: true,
+      linkedPostId: true,
+    },
+  });
+
+  if (!shot) return {};
+
+  const linkedPost = shot.linkedPostId
+    ? await prisma.post.findUnique({
+        where: { id: shot.linkedPostId },
+        select: { titleEn: true },
+      })
+    : null;
+
+  // "recreeshot at Bukhangang Bridge — ATEEZ Aurora MV Filming Location"
+  const title = [
+    shot.locationName ? `recreeshot at ${shot.locationName}` : "recreeshot",
+    linkedPost?.titleEn,
+  ].filter(Boolean).join(" — ");
+
+  const rawDescription = [shot.story, shot.tips].filter(Boolean).join(" | ");
+  const description = rawDescription
+    ? rawDescription.slice(0, 160)
+    : shot.locationName
+      ? `Check out this recreeshot taken at ${shot.locationName} on reCree.`
+      : "Check out this recreeshot on reCree.";
+  const imageUrl = shot.imageUrl ?? "https://recree.io/og-default.png";
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title: `${title} | reCree`,
+      description,
+      images: [{ url: imageUrl, width: 1200, height: 630 }],
+      type: "article",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${title} | reCree`,
+      description,
+      images: [imageUrl],
+    },
+  };
+}
 
 export default async function HallDetailPage({
   params,
