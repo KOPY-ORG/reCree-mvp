@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
+import type { Metadata } from "next";
 import { isExternalImage } from "@/lib/image";
 import Link from "next/link";
 import { ChevronRight, MapPin, EyeOff, Trash2 } from "lucide-react";
@@ -10,6 +11,52 @@ import { HallDetailClient } from "./_components/HallDetailClient";
 import { HallDetailTopSection } from "./_components/HallDetailTopSection";
 import { HallDetailOwnerDeleteButton } from "./_components/HallDetailOwnerDeleteButton";
 import { HallDetailBackButton } from "./_components/HallDetailBackButton";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const shot = await prisma.reCreeshot.findUnique({
+    where: { id },
+    select: {
+      locationName: true,
+      story: true,
+      imageUrl: true,
+      user: { select: { nickname: true } },
+    },
+  });
+
+  if (!shot) return {};
+
+  const title = shot.locationName
+    ? `recreeshot at ${shot.locationName}`
+    : "recreeshot";
+  const description = shot.story
+    ? shot.story.slice(0, 160)
+    : shot.locationName
+      ? `Check out this recreeshot taken at ${shot.locationName} on reCree.`
+      : "Check out this recreeshot on reCree.";
+  const imageUrl = shot.imageUrl ?? "https://recree.io/og-default.png";
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title: `${title} | reCree`,
+      description,
+      images: [{ url: imageUrl, width: 1200, height: 630 }],
+      type: "article",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${title} | reCree`,
+      description,
+      images: [imageUrl],
+    },
+  };
+}
 
 export default async function HallDetailPage({
   params,
