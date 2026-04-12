@@ -24,7 +24,6 @@ export async function generateMetadata({
       locationName: true,
       story: true,
       imageUrl: true,
-      user: { select: { nickname: true } },
     },
   });
 
