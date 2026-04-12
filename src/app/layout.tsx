@@ -19,7 +19,11 @@ const notoSansKR = Noto_Sans_KR({
 });
 
 export const metadata: Metadata = {
-  title: "reCree",
+  metadataBase: new URL("https://recree.io"),
+  title: {
+    default: "reCree",
+    template: "%s | reCree",
+  },
   description: "Discover iconic K-content spots",
   openGraph: {
     title: "reCree",

@@ -29,33 +29,56 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       slug: true,
       titleEn: true,
       bodyEn: true,
+      postPlaces: {
+        take: 1,
+        select: {
+          place: { select: { nameEn: true, nameKo: true } },
+        },
+      },
+      postImages: {
+        where: { imageType: "BANNER" },
+        orderBy: [{ isThumbnail: "desc" }, { sortOrder: "asc" }],
+        take: 1,
+        select: { url: true },
+      },
     },
   });
 
   if (!post) return {};
 
-  const description = post.bodyEn
-    ? post.bodyEn.slice(0, 120)
-    : "Discover iconic K-content spots";
-  const ogTitle = post.titleEn.length > 60
-    ? post.titleEn.slice(0, 57) + "..."
+  const place = post.postPlaces[0]?.place;
+  const placeLabel = place?.nameEn ?? place?.nameKo;
+
+  // "ATEEZ Aurora MV Filming Location | Bukhangang Bridge Seoul"
+  // layout.tsx template이 "| reCree" 자동 부착
+  const title = placeLabel
+    ? `${post.titleEn} | ${placeLabel}`
     : post.titleEn;
-  const imageUrl = "/og-post.png";
+
+  const description = post.bodyEn
+    ? post.bodyEn.slice(0, 160)
+    : placeLabel
+      ? `Visit ${placeLabel}, the exact filming location from ${post.titleEn}. Discover iconic K-content spots with reCree.`
+      : "Discover iconic K-content spots with reCree.";
+
+  const imageUrl = post.postImages[0]?.url ?? "https://recree.io/og-default.png";
   const pageUrl = `https://recree.io/posts/${post.slug}`;
+  const fullTitle = `${title} | reCree`;
 
   return {
-    title: post.titleEn,
+    title,
     description,
     openGraph: {
-      title: ogTitle,
+      title: fullTitle,
       description,
       url: pageUrl,
       siteName: "reCree",
-      images: [{ url: imageUrl }],
+      images: [{ url: imageUrl, width: 1200, height: 630 }],
+      type: "article",
     },
     twitter: {
       card: "summary_large_image",
-      title: ogTitle,
+      title: fullTitle,
       description,
       images: [imageUrl],
     },
@@ -214,8 +237,40 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
     tip?: string;
   } | null;
 
+  const placeLabel = spotInsight?.place.nameEn ?? spotInsight?.place.nameKo;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": post.titleEn,
+    "description": post.bodyEn?.slice(0, 160) ?? (placeLabel
+      ? `Visit ${placeLabel}, the exact filming location from ${post.titleEn}. Discover iconic K-content spots with reCree.`
+      : "Discover iconic K-content spots with reCree."),
+    "image": bannerImages.map((img) => ({
+      "@type": "ImageObject",
+      "url": img.url,
+      "contentUrl": img.url,
+    })),
+    "url": `https://recree.io/posts/${post.slug}`,
+    "publisher": {
+      "@type": "Organization",
+      "name": "reCree",
+      "url": "https://recree.io",
+    },
+    ...(spotInsight && {
+      "about": {
+        "@type": "TouristAttraction",
+        "name": placeLabel,
+        "address": spotInsight.place.addressEn ?? undefined,
+      },
+    }),
+  };
+
   return (
     <article className="pb-8 max-w-2xl mx-auto">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {!isPreview && <PostDetailHeader postId={post.id} isLoggedIn={!!currentUser} />}
       {isPreview && (
         <div className="bg-amber-100 text-amber-800 text-xs text-center py-2 font-medium">
@@ -254,11 +309,11 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
 
       {/* 제목 */}
       <div className="px-4 pb-2 space-y-1.5">
-        <h1 className="text-xl font-bold leading-tight">
-          {spotInsight?.place.nameEn ?? spotInsight?.place.nameKo ?? post.titleEn}
-        </h1>
+        <h1 className="text-xl font-bold leading-tight">{post.titleEn}</h1>
         {spotInsight && (
-          <p className="text-sm text-muted-foreground leading-snug">{post.titleEn}</p>
+          <p className="text-sm text-muted-foreground leading-snug">
+            {spotInsight.place.nameEn ?? spotInsight.place.nameKo}
+          </p>
         )}
       </div>
 
