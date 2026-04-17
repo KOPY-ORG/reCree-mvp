@@ -95,9 +95,14 @@ function GroupColumn({
 
   return (
     <div
+      style={
+        !isDragging
+          ? { borderLeft: `3px solid ${groupConfig.isVisible ? groupConfig.colorHex : "#dddddd"}` }
+          : undefined
+      }
       className={`rounded-xl overflow-hidden bg-white shadow-sm transition-shadow ${
         isDragging ? "shadow-lg ring-2 ring-zinc-200" : ""
-      }`}
+      } ${groupConfig.isVisible ? "" : "opacity-50"}`}
     >
       {/* 컬럼 헤더 */}
       <div className="px-3 py-3 border-b border-border flex items-center gap-1.5 bg-muted/30">
@@ -108,15 +113,20 @@ function GroupColumn({
         >
           <GripVertical className="w-3.5 h-3.5" />
         </span>
-        <ColorLabel
-          name={groupConfig.nameEn || groupConfig.group}
-          colorHex={groupConfig.colorHex}
-          colorHex2={groupConfig.colorHex2}
-          gradientDir={groupConfig.gradientDir}
-          gradientStop={groupConfig.gradientStop}
-          textColorHex={groupConfig.textColorHex}
-          className="text-sm px-3 py-1"
-        />
+        <span className="text-sm font-bold shrink-0">
+          {groupConfig.nameEn || groupConfig.group}
+        </span>
+        {groupConfig.displayLabel && (
+          <ColorLabel
+            name={groupConfig.displayLabel}
+            colorHex={groupConfig.colorHex}
+            colorHex2={groupConfig.colorHex2}
+            gradientDir={groupConfig.gradientDir}
+            gradientStop={groupConfig.gradientStop}
+            textColorHex={groupConfig.textColorHex}
+            className="text-xs px-2.5 py-0.5"
+          />
+        )}
         <span className="flex-1" />
         <span className="text-xs tabular-nums text-muted-foreground shrink-0">{tags.length}</span>
         <button

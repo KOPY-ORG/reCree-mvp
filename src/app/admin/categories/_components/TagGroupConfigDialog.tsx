@@ -29,6 +29,7 @@ interface TagGroupConfigDialogProps {
 export function TagGroupConfigDialog({ open, mode, groupConfig, onClose, onCreated, onUpdated }: TagGroupConfigDialogProps) {
   const [isPending, startTransition] = useTransition();
   const [nameEn, setNameEn] = useState("");
+  const [displayLabel, setDisplayLabel] = useState("");
   const [isGradient, setIsGradient] = useState(false);
   const [colorHex, setColorHex] = useState("#C8FF09");
   const [colorHex2, setColorHex2] = useState("#ffffff");
@@ -41,6 +42,7 @@ export function TagGroupConfigDialog({ open, mode, groupConfig, onClose, onCreat
       if (mode === "edit" && groupConfig) {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setNameEn(groupConfig.nameEn || groupConfig.group);
+        setDisplayLabel(groupConfig.displayLabel ?? "");
         setIsGradient(groupConfig.colorHex2 !== null);
         setColorHex(groupConfig.colorHex);
         setColorHex2(groupConfig.colorHex2 ?? "#ffffff");
@@ -49,6 +51,7 @@ export function TagGroupConfigDialog({ open, mode, groupConfig, onClose, onCreat
         setTextColorHex(groupConfig.textColorHex);
       } else {
         setNameEn("");
+        setDisplayLabel("");
         setIsGradient(false);
         setColorHex("#C8FF09");
         setColorHex2("#ffffff");
@@ -62,6 +65,7 @@ export function TagGroupConfigDialog({ open, mode, groupConfig, onClose, onCreat
   function handleSubmit() {
     const formData = {
       nameEn: nameEn.trim(),
+      displayLabel: displayLabel.trim() || null,
       colorHex,
       colorHex2: isGradient ? colorHex2 : null,
       gradientDir,
@@ -128,6 +132,20 @@ export function TagGroupConfigDialog({ open, mode, groupConfig, onClose, onCreat
                 그룹 키: <span className="font-mono font-semibold">{derivedKey}</span>
               </p>
             )}
+          </div>
+
+          {/* 포스트 라벨 표시명 */}
+          <div className="space-y-1.5">
+            <Label htmlFor="groupDisplayLabel">포스트 라벨 표시명</Label>
+            <Input
+              id="groupDisplayLabel"
+              value={displayLabel}
+              onChange={(e) => setDisplayLabel(e.target.value)}
+              placeholder="예: Spot (비워두면 미사용)"
+            />
+            <p className="text-xs text-muted-foreground">
+              포스트 상세 페이지에서 태그 라벨에 표시할 짧은 이름. 비워두면 표시 안 함.
+            </p>
           </div>
 
           <GradientColorSection
