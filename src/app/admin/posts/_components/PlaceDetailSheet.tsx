@@ -48,6 +48,7 @@ export function PlaceDetailSheet({
 
   useEffect(() => {
     if (!open || !placeId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPlace(null);
       return;
     }

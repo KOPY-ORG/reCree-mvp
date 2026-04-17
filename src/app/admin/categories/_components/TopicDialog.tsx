@@ -302,6 +302,7 @@ export function TopicDialog({ open, topic, defaultParentId, allTopics, parentEff
 
   // slug 실시간 중복 체크
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!slug.trim()) { setSlugDuplicate(false); return; }
     setSlugChecking(true);
     const timer = setTimeout(async () => {
@@ -315,6 +316,7 @@ export function TopicDialog({ open, topic, defaultParentId, allTopics, parentEff
   // dialog 열릴 때 초기값 설정
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSlugDuplicate(false);
       setSlugChecking(false);
       if (isEdit && topic) {

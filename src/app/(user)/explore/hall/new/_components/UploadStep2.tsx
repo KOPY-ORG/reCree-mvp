@@ -133,7 +133,6 @@ export function UploadStep2({
   previewScore,
   showBadge,
   onShowBadgeChange,
-  onBack: _onBack,
   onShare,
   isSubmitting,
   prefillPostId,
@@ -188,6 +187,7 @@ export function UploadStep2({
 
   // ── 장소 검색 디바운스 ───────────────────────────────────────────────────────
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!locationQuery.trim()) { setPlaceResults([]); return; }
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     searchTimerRef.current = setTimeout(async () => {
@@ -207,6 +207,7 @@ export function UploadStep2({
   // Tag 시트 열릴 때 첫 번째 L0 자동 선택
   useEffect(() => {
     if (typeSheetOpen && topicTree.length > 0 && !activeThemeL0Id) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveThemeL0Id(topicTree[0].id);
     }
   }, [typeSheetOpen, topicTree, activeThemeL0Id]);

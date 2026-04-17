@@ -55,6 +55,7 @@ export function TagDialog({ open, tag, defaultGroup, groupOptions, onClose, onSa
 
   // slug 실시간 중복 체크
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!slug.trim()) { setSlugDuplicate(false); return; }
     setSlugChecking(true);
     const timer = setTimeout(async () => {
@@ -67,6 +68,7 @@ export function TagDialog({ open, tag, defaultGroup, groupOptions, onClose, onSa
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSlugDuplicate(false);
       setSlugChecking(false);
       if (isEdit && tag) {

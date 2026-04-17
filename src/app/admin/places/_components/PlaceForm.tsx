@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useCallback, useTransition, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -318,7 +317,6 @@ export function PlaceForm({
   submitLabel,
   returnUrl = "/admin/places",
 }: PlaceFormProps) {
-  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isImagePending, startImageTransition] = useTransition();
 

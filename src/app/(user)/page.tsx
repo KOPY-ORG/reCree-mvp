@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { HomeBannerCarousel, type BannerItem } from "./_components/HomeBannerCarousel";

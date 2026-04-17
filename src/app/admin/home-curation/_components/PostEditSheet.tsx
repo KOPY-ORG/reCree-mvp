@@ -25,6 +25,7 @@ export function PostEditSheet({
 
   useEffect(() => {
     if (!postId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setData(null);
       setError(false);
       return;

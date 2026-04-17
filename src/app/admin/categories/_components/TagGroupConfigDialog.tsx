@@ -39,6 +39,7 @@ export function TagGroupConfigDialog({ open, mode, groupConfig, onClose, onCreat
   useEffect(() => {
     if (open) {
       if (mode === "edit" && groupConfig) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setNameEn(groupConfig.nameEn || groupConfig.group);
         setIsGradient(groupConfig.colorHex2 !== null);
         setColorHex(groupConfig.colorHex);

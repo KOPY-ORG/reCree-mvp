@@ -146,6 +146,7 @@ function SortableBannerItem({
       )}
       onClick={onSetThumb}
     >
+      {/* eslint-disable-next-line @next/next/no-img-element -- 관리자 이미지 드래그 편집기: 블롭/외부 URL 혼재 */}
       <img
         src={image.url}
         alt=""
@@ -220,6 +221,7 @@ function LinkSelector({
               <SelectItem key={i} value={s.url}>
                 <div className="flex items-center gap-2">
                   {ytId ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- YouTube 썸네일: 외부 URL
                     <img
                       src={`https://img.youtube.com/vi/${ytId}/default.jpg`}
                       alt=""
@@ -494,6 +496,7 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
                         : "border-transparent hover:border-zinc-400 cursor-pointer",
                     )}
                   >
+                    {/* eslint-disable-next-line @next/next/no-img-element -- 관리자 배너 이미지 선택기 */}
                     <img src={img.url} alt={img.caption ?? ""} className="w-full h-full object-cover" />
                     {alreadyAdded && (
                       <div className="absolute inset-0 flex items-center justify-center bg-black/30">
@@ -546,6 +549,7 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
                 )}
                 onClick={() => setThumbnail(originalImage.url)}
               >
+                {/* eslint-disable-next-line @next/next/no-img-element -- 관리자 소스 이미지 미리보기 */}
                 <img
                   src={originalImage.url}
                   alt=""
@@ -610,7 +614,8 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
                   })}
                   className="flex items-center gap-2 px-3 py-1.5 text-xs rounded-md border hover:bg-muted transition-colors text-sky-600 border-sky-200"
                 >
-                  <img src={`https://img.youtube.com/vi/${yt.videoId}/default.jpg`} alt="" className="w-10 h-6 object-cover rounded shrink-0" />
+                  {/* eslint-disable-next-line @next/next/no-img-element -- YouTube 썸네일 외부 URL */}
+                <img src={`https://img.youtube.com/vi/${yt.videoId}/default.jpg`} alt="" className="w-10 h-6 object-cover rounded shrink-0" />
                   YouTube {i + 1}
                 </button>
               ))}
@@ -685,6 +690,7 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
           {recreePhotoUrl ? (
             <div className="flex gap-4 items-start">
               <div className="relative group w-24 aspect-[4/5] rounded-lg overflow-hidden border shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element -- 리크리샷 기준 이미지 미리보기 */}
                 <img src={recreePhotoUrl} alt="" className="w-full h-full object-cover" />
                 <button
                   type="button"
@@ -734,6 +740,7 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
                     className="group relative w-12 aspect-[3/2] rounded overflow-hidden border hover:border-zinc-400 transition-colors shrink-0"
                     title={`배너 ${i + 1}에서 자르기`}
                   >
+                    {/* eslint-disable-next-line @next/next/no-img-element -- 배너에서 자르기 미리보기 */}
                     <img src={img.url} alt="" className="w-full h-full object-cover" />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors">
                       <Crop className="h-3 w-3 text-white opacity-0 group-hover:opacity-100" />
@@ -816,6 +823,7 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
             )}
           </div>
           <div className="relative w-40 aspect-[3/2] rounded-lg overflow-hidden border">
+            {/* eslint-disable-next-line @next/next/no-img-element -- 관리자 현재 썸네일 미리보기 */}
             <img
               src={thumbImage.url}
               alt="썸네일"
