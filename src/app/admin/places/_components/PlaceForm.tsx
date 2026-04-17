@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useTransition, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -317,6 +318,7 @@ export function PlaceForm({
   submitLabel,
   returnUrl = "/admin/places",
 }: PlaceFormProps) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isImagePending, startImageTransition] = useTransition();
 
@@ -510,6 +512,7 @@ export function PlaceForm({
       }
 
       toast.success(isEdit ? "장소가 수정되었습니다." : "장소가 등록되었습니다.");
+      router.push(returnUrl);
     });
   };
 
