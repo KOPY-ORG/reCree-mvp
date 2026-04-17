@@ -179,7 +179,7 @@ export function SheetImportClient() {
         <div className="mt-6 rounded-xl bg-white shadow-sm flex flex-col items-center justify-center py-20 text-muted-foreground gap-2">
           <Info className="h-8 w-8 opacity-40" />
           <p className="text-sm">
-            "시트 불러오기" 버튼을 눌러 데이터를 가져오세요.
+            &ldquo;시트 불러오기&rdquo; 버튼을 눌러 데이터를 가져오세요.
           </p>
         </div>
       )}

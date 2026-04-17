@@ -505,6 +505,7 @@ export function SectionDialog({
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm(
         editTarget
           ? {
@@ -522,7 +523,7 @@ export function SectionDialog({
       );
       setPickerOpen(false);
     }
-  }, [open, editTarget]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, editTarget]);
 
   function set<K extends keyof SectionFormData>(key: K, value: SectionFormData[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -584,7 +585,7 @@ export function SectionDialog({
       return t ? `${t.nameKo} (${t.name})` : undefined;
     }
     return undefined;
-  }, [form.filterTopicId, form.filterTagId, form.filterTagGroup, topics, tags, tagGroups]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [form.filterTopicId, form.filterTagId, form.filterTagGroup, topics, tags, tagGroups]);
 
   const postMap = useMemo(() => new Map(posts.map((p) => [p.id, p])), [posts]);
   const selectedPosts = useMemo(

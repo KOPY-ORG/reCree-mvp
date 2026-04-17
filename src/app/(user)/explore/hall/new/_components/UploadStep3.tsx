@@ -166,11 +166,14 @@ export function UploadStep3({
       {/* 이미지 영역 */}
       <div className="relative mx-auto h-[50dvh] aspect-[4/5] shadow-md overflow-hidden rounded-xl">
         {compositeUrl ? (
-          <img
-            src={compositeUrl}
-            alt="recreeshot"
-            className="w-full h-full object-cover"
-          />
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element -- compositeUrl은 canvas에서 생성된 blob URL, next/image 사용 불가 */}
+            <img
+              src={compositeUrl}
+              alt="recreeshot"
+              className="w-full h-full object-cover"
+            />
+          </>
         ) : (
           <>
             <ReCreeshotImage

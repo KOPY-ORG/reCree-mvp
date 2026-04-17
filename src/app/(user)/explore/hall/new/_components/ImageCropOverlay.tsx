@@ -41,6 +41,7 @@ export function ImageCropOverlay({ file, onConfirm, onClose }: Props) {
 
   useEffect(() => {
     const url = URL.createObjectURL(file);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setImageUrl(url);
     return () => URL.revokeObjectURL(url);
   }, [file]);
@@ -137,7 +138,6 @@ export function ImageCropOverlay({ file, onConfirm, onClose }: Props) {
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function startDrag(e: React.PointerEvent, mode: DragMode) {

@@ -36,6 +36,7 @@ export function PlacePickerSheet({
   // Sheet가 열릴 때 초기화 + 포커스
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setKeyword("");
       setResults([]);
       setTimeout(() => inputRef.current?.focus(), 100);

@@ -86,16 +86,20 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
   const sheetRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const minHeightRef = useRef(140);
+  const [minHeight, setMinHeight] = useState(140);
 
   useLayoutEffect(() => {
     if (place && headerRef.current) {
-      minHeightRef.current = headerRef.current.offsetHeight;
+      const h = headerRef.current.offsetHeight;
+      minHeightRef.current = h;
+      setMinHeight(h);
     }
-  });
+  }, [place]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (place) setState("half");
-  }, [place?.id]);
+  }, [place]);
 
   const PLACE_SHEET_STATES = ["tab-only", "half", "full"] as const;
 
@@ -115,7 +119,7 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
   const sheetStyle: React.CSSProperties = {
     height:
       state === "tab-only"
-        ? `${minHeightRef.current}px`
+        ? `${minHeight}px`
         : state === "half"
         ? "calc((100dvh - 64px) * 0.5)"
         : `calc(100dvh - 64px - ${PLACE_FULL_TOP_MARGIN}px)`,

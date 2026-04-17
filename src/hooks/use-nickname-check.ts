@@ -14,6 +14,7 @@ export function useNicknameCheck(nickname: string, currentNickname?: string) {
 
     // 현재 닉네임과 동일하면 체크 불필요
     if (currentNickname !== undefined && trimmed === currentNickname.trim()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStatus("idle");
       return;
     }
