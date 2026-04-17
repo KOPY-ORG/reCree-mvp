@@ -13,6 +13,8 @@ import {
   labelBackground,
   resolveTagColors,
   resolveTopicColors,
+  K_MEDIA_GROUP,
+  labelGroupOrder,
   type TagGroupColorMap,
 } from "@/lib/post-labels";
 import type { MapPlace, MapPost } from "@/lib/map-queries";
@@ -38,15 +40,35 @@ function PostCard({
   isSaved: boolean;
   tagGroupMap: TagGroupColorMap;
 }) {
-  const topicLabels = post.topics.slice(0, 1).map((topic) => {
-    const colors = resolveTopicColors(topic);
-    return { text: topic.nameEn, ...colors };
+  // home variant 슬롯 선택 (resolvePostLabels와 동일한 규칙, 최대 2개)
+  const topicSlots = post.topics.map((topic) => ({
+    group: "TOPIC" as const,
+    name: topic.nameEn,
+    displayLabel: null as string | null,
+    colors: resolveTopicColors(topic),
+  }));
+  const otherSlots = post.tags
+    .filter((tag) => tag.group !== K_MEDIA_GROUP)
+    .map((tag) => {
+      const gc = tagGroupMap.get(tag.group);
+      return { group: tag.group, name: tag.name, displayLabel: gc?.displayLabel ?? null, colors: resolveTagColors(tag, gc) };
+    });
+
+  type Slot = { group: string; name: string; displayLabel: string | null; colors: ReturnType<typeof resolveTopicColors> };
+  const selected: Slot[] = [];
+  let topicUsed = 0, otherUsed = 0;
+  if (topicUsed < topicSlots.length) selected.push(topicSlots[topicUsed++]);
+  else if (otherUsed < otherSlots.length) selected.push(otherSlots[otherUsed++]);
+  if (otherUsed < otherSlots.length) selected.push(otherSlots[otherUsed++]);
+  else if (topicUsed < topicSlots.length) selected.push(topicSlots[topicUsed++]);
+
+  selected.sort((a, b) => labelGroupOrder(a.group) - labelGroupOrder(b.group));
+
+  const labels = selected.map((slot) => {
+    const hasOtherGroup = selected.some((s) => s.group !== slot.group);
+    const text = slot.displayLabel && hasOtherGroup ? slot.displayLabel : slot.name;
+    return { text, ...slot.colors };
   });
-  const tagLabels = post.tags.slice(0, 1).map((tag) => {
-    const colors = resolveTagColors(tag, tagGroupMap.get(tag.group));
-    return { text: tag.name, ...colors };
-  });
-  const labels = [...topicLabels, ...tagLabels];
 
   const cardImageUrl = post.imageUrl ?? post.images[0] ?? null;
 
