@@ -20,8 +20,8 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { TopicForForm, TagForForm, TagGroupItem } from "./PostForm";
+import { K_MEDIA_GROUP, labelGroupOrder } from "@/lib/post-labels";
 
-const K_SCENE_GROUP = "K_MEDIA";
 
 type PostTopicState = { topicId: string; isVisible: boolean; displayOrder: number };
 type PostTagState = { tagId: string; isVisible: boolean; displayOrder: number };
@@ -261,9 +261,9 @@ export function LabelVisibilityCard({
       }),
   [postTopics, topicMap, topicEffectiveStyleMap]);
 
-  const ksceneItems = useMemo<SectionItem[]>(() =>
+  const kmediaItems = useMemo<SectionItem[]>(() =>
     [...postTags]
-      .filter((pt) => tagMap.get(pt.tagId)?.group === K_SCENE_GROUP)
+      .filter((pt) => tagMap.get(pt.tagId)?.group === K_MEDIA_GROUP)
       .sort((a, b) => a.displayOrder - b.displayOrder)
       .map((pt) => {
         const t = tagMap.get(pt.tagId);
@@ -274,7 +274,7 @@ export function LabelVisibilityCard({
 
   const otherTagItems = useMemo<SectionItem[]>(() =>
     [...postTags]
-      .filter((pt) => tagMap.get(pt.tagId)?.group !== K_SCENE_GROUP)
+      .filter((pt) => tagMap.get(pt.tagId)?.group !== K_MEDIA_GROUP)
       .sort((a, b) => a.displayOrder - b.displayOrder)
       .map((pt) => {
         const t = tagMap.get(pt.tagId);
@@ -290,11 +290,11 @@ export function LabelVisibilityCard({
     const visibleTopics = [...postTopics]
       .filter((pt) => pt.isVisible)
       .sort((a, b) => a.displayOrder - b.displayOrder);
-    const visibleKscene = [...postTags]
-      .filter((pt) => pt.isVisible && tagMap.get(pt.tagId)?.group === K_SCENE_GROUP)
+    const visibleKmedia = [...postTags]
+      .filter((pt) => pt.isVisible && tagMap.get(pt.tagId)?.group === K_MEDIA_GROUP)
       .sort((a, b) => a.displayOrder - b.displayOrder);
     const visibleOther = [...postTags]
-      .filter((pt) => pt.isVisible && tagMap.get(pt.tagId)?.group !== K_SCENE_GROUP)
+      .filter((pt) => pt.isVisible && tagMap.get(pt.tagId)?.group !== K_MEDIA_GROUP)
       .sort((a, b) => a.displayOrder - b.displayOrder);
 
     const topicSlots: PreviewSlot[] = visibleTopics.map((pt) => {
@@ -308,10 +308,10 @@ export function LabelVisibilityCard({
       };
     });
 
-    const ksceneSlots: PreviewSlot[] = visibleKscene.map((pt) => {
+    const kmediaSlots: PreviewSlot[] = visibleKmedia.map((pt) => {
       const t = tagMap.get(pt.tagId)!;
       const { background, color } = t ? getTagColors(t) : { background: "", color: "#000" };
-      return { group: K_SCENE_GROUP, name: t?.name ?? pt.tagId, displayLabel: null, background, color };
+      return { group: K_MEDIA_GROUP, name: t?.name ?? pt.tagId, displayLabel: null, background, color };
     });
 
     const otherSlots: PreviewSlot[] = visibleOther.map((pt) => {
@@ -321,10 +321,8 @@ export function LabelVisibilityCard({
       return { group: t?.group ?? "OTHER", name: t?.name ?? pt.tagId, displayLabel, background, color };
     });
 
-    const ORDER = (g: string) => g === "TOPIC" ? 0 : g === K_SCENE_GROUP ? 1 : 2;
-
     function applyText(selected: PreviewSlot[]): PreviewLabel[] {
-      selected.sort((a, b) => ORDER(a.group) - ORDER(b.group));
+      selected.sort((a, b) => labelGroupOrder(a.group) - labelGroupOrder(b.group));
       return selected.map((slot) => {
         const hasOtherGroup = selected.some((s) => s.group !== slot.group);
         const text = slot.displayLabel && hasOtherGroup ? slot.displayLabel : slot.name;
@@ -344,10 +342,10 @@ export function LabelVisibilityCard({
     const listSelected: PreviewSlot[] = [];
     let lT = 0, lK = 0, lO = 0;
     if (lT < topicSlots.length) listSelected.push(topicSlots[lT++]);
-    if (lK < ksceneSlots.length) listSelected.push(ksceneSlots[lK++]);
+    if (lK < kmediaSlots.length) listSelected.push(kmediaSlots[lK++]);
     if (lO < otherSlots.length) listSelected.push(otherSlots[lO++]);
     if (listSelected.length < 3) {
-      const remaining = [...topicSlots.slice(lT), ...ksceneSlots.slice(lK), ...otherSlots.slice(lO)];
+      const remaining = [...topicSlots.slice(lT), ...kmediaSlots.slice(lK), ...otherSlots.slice(lO)];
       for (const slot of remaining) {
         if (listSelected.length >= 3) break;
         listSelected.push(slot);
@@ -357,7 +355,7 @@ export function LabelVisibilityCard({
     // 상세
     const detailLabels: PreviewLabel[] = [
       ...topicSlots.map((s) => ({ text: s.name, background: s.background, color: s.color })),
-      ...ksceneSlots.map((s) => ({ text: s.name, background: s.background, color: s.color })),
+      ...kmediaSlots.map((s) => ({ text: s.name, background: s.background, color: s.color })),
       ...otherSlots.map((s) => ({ text: s.name, background: s.background, color: s.color })),
     ];
 
@@ -378,10 +376,10 @@ export function LabelVisibilityCard({
     });
   };
 
-  const handleKsceneDragEnd = (event: DragEndEvent) => {
+  const handleKmediaDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const visible = ksceneItems.filter((i) => i.isVisible);
+    const visible = kmediaItems.filter((i) => i.isVisible);
     const oldIdx = visible.findIndex((i) => i.id === active.id);
     const newIdx = visible.findIndex((i) => i.id === over.id);
     if (oldIdx === -1 || newIdx === -1) return;
@@ -427,11 +425,11 @@ export function LabelVisibilityCard({
         {/* ── K-MEDIA 태그 ── */}
         <GroupSection
           title="K-MEDIA 태그"
-          dndId="label-kscene-dnd"
-          items={ksceneItems}
+          dndId="label-kmedia-dnd"
+          items={kmediaItems}
           sensors={sensors}
           onToggle={(id) => setPostTags((prev) => prev.map((pt) => pt.tagId === id ? { ...pt, isVisible: !pt.isVisible } : pt))}
-          onDragEnd={handleKsceneDragEnd}
+          onDragEnd={handleKmediaDragEnd}
         />
 
         {/* ── 나머지 태그 ── */}

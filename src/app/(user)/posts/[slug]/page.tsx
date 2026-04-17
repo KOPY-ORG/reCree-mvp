@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { Sparkles, Waves, Flame, Lightbulb } from "lucide-react";
 import { LocationCard } from "./_components/LocationCard";
 import { prisma } from "@/lib/prisma";
-import { resolveTopicColors, resolveTagColors, type ResolvedLabel } from "@/lib/post-labels";
+import { resolveTopicColors, resolveTagColors, K_MEDIA_GROUP, type ResolvedLabel } from "@/lib/post-labels";
 import { MarkdownContent } from "./_components/MarkdownContent";
 import { PostDetailHeader } from "./_components/PostDetailHeader";
 import { BannerCarousel } from "./_components/BannerCarousel";
@@ -219,11 +219,10 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
   // 색상 resolve
   const configMap = new Map(tagGroupConfigs.map((c) => [c.group, c]));
 
-  const K_SCENE_GROUP = "K_MEDIA";
   const labels: ResolvedLabel[] = [
     ...post.postTopics.map(({ topic }) => ({ text: topic.nameEn, ...resolveTopicColors(topic) })),
-    ...post.postTags.filter(({ tag }) => tag.group === K_SCENE_GROUP).map(({ tag }) => ({ text: tag.name, ...resolveTagColors(tag, configMap.get(tag.group)) })),
-    ...post.postTags.filter(({ tag }) => tag.group !== K_SCENE_GROUP).map(({ tag }) => ({ text: tag.name, ...resolveTagColors(tag, configMap.get(tag.group)) })),
+    ...post.postTags.filter(({ tag }) => tag.group === K_MEDIA_GROUP).map(({ tag }) => ({ text: tag.name, ...resolveTagColors(tag, configMap.get(tag.group)) })),
+    ...post.postTags.filter(({ tag }) => tag.group !== K_MEDIA_GROUP).map(({ tag }) => ({ text: tag.name, ...resolveTagColors(tag, configMap.get(tag.group)) })),
   ];
 
   const currentUser = await getCurrentUser();

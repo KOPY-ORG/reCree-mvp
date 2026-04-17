@@ -1,6 +1,13 @@
 // 포스트 라벨 색상 헬퍼 — 홈·탐색 등 여러 페이지에서 공유
 import type React from "react";
 
+/** K-MEDIA 태그 그룹 PK — 변경 시 DB TagGroupConfig.group과 동기화 */
+export const K_MEDIA_GROUP = "K_MEDIA";
+
+/** 라벨 렌더링 그룹 우선순위: 토픽(0) → K-MEDIA(1) → 나머지(2) */
+export const labelGroupOrder = (group: string): number =>
+  group === "TOPIC" ? 0 : group === K_MEDIA_GROUP ? 1 : 2;
+
 export const DEFAULT_COLOR = "#e4e4e7";
 export const DEFAULT_TEXT = "#000000";
 

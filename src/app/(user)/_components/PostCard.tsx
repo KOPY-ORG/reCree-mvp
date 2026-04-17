@@ -5,14 +5,14 @@ import {
   resolveTopicColors,
   resolveTagColors,
   labelBackground,
+  K_MEDIA_GROUP,
+  labelGroupOrder,
   type TagGroupColorMap,
   type ResolvedLabel,
 } from "@/lib/post-labels";
 import { LabelBadge } from "@/components/LabelBadge";
 import type { PostItem } from "@/lib/post-queries";
 import { ScrapButton } from "./ScrapButton";
-
-const K_SCENE_GROUP = "K_MEDIA";
 
 // 슬롯 선택 후 displayLabel 적용 여부를 결정하기 위한 중간 타입
 type LabelSlot = {
@@ -36,8 +36,8 @@ function resolvePostLabels(
   }));
 
   // K_MEDIA 태그 슬롯
-  const ksceneSlots: LabelSlot[] = post.postTags
-    .filter(({ tag }) => tag.group === K_SCENE_GROUP)
+  const kmediaSlots: LabelSlot[] = post.postTags
+    .filter(({ tag }) => tag.group === K_MEDIA_GROUP)
     .map(({ tag }) => {
       const gc = tagGroupMap.get(tag.group);
       return { group: tag.group, name: tag.name, displayLabel: null, colors: resolveTagColors(tag, gc) };
@@ -45,7 +45,7 @@ function resolvePostLabels(
 
   // non-K_MEDIA 태그 슬롯
   const otherSlots: LabelSlot[] = post.postTags
-    .filter(({ tag }) => tag.group !== K_SCENE_GROUP)
+    .filter(({ tag }) => tag.group !== K_MEDIA_GROUP)
     .map(({ tag }) => {
       const gc = tagGroupMap.get(tag.group);
       return { group: tag.group, name: tag.name, displayLabel: gc?.displayLabel ?? null, colors: resolveTagColors(tag, gc) };
@@ -65,18 +65,18 @@ function resolvePostLabels(
   } else {
     // list: 토픽 1 + K_MEDIA 1 + non-K_MEDIA 1, 빈 슬롯은 남은 항목으로 보충 (최대 3개)
     selected = [];
-    let topicUsed = 0, ksceneUsed = 0, otherUsed = 0;
+    let topicUsed = 0, kmediaUsed = 0, otherUsed = 0;
 
     // 1단계: 각 풀에서 대표 1개씩
     if (topicUsed < topicSlots.length)  selected.push(topicSlots[topicUsed++]);
-    if (ksceneUsed < ksceneSlots.length) selected.push(ksceneSlots[ksceneUsed++]);
+    if (kmediaUsed < kmediaSlots.length) selected.push(kmediaSlots[kmediaUsed++]);
     if (otherUsed < otherSlots.length)  selected.push(otherSlots[otherUsed++]);
 
     // 2단계: 빈 슬롯 보충 — 남은 항목을 displayOrder 순(토픽→K_MEDIA→나머지)으로 채움
     if (selected.length < 3) {
       const remaining = [
         ...topicSlots.slice(topicUsed),
-        ...ksceneSlots.slice(ksceneUsed),
+        ...kmediaSlots.slice(kmediaUsed),
         ...otherSlots.slice(otherUsed),
       ];
       for (const slot of remaining) {
@@ -87,8 +87,7 @@ function resolvePostLabels(
   }
 
   // 렌더링 순서 보정: 토픽 → K-MEDIA → 나머지 태그
-  const ORDER = (g: string) => g === "TOPIC" ? 0 : g === K_SCENE_GROUP ? 1 : 2;
-  selected.sort((a, b) => ORDER(a.group) - ORDER(b.group));
+  selected.sort((a, b) => labelGroupOrder(a.group) - labelGroupOrder(b.group));
 
   // displayLabel 적용 조건:
   // 해당 슬롯 외에 다른 group의 슬롯이 함께 표시될 때만 displayLabel 사용.

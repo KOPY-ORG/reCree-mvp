@@ -6,15 +6,16 @@ import { getPostsWithLabels, getSavedPostIds, type PostItem } from "@/lib/post-q
 import {
   resolveTopicColors,
   resolveTagColors,
+  K_MEDIA_GROUP,
+  labelGroupOrder,
+  type ColorNode,
   type TagGroupColorMap,
   type ResolvedLabel,
 } from "@/lib/post-labels";
 
-const K_SCENE_GROUP = "K_MEDIA";
-
 /** 홈 배너용 라벨 2개 선택 — PostCard home variant와 동일한 규칙 */
 function resolveBannerLabels(
-  postTopics: { isVisible: boolean; displayOrder: number; topic: { nameEn: string; colorHex?: string | null; colorHex2?: string | null; gradientDir?: string; gradientStop?: number; textColorHex?: string | null; parent?: unknown } }[],
+  postTopics: { isVisible: boolean; displayOrder: number; topic: { nameEn: string; colorHex?: string | null; colorHex2?: string | null; gradientDir?: string; gradientStop?: number; textColorHex?: string | null; parent?: ColorNode | null } }[],
   postTags:   { isVisible: boolean; displayOrder: number; tag:   { name: string; group: string; colorHex?: string | null; colorHex2?: string | null; textColorHex?: string | null } }[],
   tagGroupMap: TagGroupColorMap,
 ): ResolvedLabel[] {
@@ -26,12 +27,11 @@ function resolveBannerLabels(
       group: "TOPIC",
       name: t.topic.nameEn,
       displayLabel: null,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      colors: resolveTopicColors(t.topic as any),
+      colors: resolveTopicColors(t.topic),
     }));
 
   const otherSlots: Slot[] = postTags
-    .filter((t) => t.isVisible && t.tag.group !== K_SCENE_GROUP)
+    .filter((t) => t.isVisible && t.tag.group !== K_MEDIA_GROUP)
     .map((t) => {
       const gc = tagGroupMap.get(t.tag.group);
       return { group: t.tag.group, name: t.tag.name, displayLabel: gc?.displayLabel ?? null, colors: resolveTagColors(t.tag, gc) };
@@ -46,8 +46,7 @@ function resolveBannerLabels(
   else if (topicUsed < topicSlots.length) selected.push(topicSlots[topicUsed++]);
 
   // 렌더링 순서 보정: 토픽 → K-MEDIA → 나머지 태그
-  const ORDER = (g: string) => g === "TOPIC" ? 0 : g === K_SCENE_GROUP ? 1 : 2;
-  selected.sort((a, b) => ORDER(a.group) - ORDER(b.group));
+  selected.sort((a, b) => labelGroupOrder(a.group) - labelGroupOrder(b.group));
 
   // displayLabel 조건: 다른 그룹이 함께 표시될 때만 사용
   return selected.map((slot) => {
