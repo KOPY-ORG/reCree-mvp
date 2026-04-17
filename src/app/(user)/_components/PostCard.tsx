@@ -12,7 +12,7 @@ import { LabelBadge } from "@/components/LabelBadge";
 import type { PostItem } from "@/lib/post-queries";
 import { ScrapButton } from "./ScrapButton";
 
-const K_SCENE_GROUP = "K_SCENE";
+const K_SCENE_GROUP = "K_MEDIA";
 
 // 슬롯 선택 후 displayLabel 적용 여부를 결정하기 위한 중간 타입
 type LabelSlot = {
@@ -35,7 +35,7 @@ function resolvePostLabels(
     colors: resolveTopicColors(topic),
   }));
 
-  // K_SCENE 태그 슬롯
+  // K_MEDIA 태그 슬롯
   const ksceneSlots: LabelSlot[] = post.postTags
     .filter(({ tag }) => tag.group === K_SCENE_GROUP)
     .map(({ tag }) => {
@@ -43,7 +43,7 @@ function resolvePostLabels(
       return { group: tag.group, name: tag.name, displayLabel: null, colors: resolveTagColors(tag, gc) };
     });
 
-  // non-K_SCENE 태그 슬롯
+  // non-K_MEDIA 태그 슬롯
   const otherSlots: LabelSlot[] = post.postTags
     .filter(({ tag }) => tag.group !== K_SCENE_GROUP)
     .map(({ tag }) => {
@@ -54,8 +54,8 @@ function resolvePostLabels(
   // 슬롯 선택
   let selected: LabelSlot[];
   if (variant === "home") {
-    // 슬롯 1: 토픽 우선, 없으면 non-K_SCENE 태그
-    // 슬롯 2: non-K_SCENE 태그 우선, 없으면 다음 토픽
+    // 슬롯 1: 토픽 우선, 없으면 non-K_MEDIA 태그
+    // 슬롯 2: non-K_MEDIA 태그 우선, 없으면 다음 토픽
     selected = [];
     let topicUsed = 0, otherUsed = 0;
     if (topicUsed < topicSlots.length) selected.push(topicSlots[topicUsed++]);
@@ -63,7 +63,7 @@ function resolvePostLabels(
     if (otherUsed < otherSlots.length) selected.push(otherSlots[otherUsed++]);
     else if (topicUsed < topicSlots.length) selected.push(topicSlots[topicUsed++]);
   } else {
-    // list: 토픽 1 + K_SCENE 1 + non-K_SCENE 1, 빈 슬롯은 남은 항목으로 보충 (최대 3개)
+    // list: 토픽 1 + K_MEDIA 1 + non-K_MEDIA 1, 빈 슬롯은 남은 항목으로 보충 (최대 3개)
     selected = [];
     let topicUsed = 0, ksceneUsed = 0, otherUsed = 0;
 
@@ -72,7 +72,7 @@ function resolvePostLabels(
     if (ksceneUsed < ksceneSlots.length) selected.push(ksceneSlots[ksceneUsed++]);
     if (otherUsed < otherSlots.length)  selected.push(otherSlots[otherUsed++]);
 
-    // 2단계: 빈 슬롯 보충 — 남은 항목을 displayOrder 순(토픽→K_SCENE→나머지)으로 채움
+    // 2단계: 빈 슬롯 보충 — 남은 항목을 displayOrder 순(토픽→K_MEDIA→나머지)으로 채움
     if (selected.length < 3) {
       const remaining = [
         ...topicSlots.slice(topicUsed),

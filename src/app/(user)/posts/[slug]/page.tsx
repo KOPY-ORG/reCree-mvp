@@ -219,7 +219,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
   // 색상 resolve
   const configMap = new Map(tagGroupConfigs.map((c) => [c.group, c]));
 
-  const K_SCENE_GROUP = "K_SCENE";
+  const K_SCENE_GROUP = "K_MEDIA";
   const labels: ResolvedLabel[] = [
     ...post.postTopics.map(({ topic }) => ({ text: topic.nameEn, ...resolveTopicColors(topic) })),
     ...post.postTags.filter(({ tag }) => tag.group === K_SCENE_GROUP).map(({ tag }) => ({ text: tag.name, ...resolveTagColors(tag, configMap.get(tag.group)) })),

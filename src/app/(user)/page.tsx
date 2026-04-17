@@ -10,7 +10,7 @@ import {
   type ResolvedLabel,
 } from "@/lib/post-labels";
 
-const K_SCENE_GROUP = "K_SCENE";
+const K_SCENE_GROUP = "K_MEDIA";
 
 /** 홈 배너용 라벨 2개 선택 — PostCard home variant와 동일한 규칙 */
 function resolveBannerLabels(
@@ -37,7 +37,7 @@ function resolveBannerLabels(
       return { group: t.tag.group, name: t.tag.name, displayLabel: gc?.displayLabel ?? null, colors: resolveTagColors(t.tag, gc) };
     });
 
-  // 슬롯 선택: 토픽 1 → non-K_SCENE 태그 1 (부족하면 상호 보완)
+  // 슬롯 선택: 토픽 1 → non-K_MEDIA 태그 1 (부족하면 상호 보완)
   const selected: Slot[] = [];
   let topicUsed = 0, otherUsed = 0;
   if (topicUsed < topicSlots.length) selected.push(topicSlots[topicUsed++]);

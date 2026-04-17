@@ -21,7 +21,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { TopicForForm, TagForForm, TagGroupItem } from "./PostForm";
 
-const K_SCENE_GROUP = "K_SCENE";
+const K_SCENE_GROUP = "K_MEDIA";
 
 type PostTopicState = { topicId: string; isVisible: boolean; displayOrder: number };
 type PostTagState = { tagId: string; isVisible: boolean; displayOrder: number };
