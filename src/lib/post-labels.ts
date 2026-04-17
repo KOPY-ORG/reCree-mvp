@@ -128,3 +128,67 @@ export function labelBackground(label: ResolvedLabel): string {
     ? `linear-gradient(${label.gradientDir}, ${label.colorHex}, ${label.colorHex2} ${label.gradientStop}%)`
     : label.colorHex;
 }
+
+// ── 라벨 슬롯 선택 공통 타입 ──────────────────────────────────────────────────
+
+export type LabelSlot = {
+  group: string;
+  name: string;
+  displayLabel: string | null;
+  colors: Omit<ResolvedLabel, "text">;
+};
+
+/** 슬롯 배열을 ResolvedLabel[]로 변환 (정렬 + displayLabel 결정 포함) */
+function finalizeSlots(selected: LabelSlot[]): ResolvedLabel[] {
+  selected.sort((a, b) => labelGroupOrder(a.group) - labelGroupOrder(b.group));
+  return selected.map((slot) => {
+    const hasOtherGroup = selected.some((s) => s.group !== slot.group);
+    const text = slot.displayLabel && hasOtherGroup ? slot.displayLabel : slot.name;
+    return { text, ...slot.colors };
+  });
+}
+
+/**
+ * home variant — 토픽 1 + non-K_MEDIA 태그 1 (최대 2개)
+ * 슬롯이 부족하면 상호 보완
+ */
+export function selectHomeLabels(
+  topicSlots: LabelSlot[],
+  otherSlots: LabelSlot[],
+): ResolvedLabel[] {
+  const selected: LabelSlot[] = [];
+  let topicUsed = 0, otherUsed = 0;
+  if (topicUsed < topicSlots.length) selected.push(topicSlots[topicUsed++]);
+  else if (otherUsed < otherSlots.length) selected.push(otherSlots[otherUsed++]);
+  if (otherUsed < otherSlots.length) selected.push(otherSlots[otherUsed++]);
+  else if (topicUsed < topicSlots.length) selected.push(topicSlots[topicUsed++]);
+  return finalizeSlots(selected);
+}
+
+/**
+ * list variant — 토픽 1 + K_MEDIA 1 + non-K_MEDIA 1, 최대 3개
+ * 빈 슬롯은 남은 항목으로 보충
+ */
+export function selectListLabels(
+  topicSlots: LabelSlot[],
+  kmediaSlots: LabelSlot[],
+  otherSlots: LabelSlot[],
+): ResolvedLabel[] {
+  const selected: LabelSlot[] = [];
+  let topicUsed = 0, kmediaUsed = 0, otherUsed = 0;
+  if (topicUsed < topicSlots.length)   selected.push(topicSlots[topicUsed++]);
+  if (kmediaUsed < kmediaSlots.length) selected.push(kmediaSlots[kmediaUsed++]);
+  if (otherUsed < otherSlots.length)   selected.push(otherSlots[otherUsed++]);
+  if (selected.length < 3) {
+    const remaining = [
+      ...topicSlots.slice(topicUsed),
+      ...kmediaSlots.slice(kmediaUsed),
+      ...otherSlots.slice(otherUsed),
+    ];
+    for (const slot of remaining) {
+      if (selected.length >= 3) break;
+      selected.push(slot);
+    }
+  }
+  return finalizeSlots(selected);
+}

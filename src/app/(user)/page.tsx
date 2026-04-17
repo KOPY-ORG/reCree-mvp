@@ -7,7 +7,8 @@ import {
   resolveTopicColors,
   resolveTagColors,
   K_MEDIA_GROUP,
-  labelGroupOrder,
+  selectHomeLabels,
+  type LabelSlot,
   type ColorNode,
   type TagGroupColorMap,
   type ResolvedLabel,
@@ -19,41 +20,18 @@ function resolveBannerLabels(
   postTags:   { isVisible: boolean; displayOrder: number; tag:   { name: string; group: string; colorHex?: string | null; colorHex2?: string | null; textColorHex?: string | null } }[],
   tagGroupMap: TagGroupColorMap,
 ): ResolvedLabel[] {
-  type Slot = { group: string; name: string; displayLabel: string | null; colors: Omit<ResolvedLabel, "text"> };
-
-  const topicSlots: Slot[] = postTopics
+  const topicSlots: LabelSlot[] = postTopics
     .filter((t) => t.isVisible)
-    .map((t) => ({
-      group: "TOPIC",
-      name: t.topic.nameEn,
-      displayLabel: null,
-      colors: resolveTopicColors(t.topic),
-    }));
+    .map((t) => ({ group: "TOPIC", name: t.topic.nameEn, displayLabel: null, colors: resolveTopicColors(t.topic) }));
 
-  const otherSlots: Slot[] = postTags
+  const otherSlots: LabelSlot[] = postTags
     .filter((t) => t.isVisible && t.tag.group !== K_MEDIA_GROUP)
     .map((t) => {
       const gc = tagGroupMap.get(t.tag.group);
       return { group: t.tag.group, name: t.tag.name, displayLabel: gc?.displayLabel ?? null, colors: resolveTagColors(t.tag, gc) };
     });
 
-  // 슬롯 선택: 토픽 1 → non-K_MEDIA 태그 1 (부족하면 상호 보완)
-  const selected: Slot[] = [];
-  let topicUsed = 0, otherUsed = 0;
-  if (topicUsed < topicSlots.length) selected.push(topicSlots[topicUsed++]);
-  else if (otherUsed < otherSlots.length) selected.push(otherSlots[otherUsed++]);
-  if (otherUsed < otherSlots.length) selected.push(otherSlots[otherUsed++]);
-  else if (topicUsed < topicSlots.length) selected.push(topicSlots[topicUsed++]);
-
-  // 렌더링 순서 보정: 토픽 → K-MEDIA → 나머지 태그
-  selected.sort((a, b) => labelGroupOrder(a.group) - labelGroupOrder(b.group));
-
-  // displayLabel 조건: 다른 그룹이 함께 표시될 때만 사용
-  return selected.map((slot) => {
-    const hasOtherGroup = selected.some((s) => s.group !== slot.group);
-    const text = slot.displayLabel && hasOtherGroup ? slot.displayLabel : slot.name;
-    return { text, ...slot.colors };
-  });
+  return selectHomeLabels(topicSlots, otherSlots);
 }
 import { PostCard } from "./_components/PostCard";
 import { SearchBar } from "./_components/SearchBar";

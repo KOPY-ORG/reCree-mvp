@@ -20,7 +20,15 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { TopicForForm, TagForForm, TagGroupItem } from "./PostForm";
-import { K_MEDIA_GROUP, labelGroupOrder } from "@/lib/post-labels";
+import {
+  K_MEDIA_GROUP,
+  labelBackground,
+  selectHomeLabels,
+  selectListLabels,
+  type LabelSlot,
+  type ResolvedLabel,
+  type EffectiveColorInfo,
+} from "@/lib/post-labels";
 
 
 type PostTopicState = { topicId: string; isVisible: boolean; displayOrder: number };
@@ -35,30 +43,14 @@ type SectionItem = {
   hint?: string;
 };
 
-type PreviewLabel = { text: string; background: string; color: string };
-type PreviewSlot = {
-  group: string;
-  name: string;
-  displayLabel: string | null;
-  background: string;
-  color: string;
-};
-
-function getTagColors(tag: TagForForm): { background: string; color: string } {
-  const background = tag.effectiveColorHex2
-    ? `linear-gradient(${tag.effectiveGradientDir}, ${tag.effectiveColorHex} 0%, ${tag.effectiveColorHex2} ${tag.effectiveGradientStop}%)`
-    : tag.effectiveColorHex;
-  return { background, color: tag.effectiveTextColorHex };
-}
-
 // ─── 미리보기 ─────────────────────────────────────────────────────────────────
 
 function PreviewSection({
   preview,
 }: {
-  preview: { home: PreviewLabel[]; list: PreviewLabel[]; detail: PreviewLabel[] };
+  preview: { home: ResolvedLabel[]; list: ResolvedLabel[]; detail: ResolvedLabel[] };
 }) {
-  const rows: { label: string; labels: PreviewLabel[] }[] = [
+  const rows: { label: string; labels: ResolvedLabel[] }[] = [
     { label: "홈", labels: preview.home },
     { label: "목록", labels: preview.list },
     { label: "상세", labels: preview.detail },
@@ -76,7 +68,7 @@ function PreviewSection({
                 <span className="text-[10px] text-muted-foreground/30 italic pt-[3px]">없음</span>
               ) : (
                 labels.map((l, i) => (
-                  <LabelBadge key={i} text={l.text} background={l.background} color={l.color} />
+                  <LabelBadge key={i} text={l.text} background={labelBackground(l)} color={l.textColorHex} />
                 ))
               )}
             </div>
@@ -229,6 +221,7 @@ interface Props {
   allTopics: TopicForForm[];
   allTags: TagForForm[];
   topicEffectiveStyleMap: Map<string, React.CSSProperties>;
+  topicEffectiveInfoMap: Map<string, EffectiveColorInfo>;
   tagGroups: TagGroupItem[];
 }
 
@@ -237,6 +230,7 @@ export function LabelVisibilityCard({
   postTags, setPostTags,
   allTopics, allTags,
   topicEffectiveStyleMap,
+  topicEffectiveInfoMap,
   tagGroups,
 }: Props) {
   const sensors = useSensors(useSensor(PointerSensor));
@@ -267,7 +261,8 @@ export function LabelVisibilityCard({
       .sort((a, b) => a.displayOrder - b.displayOrder)
       .map((pt) => {
         const t = tagMap.get(pt.tagId);
-        const { background, color } = t ? getTagColors(t) : { background: "", color: "#000" };
+        const background = t ? (t.effectiveColorHex2 ? `linear-gradient(${t.effectiveGradientDir}, ${t.effectiveColorHex}, ${t.effectiveColorHex2} ${t.effectiveGradientStop}%)` : t.effectiveColorHex) : "";
+        const color = t?.effectiveTextColorHex ?? "#000";
         return { id: pt.tagId, isVisible: pt.isVisible, label: t?.name ?? pt.tagId, background, color };
       }),
   [postTags, tagMap]);
@@ -278,7 +273,8 @@ export function LabelVisibilityCard({
       .sort((a, b) => a.displayOrder - b.displayOrder)
       .map((pt) => {
         const t = tagMap.get(pt.tagId);
-        const { background, color } = t ? getTagColors(t) : { background: "", color: "#000" };
+        const background = t ? (t.effectiveColorHex2 ? `linear-gradient(${t.effectiveGradientDir}, ${t.effectiveColorHex}, ${t.effectiveColorHex2} ${t.effectiveGradientStop}%)` : t.effectiveColorHex) : "";
+        const color = t?.effectiveTextColorHex ?? "#000";
         const hint = t ? (tagGroupMap.get(t.group)?.displayLabel ?? undefined) : undefined;
         return { id: pt.tagId, isVisible: pt.isVisible, label: t?.name ?? pt.tagId, background, color, hint };
       }),
@@ -287,80 +283,59 @@ export function LabelVisibilityCard({
   // ─── 미리보기 계산 ──────────────────────────────────────────────────────────
 
   const preview = useMemo(() => {
-    const visibleTopics = [...postTopics]
-      .filter((pt) => pt.isVisible)
-      .sort((a, b) => a.displayOrder - b.displayOrder);
-    const visibleKmedia = [...postTags]
-      .filter((pt) => pt.isVisible && tagMap.get(pt.tagId)?.group === K_MEDIA_GROUP)
-      .sort((a, b) => a.displayOrder - b.displayOrder);
-    const visibleOther = [...postTags]
-      .filter((pt) => pt.isVisible && tagMap.get(pt.tagId)?.group !== K_MEDIA_GROUP)
-      .sort((a, b) => a.displayOrder - b.displayOrder);
-
-    const topicSlots: PreviewSlot[] = visibleTopics.map((pt) => {
-      const s = topicEffectiveStyleMap.get(pt.topicId) ?? {};
+    const toTopicColors = (topicId: string): Omit<ResolvedLabel, "text"> => {
+      const info = topicEffectiveInfoMap.get(topicId);
       return {
-        group: "TOPIC",
-        name: topicMap.get(pt.topicId)?.nameEn ?? pt.topicId,
-        displayLabel: null,
-        background: String(s.background ?? ""),
-        color: String(s.color ?? "#000"),
+        colorHex: info?.hex ?? "#e4e4e7",
+        colorHex2: info?.hex2 ?? null,
+        gradientDir: info?.dir ?? "to bottom",
+        gradientStop: info?.stop ?? 150,
+        textColorHex: info?.textHex ?? "#000000",
       };
+    };
+    const toTagColors = (t: TagForForm): Omit<ResolvedLabel, "text"> => ({
+      colorHex: t.effectiveColorHex,
+      colorHex2: t.effectiveColorHex2 ?? null,
+      gradientDir: t.effectiveGradientDir,
+      gradientStop: t.effectiveGradientStop,
+      textColorHex: t.effectiveTextColorHex,
     });
 
-    const kmediaSlots: PreviewSlot[] = visibleKmedia.map((pt) => {
-      const t = tagMap.get(pt.tagId)!;
-      const { background, color } = t ? getTagColors(t) : { background: "", color: "#000" };
-      return { group: K_MEDIA_GROUP, name: t?.name ?? pt.tagId, displayLabel: null, background, color };
+    const visibleTopics = [...postTopics].filter((pt) => pt.isVisible).sort((a, b) => a.displayOrder - b.displayOrder);
+    const visibleKmedia = [...postTags].filter((pt) => pt.isVisible && tagMap.get(pt.tagId)?.group === K_MEDIA_GROUP).sort((a, b) => a.displayOrder - b.displayOrder);
+    const visibleOther = [...postTags].filter((pt) => pt.isVisible && tagMap.get(pt.tagId)?.group !== K_MEDIA_GROUP).sort((a, b) => a.displayOrder - b.displayOrder);
+
+    const topicSlots: LabelSlot[] = visibleTopics.map((pt) => ({
+      group: "TOPIC",
+      name: topicMap.get(pt.topicId)?.nameEn ?? pt.topicId,
+      displayLabel: null,
+      colors: toTopicColors(pt.topicId),
+    }));
+
+    const kmediaSlots: LabelSlot[] = visibleKmedia.map((pt) => {
+      const t = tagMap.get(pt.tagId);
+      return { group: K_MEDIA_GROUP, name: t?.name ?? pt.tagId, displayLabel: null, colors: t ? toTagColors(t) : { colorHex: "#e4e4e7", colorHex2: null, gradientDir: "to bottom", gradientStop: 150, textColorHex: "#000000" } };
     });
 
-    const otherSlots: PreviewSlot[] = visibleOther.map((pt) => {
-      const t = tagMap.get(pt.tagId)!;
-      const { background, color } = t ? getTagColors(t) : { background: "", color: "#000" };
+    const otherSlots: LabelSlot[] = visibleOther.map((pt) => {
+      const t = tagMap.get(pt.tagId);
       const displayLabel = t ? (tagGroupMap.get(t.group)?.displayLabel ?? null) : null;
-      return { group: t?.group ?? "OTHER", name: t?.name ?? pt.tagId, displayLabel, background, color };
+      return { group: t?.group ?? "OTHER", name: t?.name ?? pt.tagId, displayLabel, colors: t ? toTagColors(t) : { colorHex: "#e4e4e7", colorHex2: null, gradientDir: "to bottom", gradientStop: 150, textColorHex: "#000000" } };
     });
 
-    function applyText(selected: PreviewSlot[]): PreviewLabel[] {
-      selected.sort((a, b) => labelGroupOrder(a.group) - labelGroupOrder(b.group));
-      return selected.map((slot) => {
-        const hasOtherGroup = selected.some((s) => s.group !== slot.group);
-        const text = slot.displayLabel && hasOtherGroup ? slot.displayLabel : slot.name;
-        return { text, background: slot.background, color: slot.color };
-      });
-    }
-
-    // 홈
-    const homeSelected: PreviewSlot[] = [];
-    let hT = 0, hO = 0;
-    if (hT < topicSlots.length) homeSelected.push(topicSlots[hT++]);
-    else if (hO < otherSlots.length) homeSelected.push(otherSlots[hO++]);
-    if (hO < otherSlots.length) homeSelected.push(otherSlots[hO++]);
-    else if (hT < topicSlots.length) homeSelected.push(topicSlots[hT++]);
-
-    // 목록
-    const listSelected: PreviewSlot[] = [];
-    let lT = 0, lK = 0, lO = 0;
-    if (lT < topicSlots.length) listSelected.push(topicSlots[lT++]);
-    if (lK < kmediaSlots.length) listSelected.push(kmediaSlots[lK++]);
-    if (lO < otherSlots.length) listSelected.push(otherSlots[lO++]);
-    if (listSelected.length < 3) {
-      const remaining = [...topicSlots.slice(lT), ...kmediaSlots.slice(lK), ...otherSlots.slice(lO)];
-      for (const slot of remaining) {
-        if (listSelected.length >= 3) break;
-        listSelected.push(slot);
-      }
-    }
-
-    // 상세
-    const detailLabels: PreviewLabel[] = [
-      ...topicSlots.map((s) => ({ text: s.name, background: s.background, color: s.color })),
-      ...kmediaSlots.map((s) => ({ text: s.name, background: s.background, color: s.color })),
-      ...otherSlots.map((s) => ({ text: s.name, background: s.background, color: s.color })),
+    // 상세: 모든 visible 라벨 전부 (TOPIC → K_MEDIA → OTHER 순)
+    const detail: ResolvedLabel[] = [
+      ...topicSlots.map((s) => ({ text: s.name, ...s.colors })),
+      ...kmediaSlots.map((s) => ({ text: s.name, ...s.colors })),
+      ...otherSlots.map((s) => ({ text: s.name, ...s.colors })),
     ];
 
-    return { home: applyText(homeSelected), list: applyText(listSelected), detail: detailLabels };
-  }, [postTopics, postTags, topicMap, tagMap, topicEffectiveStyleMap, tagGroupMap]);
+    return {
+      home: selectHomeLabels(topicSlots, otherSlots),
+      list: selectListLabels(topicSlots, kmediaSlots, otherSlots),
+      detail,
+    };
+  }, [postTopics, postTags, topicMap, tagMap, topicEffectiveInfoMap, tagGroupMap]);
 
   // ─── 드래그 핸들러 ──────────────────────────────────────────────────────────
 

@@ -1086,6 +1086,7 @@ export function PostForm({
                 allTopics={localAllTopics}
                 allTags={localAllTags}
                 topicEffectiveStyleMap={topicEffectiveStyleMap}
+                topicEffectiveInfoMap={topicEffectiveInfoMap}
                 tagGroups={tagGroups}
               />
 
