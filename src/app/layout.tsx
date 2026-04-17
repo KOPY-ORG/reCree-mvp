@@ -18,8 +18,11 @@ const notoSansKR = Noto_Sans_KR({
   weight: ["400", "500", "600", "700"],
 });
 
+const isProduction = process.env.VERCEL_ENV === "production";
+
 export const metadata: Metadata = {
   metadataBase: new URL("https://recree.io"),
+  robots: isProduction ? undefined : { index: false, follow: false },
   title: {
     default: "reCree",
     template: "%s | reCree",
