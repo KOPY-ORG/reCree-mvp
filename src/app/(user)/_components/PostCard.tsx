@@ -86,6 +86,10 @@ function resolvePostLabels(
     }
   }
 
+  // 렌더링 순서 보정: 토픽 → K-MEDIA → 나머지 태그
+  const ORDER = (g: string) => g === "TOPIC" ? 0 : g === K_SCENE_GROUP ? 1 : 2;
+  selected.sort((a, b) => ORDER(a.group) - ORDER(b.group));
+
   // displayLabel 적용 조건:
   // 해당 슬롯 외에 다른 group의 슬롯이 함께 표시될 때만 displayLabel 사용.
   // 단독이거나 같은 group끼리만 표시되면 tag.name 그대로 사용.

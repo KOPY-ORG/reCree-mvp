@@ -45,6 +45,10 @@ function resolveBannerLabels(
   if (otherUsed < otherSlots.length) selected.push(otherSlots[otherUsed++]);
   else if (topicUsed < topicSlots.length) selected.push(topicSlots[topicUsed++]);
 
+  // 렌더링 순서 보정: 토픽 → K-MEDIA → 나머지 태그
+  const ORDER = (g: string) => g === "TOPIC" ? 0 : g === K_SCENE_GROUP ? 1 : 2;
+  selected.sort((a, b) => ORDER(a.group) - ORDER(b.group));
+
   // displayLabel 조건: 다른 그룹이 함께 표시될 때만 사용
   return selected.map((slot) => {
     const hasOtherGroup = selected.some((s) => s.group !== slot.group);

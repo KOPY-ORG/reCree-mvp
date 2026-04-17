@@ -321,7 +321,10 @@ export function LabelVisibilityCard({
       return { group: t?.group ?? "OTHER", name: t?.name ?? pt.tagId, displayLabel, background, color };
     });
 
+    const ORDER = (g: string) => g === "TOPIC" ? 0 : g === K_SCENE_GROUP ? 1 : 2;
+
     function applyText(selected: PreviewSlot[]): PreviewLabel[] {
+      selected.sort((a, b) => ORDER(a.group) - ORDER(b.group));
       return selected.map((slot) => {
         const hasOtherGroup = selected.some((s) => s.group !== slot.group);
         const text = slot.displayLabel && hasOtherGroup ? slot.displayLabel : slot.name;
