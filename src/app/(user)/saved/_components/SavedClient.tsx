@@ -12,6 +12,7 @@ import type { PostItem } from "@/lib/post-queries";
 
 type TagGroupConfig = {
   group: string;
+  displayLabel: string | null;
   colorHex: string;
   colorHex2: string | null;
   gradientDir: string;

@@ -79,6 +79,7 @@ export function resolveTopicColors(node: ColorNode): {
 export type TagGroupColorMap = Map<
   string,
   {
+    displayLabel: string | null;
     colorHex: string;
     colorHex2: string | null;
     gradientDir: string;

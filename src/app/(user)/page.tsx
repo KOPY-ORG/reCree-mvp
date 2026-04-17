@@ -7,7 +7,51 @@ import {
   resolveTopicColors,
   resolveTagColors,
   type TagGroupColorMap,
+  type ResolvedLabel,
 } from "@/lib/post-labels";
+
+const K_SCENE_GROUP = "K_SCENE";
+
+/** 홈 배너용 라벨 2개 선택 — PostCard home variant와 동일한 규칙 */
+function resolveBannerLabels(
+  postTopics: { isVisible: boolean; displayOrder: number; topic: { nameEn: string; colorHex?: string | null; colorHex2?: string | null; gradientDir?: string; gradientStop?: number; textColorHex?: string | null; parent?: unknown } }[],
+  postTags:   { isVisible: boolean; displayOrder: number; tag:   { name: string; group: string; colorHex?: string | null; colorHex2?: string | null; textColorHex?: string | null } }[],
+  tagGroupMap: TagGroupColorMap,
+): ResolvedLabel[] {
+  type Slot = { group: string; name: string; displayLabel: string | null; colors: Omit<ResolvedLabel, "text"> };
+
+  const topicSlots: Slot[] = postTopics
+    .filter((t) => t.isVisible)
+    .map((t) => ({
+      group: "TOPIC",
+      name: t.topic.nameEn,
+      displayLabel: null,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      colors: resolveTopicColors(t.topic as any),
+    }));
+
+  const otherSlots: Slot[] = postTags
+    .filter((t) => t.isVisible && t.tag.group !== K_SCENE_GROUP)
+    .map((t) => {
+      const gc = tagGroupMap.get(t.tag.group);
+      return { group: t.tag.group, name: t.tag.name, displayLabel: gc?.displayLabel ?? null, colors: resolveTagColors(t.tag, gc) };
+    });
+
+  // 슬롯 선택: 토픽 1 → non-K_SCENE 태그 1 (부족하면 상호 보완)
+  const selected: Slot[] = [];
+  let topicUsed = 0, otherUsed = 0;
+  if (topicUsed < topicSlots.length) selected.push(topicSlots[topicUsed++]);
+  else if (otherUsed < otherSlots.length) selected.push(otherSlots[otherUsed++]);
+  if (otherUsed < otherSlots.length) selected.push(otherSlots[otherUsed++]);
+  else if (topicUsed < topicSlots.length) selected.push(topicSlots[topicUsed++]);
+
+  // displayLabel 조건: 다른 그룹이 함께 표시될 때만 사용
+  return selected.map((slot) => {
+    const hasOtherGroup = selected.some((s) => s.group !== slot.group);
+    const text = slot.displayLabel && hasOtherGroup ? slot.displayLabel : slot.name;
+    return { text, ...slot.colors };
+  });
+}
 import { PostCard } from "./_components/PostCard";
 import { SearchBar } from "./_components/SearchBar";
 import { GuideVideoCard } from "./_components/GuideVideoCard";
@@ -122,7 +166,7 @@ export default async function HomePage() {
       orderBy: { order: "asc" },
     }),
     prisma.tagGroupConfig.findMany({
-      select: { group: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true },
+      select: { group: true, displayLabel: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true },
     }),
     getSavedPostIds(currentUser?.id ?? null),
   ]);
@@ -227,16 +271,7 @@ export default async function HomePage() {
 
   // 배너 props 변환
   const bannerItems: BannerItem[] = homeBanners.map((b) => {
-    const topicLabel = b.post.postTopics
-      .filter((t) => t.isVisible)
-      .slice(0, 1)
-      .map((t) => ({ text: t.topic.nameEn, ...resolveTopicColors(t.topic) }));
-
-    const tagLabel = b.post.postTags
-      .filter((t) => t.isVisible)
-      .slice(0, 1)
-      .map((t) => ({ text: t.tag.name, ...resolveTagColors(t.tag, tagGroupMap.get(t.tag.group)) }));
-
+    const labels = resolveBannerLabels(b.post.postTopics, b.post.postTags, tagGroupMap);
     return {
       slug: b.post.slug,
       titleEn: b.post.titleEn,
@@ -248,7 +283,7 @@ export default async function HomePage() {
       focalX: b.post.postImages[0]?.focalX ?? null,
       focalY: b.post.postImages[0]?.focalY ?? null,
       zoom: b.post.postImages[0]?.zoom ?? null,
-      labels: [...topicLabel, ...tagLabel],
+      labels,
     };
   });
 

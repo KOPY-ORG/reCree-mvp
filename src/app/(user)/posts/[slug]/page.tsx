@@ -96,7 +96,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
     include: {
       postTopics: {
         where: { isVisible: true },
-        orderBy: { displayOrder: "asc" },
+        orderBy: [{ topic: { level: "asc" } }, { displayOrder: "asc" }],
         include: {
           topic: {
             select: {
@@ -180,7 +180,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
     },
   }),
     prisma.tagGroupConfig.findMany({
-      select: { group: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true },
+      select: { group: true, displayLabel: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true },
     }),
   ]);
 
@@ -219,9 +219,11 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
   // 색상 resolve
   const configMap = new Map(tagGroupConfigs.map((c) => [c.group, c]));
 
+  const K_SCENE_GROUP = "K_SCENE";
   const labels: ResolvedLabel[] = [
     ...post.postTopics.map(({ topic }) => ({ text: topic.nameEn, ...resolveTopicColors(topic) })),
-    ...post.postTags.map(({ tag }) => ({ text: tag.name, ...resolveTagColors(tag, configMap.get(tag.group)) })),
+    ...post.postTags.filter(({ tag }) => tag.group === K_SCENE_GROUP).map(({ tag }) => ({ text: tag.name, ...resolveTagColors(tag, configMap.get(tag.group)) })),
+    ...post.postTags.filter(({ tag }) => tag.group !== K_SCENE_GROUP).map(({ tag }) => ({ text: tag.name, ...resolveTagColors(tag, configMap.get(tag.group)) })),
   ];
 
   const currentUser = await getCurrentUser();

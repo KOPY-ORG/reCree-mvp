@@ -44,7 +44,7 @@ export default async function SavedPage() {
       })
       .then((rows) => rows.map((r) => r.targetId)),
     prisma.tagGroupConfig.findMany({
-      select: { group: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true },
+      select: { group: true, displayLabel: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true },
     }),
   ]);
 
