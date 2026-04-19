@@ -25,6 +25,7 @@ type SheetState = "collapsed" | "tab-only" | "peek" | "expanded";
 type TagGroupConfig = {
   group: string;
   nameEn: string;
+  displayLabel: string | null;
   colorHex: string; colorHex2: string | null;
   gradientDir: string; gradientStop: number; textColorHex: string;
 };

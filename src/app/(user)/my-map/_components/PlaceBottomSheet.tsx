@@ -13,6 +13,9 @@ import {
   labelBackground,
   resolveTagColors,
   resolveTopicColors,
+  K_MEDIA_GROUP,
+  selectHomeLabels,
+  type LabelSlot,
   type TagGroupColorMap,
 } from "@/lib/post-labels";
 import type { MapPlace, MapPost } from "@/lib/map-queries";
@@ -38,15 +41,19 @@ function PostCard({
   isSaved: boolean;
   tagGroupMap: TagGroupColorMap;
 }) {
-  const topicLabels = post.topics.slice(0, 1).map((topic) => {
-    const colors = resolveTopicColors(topic);
-    return { text: topic.nameEn, ...colors };
-  });
-  const tagLabels = post.tags.slice(0, 1).map((tag) => {
-    const colors = resolveTagColors(tag, tagGroupMap.get(tag.group));
-    return { text: tag.name, ...colors };
-  });
-  const labels = [...topicLabels, ...tagLabels];
+  const topicSlots: LabelSlot[] = post.topics.map((topic) => ({
+    group: "TOPIC",
+    name: topic.nameEn,
+    displayLabel: null,
+    colors: resolveTopicColors(topic),
+  }));
+  const otherSlots: LabelSlot[] = post.tags
+    .filter((tag) => tag.group !== K_MEDIA_GROUP)
+    .map((tag) => {
+      const gc = tagGroupMap.get(tag.group);
+      return { group: tag.group, name: tag.name, displayLabel: gc?.displayLabel ?? null, colors: resolveTagColors(tag, gc) };
+    });
+  const labels = selectHomeLabels(topicSlots, otherSlots);
 
   const cardImageUrl = post.imageUrl ?? post.images[0] ?? null;
 

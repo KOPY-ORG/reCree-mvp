@@ -90,6 +90,7 @@ export type TopicForForm = {
 export type TagGroupItem = {
   group: string;
   nameEn: string;
+  displayLabel?: string | null;
   colorHex?: string;
   colorHex2?: string | null;
   gradientDir?: string;
@@ -654,7 +655,7 @@ export function PostForm({
       {/* ── 본문 ─────────────────────────────────────────────────────────── */}
       <div className="flex-1 px-6 py-6">
         <div className="mx-auto max-w-[1400px]">
-          <div className="grid grid-cols-[1fr_320px] gap-6 items-start">
+          <div className="grid grid-cols-[1fr_380px] gap-6 items-start">
 
             {/* ── 왼쪽: 제목 카드 + 탭 카드 ───────────────────────────── */}
             <div className="min-w-0 space-y-3">
@@ -1085,6 +1086,8 @@ export function PostForm({
                 allTopics={localAllTopics}
                 allTags={localAllTags}
                 topicEffectiveStyleMap={topicEffectiveStyleMap}
+                topicEffectiveInfoMap={topicEffectiveInfoMap}
+                tagGroups={tagGroups}
               />
 
               {/* 수집 정보 */}

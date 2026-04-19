@@ -234,6 +234,7 @@ export type TagFormData = {
 
 export type TagGroupConfigFormData = {
   nameEn: string;
+  displayLabel: string | null;
   colorHex: string;
   colorHex2: string | null;
   gradientDir: string;
@@ -378,6 +379,7 @@ export async function checkTagSlug(
 export type TagGroupConfigData = {
   group: string;
   nameEn: string;
+  displayLabel: string | null;
   colorHex: string;
   colorHex2: string | null;
   gradientDir: string;
@@ -394,9 +396,9 @@ export async function upsertTagGroupConfig(
   try {
     const updated = await prisma.tagGroupConfig.upsert({
       where: { group },
-      update: { nameEn: data.nameEn, colorHex: data.colorHex, colorHex2: data.colorHex2, gradientDir: data.gradientDir, gradientStop: data.gradientStop, textColorHex: data.textColorHex },
-      create: { group, nameEn: data.nameEn, colorHex: data.colorHex, colorHex2: data.colorHex2, gradientDir: data.gradientDir, gradientStop: data.gradientStop, textColorHex: data.textColorHex },
-      select: { group: true, nameEn: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true, isVisible: true, sortOrder: true },
+      update: { nameEn: data.nameEn, displayLabel: data.displayLabel, colorHex: data.colorHex, colorHex2: data.colorHex2, gradientDir: data.gradientDir, gradientStop: data.gradientStop, textColorHex: data.textColorHex },
+      create: { group, nameEn: data.nameEn, displayLabel: data.displayLabel, colorHex: data.colorHex, colorHex2: data.colorHex2, gradientDir: data.gradientDir, gradientStop: data.gradientStop, textColorHex: data.textColorHex },
+      select: { group: true, nameEn: true, displayLabel: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true, isVisible: true, sortOrder: true },
     });
     revalidatePath("/admin/categories");
   revalidatePath("/category");
@@ -421,6 +423,7 @@ export async function reorderTagGroups(orderedGroups: string[]): Promise<void> {
 export type TagGroupConfigCreated = {
   group: string;
   nameEn: string;
+  displayLabel: string | null;
   colorHex: string;
   colorHex2: string | null;
   gradientDir: string;
@@ -441,8 +444,8 @@ export async function createTagGroup(
     const last = await prisma.tagGroupConfig.findFirst({ orderBy: { sortOrder: "desc" }, select: { sortOrder: true } });
     const sortOrder = (last?.sortOrder ?? -1) + 1;
     const created = await prisma.tagGroupConfig.create({
-      data: { group, nameEn: data.nameEn.trim(), colorHex: data.colorHex, colorHex2: data.colorHex2, gradientDir: data.gradientDir, gradientStop: data.gradientStop, textColorHex: data.textColorHex, sortOrder },
-      select: { group: true, nameEn: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true, isVisible: true, sortOrder: true },
+      data: { group, nameEn: data.nameEn.trim(), displayLabel: data.displayLabel, colorHex: data.colorHex, colorHex2: data.colorHex2, gradientDir: data.gradientDir, gradientStop: data.gradientStop, textColorHex: data.textColorHex, sortOrder },
+      select: { group: true, nameEn: true, displayLabel: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true, isVisible: true, sortOrder: true },
     });
     revalidatePath("/admin/categories");
   revalidatePath("/category");

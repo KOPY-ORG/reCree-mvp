@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { Sparkles, Waves, Flame, Lightbulb } from "lucide-react";
 import { LocationCard } from "./_components/LocationCard";
 import { prisma } from "@/lib/prisma";
-import { resolveTopicColors, resolveTagColors, type ResolvedLabel } from "@/lib/post-labels";
+import { resolveTopicColors, resolveTagColors, K_MEDIA_GROUP, type ResolvedLabel } from "@/lib/post-labels";
 import { MarkdownContent } from "./_components/MarkdownContent";
 import { PostDetailHeader } from "./_components/PostDetailHeader";
 import { BannerCarousel } from "./_components/BannerCarousel";
@@ -96,7 +96,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
     include: {
       postTopics: {
         where: { isVisible: true },
-        orderBy: { displayOrder: "asc" },
+        orderBy: [{ topic: { level: "asc" } }, { displayOrder: "asc" }],
         include: {
           topic: {
             select: {
@@ -180,7 +180,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
     },
   }),
     prisma.tagGroupConfig.findMany({
-      select: { group: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true },
+      select: { group: true, displayLabel: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true },
     }),
   ]);
 
@@ -221,7 +221,8 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
 
   const labels: ResolvedLabel[] = [
     ...post.postTopics.map(({ topic }) => ({ text: topic.nameEn, ...resolveTopicColors(topic) })),
-    ...post.postTags.map(({ tag }) => ({ text: tag.name, ...resolveTagColors(tag, configMap.get(tag.group)) })),
+    ...post.postTags.filter(({ tag }) => tag.group === K_MEDIA_GROUP).map(({ tag }) => ({ text: tag.name, ...resolveTagColors(tag, configMap.get(tag.group)) })),
+    ...post.postTags.filter(({ tag }) => tag.group !== K_MEDIA_GROUP).map(({ tag }) => ({ text: tag.name, ...resolveTagColors(tag, configMap.get(tag.group)) })),
   ];
 
   const currentUser = await getCurrentUser();

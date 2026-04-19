@@ -41,7 +41,8 @@ export interface TagItem {
 
 export interface TagGroupConfigItem {
   group: string;
-  nameEn: string;       // 라벨에 표시될 영어 이름 (빈 문자열 = group key 폴백)
+  nameEn: string;             // 라벨에 표시될 영어 이름 (빈 문자열 = group key 폴백)
+  displayLabel: string | null; // 포스트 라벨 표시용 짧은 이름 (null = 미사용)
   colorHex: string;
   colorHex2: string | null;
   gradientDir: string;
@@ -137,7 +138,7 @@ function SortableTagItem({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.4 : 1,
+    opacity: isDragging ? 0.4 : item.isActive ? 1 : 0.45,
     display: (hideInactive && !item.isActive) ? "none" : undefined,
   };
 

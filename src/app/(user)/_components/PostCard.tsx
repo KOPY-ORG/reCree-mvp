@@ -5,6 +5,10 @@ import {
   resolveTopicColors,
   resolveTagColors,
   labelBackground,
+  K_MEDIA_GROUP,
+  selectHomeLabels,
+  selectListLabels,
+  type LabelSlot,
   type TagGroupColorMap,
   type ResolvedLabel,
 } from "@/lib/post-labels";
@@ -17,13 +21,30 @@ function resolvePostLabels(
   tagGroupMap: TagGroupColorMap,
   variant: "home" | "list",
 ): ResolvedLabel[] {
-  const topics = post.postTopics
-    .map(({ topic }) => ({ text: topic.nameEn, ...resolveTopicColors(topic) }));
-  const tags = post.postTags
-    .map(({ tag }) => ({ text: tag.name, ...resolveTagColors(tag, tagGroupMap.get(tag.group)) }));
+  const topicSlots: LabelSlot[] = post.postTopics.map(({ topic }) => ({
+    group: "TOPIC",
+    name: topic.nameEn,
+    displayLabel: null,
+    colors: resolveTopicColors(topic),
+  }));
 
-  if (variant === "home") return [...topics.slice(0, 1), ...tags.slice(0, 1)];
-  return [...topics.slice(0, 1), ...tags.slice(0, 2)];
+  const kmediaSlots: LabelSlot[] = post.postTags
+    .filter(({ tag }) => tag.group === K_MEDIA_GROUP)
+    .map(({ tag }) => {
+      const gc = tagGroupMap.get(tag.group);
+      return { group: tag.group, name: tag.name, displayLabel: null, colors: resolveTagColors(tag, gc) };
+    });
+
+  const otherSlots: LabelSlot[] = post.postTags
+    .filter(({ tag }) => tag.group !== K_MEDIA_GROUP)
+    .map(({ tag }) => {
+      const gc = tagGroupMap.get(tag.group);
+      return { group: tag.group, name: tag.name, displayLabel: gc?.displayLabel ?? null, colors: resolveTagColors(tag, gc) };
+    });
+
+  return variant === "home"
+    ? selectHomeLabels(topicSlots, otherSlots)
+    : selectListLabels(topicSlots, kmediaSlots, otherSlots);
 }
 
 export function PostBadges({

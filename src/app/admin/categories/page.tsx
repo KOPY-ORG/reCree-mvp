@@ -106,7 +106,7 @@ export default async function CategoriesPage({
       },
     }),
     prisma.tagGroupConfig.findMany({
-      select: { group: true, nameEn: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true, isVisible: true, sortOrder: true },
+      select: { group: true, nameEn: true, displayLabel: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true, isVisible: true, sortOrder: true },
       orderBy: { sortOrder: "asc" },
     }),
   ]);
@@ -122,6 +122,7 @@ export default async function CategoriesPage({
   const groupConfigs: TagGroupConfigItem[] = rawGroupConfigs.map((c) => ({
     group: c.group,
     nameEn: c.nameEn,
+    displayLabel: c.displayLabel,
     colorHex: c.colorHex,
     colorHex2: c.colorHex2,
     gradientDir: c.gradientDir,
