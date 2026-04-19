@@ -69,3 +69,31 @@ export async function resolveGoogleMapsUrl(url: string): Promise<ResolvedGoogleM
     return null;
   }
 }
+
+// place_id가 있는 장소 URL 생성
+export function buildMapsUrlByPlaceId(displayName: string, placeId: string): string {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(displayName)}&query_place_id=${placeId}`;
+}
+
+// 좌표 기반 Maps URL 생성
+export function buildMapsUrlByCoords(lat: number, lng: number): string {
+  return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+}
+
+// Street View URL 생성
+export function buildStreetViewUrl(lat: number, lng: number): string {
+  return `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}`;
+}
+
+// 순수 Street View URL → 공식 Maps URL API 포맷으로 변환
+// /place/ 경로가 있는 포토뷰어 URL은 앱에서 정상 작동하므로 변환하지 않음
+export async function toOfficialStreetViewUrl(url: string): Promise<string> {
+  if (!url) return url;
+  if (url.includes("map_action=pano")) return url; // 이미 공식 포맷
+  if (url.includes("/place/")) return url;          // 포토뷰어 URL - 그대로 유지
+  const resolved = await resolveGoogleMapsUrl(url);
+  if (resolved?.type === "streetview" && resolved.lat && resolved.lng) {
+    return buildStreetViewUrl(resolved.lat, resolved.lng);
+  }
+  return url; // 파싱 실패 시 원본 유지
+}
