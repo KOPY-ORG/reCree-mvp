@@ -113,7 +113,7 @@ export function TagGroupConfigDialog({ open, mode, groupConfig, onClose, onCreat
           <DialogTitle>
             {mode === "create"
               ? "새 Tag 그룹 추가"
-              : `${groupConfig!.group} 그룹 설정`}
+              : `${groupConfig!.nameEn || groupConfig!.group} 그룹 설정`}
           </DialogTitle>
         </DialogHeader>
 
