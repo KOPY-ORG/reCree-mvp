@@ -103,7 +103,7 @@ export function TagGroupConfigDialog({ open, mode, groupConfig, onClose, onCreat
 
   if (mode === "edit" && !groupConfig) return null;
 
-  const previewName = nameEn.trim() || (mode === "edit" && groupConfig ? groupConfig.group : "NEW GROUP");
+  const previewName = displayLabel.trim();
   const derivedKey = nameEn.trim().toUpperCase().replace(/\W+/g, "_");
 
   return (
@@ -168,17 +168,19 @@ export function TagGroupConfigDialog({ open, mode, groupConfig, onClose, onCreat
           />
 
           {/* 미리보기 */}
-          <div className="flex items-center gap-2 pt-0.5">
-            <ColorLabel
-              name={previewName}
-              colorHex={colorHex}
-              colorHex2={isGradient ? colorHex2 : null}
-              gradientDir={gradientDir}
-              gradientStop={gradientStop}
-              textColorHex={textColorHex}
-            />
-            <span className="text-xs text-muted-foreground">미리보기</span>
-          </div>
+          {previewName && (
+            <div className="flex items-center gap-2 pt-0.5">
+              <ColorLabel
+                name={previewName}
+                colorHex={colorHex}
+                colorHex2={isGradient ? colorHex2 : null}
+                gradientDir={gradientDir}
+                gradientStop={gradientStop}
+                textColorHex={textColorHex}
+              />
+              <span className="text-xs text-muted-foreground">미리보기</span>
+            </div>
+          )}
         </div>
 
         <DialogFooter>
