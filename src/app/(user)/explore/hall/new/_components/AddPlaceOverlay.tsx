@@ -10,6 +10,7 @@ import {
   useMap,
 } from "@vis.gl/react-google-maps";
 import { createPlaceFromGoogleMaps } from "@/app/(user)/_actions/recreeshot-actions";
+import { buildMapsUrlByPlaceId } from "@/lib/google-maps-url";
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 const MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID ?? "DEMO_MAP_ID";
@@ -164,7 +165,7 @@ function AddPlaceContent({ onSelect, onClose }: Props) {
         lat: selected.lat,
         lng: selected.lng,
         googlePlaceId: selected.placeId,
-        googleMapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selected.name)}&query_place_id=${selected.placeId}`,
+        googleMapsUrl: buildMapsUrlByPlaceId(selected.name, selected.placeId),
       });
 
       if ("error" in result) { alert(result.error); return; }

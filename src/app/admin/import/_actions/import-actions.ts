@@ -3,7 +3,7 @@
 import Papa from "papaparse";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { expandGoogleMapsShortUrl, resolveGoogleMapsUrl, buildStreetViewUrl } from "@/lib/google-maps-url";
+import { expandGoogleMapsShortUrl, resolveGoogleMapsUrl, buildStreetViewUrl, buildMapsUrlByCoords } from "@/lib/google-maps-url";
 import { detectPlatform } from "@/lib/platform";
 import type { SourceType } from "@prisma/client";
 
@@ -470,7 +470,7 @@ export async function importSheetRows(rowIds: string[]): Promise<{
 
       // google_maps_link가 없고 좌표가 있는 경우 → 좌표 링크 자동 생성
       const generatedMapsUrl = !googleMapsLink && finalCoords
-        ? `https://www.google.com/maps/search/?api=1&query=${finalCoords.lat},${finalCoords.lng}`
+        ? buildMapsUrlByCoords(finalCoords.lat, finalCoords.lng)
         : null;
 
       // 실제 저장할 googleMapsUrl:

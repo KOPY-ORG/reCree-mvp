@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { Prisma } from "@prisma/client";
 import type { PlaceStatus } from "@prisma/client";
-import { resolveGoogleMapsUrl, toOfficialStreetViewUrl } from "@/lib/google-maps-url";
+import { resolveGoogleMapsUrl, toOfficialStreetViewUrl, buildMapsUrlByCoords } from "@/lib/google-maps-url";
 import { makeStorageExtractor, deleteStorageFiles } from "@/lib/storage";
 
 const extractStoragePath = makeStorageExtractor("place-images");
@@ -153,7 +153,7 @@ export async function resolveCoordinateLink(url: string): Promise<{
       return {
         lat: resolved.lat,
         lng: resolved.lng,
-        googleMapsUrl: `https://www.google.com/maps/search/?api=1&query=${resolved.lat},${resolved.lng}`,
+        googleMapsUrl: buildMapsUrlByCoords(resolved.lat, resolved.lng),
       };
     }
     if (resolved?.type === "streetview") {

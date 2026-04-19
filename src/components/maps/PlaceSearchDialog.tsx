@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { resolveCoordinateLink } from "@/app/admin/places/actions";
+import { buildMapsUrlByPlaceId } from "@/lib/google-maps-url";
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 const MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID ?? "DEMO_MAP_ID";
@@ -236,7 +237,7 @@ function PlaceSearchContent({
         addressEn,
         phone: selected.nationalPhoneNumber ?? "",
         operatingHours,
-        googleMapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selected.displayName ?? "")}&query_place_id=${placeId}`,
+        googleMapsUrl: buildMapsUrlByPlaceId(selected.displayName ?? "", placeId),
         lat: selectedLat!,
         lng: selectedLng!,
         googlePlaceId: placeId,
