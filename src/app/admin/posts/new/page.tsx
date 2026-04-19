@@ -20,6 +20,7 @@ export default async function NewPostPage() {
       select: {
         group: true,
         nameEn: true,
+        displayLabel: true,
         colorHex: true,
         colorHex2: true,
         gradientDir: true,
@@ -60,6 +61,7 @@ export default async function NewPostPage() {
   const tagGroups = tagGroupConfigs.map((c) => ({
     group: c.group,
     nameEn: c.nameEn,
+    displayLabel: c.displayLabel,
     colorHex: c.colorHex,
     colorHex2: c.colorHex2,
     gradientDir: c.gradientDir,

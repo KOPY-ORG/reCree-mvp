@@ -25,7 +25,7 @@ export function LabelBadge({ text, background, color, className, style: extraSty
   const cls = cn(BASE, className);
 
   if (rest.as === "button") {
-    const { as: _as, onClick, type = "button" } = rest as ButtonProps;
+    const { onClick, type = "button" } = rest as ButtonProps;
     return (
       <button type={type} onClick={onClick} className={cls} style={style}>
         {text}

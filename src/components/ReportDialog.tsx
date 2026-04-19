@@ -31,6 +31,7 @@ export function ReportDialog({ open, onClose, postId, reCreeshotId }: Props) {
 
   useEffect(() => {
     if (!open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedReason(null);
       setDescription("");
       setDialogState("form");
@@ -79,7 +80,7 @@ export function ReportDialog({ open, onClose, postId, reCreeshotId }: Props) {
           <div className="flex flex-col items-center gap-3 py-6">
             <CheckCircle className="size-10 text-foreground" strokeWidth={1.5} />
             <p className="font-semibold text-base text-center">Report submitted.</p>
-            <p className="text-sm text-muted-foreground text-center">Thank you. We'll review it shortly.</p>
+            <p className="text-sm text-muted-foreground text-center">Thank you. We&apos;ll review it shortly.</p>
           </div>
         )}
 
@@ -87,7 +88,7 @@ export function ReportDialog({ open, onClose, postId, reCreeshotId }: Props) {
         {dialogState === "own_content" && (
           <div className="flex flex-col gap-4">
             <p className="font-semibold text-base">Report</p>
-            <p className="text-sm text-muted-foreground text-center py-4">You can't report your own content.</p>
+            <p className="text-sm text-muted-foreground text-center py-4">You can&apos;t report your own content.</p>
             <button type="button" onClick={onClose} className="w-full py-2.5 rounded-full text-sm font-medium border border-border">
               Close
             </button>
@@ -98,7 +99,7 @@ export function ReportDialog({ open, onClose, postId, reCreeshotId }: Props) {
         {dialogState === "already_reported" && (
           <div className="flex flex-col gap-4">
             <p className="font-semibold text-base">Report</p>
-            <p className="text-sm text-muted-foreground text-center py-4">You've already reported this content.</p>
+            <p className="text-sm text-muted-foreground text-center py-4">You&apos;ve already reported this content.</p>
             <button type="button" onClick={onClose} className="w-full py-2.5 rounded-full text-sm font-medium border border-border">
               Close
             </button>

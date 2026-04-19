@@ -13,6 +13,9 @@ import {
   labelBackground,
   resolveTagColors,
   resolveTopicColors,
+  K_MEDIA_GROUP,
+  selectHomeLabels,
+  type LabelSlot,
   type TagGroupColorMap,
 } from "@/lib/post-labels";
 import type { MapPlace, MapPost } from "@/lib/map-queries";
@@ -38,15 +41,19 @@ function PostCard({
   isSaved: boolean;
   tagGroupMap: TagGroupColorMap;
 }) {
-  const topicLabels = post.topics.slice(0, 1).map((topic) => {
-    const colors = resolveTopicColors(topic);
-    return { text: topic.nameEn, ...colors };
-  });
-  const tagLabels = post.tags.slice(0, 1).map((tag) => {
-    const colors = resolveTagColors(tag, tagGroupMap.get(tag.group));
-    return { text: tag.name, ...colors };
-  });
-  const labels = [...topicLabels, ...tagLabels];
+  const topicSlots: LabelSlot[] = post.topics.map((topic) => ({
+    group: "TOPIC",
+    name: topic.nameEn,
+    displayLabel: null,
+    colors: resolveTopicColors(topic),
+  }));
+  const otherSlots: LabelSlot[] = post.tags
+    .filter((tag) => tag.group !== K_MEDIA_GROUP)
+    .map((tag) => {
+      const gc = tagGroupMap.get(tag.group);
+      return { group: tag.group, name: tag.name, displayLabel: gc?.displayLabel ?? null, colors: resolveTagColors(tag, gc) };
+    });
+  const labels = selectHomeLabels(topicSlots, otherSlots);
 
   const cardImageUrl = post.imageUrl ?? post.images[0] ?? null;
 
@@ -86,16 +93,20 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
   const sheetRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const minHeightRef = useRef(140);
+  const [minHeight, setMinHeight] = useState(140);
 
   useLayoutEffect(() => {
     if (place && headerRef.current) {
-      minHeightRef.current = headerRef.current.offsetHeight;
+      const h = headerRef.current.offsetHeight;
+      minHeightRef.current = h;
+      setMinHeight(h);
     }
-  });
+  }, [place]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (place) setState("half");
-  }, [place?.id]);
+  }, [place]);
 
   const PLACE_SHEET_STATES = ["tab-only", "half", "full"] as const;
 
@@ -115,7 +126,7 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
   const sheetStyle: React.CSSProperties = {
     height:
       state === "tab-only"
-        ? `${minHeightRef.current}px`
+        ? `${minHeight}px`
         : state === "half"
         ? "calc((100dvh - 64px) * 0.5)"
         : `calc(100dvh - 64px - ${PLACE_FULL_TOP_MARGIN}px)`,

@@ -7,7 +7,6 @@ import {
   useState,
   useTransition,
 } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -50,7 +49,6 @@ import {
 } from "../_actions/post-actions";
 import { translateFields, fetchAIDraft } from "../_actions/draft-actions";
 import { PlacePickerSheet } from "./PlacePickerSheet";
-import { PlaceDetailSheet } from "./PlaceDetailSheet";
 import { ContentTab } from "./ContentTab";
 import { TaxonomyTab } from "./TaxonomyTab";
 import { InsightTab } from "./InsightTab";
@@ -92,6 +90,7 @@ export type TopicForForm = {
 export type TagGroupItem = {
   group: string;
   nameEn: string;
+  displayLabel?: string | null;
   colorHex?: string;
   colorHex2?: string | null;
   gradientDir?: string;
@@ -229,7 +228,6 @@ export function PostForm({
   isEmbedded,
   returnUrl = "/admin/posts",
 }: PostFormProps) {
-  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const isEdit = mode === "edit";
 
@@ -276,7 +274,7 @@ export function PostForm({
   const [bodyEn, setBodyEn] = useState(initialData?.bodyEn ?? "");
   const [images, setImages] = useState<PostImageInput[]>(initialData?.postImages ?? []);
   const [recreePhotoUrl, setRecreePhotoUrl] = useState<string | null>(initialData?.recreePhotoUrl ?? null);
-  const [status, setStatus] = useState<PostStatus>(initialData?.status ?? "DRAFT");
+  const [status] = useState<PostStatus>(initialData?.status ?? "DRAFT");
   const [memo, setMemo] = useState(initialData?.memo ?? "");
   const [collectedBy, setCollectedBy] = useState(initialData?.collectedBy ?? "");
   const [collectedAt, setCollectedAt] = useState(initialData?.collectedAt ?? "");
@@ -657,7 +655,7 @@ export function PostForm({
       {/* ── 본문 ─────────────────────────────────────────────────────────── */}
       <div className="flex-1 px-6 py-6">
         <div className="mx-auto max-w-[1400px]">
-          <div className="grid grid-cols-[1fr_320px] gap-6 items-start">
+          <div className="grid grid-cols-[1fr_380px] gap-6 items-start">
 
             {/* ── 왼쪽: 제목 카드 + 탭 카드 ───────────────────────────── */}
             <div className="min-w-0 space-y-3">
@@ -992,6 +990,7 @@ export function PostForm({
                     const thumb = images.find((img) => img.isThumbnail);
                     return thumb ? (
                       <div className="relative aspect-[3/2] rounded-lg overflow-hidden border">
+                        {/* eslint-disable-next-line @next/next/no-img-element -- 관리자 썸네일 미리보기: 블롭/외부 URL 혼재로 next/image 최적화 불가 */}
                         <img src={thumb.url} alt="썸네일" className="w-full h-full object-cover" style={focalStyle(thumb.focalX, thumb.focalY, thumb.zoom)} />
                       </div>
                     ) : (
@@ -1087,6 +1086,8 @@ export function PostForm({
                 allTopics={localAllTopics}
                 allTags={localAllTags}
                 topicEffectiveStyleMap={topicEffectiveStyleMap}
+                topicEffectiveInfoMap={topicEffectiveInfoMap}
+                tagGroups={tagGroups}
               />
 
               {/* 수집 정보 */}

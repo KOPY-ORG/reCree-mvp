@@ -11,7 +11,6 @@ import {
   labelBackground,
   badgeRingStyle,
   DEFAULT_TEXT,
-  DEFAULT_COLOR,
 } from "@/lib/post-labels";
 import { LabelBadge } from "@/components/LabelBadge";
 import { AllBadge } from "@/components/AllBadge";

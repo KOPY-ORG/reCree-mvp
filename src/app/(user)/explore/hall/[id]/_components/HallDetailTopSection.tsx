@@ -250,6 +250,7 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
 
       {/* 이미지 — HTML 오버레이 방식 (CORS 불필요) */}
       <div className="relative aspect-[4/5] bg-muted overflow-hidden">
+        {/* eslint-disable-next-line @next/next/no-img-element -- HTML 오버레이 렌더링(CORS 불필요), 사용자 업로드 이미지 */}
         <img
           src={imageUrl}
           alt="recreeshot"
@@ -282,6 +283,7 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
                 outline: "1px solid white",
               }}
             >
+              {/* eslint-disable-next-line @next/next/no-img-element -- 레퍼런스 오버레이: 외부 사용자 이미지 */}
               <img src={referencePhotoUrl} alt="original" className="w-full h-full object-cover" />
             </div>
           </div>

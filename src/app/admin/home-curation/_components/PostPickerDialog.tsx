@@ -120,6 +120,7 @@ export function PostPickerDialog({
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPicked(selectedIds);
       setQuery("");
     }

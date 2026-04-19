@@ -30,6 +30,7 @@ export default async function MyTripPage({
         select: {
           group: true,
           nameEn: true,
+          displayLabel: true,
           colorHex: true,
           colorHex2: true,
           gradientDir: true,

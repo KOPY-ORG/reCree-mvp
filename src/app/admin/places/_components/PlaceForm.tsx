@@ -512,6 +512,7 @@ export function PlaceForm({
       }
 
       toast.success(isEdit ? "장소가 수정되었습니다." : "장소가 등록되었습니다.");
+      router.push(returnUrl);
     });
   };
 

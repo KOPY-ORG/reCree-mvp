@@ -134,6 +134,7 @@ export default async function ExplorePage({
       prisma.tagGroupConfig.findMany({
         select: {
           group: true,
+          displayLabel: true,
           colorHex: true,
           colorHex2: true,
           gradientDir: true,

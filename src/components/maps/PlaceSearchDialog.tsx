@@ -19,11 +19,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { resolveCoordinateLink } from "@/app/admin/places/actions";
+import { buildMapsUrlByPlaceId } from "@/lib/google-maps-url";
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 const MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID ?? "DEMO_MAP_ID";
 
 // ─── 타입 ─────────────────────────────────────────────────────────────────────
+
+type PlaceWithSearchByText = typeof google.maps.places.Place & {
+  searchByText(req: Record<string, unknown>): Promise<{ places: google.maps.places.Place[] }>;
+};
 
 export type PlaceSelectResult = {
   name: string;
@@ -90,7 +95,7 @@ function PlaceSearchContent({
       setIsSearching(true);
       try {
         const { places } = await (
-          google.maps.places.Place as any
+          google.maps.places.Place as PlaceWithSearchByText
         ).searchByText({
           textQuery: input,
           fields: [
@@ -163,9 +168,9 @@ function PlaceSearchContent({
     }
   }, [query, doSearch]);
 
-  const selected = selectedIndex !== null ? (results[selectedIndex] as any) : null;
-  const selectedLat = selected?.location?.lat();
-  const selectedLng = selected?.location?.lng();
+  const selected = selectedIndex !== null ? results[selectedIndex] : null;
+  const selectedLat = selected?.location?.lat() ?? undefined;
+  const selectedLng = selected?.location?.lng() ?? undefined;
 
   // 지도 미리보기 좌표: 좌표 결과 우선
   const displayLat = coordResult ? coordResult.lat : selectedLat;
@@ -232,9 +237,9 @@ function PlaceSearchContent({
         addressEn,
         phone: selected.nationalPhoneNumber ?? "",
         operatingHours,
-        googleMapsUrl: `https://www.google.com/maps/place/?q=place_id:${placeId}`,
-        lat: selectedLat,
-        lng: selectedLng,
+        googleMapsUrl: buildMapsUrlByPlaceId(selected.displayName ?? "", placeId),
+        lat: selectedLat!,
+        lng: selectedLng!,
         googlePlaceId: placeId,
         status,
       });
@@ -312,10 +317,8 @@ function PlaceSearchContent({
             </div>
           ) : (
             <ul>
-              {results.map((result, i) => {
-                const r = result as any;
-                return (
-                  <li key={r.id ?? i}>
+              {results.map((result, i) => (
+                  <li key={result.id ?? i}>
                     <button
                       type="button"
                       onClick={() => setSelectedIndex(i)}
@@ -328,18 +331,17 @@ function PlaceSearchContent({
                       <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                       <div className="min-w-0">
                         <div className="text-sm font-medium leading-snug">
-                          {r.displayName}
+                          {result.displayName}
                         </div>
-                        {r.formattedAddress && (
+                        {result.formattedAddress && (
                           <div className="mt-0.5 truncate text-xs text-muted-foreground">
-                            {r.formattedAddress}
+                            {result.formattedAddress}
                           </div>
                         )}
                       </div>
                     </button>
                   </li>
-                );
-              })}
+              ))}
             </ul>
           )}
         </div>

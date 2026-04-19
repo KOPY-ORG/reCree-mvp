@@ -16,6 +16,7 @@ export function LanguageSelector() {
 
   useEffect(() => {
     const saved = localStorage.getItem("lang");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (saved) setCurrent(saved);
   }, []);
 

@@ -161,7 +161,7 @@ export default async function HallDetailPage({
 
   // 태그 그룹 컬러 맵
   const tagGroups = await prisma.tagGroupConfig.findMany({
-    select: { group: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true },
+    select: { group: true, displayLabel: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true },
   });
   const groupMap: TagGroupColorMap = new Map(tagGroups.map((g) => [g.group, g]));
 

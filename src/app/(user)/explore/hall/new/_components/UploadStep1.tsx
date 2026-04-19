@@ -6,6 +6,14 @@ import { Camera, X } from "lucide-react";
 import { showError } from "@/lib/toast";
 import { MAX_RECREESHOT_IMAGE_SIZE, ALLOWED_IMAGE_ACCEPT } from "@/lib/upload-constants";
 
+const WAITING_MESSAGES = [
+  "ANALYZING...",
+  "COMPARING YOUR SHOT...",
+  "ALMOST THERE...",
+  "FINISHING UP...",
+  "COMPUTING SCORE...",
+];
+
 interface Props {
   referencePreviewUrl: string | null;
   shotPreviewUrl: string | null;
@@ -51,21 +59,17 @@ export function UploadStep1({
   const shotInputRef = useRef<HTMLInputElement>(null);
 
   const [msgIndex, setMsgIndex] = useState(0);
-  const waitingMessages = [
-    "ANALYZING...",
-    "COMPARING YOUR SHOT...",
-    "ALMOST THERE...",
-    "FINISHING UP...",
-    "COMPUTING SCORE...",
-  ];
 
-  // 채점 중 메시지 순차 진행 (마지막에서 멈춤)
+  // 채점 중 메시지 순차 진행 (마지막에서 멈춤), 채점 종료 시 클린업에서 리셋
   useEffect(() => {
-    if (!isScoringPreview) { setMsgIndex(0); return; }
+    if (!isScoringPreview) return;
     const interval = setInterval(() => {
-      setMsgIndex((i) => Math.min(i + 1, waitingMessages.length - 1));
+      setMsgIndex((i) => Math.min(i + 1, WAITING_MESSAGES.length - 1));
     }, 5000);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      setMsgIndex(0);
+    };
   }, [isScoringPreview]);
 
   const hasShot = !!shotPreviewUrl;
@@ -172,7 +176,7 @@ export function UploadStep1({
                 </div>
               </div>
               <span className="text-xs font-semibold text-white/70 uppercase tracking-widest">
-                {waitingMessages[msgIndex]}
+                {WAITING_MESSAGES[msgIndex]}
               </span>
             </div>
           </div>

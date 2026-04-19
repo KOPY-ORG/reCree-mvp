@@ -155,6 +155,7 @@ model Tag {
 model TagGroupConfig {
   group        String   @id
   nameEn       String   @default("")
+  displayLabel String?
   colorHex     String   @default("#C6FD09")
   colorHex2    String?
   gradientDir  String   @default("to bottom")

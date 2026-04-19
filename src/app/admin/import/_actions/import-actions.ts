@@ -3,7 +3,7 @@
 import Papa from "papaparse";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { expandGoogleMapsShortUrl, resolveGoogleMapsUrl } from "@/lib/google-maps-url";
+import { expandGoogleMapsShortUrl, resolveGoogleMapsUrl, buildStreetViewUrl, buildMapsUrlByCoords } from "@/lib/google-maps-url";
 import { detectPlatform } from "@/lib/platform";
 import type { SourceType } from "@prisma/client";
 
@@ -462,10 +462,15 @@ export async function importSheetRows(rowIds: string[]): Promise<{
         ? { lat: placeInfo.lat, lng: placeInfo.lng }
         : coordFromMapsLink ?? coordFromStreetView ?? null;
 
-      // google_maps_link가 없고 street_view_url에서 좌표를 얻은 경우
-      // → /@lat,lng,17z 형태의 좌표 링크 자동 생성
+      // 순수 Street View URL만 공식 포맷으로 변환 (/place/ 포토뷰어 URL은 그대로 유지)
+      const officialStreetViewUrl =
+        finalStreetViewUrl && finalCoords && !finalStreetViewUrl.includes("/place/")
+          ? buildStreetViewUrl(finalCoords.lat, finalCoords.lng)
+          : finalStreetViewUrl;
+
+      // google_maps_link가 없고 좌표가 있는 경우 → 좌표 링크 자동 생성
       const generatedMapsUrl = !googleMapsLink && finalCoords
-        ? `https://www.google.com/maps/@${finalCoords.lat},${finalCoords.lng},17z`
+        ? buildMapsUrlByCoords(finalCoords.lat, finalCoords.lng)
         : null;
 
       // 실제 저장할 googleMapsUrl:
@@ -559,7 +564,7 @@ export async function importSheetRows(rowIds: string[]): Promise<{
                 operatingHours: placeInfo.operatingHours ? (placeInfo.operatingHours as object) : undefined,
                 rating: placeInfo.rating ?? null,
                 gettingThere: (r["getting_there"] ?? "").trim() || null,
-                streetViewUrl: finalStreetViewUrl,
+                streetViewUrl: officialStreetViewUrl,
                 placeTypes,
                 status: placeStatus,
                 source: "ADMIN",
@@ -581,7 +586,7 @@ export async function importSheetRows(rowIds: string[]): Promise<{
               googlePlaceId: null,
               googleMapsUrl: googleMapsUrlToStore,
               gettingThere: (r["getting_there"] ?? "").trim() || null,
-              streetViewUrl: finalStreetViewUrl,
+              streetViewUrl: officialStreetViewUrl,
               placeTypes,
               status: placeStatus,
               source: "ADMIN",

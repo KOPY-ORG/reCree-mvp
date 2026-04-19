@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { ChevronDown, ChevronUp, X } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { labelBackground, badgeRingStyle, resolveTopicColors } from "@/lib/post-labels";
@@ -95,10 +95,9 @@ export function TopicFilterRow({
   const activeL1 = openTopic?.children.find((c) => c.id === resolvedL1Id) ?? null;
   const activeL2 = activeL2Id ? (activeL1?.children.find((c) => c.id === activeL2Id) ?? null) : null;
 
-  const flatL2s = useMemo(
-    () => openTopic?.children.flatMap((l1) => l1.children.map((l2) => ({ l2, l1 }))) ?? [],
-    [openTopic],
-  );
+  const flatL2s = openTopic
+    ? openTopic.children.flatMap((l1) => l1.children.map((l2) => ({ l2, l1 })))
+    : [];
 
   function openSheet(id: string) {
     const topic = topics.find((t) => t.id === id);

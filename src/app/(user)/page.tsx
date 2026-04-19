@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { HomeBannerCarousel, type BannerItem } from "./_components/HomeBannerCarousel";
@@ -7,8 +6,33 @@ import { getPostsWithLabels, getSavedPostIds, type PostItem } from "@/lib/post-q
 import {
   resolveTopicColors,
   resolveTagColors,
+  K_MEDIA_GROUP,
+  selectHomeLabels,
+  type LabelSlot,
+  type ColorNode,
   type TagGroupColorMap,
+  type ResolvedLabel,
 } from "@/lib/post-labels";
+
+/** 홈 배너용 라벨 2개 선택 — PostCard home variant와 동일한 규칙 */
+function resolveBannerLabels(
+  postTopics: { isVisible: boolean; displayOrder: number; topic: { nameEn: string; colorHex?: string | null; colorHex2?: string | null; gradientDir?: string; gradientStop?: number; textColorHex?: string | null; parent?: ColorNode | null } }[],
+  postTags:   { isVisible: boolean; displayOrder: number; tag:   { name: string; group: string; colorHex?: string | null; colorHex2?: string | null; textColorHex?: string | null } }[],
+  tagGroupMap: TagGroupColorMap,
+): ResolvedLabel[] {
+  const topicSlots: LabelSlot[] = postTopics
+    .filter((t) => t.isVisible)
+    .map((t) => ({ group: "TOPIC", name: t.topic.nameEn, displayLabel: null, colors: resolveTopicColors(t.topic) }));
+
+  const otherSlots: LabelSlot[] = postTags
+    .filter((t) => t.isVisible && t.tag.group !== K_MEDIA_GROUP)
+    .map((t) => {
+      const gc = tagGroupMap.get(t.tag.group);
+      return { group: t.tag.group, name: t.tag.name, displayLabel: gc?.displayLabel ?? null, colors: resolveTagColors(t.tag, gc) };
+    });
+
+  return selectHomeLabels(topicSlots, otherSlots);
+}
 import { PostCard } from "./_components/PostCard";
 import { SearchBar } from "./_components/SearchBar";
 import { GuideVideoCard } from "./_components/GuideVideoCard";
@@ -123,7 +147,7 @@ export default async function HomePage() {
       orderBy: { order: "asc" },
     }),
     prisma.tagGroupConfig.findMany({
-      select: { group: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true },
+      select: { group: true, displayLabel: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true },
     }),
     getSavedPostIds(currentUser?.id ?? null),
   ]);
@@ -228,16 +252,7 @@ export default async function HomePage() {
 
   // 배너 props 변환
   const bannerItems: BannerItem[] = homeBanners.map((b) => {
-    const topicLabel = b.post.postTopics
-      .filter((t) => t.isVisible)
-      .slice(0, 1)
-      .map((t) => ({ text: t.topic.nameEn, ...resolveTopicColors(t.topic) }));
-
-    const tagLabel = b.post.postTags
-      .filter((t) => t.isVisible)
-      .slice(0, 1)
-      .map((t) => ({ text: t.tag.name, ...resolveTagColors(t.tag, tagGroupMap.get(t.tag.group)) }));
-
+    const labels = resolveBannerLabels(b.post.postTopics, b.post.postTags, tagGroupMap);
     return {
       slug: b.post.slug,
       titleEn: b.post.titleEn,
@@ -249,7 +264,7 @@ export default async function HomePage() {
       focalX: b.post.postImages[0]?.focalX ?? null,
       focalY: b.post.postImages[0]?.focalY ?? null,
       zoom: b.post.postImages[0]?.zoom ?? null,
-      labels: [...topicLabel, ...tagLabel],
+      labels,
     };
   });
 

@@ -103,6 +103,7 @@ export function ReCreeshotImage({
             boxShadow: thumbGlow,
           }}
         >
+          {/* eslint-disable-next-line @next/next/no-img-element -- 리크리샷 레퍼런스 오버레이: 외부 사용자 이미지 */}
           <img src={referenceUrl} alt="" className="w-full h-full object-cover" />
         </div>
       )}

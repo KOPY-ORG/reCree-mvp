@@ -145,6 +145,7 @@ export function AIDraftReviewDialog({
   });
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (open && draft) setEditedValues(initEditedValues(draft));
   }, [open, draft]);
 

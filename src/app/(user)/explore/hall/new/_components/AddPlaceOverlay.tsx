@@ -10,6 +10,7 @@ import {
   useMap,
 } from "@vis.gl/react-google-maps";
 import { createPlaceFromGoogleMaps } from "@/app/(user)/_actions/recreeshot-actions";
+import { buildMapsUrlByPlaceId } from "@/lib/google-maps-url";
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 const MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID ?? "DEMO_MAP_ID";
@@ -39,6 +40,10 @@ interface Props {
   onSelect: (place: PlaceResult) => void;
   onClose: () => void;
 }
+
+type PlaceWithSearchByText = typeof google.maps.places.Place & {
+  searchByText(req: Record<string, unknown>): Promise<{ places: google.maps.places.Place[] }>;
+};
 
 export function AddPlaceOverlay({ onSelect, onClose }: Props) {
   if (!API_KEY) return null;
@@ -72,7 +77,7 @@ function AddPlaceContent({ onSelect, onClose }: Props) {
       if (!placesLib || !input.trim()) { setSuggestions([]); return; }
       setIsSearching(true);
       try {
-        const { places } = await (google.maps.places.Place as any).searchByText({
+        const { places } = await (google.maps.places.Place as PlaceWithSearchByText).searchByText({
           textQuery: input,
           fields: ["displayName", "formattedAddress", "location", "id"],
           maxResultCount: 8,
@@ -95,12 +100,12 @@ function AddPlaceContent({ onSelect, onClose }: Props) {
   }, [query, doSearch]);
 
   // 검색 결과에서 선택
-  function selectFromList(r: any) {
+  function selectFromList(r: google.maps.places.Place) {
     const lat = r.location?.lat();
     const lng = r.location?.lng();
     if (lat == null || lng == null) return;
 
-    setSelected({ placeId: r.id, name: r.displayName ?? "", address: r.formattedAddress ?? "", lat, lng });
+    setSelected({ placeId: r.id ?? "", name: r.displayName ?? "", address: r.formattedAddress ?? "", lat, lng });
     setQuery(r.displayName ?? "");
     setShowSuggestions(false);
 
@@ -109,8 +114,8 @@ function AddPlaceContent({ onSelect, onClose }: Props) {
   }
 
   // 지도 POI 클릭
-  async function handleMapClick(e: any) {
-    const placeId: string | undefined = e.detail?.placeId;
+  async function handleMapClick(e: { detail?: { placeId?: string | null }; stop?: () => void }) {
+    const placeId = e.detail?.placeId ?? undefined;
     if (!placeId || !placesLib) return;
 
     // 기본 인포윈도우 방지
@@ -118,14 +123,13 @@ function AddPlaceContent({ onSelect, onClose }: Props) {
 
     setIsFetchingPlace(true);
     try {
-      const place = new google.maps.places.Place({ id: placeId, requestedLanguage: "en" } as any);
+      const place = new google.maps.places.Place({ id: placeId } as google.maps.places.PlaceOptions);
       await place.fetchFields({ fields: ["displayName", "formattedAddress", "location", "id"] });
-      const p = place as any;
-      const lat = p.location?.lat();
-      const lng = p.location?.lng();
+      const lat = place.location?.lat();
+      const lng = place.location?.lng();
       if (lat == null || lng == null) return;
 
-      setSelected({ placeId, name: p.displayName ?? "", address: p.formattedAddress ?? "", lat, lng });
+      setSelected({ placeId, name: place.displayName ?? "", address: place.formattedAddress ?? "", lat, lng });
       setShowSuggestions(false);
       map?.panTo({ lat, lng });
     } catch {
@@ -161,7 +165,7 @@ function AddPlaceContent({ onSelect, onClose }: Props) {
         lat: selected.lat,
         lng: selected.lng,
         googlePlaceId: selected.placeId,
-        googleMapsUrl: `https://www.google.com/maps/place/?q=place_id:${selected.placeId}`,
+        googleMapsUrl: buildMapsUrlByPlaceId(selected.name, selected.placeId),
       });
 
       if ("error" in result) { alert(result.error); return; }
@@ -237,25 +241,22 @@ function AddPlaceContent({ onSelect, onClose }: Props) {
           {/* 검색 결과 드롭다운 */}
           {showSuggestions && suggestions.length > 0 && (
             <div className="mt-1.5 bg-background rounded-2xl shadow-lg overflow-hidden">
-              {suggestions.map((r, i) => {
-                const item = r as any;
-                return (
-                  <button
-                    key={item.id ?? i}
-                    type="button"
-                    onClick={() => selectFromList(item)}
-                    className="flex items-start gap-3 w-full text-left px-4 py-3 hover:bg-muted/50 active:bg-muted transition-colors border-b border-border/30 last:border-0"
-                  >
-                    <MapPin className="size-4 text-muted-foreground shrink-0 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium leading-snug">{item.displayName}</p>
-                      {item.formattedAddress && (
-                        <p className="text-xs text-muted-foreground mt-0.5 truncate">{item.formattedAddress}</p>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
+              {suggestions.map((r, i) => (
+                <button
+                  key={r.id ?? i}
+                  type="button"
+                  onClick={() => selectFromList(r)}
+                  className="flex items-start gap-3 w-full text-left px-4 py-3 hover:bg-muted/50 active:bg-muted transition-colors border-b border-border/30 last:border-0"
+                >
+                  <MapPin className="size-4 text-muted-foreground shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium leading-snug">{r.displayName}</p>
+                    {r.formattedAddress && (
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">{r.formattedAddress}</p>
+                    )}
+                  </div>
+                </button>
+              ))}
             </div>
           )}
         </div>
