@@ -164,7 +164,7 @@ function AddPlaceContent({ onSelect, onClose }: Props) {
         lat: selected.lat,
         lng: selected.lng,
         googlePlaceId: selected.placeId,
-        googleMapsUrl: `https://www.google.com/maps/place/?q=place_id:${selected.placeId}`,
+        googleMapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selected.name)}&query_place_id=${selected.placeId}`,
       });
 
       if ("error" in result) { alert(result.error); return; }

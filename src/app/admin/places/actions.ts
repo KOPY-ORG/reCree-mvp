@@ -147,7 +147,7 @@ export async function resolveCoordinateLink(url: string): Promise<{
       return {
         lat: resolved.lat,
         lng: resolved.lng,
-        googleMapsUrl: `https://www.google.com/maps/@${resolved.lat},${resolved.lng},17z`,
+        googleMapsUrl: `https://www.google.com/maps/search/?api=1&query=${resolved.lat},${resolved.lng}`,
       };
     }
     if (resolved?.type === "streetview") {

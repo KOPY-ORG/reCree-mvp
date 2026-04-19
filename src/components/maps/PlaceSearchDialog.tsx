@@ -236,7 +236,7 @@ function PlaceSearchContent({
         addressEn,
         phone: selected.nationalPhoneNumber ?? "",
         operatingHours,
-        googleMapsUrl: `https://www.google.com/maps/place/?q=place_id:${placeId}`,
+        googleMapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selected.displayName ?? "")}&query_place_id=${placeId}`,
         lat: selectedLat!,
         lng: selectedLng!,
         googlePlaceId: placeId,
