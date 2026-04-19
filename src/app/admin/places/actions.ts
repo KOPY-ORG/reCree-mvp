@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { Prisma } from "@prisma/client";
 import type { PlaceStatus } from "@prisma/client";
-import { resolveGoogleMapsUrl } from "@/lib/google-maps-url";
+import { resolveGoogleMapsUrl, toOfficialStreetViewUrl } from "@/lib/google-maps-url";
 import { makeStorageExtractor, deleteStorageFiles } from "@/lib/storage";
 
 const extractStoragePath = makeStorageExtractor("place-images");
@@ -63,6 +63,9 @@ export async function createPlace(
 ): Promise<{ error?: string; id?: string }> {
   let newId: string | undefined;
   try {
+    const streetViewUrl = data.streetViewUrl
+      ? await toOfficialStreetViewUrl(data.streetViewUrl)
+      : null;
     const place = await prisma.place.create({
       data: {
         nameKo: data.nameKo,
@@ -77,7 +80,7 @@ export async function createPlace(
         googleMapsUrl: data.googleMapsUrl || null,
         naverMapsUrl: data.naverMapsUrl || null,
         kakaoMapsUrl: data.kakaoMapsUrl || null,
-        streetViewUrl: data.streetViewUrl || null,
+        streetViewUrl,
         phone: data.phone || null,
         operatingHours: data.operatingHours?.length ? data.operatingHours : Prisma.DbNull,
         gettingThere: data.gettingThere || null,
@@ -100,6 +103,9 @@ export async function updatePlace(
   returnUrl?: string,
 ): Promise<{ error?: string }> {
   try {
+    const streetViewUrl = data.streetViewUrl
+      ? await toOfficialStreetViewUrl(data.streetViewUrl)
+      : null;
     await prisma.place.update({
       where: { id },
       data: {
@@ -115,7 +121,7 @@ export async function updatePlace(
         googleMapsUrl: data.googleMapsUrl || null,
         naverMapsUrl: data.naverMapsUrl || null,
         kakaoMapsUrl: data.kakaoMapsUrl || null,
-        streetViewUrl: data.streetViewUrl || null,
+        streetViewUrl,
         phone: data.phone || null,
         operatingHours: data.operatingHours?.length ? data.operatingHours : Prisma.DbNull,
         gettingThere: data.gettingThere || null,
