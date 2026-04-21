@@ -22,6 +22,12 @@ import type { TagGroupForFilter as TagGroup } from "@/components/TagFilterRow";
 type Tab = "places" | "my-maps";
 type SheetState = "collapsed" | "tab-only" | "peek" | "expanded";
 
+type TopicColorNode = { colorHex: string | null; textColorHex: string | null; parent?: TopicColorNode | null };
+function resolveTopicColor(t: TopicColorNode): string | null {
+  if (t.colorHex) return t.colorHex;
+  return t.parent ? resolveTopicColor(t.parent) : null;
+}
+
 type TagGroupConfig = {
   group: string;
   nameEn: string;
@@ -42,8 +48,6 @@ interface Props {
   searchQuery: string;
   searchedPlaces: MapPlace[] | null;
   initialTab?: Tab;
-  btsTopicId: string | null;
-  btsTopicColor: string | null;
 }
 
 // ─── 헬퍼 ─────────────────────────────────────────────────────────────────────
@@ -164,8 +168,6 @@ export function MapPageClient({
   searchQuery,
   searchedPlaces,
   initialTab = "places",
-  btsTopicId,
-  btsTopicColor,
 }: Props) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -232,10 +234,6 @@ export function MapPageClient({
     });
   }, [basePlaces, selectedTopicId, selectedTagId, selectedTagGroup]);
 
-  const { arirangColor, arirangGroupKey } = useMemo(() => {
-    const config = tagGroupConfigs.find((c) => c.nameEn === "ARIRANG");
-    return { arirangColor: config?.colorHex ?? null, arirangGroupKey: config?.group ?? null };
-  }, [tagGroupConfigs]);
 
   const isSearchMode = !!searchQuery && searchedPlaces !== null;
   const displayPlaces = isSearchMode ? (searchedPlaces ?? []) : filteredPlaces;
@@ -329,17 +327,17 @@ export function MapPageClient({
         {/* ── 지도 (전체 배경) ── */}
         <InteractiveMap
           places={displayPlaces.map((p) => {
-            const isArirang =
-              !!arirangColor && !!arirangGroupKey &&
-              p.posts.some((post) => post.allTagGroups.includes(arirangGroupKey));
-            const isBts =
-              !isArirang && !!btsTopicId && !!btsTopicColor &&
-              p.posts.some((post) => post.topics.some((t) => isTopicMatch(t, btsTopicId)));
-            return {
-              ...p,
-              markerColor: isArirang ? arirangColor : isBts ? btsTopicColor : undefined,
-              markerGlyphColor: isArirang ? "#1a1a1a" : "white",
-            };
+            const sortedPosts = [...p.posts].sort((a, b) =>
+              (b.topics.length > 0 ? 1 : 0) - (a.topics.length > 0 ? 1 : 0)
+            );
+            let markerColor: string | undefined;
+            outer: for (const post of sortedPosts) {
+              for (const topic of post.topics) {
+                const color = resolveTopicColor(topic);
+                if (color) { markerColor = color; break outer; }
+              }
+            }
+            return { ...p, markerColor };
           })}
           selectedPlaceId={selectedPlaceId}
           highlightedIds={isSearchMode ? new Set(displayPlaces.map((p) => p.id)) : undefined}
