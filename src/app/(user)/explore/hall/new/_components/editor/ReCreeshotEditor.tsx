@@ -8,7 +8,8 @@ import { getReCreeshotPresignedUrl } from "@/lib/actions/upload-actions";
 import { exportStageToBlob } from "./canvas-export";
 import { getTemplateConfig } from "./template-config";
 import { EditorToolbar } from "./EditorToolbar";
-import type { EditorLayer, StickerBadgeOption, TemplateId } from "./editor-types";
+import type { PlaceResult, TagGroup, TopicItem, PostResult } from "./StickerPanel";
+import type { EditorLayer, TemplateId } from "./editor-types";
 
 const KonvaStage = dynamic(() => import("./KonvaStage"), { ssr: false });
 
@@ -18,10 +19,18 @@ interface Props {
   shotPreviewUrl: string;
   uploadedReferenceUrl: string | null;
   uploadedShotUrl: string;
-  placeName: string | null;
-  badgeOptions: StickerBadgeOption[];
   onNext: (compositeUrl: string) => void;
   onError: (msg: string) => void;
+  selectedPlace: PlaceResult | null;
+  onPlaceChange: (place: PlaceResult | null) => void;
+  linkedPosts: PostResult[];
+  linkedPostId: string | undefined;
+  onLinkedPostChange: (id: string | undefined, tagIds?: string[], topicIds?: string[]) => void;
+  selectedTagIds: string[];
+  selectedTopicIds: string[];
+  onTagsChange: (tagIds: string[], topicIds: string[]) => void;
+  tagGroups: TagGroup[];
+  topics: TopicItem[];
 }
 
 interface EditorState {
@@ -38,10 +47,18 @@ export function ReCreeshotEditor({
   shotPreviewUrl,
   uploadedReferenceUrl,
   uploadedShotUrl,
-  placeName,
-  badgeOptions,
   onNext,
   onError,
+  selectedPlace,
+  onPlaceChange,
+  linkedPosts,
+  linkedPostId,
+  onLinkedPostChange,
+  selectedTagIds,
+  selectedTopicIds,
+  onTagsChange,
+  tagGroups,
+  topics,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [stageW, setStageW] = useState(0);
@@ -217,11 +234,19 @@ export function ReCreeshotEditor({
         onReferenceLabelChange={(v) => setEditorState((s) => ({ ...s, referenceLabel: v }))}
         onShotLabelChange={(v) => setEditorState((s) => ({ ...s, shotLabel: v }))}
         onAddTextLayer={handleAddTextLayer}
-        placeName={placeName}
-        badgeOptions={badgeOptions}
         uploadedReferenceUrl={uploadedReferenceUrl}
         uploadedShotUrl={uploadedShotUrl}
         onAddLayer={handleAddLayer}
+        selectedPlace={selectedPlace}
+        onPlaceChange={onPlaceChange}
+        linkedPosts={linkedPosts}
+        linkedPostId={linkedPostId}
+        onLinkedPostChange={onLinkedPostChange}
+        selectedTagIds={selectedTagIds}
+        selectedTopicIds={selectedTopicIds}
+        onTagsChange={onTagsChange}
+        tagGroups={tagGroups}
+        topics={topics}
       />
 
       <div className="px-4 py-3 shrink-0">

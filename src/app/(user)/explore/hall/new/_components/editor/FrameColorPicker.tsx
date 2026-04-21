@@ -17,16 +17,19 @@ const COLORS = [
 interface Props {
   value: string;
   onChange: (hex: string) => void;
+  extraColors?: string[];
 }
 
-export function FrameColorPicker({ value, onChange }: Props) {
+export function FrameColorPicker({ value, onChange, extraColors = [] }: Props) {
+  const colorsLower = COLORS.map((c) => c.toLowerCase());
+  const allColors = [...COLORS, ...extraColors.filter((c) => !colorsLower.includes(c.toLowerCase()))];
   return (
     <div className="flex flex-wrap gap-3 py-1">
-      {COLORS.map((color) => {
+      {allColors.map((color, i) => {
         const isSelected = value.toLowerCase() === color.toLowerCase();
         return (
           <button
-            key={color}
+            key={`${color}-${i}`}
             type="button"
             onClick={() => onChange(color)}
             className={`size-9 rounded-full flex items-center justify-center transition-transform ${

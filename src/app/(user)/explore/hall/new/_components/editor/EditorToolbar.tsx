@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Palette, Type, Smile, X, Plus } from "lucide-react";
 import { FrameColorPicker } from "./FrameColorPicker";
 import { StickerPanel } from "./StickerPanel";
-import type { EditorLayer, StickerBadgeOption, TemplateConfig } from "./editor-types";
+import type { PlaceResult, TagGroup, TopicItem, PostResult } from "./StickerPanel";
+import { resolveBadgeOptions } from "./StickerPanel";
+import type { EditorLayer, TemplateConfig } from "./editor-types";
 
 const TEXT_SIZES = [
   { label: "S", value: 48 },
@@ -33,11 +35,19 @@ interface Props {
   onShotLabelChange: (v: string | null) => void;
   onAddTextLayer: (text: string, fontSize: number, color: string) => void;
   // sticker panel
-  placeName: string | null;
-  badgeOptions: StickerBadgeOption[];
   uploadedReferenceUrl: string | null;
   uploadedShotUrl: string | null;
   onAddLayer: (layer: Omit<EditorLayer, "id">) => void;
+  selectedPlace: PlaceResult | null;
+  onPlaceChange: (place: PlaceResult | null) => void;
+  linkedPosts: PostResult[];
+  linkedPostId: string | undefined;
+  onLinkedPostChange: (id: string | undefined, tagIds?: string[], topicIds?: string[]) => void;
+  selectedTagIds: string[];
+  selectedTopicIds: string[];
+  onTagsChange: (tagIds: string[], topicIds: string[]) => void;
+  tagGroups: TagGroup[];
+  topics: TopicItem[];
 }
 
 export function EditorToolbar({
@@ -49,11 +59,19 @@ export function EditorToolbar({
   onReferenceLabelChange,
   onShotLabelChange,
   onAddTextLayer,
-  placeName,
-  badgeOptions,
   uploadedReferenceUrl,
   uploadedShotUrl,
   onAddLayer,
+  selectedPlace,
+  onPlaceChange,
+  linkedPosts,
+  linkedPostId,
+  onLinkedPostChange,
+  selectedTagIds,
+  selectedTopicIds,
+  onTagsChange,
+  tagGroups,
+  topics,
 }: Props) {
   const [activeTab, setActiveTab] = useState<Tab | null>(null);
   const [showTextForm, setShowTextForm] = useState(false);
@@ -62,6 +80,12 @@ export function EditorToolbar({
   const [textColor, setTextColor] = useState("#ffffff");
 
   const hasFrame = templateConfig.frame !== null;
+
+  const topicTagColors = useMemo(() => {
+    return resolveBadgeOptions(topics, tagGroups, selectedTopicIds, selectedTagIds)
+      .map((opt) => opt.colorHex)
+      .filter(Boolean) as string[];
+  }, [topics, tagGroups, selectedTopicIds, selectedTagIds]);
 
   function handleTabPress(tab: Tab) {
     setActiveTab((prev) => (prev === tab ? null : tab));
@@ -79,9 +103,9 @@ export function EditorToolbar({
     <div className="shrink-0 border-t border-border bg-background">
       {/* 패널 */}
       {activeTab && (
-        <div className="px-4 py-3 max-h-52 overflow-y-auto">
+        <div className={`px-4 py-3 overflow-y-auto ${activeTab === "sticker" ? "max-h-72" : "max-h-52"}`}>
           {activeTab === "color" && hasFrame && (
-            <FrameColorPicker value={frameColorHex} onChange={onFrameColorChange} />
+            <FrameColorPicker value={frameColorHex} onChange={onFrameColorChange} extraColors={topicTagColors} />
           )}
           {activeTab === "color" && !hasFrame && (
             <p className="text-sm text-muted-foreground py-2">
@@ -204,11 +228,19 @@ export function EditorToolbar({
             <StickerPanel
               canvasWidth={templateConfig.canvasWidth}
               canvasHeight={templateConfig.canvasHeight}
-              placeName={placeName}
-              badgeOptions={badgeOptions}
               uploadedReferenceUrl={uploadedReferenceUrl}
               uploadedShotUrl={uploadedShotUrl}
               onAddLayer={onAddLayer}
+              selectedPlace={selectedPlace}
+              onPlaceChange={onPlaceChange}
+              linkedPosts={linkedPosts}
+              linkedPostId={linkedPostId}
+              onLinkedPostChange={onLinkedPostChange}
+              selectedTagIds={selectedTagIds}
+              selectedTopicIds={selectedTopicIds}
+              onTagsChange={onTagsChange}
+              tagGroups={tagGroups}
+              topics={topics}
             />
           )}
         </div>
@@ -216,6 +248,18 @@ export function EditorToolbar({
 
       {/* 탭 바 */}
       <div className="flex border-t border-border/40">
+        <TabButton
+          icon={<Smile className="size-5" />}
+          label="Sticker"
+          active={activeTab === "sticker"}
+          onPress={() => handleTabPress("sticker")}
+        />
+        <TabButton
+          icon={<Type className="size-5" />}
+          label="Text"
+          active={activeTab === "text"}
+          onPress={() => handleTabPress("text")}
+        />
         {hasFrame && (
           <TabButton
             icon={<Palette className="size-5" />}
@@ -224,18 +268,6 @@ export function EditorToolbar({
             onPress={() => handleTabPress("color")}
           />
         )}
-        <TabButton
-          icon={<Type className="size-5" />}
-          label="Text"
-          active={activeTab === "text"}
-          onPress={() => handleTabPress("text")}
-        />
-        <TabButton
-          icon={<Smile className="size-5" />}
-          label="Sticker"
-          active={activeTab === "sticker"}
-          onPress={() => handleTabPress("sticker")}
-        />
       </div>
     </div>
   );

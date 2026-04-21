@@ -83,12 +83,7 @@ export default function KonvaStage({
   const scale = stageW / templateConfig.canvasWidth;
   const { frame, slots } = templateConfig;
 
-  const [refLabel, meLabel] = frame
-    ? [
-        referenceLabel ?? frame.defaultLabels[0],
-        shotLabel ?? frame.defaultLabels[1],
-      ]
-    : [null, null];
+  const [refLabel, meLabel] = [referenceLabel, shotLabel];
 
   function handleStageClick(e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) {
     let node: Konva.Node | null = e.target;
@@ -203,7 +198,7 @@ export default function KonvaStage({
                   fill={i === 0 ? "#d4f986" : "#c8ebf5"}
                 />
               )}
-              {frame && (
+              {frame && (i === 0 ? refLabel : meLabel) !== null && (
                 <Text
                   x={dX}
                   y={dY + dH + Math.round(frame.labelHeight * scale * 0.4)}

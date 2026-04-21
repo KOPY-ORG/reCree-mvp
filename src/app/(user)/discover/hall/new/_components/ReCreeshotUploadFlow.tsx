@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import {
   createReCreeshot,
+  getPostsByPlace,
 } from "@/app/(user)/_actions/recreeshot-actions";
 import {
   getReCreeshotPresignedUrl,
@@ -16,39 +17,17 @@ import { PhotoPlacer } from "./editor/PhotoPlacer";
 import { ReCreeshotEditor } from "./editor/ReCreeshotEditor";
 import { DoneStep } from "./editor/DoneStep";
 import { DEFAULT_TEMPLATE_ID } from "./editor/template-config";
-import type { TemplateId, StickerBadgeOption } from "./editor/editor-types";
-import { computeTopicEffectiveColors, resolveTagColors } from "@/lib/post-labels";
+import type { TemplateId } from "./editor/editor-types";
+import type { PlaceResult, TagGroup as EditorTagGroup, TopicItem } from "./editor/StickerPanel";
+import { resolveBadgeOptions } from "./editor/StickerPanel";
 
-interface TagItem {
+interface PostResult {
   id: string;
-  name: string;
-  group: string;
-  colorHex: string | null;
-  colorHex2: string | null;
-  textColorHex: string | null;
-}
-
-interface TagGroup {
-  group: string;
-  nameEn: string;
-  colorHex: string;
-  colorHex2: string | null;
-  gradientDir: string;
-  gradientStop: number;
-  textColorHex: string;
-  tags: TagItem[];
-}
-
-interface Topic {
-  id: string;
-  nameEn: string;
-  colorHex: string | null;
-  colorHex2: string | null;
-  gradientDir: string;
-  gradientStop: number;
-  textColorHex: string | null;
-  level: number;
-  parentId: string | null;
+  titleEn: string | null;
+  titleKo: string | null;
+  thumbnailUrl: string | null;
+  topicIds: string[];
+  tagIds: string[];
 }
 
 interface PlacePrefill {
@@ -60,8 +39,8 @@ interface PlacePrefill {
 }
 
 interface Props {
-  tagGroups: TagGroup[];
-  topics: Topic[];
+  tagGroups: EditorTagGroup[];
+  topics: TopicItem[];
   userId: string;
   prefillPostId?: string;
   prefillReferenceUrl?: string;
@@ -85,6 +64,12 @@ type State = {
   uploadedShotUrl: string | null;
   uploadedShotPath: string | null;
   uploadedReferencePath: string | null;
+  // Step 3에서 선택한 장소·태그
+  selectedPlace: PlaceResult | null;
+  selectedTagIds: string[];
+  selectedTopicIds: string[];
+  linkedPosts: PostResult[];
+  linkedPostId: string | undefined;
   // DB 저장 결과
   createdId: string | null;
   // 에디터에서 export된 합성 이미지 URL
@@ -96,55 +81,6 @@ type State = {
   showLeaveDialog: boolean;
 };
 
-function resolveBadgeOptions(
-  topics: Topic[],
-  tagGroups: TagGroup[],
-  topicIds: string[] = [],
-  tagIds: string[] = [],
-): StickerBadgeOption[] {
-  const sorted = [...topics].sort((a, b) => a.level - b.level);
-  const colorMap = computeTopicEffectiveColors(sorted);
-
-  const topicBadges: StickerBadgeOption[] = topicIds.flatMap((id) => {
-    const t = topics.find((x) => x.id === id);
-    const c = colorMap.get(id);
-    if (!t || !c) return [];
-    return [{
-      id,
-      name: t.nameEn,
-      type: "topic" as const,
-      colorHex: c.hex,
-      colorHex2: c.hex2,
-      gradientDir: c.dir,
-      gradientStop: c.stop,
-      textColorHex: c.textHex,
-    }];
-  });
-
-  const tagBadges: StickerBadgeOption[] = tagIds.flatMap((id) => {
-    for (const group of tagGroups) {
-      const tag = group.tags.find((t) => t.id === id);
-      if (tag) {
-        const c = resolveTagColors(tag, {
-          colorHex: group.colorHex,
-          colorHex2: group.colorHex2,
-          gradientDir: group.gradientDir,
-          gradientStop: group.gradientStop,
-          textColorHex: group.textColorHex,
-        });
-        return [{
-          id,
-          name: tag.name,
-          type: "tag" as const,
-          ...c,
-        }];
-      }
-    }
-    return [];
-  });
-
-  return [...topicBadges, ...tagBadges];
-}
 
 export function ReCreeshotUploadFlow({
   tagGroups,
@@ -167,6 +103,13 @@ export function ReCreeshotUploadFlow({
     uploadedShotUrl: null,
     uploadedShotPath: null,
     uploadedReferencePath: null,
+    selectedPlace: prefillPlace
+      ? { id: prefillPlace.id, nameEn: prefillPlace.nameEn, nameKo: prefillPlace.nameKo, addressEn: prefillPlace.addressEn, city: null, imageUrl: prefillPlace.imageUrl }
+      : null,
+    selectedTagIds: prefillTagIds ?? [],
+    selectedTopicIds: prefillTopicIds ?? [],
+    linkedPosts: [],
+    linkedPostId: prefillPostId,
     createdId: null,
     compositeUrl: null,
     isUploading: false,
@@ -174,6 +117,12 @@ export function ReCreeshotUploadFlow({
     error: null,
     showLeaveDialog: false,
   });
+
+  // 장소 변경 시 연결 포스트 로드
+  useEffect(() => {
+    if (!state.selectedPlace) { setState((s) => ({ ...s, linkedPosts: [], linkedPostId: undefined })); return; }
+    getPostsByPlace(state.selectedPlace.id).then((posts) => setState((s) => ({ ...s, linkedPosts: posts })));
+  }, [state.selectedPlace?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 업로드됐지만 DB 저장 전 이탈 시 고아 파일 방지
   const hasUnsavedUpload = !!state.uploadedShotUrl && !state.createdId;
@@ -293,13 +242,8 @@ export function ReCreeshotUploadFlow({
   // ── Step 4: Share (createReCreeshot) ─────────────────────────────────────────
 
   async function handleShare(data: {
-    locationName: string;
     story: string;
     tips: string;
-    tagIds: string[];
-    topicIds: string[];
-    placeId?: string;
-    linkedPostId?: string;
     showBadge: boolean;
   }) {
     const imageUrl = state.compositeUrl ?? state.uploadedShotUrl;
@@ -309,13 +253,13 @@ export function ReCreeshotUploadFlow({
     const result = await createReCreeshot({
       imageUrl,
       referencePhotoUrl: state.uploadedReferenceUrl ?? undefined,
-      placeId: data.placeId,
-      linkedPostId: data.linkedPostId,
-      locationName: data.locationName || undefined,
+      placeId: state.selectedPlace?.id,
+      linkedPostId: state.linkedPostId,
+      locationName: state.selectedPlace?.nameEn ?? state.selectedPlace?.nameKo ?? undefined,
       story: data.story || undefined,
       tips: data.tips || undefined,
-      tagIds: data.tagIds,
-      topicIds: data.topicIds,
+      tagIds: state.selectedTagIds,
+      topicIds: state.selectedTopicIds,
       templateId: state.selectedTemplateId,
     });
 
@@ -401,10 +345,22 @@ export function ReCreeshotUploadFlow({
             shotPreviewUrl={state.shotPreviewUrl}
             uploadedReferenceUrl={state.uploadedReferenceUrl}
             uploadedShotUrl={state.uploadedShotUrl ?? ""}
-            placeName={prefillPlace?.nameEn ?? prefillPlace?.nameKo ?? null}
-            badgeOptions={resolveBadgeOptions(topics, tagGroups, prefillTopicIds, prefillTagIds)}
             onNext={handleEditorNext}
             onError={(msg) => setState((s) => ({ ...s, error: msg }))}
+            selectedPlace={state.selectedPlace}
+            onPlaceChange={(place) => setState((s) => ({ ...s, selectedPlace: place }))}
+            linkedPosts={state.linkedPosts}
+            linkedPostId={state.linkedPostId}
+            onLinkedPostChange={(id, tagIds, topicIds) => setState((s) => ({
+              ...s,
+              linkedPostId: id,
+              ...(tagIds !== undefined && topicIds !== undefined ? { selectedTagIds: tagIds, selectedTopicIds: topicIds } : {}),
+            }))}
+            selectedTagIds={state.selectedTagIds}
+            selectedTopicIds={state.selectedTopicIds}
+            onTagsChange={(tagIds, topicIds) => setState((s) => ({ ...s, selectedTagIds: tagIds, selectedTopicIds: topicIds }))}
+            tagGroups={tagGroups}
+            topics={topics}
           />
           {state.error && (
             <p className="text-red-500 text-sm text-center py-2">{state.error}</p>
@@ -416,21 +372,11 @@ export function ReCreeshotUploadFlow({
       {state.step === 4 && state.shotPreviewUrl && (state.compositeUrl ?? state.uploadedShotUrl) && (
         <>
           <UploadStep2
-            referencePreviewUrl={state.referencePreviewUrl}
-            shotPreviewUrl={state.shotPreviewUrl}
             compositeUrl={state.compositeUrl}
-            tagGroups={tagGroups}
-            topics={topics}
-            previewScore={null}
-            showBadge={false}
-            onShowBadgeChange={() => {}}
-            onBack={() => setState((s) => ({ ...s, step: 3 }))}
+            selectedPlace={state.selectedPlace}
+            badgeOptions={resolveBadgeOptions(topics, tagGroups, state.selectedTopicIds, state.selectedTagIds)}
             onShare={handleShare}
             isSubmitting={state.isSubmitting}
-            prefillPostId={prefillPostId}
-            prefillPlace={prefillPlace}
-            prefillTagIds={prefillTagIds}
-            prefillTopicIds={prefillTopicIds}
           />
           {state.error && (
             <p className="text-red-500 text-sm text-center py-2">{state.error}</p>
