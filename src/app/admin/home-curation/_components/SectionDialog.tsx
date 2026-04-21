@@ -654,12 +654,13 @@ export function SectionDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-        <DialogContent className="sm:w-[calc(100vw_-_300px)] sm:max-w-[900px] left-[calc(50vw_+_120px)] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="sm:w-[calc(100vw_-_300px)] sm:max-w-[900px] left-[calc(50vw_+_120px)] max-h-[90vh] flex flex-col gap-0 p-0 overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
             <DialogTitle>{editTarget ? "섹션 수정" : "섹션 추가"}</DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-5 pt-1">
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <div className="flex-1 overflow-y-auto px-6 pt-1 pb-2 space-y-5">
 
             {/* ① 기본 정보 */}
             <div className="space-y-3">
@@ -830,8 +831,9 @@ export function SectionDialog({
               </div>
             )}
 
+          </div>
             {/* 하단 */}
-            <div className="flex items-center justify-between pt-2 border-t">
+            <div className="flex items-center justify-between px-6 py-4 border-t shrink-0">
               <div className="flex items-center gap-2">
                 <Switch
                   id="section-active"
