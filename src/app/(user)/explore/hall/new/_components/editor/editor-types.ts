@@ -1,3 +1,5 @@
+export type TemplateModeId = "side-by-side" | "4-cuts" | "solo";
+
 export type TemplateId =
   | "vertical-full"
   | "vertical-frame"
@@ -55,12 +57,12 @@ export interface StickerBadgeOption {
 }
 
 export interface TemplateConfig {
-  id: TemplateId;
+  id: string;
   // 완성 캔버스 크기 (export 기준)
   canvasWidth: number;
   canvasHeight: number;
-  // 사진 슬롯 (export 기준 px)
-  slots: [PhotoSlot, PhotoSlot];
+  // 사진 슬롯 (export 기준 px) — 모드에 따라 1개(solo), 2개(side-by-side), 4개(4-cuts)
+  slots: PhotoSlot[];
   // 프레임 설정 (null = 꽉찬 버전)
   frame: FrameConfig | null;
 }

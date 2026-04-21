@@ -188,12 +188,18 @@ interface CreateReCreeshotData {
   tips?: string;
   topicIds?: string[];
   tagIds?: string[];
-  // 신규 템플릿 필드
+  // 템플릿 필드
   templateId?: string;
+  templateMode?: string;
   frameColorHex?: string;
   referenceLabel?: string | null;
   shotLabel?: string | null;
   editorLayers?: object;
+  // 4컷 사진 URL
+  cut1Url?: string;
+  cut2Url?: string;
+  cut3Url?: string;
+  cut4Url?: string;
 }
 
 export async function createReCreeshot(
@@ -220,10 +226,15 @@ export async function createReCreeshot(
         story: data.story ?? null,
         tips: data.tips ?? null,
         templateId: data.templateId ?? null,
+        templateMode: data.templateMode ?? null,
         frameColorHex: data.frameColorHex ?? null,
         referenceLabel: data.referenceLabel ?? null,
         shotLabel: data.shotLabel ?? null,
         editorLayers: data.editorLayers ?? undefined,
+        cut1Url: data.cut1Url ?? null,
+        cut2Url: data.cut2Url ?? null,
+        cut3Url: data.cut3Url ?? null,
+        cut4Url: data.cut4Url ?? null,
         reCreeshotTopics: data.topicIds?.length
           ? {
               create: data.topicIds.map((topicId) => ({ topicId })),

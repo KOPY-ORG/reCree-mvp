@@ -96,11 +96,36 @@ const HORIZONTAL_FRAME: TemplateConfig = {
   },
 };
 
+// 4컷: 1:1 (1080×1080), 2×2 그리드
+const FOUR_CUTS: TemplateConfig = {
+  id: "4-cuts",
+  canvasWidth: 1080,
+  canvasHeight: 1080,
+  slots: [
+    { x: 0, y: 0, width: 540, height: 540 },
+    { x: 540, y: 0, width: 540, height: 540 },
+    { x: 0, y: 540, width: 540, height: 540 },
+    { x: 540, y: 540, width: 540, height: 540 },
+  ],
+  frame: null,
+};
+
+// 솔로: 4:5 (1080×1350), 단일 사진 꽉찬
+const SOLO: TemplateConfig = {
+  id: "solo",
+  canvasWidth: 1080,
+  canvasHeight: 1350,
+  slots: [{ x: 0, y: 0, width: 1080, height: 1350 }],
+  frame: null,
+};
+
 export const TEMPLATE_CONFIGS: Record<string, TemplateConfig> = {
   "vertical-full": VERTICAL_FULL,
   "vertical-frame": VERTICAL_FRAME,
   "horizontal-full": HORIZONTAL_FULL,
   "horizontal-frame": HORIZONTAL_FRAME,
+  "4-cuts": FOUR_CUTS,
+  solo: SOLO,
 };
 
 export const DEFAULT_TEMPLATE_ID = "vertical-full";
