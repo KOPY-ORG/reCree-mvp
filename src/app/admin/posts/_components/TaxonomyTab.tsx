@@ -42,6 +42,7 @@ interface Props {
   tagGroupColorMap: Map<string, TagGroupItem>;
   onTopicAdded: (topic: TopicForForm) => void;
   onTagAdded: (tag: TagForForm) => void;
+  importNote?: string | null;
 }
 
 type SubTab = "topics" | "tags";
@@ -69,6 +70,7 @@ export function TaxonomyTab({
   tagGroupColorMap,
   onTopicAdded,
   onTagAdded,
+  importNote,
 }: Props) {
   const [activeSubTab, setActiveSubTab] = useState<SubTab>("topics");
   const [search, setSearch] = useState("");
@@ -292,8 +294,63 @@ export function TaxonomyTab({
     );
   }
 
+  const parsedNote = importNote ? (() => {
+    try { return JSON.parse(importNote) as Record<string, string>; } catch { return null; }
+  })() : null;
+
+  const noteTopicRows: { label: string; value: string }[] = parsedNote
+    ? [
+        { label: "category", value: parsedNote.category },
+        { label: "genre", value: parsedNote.genre },
+        { label: "artist / work", value: parsedNote.artist_work },
+        { label: "sub detail", value: parsedNote.sub_detail },
+      ].filter((r) => r.value)
+    : [];
+
+  const noteTagRows: { label: string; value: string }[] = parsedNote
+    ? [
+        { label: "tag group", value: parsedNote.tag_group },
+        { label: "tags", value: parsedNote.tags },
+      ].filter((r) => r.value)
+    : [];
+
+  const hasNote = noteTopicRows.length > 0 || noteTagRows.length > 0;
+
   return (
     <div className="space-y-3">
+      {/* ── 구글 시트 원본 메모 ──────────────────────────────────────────────── */}
+      {hasNote && (
+        <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 space-y-2">
+          <p className="text-[10px] font-semibold text-amber-600 uppercase tracking-wider">구글 시트 원본</p>
+          <div className="grid grid-cols-2 gap-3">
+            {/* 토픽 */}
+            {noteTopicRows.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-[10px] font-semibold text-amber-500 uppercase tracking-wider">토픽</p>
+                {noteTopicRows.map((r) => (
+                  <div key={r.label} className="flex items-baseline gap-1.5 min-w-0">
+                    <span className="text-[10px] text-amber-400 shrink-0 w-16">{r.label}</span>
+                    <span className="text-xs text-amber-900 font-medium">{r.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* 태그 */}
+            {noteTagRows.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-[10px] font-semibold text-amber-500 uppercase tracking-wider">태그</p>
+                {noteTagRows.map((r) => (
+                  <div key={r.label} className="flex items-baseline gap-1.5 min-w-0">
+                    <span className="text-[10px] text-amber-400 shrink-0 w-16">{r.label}</span>
+                    <span className="text-xs text-amber-900 font-medium">{r.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── 서브탭: 세그먼트 컨트롤 ─────────────────────────────────────────── */}
       <div className="space-y-2 border-b border-border pb-3">
         {/* 세그먼트 컨트롤 행 */}

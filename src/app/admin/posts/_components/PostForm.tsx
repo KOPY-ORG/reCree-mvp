@@ -137,6 +137,7 @@ export type PostInitialData = {
   bodyEn: string | null;
   status: PostStatus;
   memo: string | null;
+  importNote?: string | null;
   recreePhotoUrl?: string | null;
   collectedBy: string | null;
   collectedAt: string | null;
@@ -922,6 +923,7 @@ export function PostForm({
                       tagGroupColorMap={tagGroupColorMap}
                       onTopicAdded={(topic) => setLocalAllTopics((prev) => [...prev, topic])}
                       onTagAdded={(tag) => setLocalAllTags((prev) => [...prev, tag])}
+                      importNote={initialData?.importNote}
                     />
                   )}
                   {activeTab === "content" && (
