@@ -8,7 +8,7 @@ import { getReCreeshotPresignedUrl } from "@/lib/actions/upload-actions";
 import { exportStageToBlob } from "./canvas-export";
 import { getTemplateConfig } from "./template-config";
 import { EditorToolbar } from "./EditorToolbar";
-import type { EditorLayer, TemplateId } from "./editor-types";
+import type { EditorLayer, StickerBadgeOption, TemplateId } from "./editor-types";
 
 const KonvaStage = dynamic(() => import("./KonvaStage"), { ssr: false });
 
@@ -16,6 +16,10 @@ interface Props {
   templateId: TemplateId;
   referencePreviewUrl: string | null;
   shotPreviewUrl: string;
+  uploadedReferenceUrl: string | null;
+  uploadedShotUrl: string;
+  placeName: string | null;
+  badgeOptions: StickerBadgeOption[];
   onNext: (compositeUrl: string) => void;
   onError: (msg: string) => void;
 }
@@ -32,6 +36,10 @@ export function ReCreeshotEditor({
   templateId,
   referencePreviewUrl,
   shotPreviewUrl,
+  uploadedReferenceUrl,
+  uploadedShotUrl,
+  placeName,
+  badgeOptions,
   onNext,
   onError,
 }: Props) {
@@ -40,6 +48,7 @@ export function ReCreeshotEditor({
   const [stageInstance, setStageInstance] = useState<Konva.Stage | null>(null);
   const [referenceImg, setReferenceImg] = useState<HTMLImageElement | null>(null);
   const [shotImg, setShotImg] = useState<HTMLImageElement | null>(null);
+  const [stickerImages, setStickerImages] = useState<Record<string, HTMLImageElement>>({});
   const [isExporting, setIsExporting] = useState(false);
 
   const templateConfig = getTemplateConfig(templateId);
@@ -69,7 +78,7 @@ export function ReCreeshotEditor({
     return () => ro.disconnect();
   }, []);
 
-  // 이미지 로드
+  // 사진 이미지 로드
   useEffect(() => {
     if (!referencePreviewUrl) { setReferenceImg(null); return; }
     loadImage(referencePreviewUrl).then(setReferenceImg).catch(() => setReferenceImg(null));
@@ -78,6 +87,19 @@ export function ReCreeshotEditor({
   useEffect(() => {
     loadImage(shotPreviewUrl).then(setShotImg).catch(() => setShotImg(null));
   }, [shotPreviewUrl]);
+
+  // 스티커 이미지 로드 (type=sticker 레이어 추가 시)
+  useEffect(() => {
+    const toLoad = editorState.layers.filter(
+      (l) => l.type === "sticker" && l.stickerUrl && !stickerImages[l.id]
+    );
+    toLoad.forEach((layer) => {
+      if (!layer.stickerUrl) return;
+      loadImage(layer.stickerUrl)
+        .then((img) => setStickerImages((prev) => ({ ...prev, [layer.id]: img })))
+        .catch(() => {});
+    });
+  }, [editorState.layers]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleStageReady = useCallback((stage: Konva.Stage) => {
     setStageInstance(stage);
@@ -93,6 +115,11 @@ export function ReCreeshotEditor({
       layers: s.layers.filter((l) => l.id !== id),
       selectedLayerId: s.selectedLayerId === id ? null : s.selectedLayerId,
     }));
+    setStickerImages((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
   }
 
   function handleLayerUpdate(
@@ -105,32 +132,24 @@ export function ReCreeshotEditor({
     }));
   }
 
-  function handleAddTextLayer(text: string, fontSize: number, color: string) {
+  function handleAddLayer(layerData: Omit<EditorLayer, "id">) {
     const id = crypto.randomUUID();
-    const newLayer: EditorLayer = {
-      id,
-      type: "text",
-      x: 0.5,
-      y: 0.5,
-      scale: 1,
-      rotation: 0,
-      text,
-      fontSize,
-      color,
-    };
     setEditorState((s) => ({
       ...s,
-      layers: [...s.layers, newLayer],
+      layers: [...s.layers, { id, ...layerData }],
       selectedLayerId: id,
     }));
   }
 
+  function handleAddTextLayer(text: string, fontSize: number, color: string) {
+    handleAddLayer({ type: "text", x: 0.5, y: 0.5, scale: 1, rotation: 0, text, fontSize, color });
+  }
+
   async function handleContinue() {
     if (!stageInstance || isExporting) return;
+    setEditorState((s) => ({ ...s, selectedLayerId: null }));
     setIsExporting(true);
 
-    // Transformer 핸들 숨기고 export
-    setEditorState((s) => ({ ...s, selectedLayerId: null }));
     const tr = stageInstance.findOne("Transformer") as Konva.Transformer | null;
     if (tr) {
       tr.hide();
@@ -178,6 +197,7 @@ export function ReCreeshotEditor({
                 shotLabel={editorState.shotLabel}
                 layers={editorState.layers}
                 selectedLayerId={editorState.selectedLayerId}
+                stickerImages={stickerImages}
                 onStageReady={handleStageReady}
                 onLayerSelect={handleLayerSelect}
                 onLayerDelete={handleLayerDelete}
@@ -197,6 +217,11 @@ export function ReCreeshotEditor({
         onReferenceLabelChange={(v) => setEditorState((s) => ({ ...s, referenceLabel: v }))}
         onShotLabelChange={(v) => setEditorState((s) => ({ ...s, shotLabel: v }))}
         onAddTextLayer={handleAddTextLayer}
+        placeName={placeName}
+        badgeOptions={badgeOptions}
+        uploadedReferenceUrl={uploadedReferenceUrl}
+        uploadedShotUrl={uploadedShotUrl}
+        onAddLayer={handleAddLayer}
       />
 
       <div className="px-4 py-3 shrink-0">

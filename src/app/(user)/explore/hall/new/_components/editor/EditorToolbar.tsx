@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Palette, Type, Smile, X, Plus } from "lucide-react";
 import { FrameColorPicker } from "./FrameColorPicker";
-import type { TemplateConfig } from "./editor-types";
+import { StickerPanel } from "./StickerPanel";
+import type { EditorLayer, StickerBadgeOption, TemplateConfig } from "./editor-types";
 
 const TEXT_SIZES = [
   { label: "S", value: 48 },
@@ -31,6 +32,12 @@ interface Props {
   onReferenceLabelChange: (v: string | null) => void;
   onShotLabelChange: (v: string | null) => void;
   onAddTextLayer: (text: string, fontSize: number, color: string) => void;
+  // sticker panel
+  placeName: string | null;
+  badgeOptions: StickerBadgeOption[];
+  uploadedReferenceUrl: string | null;
+  uploadedShotUrl: string | null;
+  onAddLayer: (layer: Omit<EditorLayer, "id">) => void;
 }
 
 export function EditorToolbar({
@@ -42,6 +49,11 @@ export function EditorToolbar({
   onReferenceLabelChange,
   onShotLabelChange,
   onAddTextLayer,
+  placeName,
+  badgeOptions,
+  uploadedReferenceUrl,
+  uploadedShotUrl,
+  onAddLayer,
 }: Props) {
   const [activeTab, setActiveTab] = useState<Tab | null>(null);
   const [showTextForm, setShowTextForm] = useState(false);
@@ -189,9 +201,15 @@ export function EditorToolbar({
           )}
 
           {activeTab === "sticker" && (
-            <p className="text-sm text-muted-foreground py-3 text-center">
-              Stickers — coming soon
-            </p>
+            <StickerPanel
+              canvasWidth={templateConfig.canvasWidth}
+              canvasHeight={templateConfig.canvasHeight}
+              placeName={placeName}
+              badgeOptions={badgeOptions}
+              uploadedReferenceUrl={uploadedReferenceUrl}
+              uploadedShotUrl={uploadedShotUrl}
+              onAddLayer={onAddLayer}
+            />
           )}
         </div>
       )}

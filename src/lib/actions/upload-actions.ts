@@ -104,3 +104,25 @@ export async function getEventImagePresignedUrl(
 export async function deleteReCreeshotImages(paths: string[]): Promise<void> {
   await deleteStorageFiles("recreeshot-images", paths);
 }
+
+const ALLOWED_STICKER_TYPES = ["image/png", "image/webp", "image/svg+xml"];
+
+/** 스티커 이미지 업로드용 Presigned URL 발급 */
+export async function getStickerPresignedUrl(
+  filename: string,
+  contentType: string,
+): Promise<{ presignedUrl: string; cdnUrl: string; path: string } | { error: string }> {
+  if (!ALLOWED_STICKER_TYPES.includes(contentType)) {
+    return { error: "PNG, WebP, SVG 형식만 지원합니다." };
+  }
+  const ext = contentType === "image/svg+xml" ? "svg" : filename.split(".").pop() ?? "png";
+  const id = crypto.randomUUID();
+  const path = `${id}.${ext}`;
+  try {
+    const { presignedUrl, cdnUrl } = await getPresignedPutUrl("sticker-images", path, contentType);
+    return { presignedUrl, cdnUrl, path };
+  } catch (e) {
+    console.error("스티커 Presigned URL 생성 오류:", e);
+    return { error: "업로드 준비 중 오류가 발생했습니다." };
+  }
+}

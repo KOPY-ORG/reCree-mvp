@@ -19,16 +19,39 @@ export interface EditorLayer {
   y: number;
   scale: number;
   rotation: number;
-  // type별 추가 데이터
-  text?: string;        // type=text
-  fontSize?: number;    // type=text (px, 1080 기준)
-  color?: string;       // type=text
-  stickerId?: string;   // type=sticker
-  stickerUrl?: string;  // type=sticker (R2 URL)
-  topicId?: string;     // type=label-badge
-  tagId?: string;       // type=label-badge
-  score?: number;       // type=match-score
-  placeName?: string;   // type=location-tag
+  // type=text
+  text?: string;
+  fontSize?: number;    // px, 1080 기준
+  color?: string;
+  // type=sticker
+  stickerId?: string;
+  stickerUrl?: string;  // R2 URL
+  // type=label-badge
+  topicId?: string;
+  tagId?: string;
+  // type=match-score
+  score?: number;
+  // type=location-tag
+  placeName?: string;
+  // label-badge / location-tag 렌더링용 색상 정보 (저장 시점에 복사)
+  badgeName?: string;
+  badgeColorHex?: string;
+  badgeColorHex2?: string | null;
+  badgeGradientDir?: string;
+  badgeGradientStop?: number;
+  badgeTextColorHex?: string;
+}
+
+// 스티커 패널에서 배지 옵션으로 표시할 토픽/태그 색상 정보
+export interface StickerBadgeOption {
+  id: string;
+  name: string;
+  type: "topic" | "tag";
+  colorHex: string;
+  colorHex2: string | null;
+  gradientDir: string;
+  gradientStop: number;
+  textColorHex: string;
 }
 
 export interface TemplateConfig {

@@ -16,7 +16,8 @@ import { PhotoPlacer } from "./editor/PhotoPlacer";
 import { ReCreeshotEditor } from "./editor/ReCreeshotEditor";
 import { DoneStep } from "./editor/DoneStep";
 import { DEFAULT_TEMPLATE_ID } from "./editor/template-config";
-import type { TemplateId } from "./editor/editor-types";
+import type { TemplateId, StickerBadgeOption } from "./editor/editor-types";
+import { computeTopicEffectiveColors, resolveTagColors } from "@/lib/post-labels";
 
 interface TagItem {
   id: string;
@@ -94,6 +95,56 @@ type State = {
   error: string | null;
   showLeaveDialog: boolean;
 };
+
+function resolveBadgeOptions(
+  topics: Topic[],
+  tagGroups: TagGroup[],
+  topicIds: string[] = [],
+  tagIds: string[] = [],
+): StickerBadgeOption[] {
+  const sorted = [...topics].sort((a, b) => a.level - b.level);
+  const colorMap = computeTopicEffectiveColors(sorted);
+
+  const topicBadges: StickerBadgeOption[] = topicIds.flatMap((id) => {
+    const t = topics.find((x) => x.id === id);
+    const c = colorMap.get(id);
+    if (!t || !c) return [];
+    return [{
+      id,
+      name: t.nameEn,
+      type: "topic" as const,
+      colorHex: c.hex,
+      colorHex2: c.hex2,
+      gradientDir: c.dir,
+      gradientStop: c.stop,
+      textColorHex: c.textHex,
+    }];
+  });
+
+  const tagBadges: StickerBadgeOption[] = tagIds.flatMap((id) => {
+    for (const group of tagGroups) {
+      const tag = group.tags.find((t) => t.id === id);
+      if (tag) {
+        const c = resolveTagColors(tag, {
+          colorHex: group.colorHex,
+          colorHex2: group.colorHex2,
+          gradientDir: group.gradientDir,
+          gradientStop: group.gradientStop,
+          textColorHex: group.textColorHex,
+        });
+        return [{
+          id,
+          name: tag.name,
+          type: "tag" as const,
+          ...c,
+        }];
+      }
+    }
+    return [];
+  });
+
+  return [...topicBadges, ...tagBadges];
+}
 
 export function ReCreeshotUploadFlow({
   tagGroups,
@@ -341,13 +392,17 @@ export function ReCreeshotUploadFlow({
         </>
       )}
 
-      {/* Step 3: 꾸미기 (placeholder) */}
+      {/* Step 3: 꾸미기 */}
       {state.step === 3 && state.shotPreviewUrl && (
         <>
           <ReCreeshotEditor
             templateId={state.selectedTemplateId}
             referencePreviewUrl={state.referencePreviewUrl}
             shotPreviewUrl={state.shotPreviewUrl}
+            uploadedReferenceUrl={state.uploadedReferenceUrl}
+            uploadedShotUrl={state.uploadedShotUrl ?? ""}
+            placeName={prefillPlace?.nameEn ?? prefillPlace?.nameKo ?? null}
+            badgeOptions={resolveBadgeOptions(topics, tagGroups, prefillTopicIds, prefillTagIds)}
             onNext={handleEditorNext}
             onError={(msg) => setState((s) => ({ ...s, error: msg }))}
           />
