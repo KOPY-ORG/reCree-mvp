@@ -72,6 +72,36 @@ export function photoKey(url: string): string {
   }
 }
 
+interface CarouselPlace {
+  posts: Array<{ imageUrl: string | null; images: string[]; topics: unknown[] }>;
+  imageUrl: string | null;
+  placeImages: Array<{ url: string }>;
+}
+
+/**
+ * 장소의 이미지를 우선순위(포스트 썸네일 → 포스트 나머지 이미지 → 장소 이미지)에 따라
+ * 중복 없이 반환합니다. 토픽 있는 포스트가 먼저 옵니다.
+ */
+export function buildPlaceCarouselUrls(place: CarouselPlace): string[] {
+  const seen = new Set<string>();
+  const urls: string[] = [];
+  const add = (url: string | null | undefined) => {
+    if (!url) return;
+    const key = photoKey(url);
+    if (seen.has(key)) return;
+    seen.add(key);
+    urls.push(url);
+  };
+  const sortedPosts = [...place.posts].sort((a, b) =>
+    (b.topics.length > 0 ? 1 : 0) - (a.topics.length > 0 ? 1 : 0)
+  );
+  sortedPosts.forEach((p) => add(p.imageUrl));
+  sortedPosts.flatMap((p) => p.images).forEach(add);
+  add(place.imageUrl);
+  place.placeImages.forEach((img) => add(img.url));
+  return urls;
+}
+
 export function isExternalImage(src: string): boolean {
   try {
     const { hostname } = new URL(src);

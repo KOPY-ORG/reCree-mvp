@@ -4,7 +4,7 @@ import { useState, useMemo, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSheetDrag } from "../_hooks/useSheetDrag";
 import Image from "next/image";
-import { isExternalImage, photoKey } from "@/lib/image";
+import { isExternalImage, buildPlaceCarouselUrls } from "@/lib/image";
 import Link from "next/link";
 import { Search, User, Star, AlignJustify, X, MapPin } from "lucide-react";
 import { CloseButton } from "./CloseButton";
@@ -22,10 +22,21 @@ import type { TagGroupForFilter as TagGroup } from "@/components/TagFilterRow";
 type Tab = "places" | "my-maps";
 type SheetState = "collapsed" | "tab-only" | "peek" | "expanded";
 
-type TopicColorNode = { colorHex: string | null; textColorHex: string | null; parent?: TopicColorNode | null };
+type TopicColorNode = { colorHex: string | null; parent?: TopicColorNode | null };
 function resolveTopicColor(t: TopicColorNode): string | null {
-  if (t.colorHex) return t.colorHex;
-  return t.parent ? resolveTopicColor(t.parent) : null;
+  return t.colorHex ?? (t.parent ? resolveTopicColor(t.parent) : null);
+}
+function getTopicMarkerColor(posts: MapPlace["posts"]): string | undefined {
+  const sorted = [...posts].sort((a, b) =>
+    (b.topics.length > 0 ? 1 : 0) - (a.topics.length > 0 ? 1 : 0)
+  );
+  for (const post of sorted) {
+    for (const topic of post.topics) {
+      const color = resolveTopicColor(topic);
+      if (color) return color;
+    }
+  }
+  return undefined;
 }
 
 type TagGroupConfig = {
@@ -106,29 +117,8 @@ function SearchResultItem({
         </div>
       </button>
 
-      {/* 이미지 가로 슬라이드: 포스트 이미지 그룹 → 장소 이미지 그룹, 중복 제거 */}
       {(() => {
-        const seen = new Set<string>();
-        const add = (url: string | null | undefined): boolean => {
-          if (!url) return false;
-          const key = photoKey(url);
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        };
-        const allImages: string[] = [];
-        // 토픽 있는 포스트 우선, 동순위는 등록 순 유지
-        const sortedPosts = [...place.posts].sort((a, b) =>
-          (b.topics.length > 0 ? 1 : 0) - (a.topics.length > 0 ? 1 : 0)
-        );
-        // 1순위: 포스트 썸네일 (포스트별 1장, 토픽 있는 포스트 우선)
-        sortedPosts.forEach((p) => { if (add(p.imageUrl)) allImages.push(p.imageUrl!); });
-        // 2순위: 포스트 나머지 이미지
-        sortedPosts.flatMap((p) => p.images).forEach((url) => { if (add(url)) allImages.push(url); });
-        // 3순위: 장소 대표 이미지 (imageUrl)
-        if (add(place.imageUrl)) allImages.push(place.imageUrl!);
-        // 4순위: 나머지 장소 이미지 (placeImages, sortOrder 순)
-        place.placeImages.forEach((img) => { if (add(img.url)) allImages.push(img.url); });
+        const allImages = buildPlaceCarouselUrls(place);
         if (allImages.length === 0) return null;
         return (
           <div className="flex gap-2.5 px-5 pb-4 overflow-x-auto scrollbar-hide">
@@ -326,19 +316,10 @@ export function MapPageClient({
 
         {/* ── 지도 (전체 배경) ── */}
         <InteractiveMap
-          places={displayPlaces.map((p) => {
-            const sortedPosts = [...p.posts].sort((a, b) =>
-              (b.topics.length > 0 ? 1 : 0) - (a.topics.length > 0 ? 1 : 0)
-            );
-            let markerColor: string | undefined;
-            outer: for (const post of sortedPosts) {
-              for (const topic of post.topics) {
-                const color = resolveTopicColor(topic);
-                if (color) { markerColor = color; break outer; }
-              }
-            }
-            return { ...p, markerColor };
-          })}
+          places={displayPlaces.map((p) => ({
+            ...p,
+            markerColor: getTopicMarkerColor(p.posts),
+          }))}
           selectedPlaceId={selectedPlaceId}
           highlightedIds={isSearchMode ? new Set(displayPlaces.map((p) => p.id)) : undefined}
           boundsKey={isSearchMode ? searchQuery : undefined}
