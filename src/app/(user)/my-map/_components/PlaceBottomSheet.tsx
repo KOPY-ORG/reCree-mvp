@@ -224,10 +224,14 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
           if (url && !shownUrls.has(url)) { shownUrls.add(url); carouselUrls.push(url); }
         };
 
+        // 토픽 있는 포스트 우선, 동순위는 등록 순 유지
+        const sortedPosts = [...place.posts].sort((a, b) =>
+          (b.topics.length > 0 ? 1 : 0) - (a.topics.length > 0 ? 1 : 0)
+        );
         // 1순위: 포스트 썸네일 (포스트별 1장)
-        place.posts.forEach((post) => add(post.imageUrl));
+        sortedPosts.forEach((post) => add(post.imageUrl));
         // 2순위: 포스트 나머지 이미지
-        place.posts.forEach((post) => post.images.forEach(add));
+        sortedPosts.forEach((post) => post.images.forEach(add));
         // 3순위: 장소 대표 이미지 (imageUrl)
         add(place.imageUrl);
         // 4순위: 나머지 장소 이미지 (placeImages, sortOrder 순)

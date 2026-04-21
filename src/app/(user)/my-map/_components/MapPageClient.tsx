@@ -111,10 +111,14 @@ function SearchResultItem({
           return true;
         };
         const allImages: string[] = [];
+        // 토픽 있는 포스트 우선, 동순위는 등록 순 유지
+        const sortedPosts = [...place.posts].sort((a, b) =>
+          (b.topics.length > 0 ? 1 : 0) - (a.topics.length > 0 ? 1 : 0)
+        );
         // 1순위: 포스트 썸네일 (포스트별 1장)
-        place.posts.forEach((p) => { if (add(p.imageUrl)) allImages.push(p.imageUrl!); });
+        sortedPosts.forEach((p) => { if (add(p.imageUrl)) allImages.push(p.imageUrl!); });
         // 2순위: 포스트 나머지 이미지
-        place.posts.flatMap((p) => p.images).forEach((url) => { if (add(url)) allImages.push(url); });
+        sortedPosts.flatMap((p) => p.images).forEach((url) => { if (add(url)) allImages.push(url); });
         // 3순위: 장소 대표 이미지 (imageUrl)
         if (add(place.imageUrl)) allImages.push(place.imageUrl!);
         // 4순위: 나머지 장소 이미지 (placeImages, sortOrder 순)
