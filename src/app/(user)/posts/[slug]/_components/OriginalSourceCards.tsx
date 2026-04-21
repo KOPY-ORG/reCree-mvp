@@ -72,7 +72,7 @@ function SourceCard({ image, onClick }: { image: OriginalImage; onClick?: () => 
 
   return (
     <div
-      className="relative w-18 sm:w-24 md:w-32 lg:w-40 aspect-[3/2] rounded-lg shadow-md overflow-hidden shrink-0 cursor-pointer ring-1 ring-white/60"
+      className="relative w-18 sm:w-24 md:w-32 lg:w-40 aspect-[4/3] rounded-lg shadow-md overflow-hidden shrink-0 cursor-pointer ring-1 ring-white/60"
       onClick={onClick}
     >
       {error ? (

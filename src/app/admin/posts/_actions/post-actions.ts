@@ -27,6 +27,7 @@ export type PostImageInput = {
   imageType: "BANNER" | "ORIGINAL";
   imageSource: "UPLOAD" | "URL" | "AUTO";
   url: string;
+  originalUrl?: string | null;
   linkUrl?: string | null;
   isThumbnail: boolean;
   sortOrder: number;
@@ -192,6 +193,7 @@ function buildPostRelations(data: PostFormData) {
           imageType: img.imageType,
           imageSource: img.imageSource,
           url: img.url,
+          originalUrl: img.originalUrl ?? null,
           linkUrl: img.linkUrl ?? null,
           isThumbnail: img.isThumbnail,
           sortOrder: img.sortOrder,
@@ -291,7 +293,7 @@ export async function updatePost(
       where: { id },
       select: {
         recreePhotoUrl: true,
-        postImages: { select: { url: true } },
+        postImages: { select: { url: true, originalUrl: true } },
       },
     });
 
@@ -323,12 +325,19 @@ export async function updatePost(
     // Storage 파일 정리 (best-effort, 트랜잭션 성공 후)
     if (existing) {
       // 교체된 PostImage Storage 파일 삭제
-      const newUrlSet = new Set(data.images.map((img) => img.url));
-      const orphanedPaths = existing.postImages
-        .map((img) => img.url)
-        .filter((url) => !newUrlSet.has(url))
-        .map(extractPostImageStoragePath)
-        .filter((p): p is string => p !== null);
+      const newUrlSet = new Set<string>([
+        ...data.images.map((img) => img.url),
+        ...data.images.map((img) => img.originalUrl).filter((u): u is string => u != null),
+      ]);
+      const orphanedPaths = [
+        ...new Set(
+          existing.postImages
+            .flatMap((img) => [img.url, img.originalUrl])
+            .filter((url): url is string => url != null && !newUrlSet.has(url))
+            .map(extractPostImageStoragePath)
+            .filter((p): p is string => p !== null),
+        ),
+      ];
       await deleteStorageFiles("post-images", orphanedPaths);
 
       // recreePhotoUrl Storage 파일 삭제
@@ -359,12 +368,15 @@ export async function deletePost(id: string): Promise<{ error?: string }> {
       where: { id },
       select: {
         recreePhotoUrl: true,
-        postImages: { select: { url: true } },
+        postImages: { select: { url: true, originalUrl: true } },
       },
     });
     if (post) {
       const paths = [
-        ...post.postImages.map((img) => extractPostImageStoragePath(img.url)),
+        ...post.postImages.flatMap((img) => [
+          extractPostImageStoragePath(img.url),
+          img.originalUrl ? extractPostImageStoragePath(img.originalUrl) : null,
+        ]),
         extractPostImageStoragePath(post.recreePhotoUrl ?? ""),
       ].filter((p): p is string => p !== null);
       await deleteStorageFiles("post-images", paths);
@@ -487,6 +499,7 @@ export async function getPostEditData(id: string) {
             imageType: true,
             imageSource: true,
             url: true,
+            originalUrl: true,
             linkUrl: true,
             isThumbnail: true,
             sortOrder: true,
@@ -596,6 +609,7 @@ export async function getPostEditData(id: string) {
       imageType: img.imageType as "BANNER" | "ORIGINAL",
       imageSource: img.imageSource as "UPLOAD" | "URL" | "AUTO",
       url: img.url,
+      originalUrl: img.originalUrl ?? null,
       linkUrl: img.linkUrl ?? null,
       isThumbnail: img.isThumbnail,
       sortOrder: img.sortOrder,

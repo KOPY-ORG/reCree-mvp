@@ -9,6 +9,7 @@ export type SourcePlatform =
   | "X"
   | "PINTEREST"
   | "NETFLIX"
+  | "WEVERSE"
   | "BLOG"
   | "ARTICLE"
   | "TIKTOK"

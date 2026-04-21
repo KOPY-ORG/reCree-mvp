@@ -115,7 +115,7 @@ async function main() {
       userProfileRows,
     ] = await Promise.all([
       prisma.placeImage.findMany({ select: { url: true } }),
-      prisma.postImage.findMany({ select: { url: true } }),
+      prisma.postImage.findMany({ select: { url: true, originalUrl: true } }),
       prisma.post.findMany({
         where: { recreePhotoUrl: { not: null } },
         select: { recreePhotoUrl: true },
@@ -131,7 +131,7 @@ async function main() {
 
     const dbUrls = new Set<string>([
       ...placeImageRows.map((r) => r.url),
-      ...postImageRows.map((r) => r.url),
+      ...postImageRows.flatMap((r) => [r.url, r.originalUrl].filter((u): u is string => u != null)),
       ...postRecreeRows.map((r) => r.recreePhotoUrl!),
       ...reCreeshotRows.flatMap((r) =>
         [r.imageUrl, r.referencePhotoUrl].filter((u): u is string => !!u),

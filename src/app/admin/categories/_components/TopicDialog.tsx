@@ -458,12 +458,12 @@ export function TopicDialog({ open, topic, defaultParentId, allTopics, parentEff
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
+      <DialogContent className="max-w-lg max-h-[90vh] flex flex-col gap-0 p-0">
+        <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
           <DialogTitle>{isEdit ? "Topic 수정" : "새 Topic 추가"}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
+        <div className="space-y-4 px-6 py-2 overflow-y-auto flex-1">
           {/* nameKo */}
           <div className="space-y-1.5">
             <Label htmlFor="nameKo">이름 (한국어) *</Label>
@@ -608,7 +608,7 @@ export function TopicDialog({ open, topic, defaultParentId, allTopics, parentEff
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:justify-between">
+        <DialogFooter className="gap-2 sm:justify-between px-6 pb-6 pt-4 shrink-0 border-t">
           {isEdit && (
             <Button
               type="button"

@@ -57,7 +57,7 @@ export function ImportPreviewTable({
                 제목
               </th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">
-                아티스트
+                아티스트/작품
               </th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">
                 태그
