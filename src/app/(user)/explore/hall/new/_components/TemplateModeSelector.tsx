@@ -48,26 +48,25 @@ function PersonIconFull({ color, size = 11 }: { color: string; size?: number }) 
 // ── 바코드 ────────────────────────────────────────────────────────────────────
 
 function Barcode() {
-  // Code 39 스타일: 1px/2px 균일 높이 바
   const widths = [1,2,1,1,2,1,2,1,1,2,1,1,1,2,2,1,1,2,1,1,2,1,2,1,1,1,2,1,1,2,1,2,1,1,1,2,1];
   const GAP = 0.5;
   const H = 13;
   let x = 0;
   const bars: { x: number; w: number }[] = [];
   widths.forEach((w, i) => {
-    if (i % 2 === 0) bars.push({ x, w });   // 짝수 인덱스 = 바
+    if (i % 2 === 0) bars.push({ x, w });
     x += w + (i % 2 === 0 ? GAP : 0);
   });
   return (
     <svg width={x} height={H} viewBox={`0 0 ${x} ${H}`} aria-hidden>
       {bars.map((b, i) => (
-        <rect key={i} x={b.x} y={0} width={b.w} height={H} fill="#0b0b0b" />
+        <rect key={i} x={b.x} width={b.w} height={H} fill="#0b0b0b" />
       ))}
     </svg>
   );
 }
 
-// ── 일러스트 박스 (width 78, height 96, border 1.5px solid #0b0b0b, padding 3px) ──
+// ── 일러스트 박스 ─────────────────────────────────────────────────────────────────
 
 function IllustrationBox({ kind }: { kind: TemplateModeId }) {
   const boxStyle: React.CSSProperties = {
@@ -111,7 +110,6 @@ function IllustrationBox({ kind }: { kind: TemplateModeId }) {
     );
   }
 
-  // solo
   return (
     <div style={{ ...boxStyle, display: "flex" }}>
       <div style={{ flex: 1, background: "#CDE3F2", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -293,7 +291,6 @@ function TicketCard({ mode, isSelected, onSelect }: {
             {mode.title}
           </p>
           <p style={{
-            fontFamily: "Inter, sans-serif",
             fontSize: 12,
             color: "#555",
             lineHeight: 1.4,
