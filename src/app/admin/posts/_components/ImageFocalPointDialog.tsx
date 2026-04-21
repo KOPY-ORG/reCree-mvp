@@ -3,9 +3,10 @@
 import { useState, useRef, useCallback } from "react";
 import ReactCrop, {
   centerCrop,
+  convertToPixelCrop,
   makeAspectCrop,
   type Crop,
-  type PercentCrop,
+  type PixelCrop,
 } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 import { Button } from "@/components/ui/button";
@@ -17,53 +18,61 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
-const ASPECT = 3 / 2;
-
 interface Props {
   open: boolean;
   imageUrl: string;
-  focalX: number | null;
-  focalY: number | null;
-  zoom: number | null;
-  onConfirm: (focalX: number, focalY: number, zoom: number) => void;
+  aspect: number;
+  onConfirm: (blob: Blob) => void;
   onClose: () => void;
 }
 
-export function ImageFocalPointDialog({
-  open, imageUrl, focalX, focalY, zoom, onConfirm, onClose,
-}: Props) {
+async function getCroppedBlob(image: HTMLImageElement, pixelCrop: PixelCrop): Promise<Blob | null> {
+  const scaleX = image.naturalWidth / image.width;
+  const scaleY = image.naturalHeight / image.height;
+  const canvas = document.createElement("canvas");
+  canvas.width = pixelCrop.width * scaleX;
+  canvas.height = pixelCrop.height * scaleY;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  ctx.drawImage(
+    image,
+    pixelCrop.x * scaleX, pixelCrop.y * scaleY,
+    pixelCrop.width * scaleX, pixelCrop.height * scaleY,
+    0, 0, canvas.width, canvas.height,
+  );
+  return new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/jpeg", 0.92));
+}
+
+export function ImageFocalPointDialog({ open, imageUrl, aspect, onConfirm, onClose }: Props) {
   const imgRef = useRef<HTMLImageElement>(null);
   const [crop, setCrop] = useState<Crop>();
-  const [completedCrop, setCompletedCrop] = useState<PercentCrop>();
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
+  const [applying, setApplying] = useState(false);
 
   const onImageLoad = useCallback(
     (e: React.SyntheticEvent<HTMLImageElement>) => {
       const { width, height } = e.currentTarget;
-
-      if (focalX != null && focalY != null && zoom != null && zoom > 1) {
-        // Restore previous crop from saved focal + zoom
-        const wPct = 100 / zoom;
-        const hPct = (wPct / 100) * width / ASPECT / height * 100;
-        const xPct = Math.max(0, Math.min(100 - wPct, focalX * 100 - wPct / 2));
-        const yPct = Math.max(0, Math.min(100 - hPct, focalY * 100 - hPct / 2));
-        setCrop({ unit: "%", x: xPct, y: yPct, width: wPct, height: hPct });
-      } else {
-        setCrop(centerCrop(makeAspectCrop({ unit: "%", width: 90 }, ASPECT, width, height), width, height));
-      }
+      const initial = centerCrop(
+        makeAspectCrop({ unit: "%", width: 90 }, aspect, width, height),
+        width, height,
+      );
+      setCrop(initial);
+      setCompletedCrop(convertToPixelCrop(initial, width, height));
     },
-    // open/imageUrl 변경 시 재실행되도록 — focalX/Y/zoom은 open 시점에 고정됨
+    // open/imageUrl 변경 시 재실행 — aspect는 open 시점에 고정
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [open, imageUrl, focalX, focalY, zoom],
+    [open, imageUrl],
   );
 
-  function handleConfirm() {
-    if (!completedCrop?.width) return;
-    const { x, y, width: w, height: h } = completedCrop;
-    onConfirm(
-      Math.max(0, Math.min(1, (x + w / 2) / 100)),
-      Math.max(0, Math.min(1, (y + h / 2) / 100)),
-      Math.max(1, 100 / w),
-    );
+  async function handleConfirm() {
+    if (!imgRef.current || !completedCrop?.width) return;
+    setApplying(true);
+    try {
+      const blob = await getCroppedBlob(imgRef.current, completedCrop);
+      if (blob) onConfirm(blob);
+    } finally {
+      setApplying(false);
+    }
   }
 
   return (
@@ -79,8 +88,8 @@ export function ImageFocalPointDialog({
           <ReactCrop
             crop={crop}
             onChange={(c) => setCrop(c)}
-            onComplete={(_, pc) => setCompletedCrop(pc)}
-            aspect={ASPECT}
+            onComplete={(c) => setCompletedCrop(c)}
+            aspect={aspect}
             minWidth={20}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -95,9 +104,9 @@ export function ImageFocalPointDialog({
           </ReactCrop>
         </div>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>취소</Button>
-          <Button type="button" onClick={handleConfirm} disabled={!completedCrop?.width}>
-            적용
+          <Button type="button" variant="outline" onClick={onClose} disabled={applying}>취소</Button>
+          <Button type="button" onClick={handleConfirm} disabled={applying || !completedCrop?.width}>
+            {applying ? "적용 중..." : "적용"}
           </Button>
         </DialogFooter>
       </DialogContent>

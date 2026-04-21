@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { isExternalImage } from "@/lib/image";
+import { isExternalImage, focalStyle } from "@/lib/image";
 import { ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getSavedPostIds, type PostItem } from "@/lib/post-queries";
@@ -41,6 +41,7 @@ function PostListItem({
             fill
             unoptimized={isExternalImage(post.postImages[0].url)}
             className="object-cover"
+            style={focalStyle(post.postImages[0].focalX, post.postImages[0].focalY, post.postImages[0].zoom)}
             sizes="88px"
           />
         ) : (

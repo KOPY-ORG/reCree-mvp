@@ -991,7 +991,7 @@ export function PostForm({
                   {(() => {
                     const thumb = images.find((img) => img.isThumbnail);
                     return thumb ? (
-                      <div className="relative aspect-[3/2] rounded-lg overflow-hidden border">
+                      <div className="relative aspect-[4/3] rounded-lg overflow-hidden border">
                         {/* eslint-disable-next-line @next/next/no-img-element -- 관리자 썸네일 미리보기: 블롭/외부 URL 혼재로 next/image 최적화 불가 */}
                         <img src={thumb.url} alt="썸네일" className="w-full h-full object-cover" style={focalStyle(thumb.focalX, thumb.focalY, thumb.zoom)} />
                       </div>

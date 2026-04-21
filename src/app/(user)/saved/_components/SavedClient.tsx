@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { isExternalImage } from "@/lib/image";
+import { isExternalImage, focalStyle } from "@/lib/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ReCreeshotImage } from "@/components/recreeshot-image";
 import { ScrapButton } from "../../_components/ScrapButton";
@@ -49,6 +49,7 @@ function SavedPostCard({ post, tagGroupMap }: { post: PostItem; tagGroupMap: Tag
             fill
             unoptimized={isExternalImage(post.postImages[0].url)}
             className="object-cover"
+            style={focalStyle(post.postImages[0].focalX, post.postImages[0].focalY, post.postImages[0].zoom)}
             sizes="88px"
           />
         ) : (

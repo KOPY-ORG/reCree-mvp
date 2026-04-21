@@ -141,7 +141,7 @@ function SortableBannerItem({
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }}
       className={cn(
-        "relative group w-32 aspect-[3/2] rounded-lg overflow-hidden border-[3px] cursor-pointer shrink-0",
+        "relative group w-32 aspect-[4/3] rounded-lg overflow-hidden border-[3px] cursor-pointer shrink-0",
         image.isThumbnail ? "border-brand" : "border-transparent hover:border-zinc-300",
       )}
       onClick={onSetThumb}
@@ -280,25 +280,17 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
 
   const [bannerUploading, setBannerUploading] = useState(false);
   const [originalMode, setOriginalMode] = useState<OriginalMode>("idle");
+  const [urlInput, setUrlInput] = useState("");
   const [reCreeCropSrc, setReCreeCropSrc] = useState<string | null>(null);
   const [recreeUploading, setRecreeUploading] = useState(false);
+  const [focalDialog, setFocalDialog] = useState<{ url: string; originalUrl: string } | null>(null);
+  const [focalUploading, setFocalUploading] = useState(false);
   const [placeImages, setPlaceImages] = useState<PlaceImageItem[]>([]);
 
   useEffect(() => {
     if (!placeId) { setPlaceImages([]); return; }
     getPlaceImages(placeId).then(setPlaceImages);
   }, [placeId]);
-  const [urlInput, setUrlInput] = useState("");
-  const [focalDialog, setFocalDialog] = useState<{
-    url: string;
-    focalX: number | null;
-    focalY: number | null;
-    zoom: number | null;
-  } | null>(null);
-
-  function updateFocal(url: string, focalX: number, focalY: number, zoom: number) {
-    onChange(images.map((img) => img.url === url ? { ...img, focalX, focalY, zoom } : img));
-  }
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -382,7 +374,7 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
       const newBanners = [...bannerImages];
       results.forEach((result) => {
         if ("error" in result) { toast.error(result.error); return; }
-        newBanners.push({ imageType: "BANNER", imageSource: "UPLOAD", url: result.url, isThumbnail: false, sortOrder: newBanners.length });
+        newBanners.push({ imageType: "BANNER", imageSource: "UPLOAD", url: result.url, originalUrl: result.url, isThumbnail: false, sortOrder: newBanners.length });
       });
       replaceImages(newBanners, originalImage);
     } catch {
@@ -427,13 +419,13 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
                     image={img}
                     onRemove={() => removeBanner(img.url)}
                     onSetThumb={() => setThumbnail(img.url)}
-                    onEditFocal={() => setFocalDialog({ url: img.url, focalX: img.focalX ?? null, focalY: img.focalY ?? null, zoom: img.zoom ?? null })}
+                    onEditFocal={() => setFocalDialog({ url: img.url, originalUrl: img.originalUrl ?? img.url })}
                   />
                 ))}
               </SortableContext>
             </DndContext>
           ) : (
-            <div className="flex items-center justify-center w-32 aspect-[3/2] rounded-lg border border-dashed bg-muted/30 text-muted-foreground">
+            <div className="flex items-center justify-center w-32 aspect-[4/3] rounded-lg border border-dashed bg-muted/30 text-muted-foreground">
               <ImageIcon className="h-6 w-6" />
             </div>
           )}
@@ -444,7 +436,7 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
               disabled={bannerUploading}
               onClick={() => bannerFileRef.current?.click()}
               className={cn(
-                "flex flex-col items-center justify-center w-32 aspect-[3/2] rounded-lg border-2 border-dashed cursor-pointer shrink-0 transition-colors",
+                "flex flex-col items-center justify-center w-32 aspect-[4/3] rounded-lg border-2 border-dashed cursor-pointer shrink-0 transition-colors",
                 bannerUploading ? "opacity-50 cursor-not-allowed" : "hover:border-zinc-400",
               )}
             >
@@ -480,6 +472,7 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
                           imageType: "BANNER" as const,
                           imageSource: "URL" as const,
                           url: img.url,
+                          originalUrl: img.url,
                           isThumbnail: false,
                           sortOrder: bannerImages.length,
                         },
@@ -488,7 +481,7 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
                     }}
                     title={img.caption ?? undefined}
                     className={cn(
-                      "relative w-20 aspect-[3/2] rounded-md overflow-hidden border-2 shrink-0 transition-all",
+                      "relative w-20 aspect-[4/3] rounded-md overflow-hidden border-2 shrink-0 transition-all",
                       alreadyAdded
                         ? "border-brand opacity-50 cursor-default"
                         : bannerImages.length >= MAX_BANNER
@@ -544,7 +537,7 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
             <div className="flex gap-4 items-start">
               <div
                 className={cn(
-                  "relative group w-32 aspect-[3/2] rounded-lg overflow-hidden border-[3px] cursor-pointer shrink-0",
+                  "relative group w-32 aspect-[4/3] rounded-lg overflow-hidden border-[3px] cursor-pointer shrink-0",
                   originalImage.isThumbnail ? "border-brand" : "border-transparent hover:border-zinc-300",
                 )}
                 onClick={() => setThumbnail(originalImage.url)}
@@ -566,7 +559,7 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
                 <button
                   type="button"
                   className="absolute bottom-1 right-1 p-0.5 rounded bg-black/40 opacity-0 group-hover:opacity-100 text-white"
-                  onClick={(e) => { e.stopPropagation(); setFocalDialog({ url: originalImage.url, focalX: originalImage.focalX ?? null, focalY: originalImage.focalY ?? null, zoom: originalImage.zoom ?? null }); }}
+                  onClick={(e) => { e.stopPropagation(); setFocalDialog({ url: originalImage.url, originalUrl: originalImage.originalUrl ?? originalImage.url }); }}
                   title="초점 설정"
                 >
                   <Crosshair className="h-3 w-3" />
@@ -604,14 +597,10 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
                 <button
                   key={yt.url}
                   type="button"
-                  onClick={() => setOriginal({
-                    imageType: "ORIGINAL",
-                    imageSource: "AUTO",
-                    url: `https://img.youtube.com/vi/${yt.videoId}/maxresdefault.jpg`,
-                    linkUrl: yt.url,
-                    isThumbnail: false,
-                    sortOrder: 0,
-                  })}
+                  onClick={() => {
+                    const ytUrl = `https://img.youtube.com/vi/${yt.videoId}/maxresdefault.jpg`;
+                    setOriginal({ imageType: "ORIGINAL", imageSource: "AUTO", url: ytUrl, originalUrl: ytUrl, linkUrl: yt.url, isThumbnail: false, sortOrder: 0 });
+                  }}
                   className="flex items-center gap-2 px-3 py-1.5 text-xs rounded-md border hover:bg-muted transition-colors text-sky-600 border-sky-200"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element -- YouTube 썸네일 외부 URL */}
@@ -641,7 +630,7 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
                   try {
                     const result = await uploadImage(file, `original/${postId ?? "new"}`);
                     if ("error" in result) { toast.error(result.error); return; }
-                    setOriginal({ imageType: "ORIGINAL", imageSource: "UPLOAD", url: result.url, linkUrl: null, isThumbnail: false, sortOrder: 0 });
+                    setOriginal({ imageType: "ORIGINAL", imageSource: "UPLOAD", url: result.url, originalUrl: result.url, linkUrl: null, isThumbnail: false, sortOrder: 0 });
                   } catch {
                     toast.error("이미지 업로드 중 오류가 발생했습니다.");
                   }
@@ -665,7 +654,8 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
                   type="button" size="sm" variant="outline" className="h-8"
                   disabled={!urlInput.trim()}
                   onClick={() => {
-                    setOriginal({ imageType: "ORIGINAL", imageSource: "URL", url: urlInput.trim(), linkUrl: null, isThumbnail: false, sortOrder: 0 });
+                    const trimmed = urlInput.trim();
+                    setOriginal({ imageType: "ORIGINAL", imageSource: "URL", url: trimmed, originalUrl: trimmed, linkUrl: null, isThumbnail: false, sortOrder: 0 });
                     setUrlInput("");
                     setOriginalMode("idle");
                   }}
@@ -737,7 +727,7 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
                     key={img.url}
                     type="button"
                     onClick={() => setReCreeCropSrc(img.url)}
-                    className="group relative w-12 aspect-[3/2] rounded overflow-hidden border hover:border-zinc-400 transition-colors shrink-0"
+                    className="group relative w-12 aspect-[4/3] rounded overflow-hidden border hover:border-zinc-400 transition-colors shrink-0"
                     title={`배너 ${i + 1}에서 자르기`}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element -- 배너에서 자르기 미리보기 */}
@@ -822,7 +812,7 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{thumbSource}</span>
             )}
           </div>
-          <div className="relative w-40 aspect-[3/2] rounded-lg overflow-hidden border">
+          <div className="relative w-40 aspect-[4/3] rounded-lg overflow-hidden border">
             {/* eslint-disable-next-line @next/next/no-img-element -- 관리자 현재 썸네일 미리보기 */}
             <img
               src={thumbImage.url}
@@ -838,16 +828,39 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
       {focalDialog && (
         <ImageFocalPointDialog
           open
-          imageUrl={focalDialog.url}
-          focalX={focalDialog.focalX}
-          focalY={focalDialog.focalY}
-          zoom={focalDialog.zoom}
-          onConfirm={(x, y, z) => {
-            updateFocal(focalDialog.url, x, y, z);
+          imageUrl={focalDialog.originalUrl}
+          aspect={4 / 3}
+          onConfirm={async (blob) => {
+            const { url: oldUrl, originalUrl } = focalDialog;
+            const imageType = images.find((img) => img.url === oldUrl)?.imageType;
+            const folder = imageType === "ORIGINAL" ? "original" : "banner";
             setFocalDialog(null);
+            setFocalUploading(true);
+            try {
+              const file = new File([blob], `crop-${Date.now()}.jpg`, { type: "image/jpeg" });
+              const result = await uploadImage(file, `${folder}/${postId ?? "new"}`);
+              if ("error" in result) { toast.error(result.error); return; }
+              onChange(images.map((img) =>
+                img.url === oldUrl
+                  ? { ...img, url: result.url, originalUrl, focalX: null, focalY: null, zoom: null }
+                  : img,
+              ));
+            } catch {
+              toast.error("이미지 업로드 중 오류가 발생했습니다.");
+            } finally {
+              setFocalUploading(false);
+            }
           }}
           onClose={() => setFocalDialog(null)}
         />
+      )}
+      {focalUploading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <div className="bg-background rounded-lg px-6 py-4 flex items-center gap-3 shadow-lg">
+            <div className="h-5 w-5 rounded-full border-2 border-t-transparent border-foreground animate-spin" />
+            <span className="text-sm">이미지 적용 중...</span>
+          </div>
+        </div>
       )}
     </div>
   );
