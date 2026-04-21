@@ -12,6 +12,7 @@ export function detectPlatform(url: string): SourcePlatform | null {
     if (matchesDomain(hostname, "instagram.com")) return "INSTAGRAM";
     if (matchesDomain(hostname, "pinterest.com") || matchesDomain(hostname, "pin.it")) return "PINTEREST";
     if (matchesDomain(hostname, "netflix.com")) return "NETFLIX";
+    if (matchesDomain(hostname, "weverse.io")) return "WEVERSE";
     if (
       matchesDomain(hostname, "naver.com") ||
       matchesDomain(hostname, "tistory.com") ||
