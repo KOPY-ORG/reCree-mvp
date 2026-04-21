@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useSheetDrag } from "../_hooks/useSheetDrag";
 import { useToast } from "../../_hooks/useToast";
 import Image from "next/image";
-import { isExternalImage } from "@/lib/image";
+import { isExternalImage, photoKey } from "@/lib/image";
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import { CloseButton } from "./CloseButton";
@@ -215,23 +215,26 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
 
       {/* 스크롤 영역 */}
       {(() => {
-        // 캐러셀에 표시할 URL 목록: 장소 이미지 → 배너 → 소스 순, URL 기준 중복 제거
-        // PostCard 썸네일도 이 Set을 참조해 전체 시트에서 중복 표시를 막는다
-        const shownUrls = new Set<string>();
+        const seen = new Set<string>();
         const carouselUrls: string[] = [];
 
-        const add = (url: string | null | undefined) => {
-          if (url && !shownUrls.has(url)) { shownUrls.add(url); carouselUrls.push(url); }
+        const add = (url: string | null | undefined): boolean => {
+          if (!url) return false;
+          const key = photoKey(url);
+          if (seen.has(key)) return false;
+          seen.add(key);
+          carouselUrls.push(url);
+          return true;
         };
 
         // 토픽 있는 포스트 우선, 동순위는 등록 순 유지
         const sortedPosts = [...place.posts].sort((a, b) =>
           (b.topics.length > 0 ? 1 : 0) - (a.topics.length > 0 ? 1 : 0)
         );
-        // 1순위: 포스트 썸네일 (포스트별 1장)
+        // 1순위: 포스트 썸네일 (포스트별 1장, 토픽 있는 포스트 우선)
         sortedPosts.forEach((post) => add(post.imageUrl));
-        // 2순위: 포스트 나머지 이미지
-        sortedPosts.forEach((post) => post.images.forEach(add));
+        // 2순위: 포스트 비썸네일 이미지
+        sortedPosts.forEach((post) => post.images.forEach((url) => add(url)));
         // 3순위: 장소 대표 이미지 (imageUrl)
         add(place.imageUrl);
         // 4순위: 나머지 장소 이미지 (placeImages, sortOrder 순)

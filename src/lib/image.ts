@@ -51,6 +51,27 @@ export function focalStyle(
  * Vercel Image Optimization을 사용하지 않아야 하는 이미지인지 확인합니다.
  * R2 CDN 이미지는 Cloudflare에서 이미 최적화됩니다.
  */
+/**
+ * 동일한 구글 포토의 URL이 size 파라미터만 달라도 같은 사진으로 인식하는 dedup key.
+ * - lh3.googleusercontent.com/places/PHOTO_ID=s1600 → "PHOTO_ID" 추출
+ * - maps.googleapis.com photo_reference 파라미터 추출
+ * - 그 외 URL은 그대로 사용
+ */
+export function photoKey(url: string): string {
+  try {
+    const u = new URL(url);
+    if (u.hostname === "lh3.googleusercontent.com") {
+      // pathname: /places/PHOTO_ID=s1600-w1600 → PHOTO_ID
+      return u.pathname.split("=")[0];
+    }
+    const ref = u.searchParams.get("photo_reference");
+    if (ref) return ref;
+    return url;
+  } catch {
+    return url;
+  }
+}
+
 export function isExternalImage(src: string): boolean {
   try {
     const { hostname } = new URL(src);

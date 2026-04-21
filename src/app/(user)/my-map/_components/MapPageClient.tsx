@@ -4,7 +4,7 @@ import { useState, useMemo, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSheetDrag } from "../_hooks/useSheetDrag";
 import Image from "next/image";
-import { isExternalImage } from "@/lib/image";
+import { isExternalImage, photoKey } from "@/lib/image";
 import Link from "next/link";
 import { Search, User, Star, AlignJustify, X, MapPin } from "lucide-react";
 import { CloseButton } from "./CloseButton";
@@ -106,8 +106,10 @@ function SearchResultItem({
       {(() => {
         const seen = new Set<string>();
         const add = (url: string | null | undefined): boolean => {
-          if (!url || seen.has(url)) return false;
-          seen.add(url);
+          if (!url) return false;
+          const key = photoKey(url);
+          if (seen.has(key)) return false;
+          seen.add(key);
           return true;
         };
         const allImages: string[] = [];
@@ -115,7 +117,7 @@ function SearchResultItem({
         const sortedPosts = [...place.posts].sort((a, b) =>
           (b.topics.length > 0 ? 1 : 0) - (a.topics.length > 0 ? 1 : 0)
         );
-        // 1순위: 포스트 썸네일 (포스트별 1장)
+        // 1순위: 포스트 썸네일 (포스트별 1장, 토픽 있는 포스트 우선)
         sortedPosts.forEach((p) => { if (add(p.imageUrl)) allImages.push(p.imageUrl!); });
         // 2순위: 포스트 나머지 이미지
         sortedPosts.flatMap((p) => p.images).forEach((url) => { if (add(url)) allImages.push(url); });
