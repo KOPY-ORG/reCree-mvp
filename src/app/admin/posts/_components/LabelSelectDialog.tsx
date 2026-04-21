@@ -314,7 +314,7 @@ export function LabelSelectDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       {/* 크기 고정: w-[640px] h-[600px] */}
-      <DialogContent className="w-[640px] max-w-[640px] h-[600px] flex flex-col gap-0 p-0">
+      <DialogContent className="w-full max-w-2xl max-h-[85vh] flex flex-col gap-0 p-0">
         {/* 헤더 */}
         <DialogHeader className="px-6 pt-6 pb-3 shrink-0">
           <DialogTitle>토픽 / 태그 선택</DialogTitle>

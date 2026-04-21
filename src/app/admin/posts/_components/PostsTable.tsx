@@ -313,7 +313,7 @@ export function PostsTable({ posts, isFiltered, currentPage = 1 }: Props) {
           if (!open && !isPending) setDeleteTarget(null);
         }}
       >
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>포스트 삭제</DialogTitle>
           </DialogHeader>

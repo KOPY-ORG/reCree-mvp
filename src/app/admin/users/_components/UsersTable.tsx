@@ -150,7 +150,7 @@ export function UsersTable({ users }: { users: User[] }) {
           if (!open && !isPending) setDeleteTarget(null);
         }}
       >
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>사용자 강제 탈퇴</DialogTitle>
           </DialogHeader>

@@ -68,7 +68,7 @@ export function ImageFocalPointDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>보이는 영역 설정</DialogTitle>
         </DialogHeader>

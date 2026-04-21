@@ -200,7 +200,7 @@ export function AIDraftReviewDialog({
         onOpenChange(o);
       }}
     >
-      <DialogContent className="!w-[900px] !max-w-[900px] h-[700px] flex flex-col p-0 gap-0 overflow-hidden !rounded-[32px]">
+      <DialogContent className="w-full sm:max-w-[900px] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden !rounded-[32px]">
         {/* 헤더 */}
         <DialogHeader className="px-6 pt-5 pb-3 shrink-0 border-b">
           <DialogTitle className="text-base mb-3">AI 초안 검토</DialogTitle>

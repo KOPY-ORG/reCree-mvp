@@ -1380,7 +1380,7 @@ export function PlaceForm({
       {/* 지도 보기 Dialog */}
       {latitude !== null && longitude !== null && (
         <Dialog open={mapDialogOpen} onOpenChange={setMapDialogOpen}>
-          <DialogContent className="max-w-2xl p-0 overflow-hidden">
+          <DialogContent className="max-w-2xl max-h-[90vh] p-0 overflow-y-auto">
             <DialogHeader className="px-6 pt-6 pb-4">
               <DialogTitle>{addressKo || "지도 보기"}</DialogTitle>
             </DialogHeader>
