@@ -138,7 +138,8 @@ export function SavedClient({ posts, recreeshots, tagGroupConfigs }: Props) {
               </p>
             </div>
           ) : (
-            <div className="px-4 py-4"><div className="grid grid-cols-2 gap-2">
+            <div className="px-4 py-4">
+            <div className="grid grid-cols-2 gap-2">
               {recreeshots.map((shot) => (
                 <Link
                   key={shot.id}
@@ -158,7 +159,8 @@ export function SavedClient({ posts, recreeshots, tagGroupConfigs }: Props) {
                   />
                 </Link>
               ))}
-            </div></div>
+            </div>
+          </div>
           )}
         </div>
       )}
