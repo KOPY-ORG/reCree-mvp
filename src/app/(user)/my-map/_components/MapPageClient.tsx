@@ -102,7 +102,7 @@ function SearchResultItem({
         </div>
       </button>
 
-      {/* 이미지 가로 슬라이드: 장소 이미지 → 배너 → 소스, 중복 제거 (PlaceBottomSheet와 동일 순서) */}
+      {/* 이미지 가로 슬라이드: 포스트 이미지 그룹 → 장소 이미지 그룹, 중복 제거 */}
       {(() => {
         const seen = new Set<string>();
         const add = (url: string | null | undefined): boolean => {
@@ -111,10 +111,14 @@ function SearchResultItem({
           return true;
         };
         const allImages: string[] = [];
-        place.placeImages.forEach((img) => { if (add(img.url)) allImages.push(img.url); });
-        if (allImages.length === 0) { const u = place.imageUrl; if (add(u)) allImages.push(u!); }
+        // 1순위: 포스트 썸네일 (포스트별 1장)
         place.posts.forEach((p) => { if (add(p.imageUrl)) allImages.push(p.imageUrl!); });
+        // 2순위: 포스트 나머지 이미지
         place.posts.flatMap((p) => p.images).forEach((url) => { if (add(url)) allImages.push(url); });
+        // 3순위: 장소 대표 이미지 (imageUrl)
+        if (add(place.imageUrl)) allImages.push(place.imageUrl!);
+        // 4순위: 나머지 장소 이미지 (placeImages, sortOrder 순)
+        place.placeImages.forEach((img) => { if (add(img.url)) allImages.push(img.url); });
         if (allImages.length === 0) return null;
         return (
           <div className="flex gap-2.5 px-5 pb-4 overflow-x-auto scrollbar-hide">

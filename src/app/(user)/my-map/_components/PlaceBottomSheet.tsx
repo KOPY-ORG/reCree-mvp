@@ -224,14 +224,14 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
           if (url && !shownUrls.has(url)) { shownUrls.add(url); carouselUrls.push(url); }
         };
 
-        // 1순위: 장소 전용 이미지 (sortOrder 순)
-        place.placeImages.forEach((img) => add(img.url));
-        // 2순위: 장소 imageUrl fallback (placeImages 없을 때)
-        if (carouselUrls.length === 0) add(place.imageUrl);
-        // 3순위: 관련 포스트 배너 이미지
+        // 1순위: 포스트 썸네일 (포스트별 1장)
         place.posts.forEach((post) => add(post.imageUrl));
-        // 4순위: 관련 포스트 소스 이미지
+        // 2순위: 포스트 나머지 이미지
         place.posts.forEach((post) => post.images.forEach(add));
+        // 3순위: 장소 대표 이미지 (imageUrl)
+        add(place.imageUrl);
+        // 4순위: 나머지 장소 이미지 (placeImages, sortOrder 순)
+        place.placeImages.forEach((img) => add(img.url));
 
         return (
           <div className="flex-1 overflow-y-auto">
