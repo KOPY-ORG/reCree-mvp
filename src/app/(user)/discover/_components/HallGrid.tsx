@@ -14,6 +14,7 @@ interface HallShot {
   matchScore: number | null;
   showBadge: boolean;
   referencePhotoUrl: string | null;
+  templateId: string | null;
   labels: LabelItem[];
 }
 
@@ -51,7 +52,7 @@ export function HallGrid({ shots, guideVideo }: Props) {
         <Link key={shot.id} href={`/discover/hall/${shot.id}`} className="block relative">
           <ReCreeshotImage
             shotUrl={shot.imageUrl}
-            referenceUrl={shot.referencePhotoUrl}
+            referenceUrl={shot.templateId ? null : shot.referencePhotoUrl}
             matchScore={shot.matchScore}
             showBadge={shot.showBadge}
             referencePosition="top-left"

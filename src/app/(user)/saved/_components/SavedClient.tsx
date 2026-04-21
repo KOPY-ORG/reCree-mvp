@@ -26,6 +26,7 @@ type ReCreeshot = {
   id: string;
   imageUrl: string;
   referencePhotoUrl: string | null;
+  templateId?: string | null;
   matchScore: number | null;
   showBadge: boolean;
   status: string;
@@ -199,7 +200,7 @@ export function SavedClient({ posts, recreeshots, tagGroupConfigs, savedEvents }
                 >
                   <ReCreeshotImage
                     shotUrl={shot.imageUrl}
-                    referenceUrl={shot.referencePhotoUrl}
+                    referenceUrl={shot.templateId ? null : shot.referencePhotoUrl}
                     matchScore={shot.matchScore}
                     showBadge={shot.showBadge}
                     referencePosition="top-left"

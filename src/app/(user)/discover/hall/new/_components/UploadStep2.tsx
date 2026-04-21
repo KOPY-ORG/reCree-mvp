@@ -72,6 +72,7 @@ interface PlacePrefill {
 interface Props {
   referencePreviewUrl: string | null;
   shotPreviewUrl: string;
+  compositeUrl?: string | null;
   tagGroups: TagGroup[];
   topics: Topic[];
   previewScore: number | null;
@@ -128,6 +129,7 @@ function getAllDescendantIds(node: { id: string; children?: { id: string; childr
 export function UploadStep2({
   referencePreviewUrl,
   shotPreviewUrl,
+  compositeUrl,
   tagGroups,
   topics,
   previewScore,
@@ -280,16 +282,28 @@ export function UploadStep2({
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
 
         {/* 사진 프리뷰 */}
-        <ReCreeshotImage
-          shotUrl={shotPreviewUrl}
-          referenceUrl={referencePreviewUrl}
-          matchScore={previewScore}
-          showBadge={showBadge}
-          referencePosition="top-left"
-          badgePosition="top-right"
-          className="mx-auto h-[50dvh] aspect-[3/4]"
-          sizes="100vw"
-        />
+        {compositeUrl ? (
+          <div className="mx-auto max-h-[50dvh] flex items-center justify-center overflow-hidden rounded-lg">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={compositeUrl}
+              alt="recreeshot preview"
+              className="max-h-[50dvh] w-auto rounded-lg object-contain"
+              style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.15)" }}
+            />
+          </div>
+        ) : (
+          <ReCreeshotImage
+            shotUrl={shotPreviewUrl}
+            referenceUrl={referencePreviewUrl}
+            matchScore={previewScore}
+            showBadge={showBadge}
+            referencePosition="top-left"
+            badgePosition="top-right"
+            className="mx-auto h-[50dvh] aspect-[3/4]"
+            sizes="100vw"
+          />
+        )}
 
         {/* 배지 표시 카드 */}
         {previewScore !== null && (

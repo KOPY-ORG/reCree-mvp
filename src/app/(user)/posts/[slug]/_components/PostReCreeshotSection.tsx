@@ -19,6 +19,7 @@ interface Shot {
   matchScore: number | null;
   showBadge: boolean;
   referencePhotoUrl: string | null;
+  templateId?: string | null;
   user: { nickname: string | null };
   tips: string | null;
 }
@@ -76,7 +77,7 @@ export function PostReCreeshotSection({ postId, shots, originalImageUrl, isLogge
           >
             <ReCreeshotImage
               shotUrl={shot.imageUrl}
-              referenceUrl={shot.referencePhotoUrl}
+              referenceUrl={shot.templateId ? null : shot.referencePhotoUrl}
               matchScore={shot.matchScore}
               showBadge={shot.showBadge}
               referencePosition="top-left"

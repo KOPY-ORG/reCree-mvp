@@ -418,6 +418,7 @@ export function ReCreeshotUploadFlow({
           <UploadStep2
             referencePreviewUrl={state.referencePreviewUrl}
             shotPreviewUrl={state.shotPreviewUrl}
+            compositeUrl={state.compositeUrl}
             tagGroups={tagGroups}
             topics={topics}
             previewScore={null}

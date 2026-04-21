@@ -186,7 +186,7 @@ export default async function HallDetailPage({
         isOwner={isOwner}
         isLoggedIn={!!currentUser}
         imageUrl={shot.imageUrl}
-        referencePhotoUrl={shot.referencePhotoUrl}
+        referencePhotoUrl={shot.templateId ? null : shot.referencePhotoUrl}
         matchScore={shot.matchScore}
         showBadge={shot.showBadge}
       />
