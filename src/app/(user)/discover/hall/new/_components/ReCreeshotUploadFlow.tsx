@@ -86,6 +86,8 @@ type State = {
   uploadedReferencePath: string | null;
   // DB 저장 결과
   createdId: string | null;
+  // 에디터에서 export된 합성 이미지 URL
+  compositeUrl: string | null;
   // UI
   isUploading: boolean;
   isSubmitting: boolean;
@@ -115,6 +117,7 @@ export function ReCreeshotUploadFlow({
     uploadedShotPath: null,
     uploadedReferencePath: null,
     createdId: null,
+    compositeUrl: null,
     isUploading: false,
     isSubmitting: false,
     error: null,
@@ -230,6 +233,12 @@ export function ReCreeshotUploadFlow({
     }
   }
 
+  // ── Step 3 → 4: 에디터 export 완료 ──────────────────────────────────────────
+
+  function handleEditorNext(compositeUrl: string) {
+    setState((s) => ({ ...s, compositeUrl, step: 4 }));
+  }
+
   // ── Step 4: Share (createReCreeshot) ─────────────────────────────────────────
 
   async function handleShare(data: {
@@ -242,11 +251,12 @@ export function ReCreeshotUploadFlow({
     linkedPostId?: string;
     showBadge: boolean;
   }) {
-    if (!state.uploadedShotUrl) return;
+    const imageUrl = state.compositeUrl ?? state.uploadedShotUrl;
+    if (!imageUrl) return;
     setState((s) => ({ ...s, isSubmitting: true, error: null }));
 
     const result = await createReCreeshot({
-      imageUrl: state.uploadedShotUrl,
+      imageUrl,
       referencePhotoUrl: state.uploadedReferenceUrl ?? undefined,
       placeId: data.placeId,
       linkedPostId: data.linkedPostId,
@@ -333,16 +343,22 @@ export function ReCreeshotUploadFlow({
 
       {/* Step 3: 꾸미기 (placeholder) */}
       {state.step === 3 && state.shotPreviewUrl && (
-        <ReCreeshotEditor
-          templateId={state.selectedTemplateId}
-          referencePreviewUrl={state.referencePreviewUrl}
-          shotPreviewUrl={state.shotPreviewUrl}
-          onNext={() => setState((s) => ({ ...s, step: 4 }))}
-        />
+        <>
+          <ReCreeshotEditor
+            templateId={state.selectedTemplateId}
+            referencePreviewUrl={state.referencePreviewUrl}
+            shotPreviewUrl={state.shotPreviewUrl}
+            onNext={handleEditorNext}
+            onError={(msg) => setState((s) => ({ ...s, error: msg }))}
+          />
+          {state.error && (
+            <p className="text-red-500 text-sm text-center py-2">{state.error}</p>
+          )}
+        </>
       )}
 
       {/* Step 4: 공유/메타데이터 (기존 UploadStep2 재사용) */}
-      {state.step === 4 && state.shotPreviewUrl && state.uploadedShotUrl && (
+      {state.step === 4 && state.shotPreviewUrl && (state.compositeUrl ?? state.uploadedShotUrl) && (
         <>
           <UploadStep2
             referencePreviewUrl={state.referencePreviewUrl}
