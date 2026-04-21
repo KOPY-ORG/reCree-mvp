@@ -7,7 +7,8 @@ import { loadImage } from "@/lib/canvas-utils";
 import { getReCreeshotPresignedUrl } from "@/lib/actions/upload-actions";
 import { exportStageToBlob } from "./canvas-export";
 import { getTemplateConfig } from "./template-config";
-import type { TemplateId } from "./editor-types";
+import { EditorToolbar } from "./EditorToolbar";
+import type { EditorLayer, TemplateId } from "./editor-types";
 
 const KonvaStage = dynamic(() => import("./KonvaStage"), { ssr: false });
 
@@ -17,6 +18,14 @@ interface Props {
   shotPreviewUrl: string;
   onNext: (compositeUrl: string) => void;
   onError: (msg: string) => void;
+}
+
+interface EditorState {
+  frameColorHex: string;
+  referenceLabel: string | null;
+  shotLabel: string | null;
+  layers: EditorLayer[];
+  selectedLayerId: string | null;
 }
 
 export function ReCreeshotEditor({
@@ -34,7 +43,18 @@ export function ReCreeshotEditor({
   const [isExporting, setIsExporting] = useState(false);
 
   const templateConfig = getTemplateConfig(templateId);
-  const stageH = stageW > 0 ? Math.round(stageW * (templateConfig.canvasHeight / templateConfig.canvasWidth)) : 0;
+  const stageH =
+    stageW > 0
+      ? Math.round(stageW * (templateConfig.canvasHeight / templateConfig.canvasWidth))
+      : 0;
+
+  const [editorState, setEditorState] = useState<EditorState>({
+    frameColorHex: "#ffffff",
+    referenceLabel: templateConfig.frame?.defaultLabels[0] ?? null,
+    shotLabel: templateConfig.frame?.defaultLabels[1] ?? null,
+    layers: [],
+    selectedLayerId: null,
+  });
 
   // 컨테이너 너비 측정
   useEffect(() => {
@@ -63,9 +83,60 @@ export function ReCreeshotEditor({
     setStageInstance(stage);
   }, []);
 
+  function handleLayerSelect(id: string | null) {
+    setEditorState((s) => ({ ...s, selectedLayerId: id }));
+  }
+
+  function handleLayerDelete(id: string) {
+    setEditorState((s) => ({
+      ...s,
+      layers: s.layers.filter((l) => l.id !== id),
+      selectedLayerId: s.selectedLayerId === id ? null : s.selectedLayerId,
+    }));
+  }
+
+  function handleLayerUpdate(
+    id: string,
+    updates: { x: number; y: number; scale: number; rotation: number }
+  ) {
+    setEditorState((s) => ({
+      ...s,
+      layers: s.layers.map((l) => (l.id === id ? { ...l, ...updates } : l)),
+    }));
+  }
+
+  function handleAddTextLayer(text: string, fontSize: number, color: string) {
+    const id = crypto.randomUUID();
+    const newLayer: EditorLayer = {
+      id,
+      type: "text",
+      x: 0.5,
+      y: 0.5,
+      scale: 1,
+      rotation: 0,
+      text,
+      fontSize,
+      color,
+    };
+    setEditorState((s) => ({
+      ...s,
+      layers: [...s.layers, newLayer],
+      selectedLayerId: id,
+    }));
+  }
+
   async function handleContinue() {
     if (!stageInstance || isExporting) return;
     setIsExporting(true);
+
+    // Transformer 핸들 숨기고 export
+    setEditorState((s) => ({ ...s, selectedLayerId: null }));
+    const tr = stageInstance.findOne("Transformer") as Konva.Transformer | null;
+    if (tr) {
+      tr.hide();
+      stageInstance.batchDraw();
+    }
+
     try {
       const blob = await exportStageToBlob(stageInstance, templateConfig.canvasWidth, stageW);
       const file = new File([blob], "recreeshot.jpg", { type: "image/jpeg" });
@@ -79,6 +150,7 @@ export function ReCreeshotEditor({
       onNext(presigned.cdnUrl);
     } catch (e) {
       console.error(e);
+      if (tr) tr.show();
       onError("Export failed. Please try again.");
     } finally {
       setIsExporting(false);
@@ -88,7 +160,6 @@ export function ReCreeshotEditor({
   return (
     <div className="flex flex-col flex-1">
       <div className="flex-1 overflow-y-auto">
-        {/* Konva 캔버스 컨테이너 */}
         <div className="px-4 py-6">
           <div
             ref={containerRef}
@@ -102,23 +173,31 @@ export function ReCreeshotEditor({
                 templateConfig={templateConfig}
                 referenceImg={referenceImg}
                 shotImg={shotImg}
-                frameColorHex="#ffffff"
-                referenceLabel={null}
-                shotLabel={null}
+                frameColorHex={editorState.frameColorHex}
+                referenceLabel={editorState.referenceLabel}
+                shotLabel={editorState.shotLabel}
+                layers={editorState.layers}
+                selectedLayerId={editorState.selectedLayerId}
                 onStageReady={handleStageReady}
+                onLayerSelect={handleLayerSelect}
+                onLayerDelete={handleLayerDelete}
+                onLayerUpdate={handleLayerUpdate}
               />
             )}
           </div>
         </div>
-
-        {/* 데코레이션 툴바 placeholder */}
-        <div className="px-4 pt-3 pb-2">
-          <div className="rounded-2xl border border-dashed border-border p-4 space-y-1 text-center">
-            <p className="text-sm font-semibold">Decoration tools</p>
-            <p className="text-xs text-muted-foreground">Frame color · Text · Stickers — coming in next update</p>
-          </div>
-        </div>
       </div>
+
+      <EditorToolbar
+        templateConfig={templateConfig}
+        frameColorHex={editorState.frameColorHex}
+        onFrameColorChange={(hex) => setEditorState((s) => ({ ...s, frameColorHex: hex }))}
+        referenceLabel={editorState.referenceLabel}
+        shotLabel={editorState.shotLabel}
+        onReferenceLabelChange={(v) => setEditorState((s) => ({ ...s, referenceLabel: v }))}
+        onShotLabelChange={(v) => setEditorState((s) => ({ ...s, shotLabel: v }))}
+        onAddTextLayer={handleAddTextLayer}
+      />
 
       <div className="px-4 py-3 shrink-0">
         <button

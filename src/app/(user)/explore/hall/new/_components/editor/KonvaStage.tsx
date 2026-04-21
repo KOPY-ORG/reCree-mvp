@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
-import { Stage, Layer, Image as KonvaImage, Rect, Text } from "react-konva";
+import { Stage, Layer, Image as KonvaImage, Rect, Text, Transformer } from "react-konva";
 import { coverRect } from "@/lib/canvas-utils";
 import type Konva from "konva";
-import type { TemplateConfig } from "./editor-types";
+import type { EditorLayer, TemplateConfig } from "./editor-types";
 
 interface Props {
   stageW: number;
@@ -15,7 +15,12 @@ interface Props {
   frameColorHex: string;
   referenceLabel: string | null;
   shotLabel: string | null;
+  layers: EditorLayer[];
+  selectedLayerId: string | null;
   onStageReady: (stage: Konva.Stage) => void;
+  onLayerSelect: (id: string | null) => void;
+  onLayerDelete: (id: string) => void;
+  onLayerUpdate: (id: string, updates: { x: number; y: number; scale: number; rotation: number }) => void;
 }
 
 export default function KonvaStage({
@@ -27,13 +32,35 @@ export default function KonvaStage({
   frameColorHex,
   referenceLabel,
   shotLabel,
+  layers,
+  selectedLayerId,
   onStageReady,
+  onLayerSelect,
+  onLayerDelete,
+  onLayerUpdate,
 }: Props) {
   const stageRef = useRef<Konva.Stage>(null);
+  const trRef = useRef<Konva.Transformer>(null);
 
   useEffect(() => {
     if (stageRef.current) onStageReady(stageRef.current);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Transformer를 선택된 레이어에 붙이기
+  useEffect(() => {
+    const tr = trRef.current;
+    if (!tr || !stageRef.current) return;
+    if (selectedLayerId) {
+      const node = stageRef.current.findOne(`#${selectedLayerId}`);
+      if (node) {
+        tr.nodes([node as Konva.Node]);
+        tr.getLayer()?.batchDraw();
+      }
+    } else {
+      tr.nodes([]);
+      tr.getLayer()?.batchDraw();
+    }
+  }, [selectedLayerId, layers]);
 
   const scale = stageW / templateConfig.canvasWidth;
   const { frame, slots } = templateConfig;
@@ -45,8 +72,21 @@ export default function KonvaStage({
       ]
     : [null, null];
 
+  function handleStagePointerDown(e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) {
+    const clickedId = e.target.id();
+    if (!clickedId || !layers.some((l) => l.id === clickedId)) {
+      onLayerSelect(null);
+    }
+  }
+
   return (
-    <Stage width={stageW} height={stageH} ref={stageRef}>
+    <Stage
+      width={stageW}
+      height={stageH}
+      ref={stageRef}
+      onClick={handleStagePointerDown}
+      onTap={handleStagePointerDown}
+    >
       <Layer>
         {/* 프레임 배경 */}
         {frame && (
@@ -68,7 +108,6 @@ export default function KonvaStage({
           const dH = slot.height * scale;
 
           return (
-            // eslint-disable-next-line react/no-array-index-key
             <React.Fragment key={i}>
               {img ? (
                 <KonvaImage
@@ -107,11 +146,59 @@ export default function KonvaStage({
             </React.Fragment>
           );
         })}
-
       </Layer>
 
-      {/* 스티커 레이어 — Phase 5에서 채워짐 */}
-      <Layer name="stickers" />
+      {/* 스티커/텍스트 레이어 */}
+      <Layer name="stickers">
+        {layers.map((layer) => {
+          if (layer.type !== "text") return null;
+          return (
+            <Text
+              key={layer.id}
+              id={layer.id}
+              x={layer.x * stageW}
+              y={layer.y * stageH}
+              text={layer.text ?? ""}
+              fontSize={Math.round((layer.fontSize ?? 80) * scale)}
+              fill={layer.color ?? "#ffffff"}
+              scaleX={layer.scale}
+              scaleY={layer.scale}
+              rotation={layer.rotation}
+              draggable
+              onClick={() => onLayerSelect(layer.id)}
+              onTap={() => onLayerSelect(layer.id)}
+              onDblClick={() => onLayerDelete(layer.id)}
+              onDblTap={() => onLayerDelete(layer.id)}
+              onDragEnd={(e) => {
+                onLayerUpdate(layer.id, {
+                  x: e.target.x() / stageW,
+                  y: e.target.y() / stageH,
+                  scale: e.target.scaleX(),
+                  rotation: e.target.rotation(),
+                });
+              }}
+              onTransformEnd={(e) => {
+                const node = e.target;
+                onLayerUpdate(layer.id, {
+                  x: node.x() / stageW,
+                  y: node.y() / stageH,
+                  scale: node.scaleX(),
+                  rotation: node.rotation(),
+                });
+              }}
+            />
+          );
+        })}
+        <Transformer
+          ref={trRef}
+          keepRatio
+          enabledAnchors={["top-left", "top-right", "bottom-left", "bottom-right"]}
+          boundBoxFunc={(oldBox, newBox) => {
+            if (Math.abs(newBox.width) < 20 || Math.abs(newBox.height) < 20) return oldBox;
+            return newBox;
+          }}
+        />
+      </Layer>
     </Stage>
   );
 }
