@@ -43,7 +43,7 @@ const VERTICAL_FRAME: TemplateConfig = {
     padding: VFRAME_PADDING,
     innerGap: VFRAME_GAP,
     labelHeight: VFRAME_LABEL,
-    fontSize: 32,
+    fontSize: 48,
     defaultLabels: ["Artist", "ME"],
   },
 };
@@ -64,7 +64,7 @@ const HORIZONTAL_FULL: TemplateConfig = {
 // 프레임 padding=60, 사진 사이 gap=40, 레이블 영역 높이=60
 const HFRAME_PADDING = 60;
 const HFRAME_GAP = 40;
-const HFRAME_LABEL = 60;
+const HFRAME_LABEL = 90;
 const HFRAME_PHOTO_H = 1080 - HFRAME_PADDING * 2 - HFRAME_LABEL;
 const HFRAME_PHOTO_W =
   (1350 - HFRAME_PADDING * 2 - HFRAME_GAP) / 2;
@@ -91,7 +91,7 @@ const HORIZONTAL_FRAME: TemplateConfig = {
     padding: HFRAME_PADDING,
     innerGap: HFRAME_GAP,
     labelHeight: HFRAME_LABEL,
-    fontSize: 32,
+    fontSize: 48,
     defaultLabels: ["Artist", "ME"],
   },
 };

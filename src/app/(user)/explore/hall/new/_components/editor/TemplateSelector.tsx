@@ -10,21 +10,55 @@ interface TemplateOption {
   preview: React.ReactNode;
 }
 
+function PersonIcon({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 40 56" width="40" height="56" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <circle cx="20" cy="12" r="9" stroke={color} strokeWidth="2.5" />
+      <path d="M6 48 C6 36 10 30 20 30 C30 30 34 36 34 48" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function PersonIconFull({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 40 80" width="32" height="64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      {/* head */}
+      <circle cx="20" cy="9" r="7.5" stroke={color} strokeWidth="2.5" />
+      {/* torso */}
+      <path d="M20 18 L20 46" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
+      {/* arms */}
+      <path d="M20 24 L8 34" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
+      <path d="M20 24 L32 34" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
+      {/* legs */}
+      <path d="M20 46 L12 68" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
+      <path d="M20 46 L28 68" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function VerticalFullPreview() {
   return (
     <div className="w-full aspect-[4/5] flex flex-col bg-background overflow-hidden rounded-lg">
-      <div className="flex-1 bg-[#d4f986]" />
-      <div className="flex-1 bg-[#c8ebf5]" />
+      <div className="flex-1 bg-[#d4f986] flex items-center justify-center">
+        <PersonIcon color="#5a8a00" />
+      </div>
+      <div className="flex-1 bg-[#c8ebf5] flex items-center justify-center">
+        <PersonIcon color="#2b7a9e" />
+      </div>
     </div>
   );
 }
 
 function VerticalFramePreview() {
   return (
-    <div className="w-full aspect-[4/5] bg-white flex flex-col items-center justify-center gap-2 p-3 rounded-lg">
-      <div className="w-full flex-1 bg-[#d4f986] rounded-sm" />
+    <div className="w-full aspect-[4/5] bg-white flex flex-col items-center justify-center gap-1.5 p-3 rounded-lg">
+      <div className="w-full flex-1 bg-[#d4f986] rounded-sm flex items-center justify-center">
+        <PersonIcon color="#5a8a00" />
+      </div>
       <p className="text-[8px] font-medium text-black leading-none">Artist</p>
-      <div className="w-full flex-1 bg-[#c8ebf5] rounded-sm" />
+      <div className="w-full flex-1 bg-[#c8ebf5] rounded-sm flex items-center justify-center">
+        <PersonIcon color="#2b7a9e" />
+      </div>
       <p className="text-[8px] font-medium text-black leading-none">ME</p>
     </div>
   );
@@ -33,21 +67,29 @@ function VerticalFramePreview() {
 function HorizontalFullPreview() {
   return (
     <div className="w-full aspect-[5/4] flex flex-row bg-background overflow-hidden rounded-lg">
-      <div className="flex-1 bg-[#d4f986]" />
-      <div className="flex-1 bg-[#c8ebf5]" />
+      <div className="flex-1 bg-[#d4f986] flex items-center justify-center">
+        <PersonIconFull color="#5a8a00" />
+      </div>
+      <div className="flex-1 bg-[#c8ebf5] flex items-center justify-center">
+        <PersonIconFull color="#2b7a9e" />
+      </div>
     </div>
   );
 }
 
 function HorizontalFramePreview() {
   return (
-    <div className="w-full aspect-[5/4] bg-white flex flex-row items-end gap-2 p-3 rounded-lg">
+    <div className="w-full aspect-[5/4] bg-white flex flex-row items-center justify-center gap-2 p-3 rounded-lg">
       <div className="flex-1 flex flex-col items-center gap-1">
-        <div className="w-full flex-1 bg-[#d4f986] rounded-sm" style={{ minHeight: 40 }} />
+        <div className="w-full aspect-[3/4] bg-[#d4f986] rounded-sm flex items-center justify-center">
+          <PersonIconFull color="#5a8a00" />
+        </div>
         <p className="text-[8px] font-medium text-black leading-none">Artist</p>
       </div>
       <div className="flex-1 flex flex-col items-center gap-1">
-        <div className="w-full flex-1 bg-[#c8ebf5] rounded-sm" style={{ minHeight: 40 }} />
+        <div className="w-full aspect-[3/4] bg-[#c8ebf5] rounded-sm flex items-center justify-center">
+          <PersonIconFull color="#2b7a9e" />
+        </div>
         <p className="text-[8px] font-medium text-black leading-none">ME</p>
       </div>
     </div>
@@ -105,17 +147,14 @@ export function TemplateSelector({ selected, onSelect, onNext }: Props) {
                   isSelected ? "border-brand bg-brand/5" : "border-border bg-muted/20"
                 }`}
               >
-                {/* 선택 체크 */}
                 {isSelected && (
                   <div className="absolute top-2 right-2 z-10 size-5 rounded-full bg-brand flex items-center justify-center">
                     <Check className="size-3 text-black" strokeWidth={3} />
                   </div>
                 )}
 
-                {/* 미리보기 */}
                 <div className="w-full">{t.preview}</div>
 
-                {/* 레이블 */}
                 <div className="px-1 pb-1">
                   <p className="text-xs font-semibold">{t.label}</p>
                   <p className="text-[11px] text-muted-foreground">{t.description}</p>

@@ -95,12 +95,10 @@ export default function KonvaStage({
               {frame && (
                 <Text
                   x={dX}
-                  y={dY + dH}
+                  y={dY + dH + Math.round(frame.labelHeight * scale * 0.4)}
                   width={dW}
-                  height={frame.labelHeight * scale}
                   text={(i === 0 ? refLabel : meLabel) ?? ""}
                   align="center"
-                  verticalAlign="middle"
                   fontSize={Math.round(frame.fontSize * scale)}
                   fill="#000000"
                   listening={false}
@@ -110,21 +108,6 @@ export default function KonvaStage({
           );
         })}
 
-        {/* 워터마크 */}
-        <Text
-          x={0}
-          y={stageH - Math.round(stageW * 0.065)}
-          width={Math.round(stageW * 0.97)}
-          text="reCree"
-          align="right"
-          fontSize={Math.round(stageW * 0.026)}
-          fontStyle="bold"
-          fill="rgba(255,255,255,0.75)"
-          shadowColor="rgba(0,0,0,0.75)"
-          shadowBlur={8}
-          shadowOffsetY={2}
-          listening={false}
-        />
       </Layer>
 
       {/* 스티커 레이어 — Phase 5에서 채워짐 */}

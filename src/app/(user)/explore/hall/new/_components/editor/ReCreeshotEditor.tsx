@@ -89,20 +89,26 @@ export function ReCreeshotEditor({
     <div className="flex flex-col flex-1">
       <div className="flex-1 overflow-y-auto">
         {/* Konva 캔버스 컨테이너 */}
-        <div ref={containerRef} className="w-full">
-          {stageW > 0 && (
-            <KonvaStage
-              stageW={stageW}
-              stageH={stageH}
-              templateConfig={templateConfig}
-              referenceImg={referenceImg}
-              shotImg={shotImg}
-              frameColorHex="#ffffff"
-              referenceLabel={null}
-              shotLabel={null}
-              onStageReady={handleStageReady}
-            />
-          )}
+        <div className="px-4 py-6">
+          <div
+            ref={containerRef}
+            className="w-full"
+            style={{ boxShadow: "0 4px 28px rgba(0,0,0,0.18)" }}
+          >
+            {stageW > 0 && (
+              <KonvaStage
+                stageW={stageW}
+                stageH={stageH}
+                templateConfig={templateConfig}
+                referenceImg={referenceImg}
+                shotImg={shotImg}
+                frameColorHex="#ffffff"
+                referenceLabel={null}
+                shotLabel={null}
+                onStageReady={handleStageReady}
+              />
+            )}
+          </div>
         </div>
 
         {/* 데코레이션 툴바 placeholder */}
