@@ -530,12 +530,7 @@ export function SectionDialog({
   }
 
   function handleTypeChange(type: SectionType) {
-    setForm((prev) => ({
-      ...prev,
-      type,
-      // 자동 타입으로 바꾸면 수동 선택 포스트 초기화
-      ...(type !== "MANUAL" ? { postIds: [] } : {}),
-    }));
+    setForm((prev) => ({ ...prev, type }));
   }
 
   function handleContentTypeChange(ct: ContentType) {
