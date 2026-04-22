@@ -209,14 +209,14 @@ function LayoutCard({ layout, isSelected, onSelect, timestamp }: {
         boxShadow: isSelected
           ? "0 6px 0 -1px #0b0b0b, 0 0 0 1.5px #0b0b0b"
           : "0 0 0 1.5px #0b0b0b",
-        padding: isSelected ? "18px 10px 12px" : "10px 10px 12px",
+        padding: "18px 10px 12px",
         display: "flex",
         flexDirection: "column",
         gap: 8,
         textAlign: "left",
         cursor: "pointer",
         transform: isSelected ? "translateY(-2px) rotate(-0.3deg)" : "none",
-        transition: "transform 0.15s ease, box-shadow 0.15s ease, padding-top 0.15s ease",
+        transition: "transform 0.15s ease, box-shadow 0.15s ease",
       }}
     >
       {isSelected && (
