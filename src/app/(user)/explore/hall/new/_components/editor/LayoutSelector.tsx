@@ -215,7 +215,7 @@ function LayoutCard({ layout, isSelected, onSelect, timestamp }: {
         gap: 8,
         textAlign: "left",
         cursor: "pointer",
-        transform: isSelected ? "translateY(-2px) rotate(-0.3deg)" : "none",
+        transform: isSelected ? "translateY(-2px)" : "none",
         transition: "transform 0.15s ease, box-shadow 0.15s ease",
       }}
     >

@@ -160,7 +160,7 @@ function TicketCard({ mode, isSelected, onSelect }: {
           : "0 0 0 1.5px #0b0b0b",
         borderRadius: 0,
         border: "none",
-        transform: isSelected ? "translateX(3px) rotate(-0.3deg)" : "none",
+        transform: isSelected ? "translateX(3px)" : "none",
         transition: "transform 0.15s ease, box-shadow 0.15s ease",
         display: "flex",
         gap: 10,
