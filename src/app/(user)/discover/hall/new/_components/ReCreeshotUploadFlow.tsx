@@ -62,8 +62,8 @@ type FlowStep =
 type State = {
   step: FlowStep;
   // ── 모드/레이아웃
-  templateMode: TemplateModeId;
-  selectedTemplateId: TemplateId;   // side-by-side 레이아웃 선택
+  templateMode: TemplateModeId | null;
+  selectedTemplateId: TemplateId | null;
   // ── 사진 (side-by-side)
   referenceFile: File | null;
   referencePreviewUrl: string | null;
@@ -101,14 +101,14 @@ type State = {
 };
 
 // 헤더 제목 및 progress 계산 헬퍼
-function getStepMeta(step: FlowStep, mode: TemplateModeId): { title: string; progress: string } {
-  const TOTAL = mode === "side-by-side" ? 5 : 4;
+function getStepMeta(step: FlowStep, mode: TemplateModeId | null): { title: string; progress: string } {
+  const TOTAL = 5;
   const NUM: Record<FlowStep, number> = {
     "choose-mode": 1,
     "choose-layout": 2,
-    "add-photos": mode === "side-by-side" ? 3 : 2,
-    "decorate": mode === "side-by-side" ? 4 : 3,
-    "share": mode === "side-by-side" ? 5 : 4,
+    "add-photos": 3,
+    "decorate": 4,
+    "share": 5,
     "done": 0,
   };
   const TITLES: Record<FlowStep, string> = {
@@ -134,8 +134,8 @@ export function ReCreeshotUploadFlow({
   const router = useRouter();
   const [state, setState] = useState<State>({
     step: "choose-mode",
-    templateMode: "side-by-side",
-    selectedTemplateId: DEFAULT_TEMPLATE_ID,
+    templateMode: null,
+    selectedTemplateId: null,
     referenceFile: null,
     referencePreviewUrl: prefillReferenceUrl ?? null,
     shotFile: null,
@@ -257,7 +257,7 @@ export function ReCreeshotUploadFlow({
     // 단계 역방향
     const PREV_STEP: Partial<Record<FlowStep, FlowStep>> = {
       "choose-layout": "choose-mode",
-      "add-photos": state.templateMode === "side-by-side" ? "choose-layout" : "choose-mode",
+      "add-photos": "choose-layout",
       "decorate": "add-photos",
       "share": "decorate",
     };
@@ -273,11 +273,8 @@ export function ReCreeshotUploadFlow({
   // ── Step 1: 모드 선택 → 다음 ────────────────────────────────────────────────
 
   function handleModeNext() {
-    if (state.templateMode === "side-by-side") {
-      setState((s) => ({ ...s, step: "choose-layout" }));
-    } else {
-      setState((s) => ({ ...s, step: "add-photos" }));
-    }
+    if (!state.templateMode) return;
+    setState((s) => ({ ...s, step: "choose-layout", selectedTemplateId: null }));
   }
 
   // ── Step 2 (side-by-side): 레이아웃 선택 → 다음 ────────────────────────────
@@ -334,8 +331,8 @@ export function ReCreeshotUploadFlow({
       tips: data.tips || undefined,
       tagIds: state.selectedTagIds,
       topicIds: state.selectedTopicIds,
-      templateId: state.templateMode === "side-by-side" ? state.selectedTemplateId : state.templateMode,
-      templateMode: state.templateMode,
+      templateId: state.selectedTemplateId ?? undefined,
+      templateMode: state.templateMode ?? undefined,
       cut1Url: state.uploadedCutUrls[0] ?? undefined,
       cut2Url: state.uploadedCutUrls[1] ?? undefined,
       cut3Url: state.uploadedCutUrls[2] ?? undefined,
@@ -387,9 +384,10 @@ export function ReCreeshotUploadFlow({
         />
       )}
 
-      {/* Step 2 (side-by-side): 레이아웃 선택 */}
-      {state.step === "choose-layout" && (
+      {/* Step 2: 레이아웃 선택 (전체 모드) */}
+      {state.step === "choose-layout" && state.templateMode && (
         <LayoutSelector
+          mode={state.templateMode}
           selected={state.selectedTemplateId}
           onSelect={(id) => setState((s) => ({ ...s, selectedTemplateId: id }))}
           onNext={handleLayoutNext}
@@ -400,7 +398,7 @@ export function ReCreeshotUploadFlow({
       {state.step === "add-photos" && state.templateMode === "side-by-side" && (
         <>
           <PhotoPlacer
-            templateId={state.selectedTemplateId}
+            templateId={state.selectedTemplateId!}
             referencePreviewUrl={state.referencePreviewUrl}
             shotPreviewUrl={state.shotPreviewUrl}
             onReferenceChange={setReferencePhoto}
@@ -452,7 +450,7 @@ export function ReCreeshotUploadFlow({
       {state.step === "decorate" && state.templateMode === "side-by-side" && state.shotPreviewUrl && (
         <>
           <ReCreeshotEditor
-            templateId={state.selectedTemplateId}
+            templateId={state.selectedTemplateId!}
             referencePreviewUrl={state.referencePreviewUrl}
             shotPreviewUrl={state.shotPreviewUrl}
             uploadedReferenceUrl={state.uploadedReferenceUrl}

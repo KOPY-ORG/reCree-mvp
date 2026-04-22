@@ -1,24 +1,48 @@
 "use client";
 
-import { Check } from "lucide-react";
-import type { TemplateId } from "./editor-types";
+import { useState, useEffect } from "react";
+import type { TemplateId, TemplateModeId } from "./editor-types";
 
-// ── 썸네일 프리뷰 (TemplateSelector에서 재사용) ──────────────────────────────
+// ── 시리얼 번호 훅 ─────────────────────────────────────────────────────────────
 
-function PersonIcon({ color, size = 40 }: { color: string; size?: number }) {
-  const h = Math.round(size * 1.4);
+function useTimestamp() {
+  const [ts, setTs] = useState("····-····-····");
+
+  useEffect(() => {
+    const now = new Date();
+    const yyyy = String(now.getFullYear());
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const dd = String(now.getDate()).padStart(2, "0");
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mi = String(now.getMinutes()).padStart(2, "0");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTs(`${yyyy}-${mm}${dd}-${hh}${mi}`);
+  }, []);
+
+  return ts;
+}
+
+const FONT_TECH = "var(--font-chakra-petch), 'Chakra Petch', sans-serif";
+
+const FRAME_ASPECT = {
+  vertical: "4 / 5",
+  horizontal: "5 / 4",
+} as const;
+
+// ── 아이콘 (side-by-side 전용) ────────────────────────────────────────────────
+
+function PersonIcon({ color, size = 28 }: { color: string; size?: number }) {
   return (
-    <svg viewBox="0 0 40 56" width={size} height={h} fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+    <svg viewBox="0 0 40 56" width={size} height={Math.round(size * 1.4)} fill="none" aria-hidden>
       <circle cx="20" cy="12" r="9" stroke={color} strokeWidth="2.5" />
       <path d="M6 48 C6 36 10 30 20 30 C30 30 34 36 34 48" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
     </svg>
   );
 }
 
-function PersonIconFull({ color, size = 32 }: { color: string; size?: number }) {
-  const h = Math.round(size * 2);
+function PersonIconFull({ color, size = 28 }: { color: string; size?: number }) {
   return (
-    <svg viewBox="0 0 40 80" width={size} height={h} fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+    <svg viewBox="0 0 40 80" width={size} height={Math.round(size * 2)} fill="none" aria-hidden>
       <circle cx="20" cy="9" r="7.5" stroke={color} strokeWidth="2.5" />
       <path d="M20 18 L20 46" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
       <path d="M20 24 L8 34" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
@@ -29,125 +53,335 @@ function PersonIconFull({ color, size = 32 }: { color: string; size?: number }) 
   );
 }
 
-function VerticalFullPreview() {
+// ── 프리뷰: Side by side ──────────────────────────────────────────────────────
+
+function SbsVerticalFullPreview() {
   return (
-    <div className="w-full aspect-[4/5] flex flex-col bg-background overflow-hidden rounded-lg">
-      <div className="flex-1 bg-[#d4f986] flex items-center justify-center">
-        <PersonIcon color="#5a8a00" size={52} />
+    <div style={{ width: "100%", aspectRatio: FRAME_ASPECT.vertical, display: "flex", flexDirection: "column", overflow: "hidden", border: "1px solid #0b0b0b", boxSizing: "border-box" }}>
+      <div style={{ flex: 1, background: "#C6FD09", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <PersonIcon color="#4a7a00" size={28} />
       </div>
-      <div className="flex-1 bg-[#c8ebf5] flex items-center justify-center">
-        <PersonIcon color="#2b7a9e" size={52} />
+      <div style={{ flex: 1, background: "#CDE3F2", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <PersonIcon color="#1a5a80" size={28} />
       </div>
     </div>
   );
 }
 
-function VerticalFramePreview() {
+function SbsVerticalFramePreview() {
   return (
-    <div className="w-full aspect-[4/5] bg-white flex flex-col items-center justify-center gap-1.5 p-3 rounded-lg">
-      <div className="w-full flex-1 bg-[#d4f986] rounded-sm flex items-center justify-center">
-        <PersonIcon color="#5a8a00" size={32} />
+    <div style={{ width: "100%", aspectRatio: FRAME_ASPECT.vertical, background: "#fff", border: "1px solid #0b0b0b", display: "flex", flexDirection: "column", gap: 4, padding: 8, boxSizing: "border-box" }}>
+      <div style={{ flex: 1, background: "#C6FD09", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <PersonIcon color="#4a7a00" size={20} />
       </div>
-      <p className="text-[8px] font-medium text-black leading-none">Artist</p>
-      <div className="w-full flex-1 bg-[#c8ebf5] rounded-sm flex items-center justify-center">
-        <PersonIcon color="#2b7a9e" size={32} />
+      <p style={{ fontFamily: FONT_TECH, fontSize: 7, fontWeight: 600, color: "#0b0b0b", textAlign: "center", margin: 0, lineHeight: 1 }}>Artist</p>
+      <div style={{ flex: 1, background: "#CDE3F2", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <PersonIcon color="#1a5a80" size={20} />
       </div>
-      <p className="text-[8px] font-medium text-black leading-none">ME</p>
+      <p style={{ fontFamily: FONT_TECH, fontSize: 7, fontWeight: 600, color: "#0b0b0b", textAlign: "center", margin: 0, lineHeight: 1 }}>ME</p>
     </div>
   );
 }
 
-function HorizontalFullPreview() {
+function SbsHorizontalFullPreview() {
   return (
-    <div className="w-full aspect-[5/4] flex flex-row bg-background overflow-hidden rounded-lg">
-      <div className="flex-1 bg-[#d4f986] flex items-center justify-center">
-        <PersonIconFull color="#5a8a00" size={40} />
+    <div style={{ width: "100%", aspectRatio: FRAME_ASPECT.horizontal, display: "flex", flexDirection: "row", overflow: "hidden", border: "1px solid #0b0b0b", boxSizing: "border-box" }}>
+      <div style={{ flex: 1, background: "#C6FD09", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <PersonIconFull color="#4a7a00" size={24} />
       </div>
-      <div className="flex-1 bg-[#c8ebf5] flex items-center justify-center">
-        <PersonIconFull color="#2b7a9e" size={40} />
+      <div style={{ flex: 1, background: "#CDE3F2", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <PersonIconFull color="#1a5a80" size={24} />
       </div>
     </div>
   );
 }
 
-function HorizontalFramePreview() {
+function SbsHorizontalFramePreview() {
   return (
-    <div className="w-full aspect-[5/4] bg-white flex flex-row items-center justify-center gap-2 p-3 rounded-lg">
-      <div className="flex-1 flex flex-col items-center gap-1">
-        <div className="w-full aspect-[3/4] bg-[#d4f986] rounded-sm flex items-center justify-center">
-          <PersonIconFull color="#5a8a00" size={24} />
+    <div style={{ width: "100%", aspectRatio: FRAME_ASPECT.horizontal, background: "#fff", border: "1px solid #0b0b0b", display: "flex", flexDirection: "row", gap: 4, padding: 8, boxSizing: "border-box" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+        <div style={{ flex: 1, width: "100%", background: "#C6FD09", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <PersonIconFull color="#4a7a00" size={16} />
         </div>
-        <p className="text-[8px] font-medium text-black leading-none">Artist</p>
+        <p style={{ fontFamily: FONT_TECH, fontSize: 7, fontWeight: 600, color: "#0b0b0b", margin: 0, lineHeight: 1 }}>Artist</p>
       </div>
-      <div className="flex-1 flex flex-col items-center gap-1">
-        <div className="w-full aspect-[3/4] bg-[#c8ebf5] rounded-sm flex items-center justify-center">
-          <PersonIconFull color="#2b7a9e" size={24} />
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+        <div style={{ flex: 1, width: "100%", background: "#CDE3F2", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <PersonIconFull color="#1a5a80" size={16} />
         </div>
-        <p className="text-[8px] font-medium text-black leading-none">ME</p>
+        <p style={{ fontFamily: FONT_TECH, fontSize: 7, fontWeight: 600, color: "#0b0b0b", margin: 0, lineHeight: 1 }}>ME</p>
       </div>
     </div>
   );
 }
+
+// ── 프리뷰: 4 cuts ────────────────────────────────────────────────────────────
+
+const FOUR_CUTS_CELLS = [
+  { bg: "#C6FD09", fg: "#3a6000" },
+  { bg: "#CDE3F2", fg: "#1a5a80" },
+  { bg: "#F2D9C7", fg: "#8B4513" },
+  { bg: "#EECFE4", fg: "#7B2D8B" },
+];
+
+function FourCutsFullPreview({ aspect }: { aspect: string }) {
+  const iconSize = aspect === FRAME_ASPECT.vertical ? 20 : 16;
+  return (
+    <div style={{ width: "100%", aspectRatio: aspect, display: "grid", gridTemplateColumns: "1fr 1fr", gridTemplateRows: "1fr 1fr", overflow: "hidden", border: "1px solid #0b0b0b", boxSizing: "border-box" }}>
+      {FOUR_CUTS_CELLS.map((c, i) => (
+        <div key={i} style={{ background: c.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <PersonIconFull color={c.fg} size={iconSize} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function FourCutsFramePreview({ aspect }: { aspect: string }) {
+  const iconSize = aspect === FRAME_ASPECT.vertical ? 16 : 13;
+  return (
+    <div style={{ width: "100%", aspectRatio: aspect, background: "#fff", border: "1px solid #0b0b0b", display: "grid", gridTemplateColumns: "1fr 1fr", gridTemplateRows: "1fr 1fr", gap: 5, padding: 8, boxSizing: "border-box" }}>
+      {FOUR_CUTS_CELLS.map((c, i) => (
+        <div key={i} style={{ background: c.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <PersonIconFull color={c.fg} size={iconSize} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── 프리뷰: Solo ──────────────────────────────────────────────────────────────
+
+function SoloFullPreview({ aspect }: { aspect: string }) {
+  return (
+    <div style={{ width: "100%", aspectRatio: aspect, background: "#CDE3F2", border: "1px solid #0b0b0b", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <PersonIconFull color="#1a5a80" size={32} />
+    </div>
+  );
+}
+
+function SoloFramePreview({ aspect }: { aspect: string }) {
+  return (
+    <div style={{ width: "100%", aspectRatio: aspect, background: "#fff", border: "1px solid #0b0b0b", padding: 8, boxSizing: "border-box", display: "flex" }}>
+      <div style={{ flex: 1, background: "#CDE3F2", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <PersonIconFull color="#1a5a80" size={28} />
+      </div>
+    </div>
+  );
+}
+
+// ── 레이아웃 데이터 ───────────────────────────────────────────────────────────
 
 interface LayoutOption {
   id: TemplateId;
+  frameNum: string;
   label: string;
   description: string;
   preview: React.ReactNode;
 }
 
-const LAYOUTS: LayoutOption[] = [
-  { id: "vertical-full", label: "Vertical", description: "Full bleed", preview: <VerticalFullPreview /> },
-  { id: "vertical-frame", label: "Vertical", description: "Framed", preview: <VerticalFramePreview /> },
-  { id: "horizontal-full", label: "Horizontal", description: "Full bleed", preview: <HorizontalFullPreview /> },
-  { id: "horizontal-frame", label: "Horizontal", description: "Framed", preview: <HorizontalFramePreview /> },
+const SBS_LAYOUTS: LayoutOption[] = [
+  { id: "vertical-full",    frameNum: "01", label: "VERTICAL",   description: "Full bleed", preview: <SbsVerticalFullPreview /> },
+  { id: "vertical-frame",   frameNum: "02", label: "VERTICAL",   description: "Framed",     preview: <SbsVerticalFramePreview /> },
+  { id: "horizontal-full",  frameNum: "03", label: "HORIZONTAL", description: "Full bleed", preview: <SbsHorizontalFullPreview /> },
+  { id: "horizontal-frame", frameNum: "04", label: "HORIZONTAL", description: "Framed",     preview: <SbsHorizontalFramePreview /> },
 ];
 
+const FOUR_CUTS_LAYOUTS: LayoutOption[] = [
+  { id: "vertical-full",    frameNum: "01", label: "VERTICAL",   description: "Full bleed", preview: <FourCutsFullPreview aspect={FRAME_ASPECT.vertical} /> },
+  { id: "vertical-frame",   frameNum: "02", label: "VERTICAL",   description: "Framed",     preview: <FourCutsFramePreview aspect={FRAME_ASPECT.vertical} /> },
+  { id: "horizontal-full",  frameNum: "03", label: "HORIZONTAL", description: "Full bleed", preview: <FourCutsFullPreview aspect={FRAME_ASPECT.horizontal} /> },
+  { id: "horizontal-frame", frameNum: "04", label: "HORIZONTAL", description: "Framed",     preview: <FourCutsFramePreview aspect={FRAME_ASPECT.horizontal} /> },
+];
+
+const SOLO_LAYOUTS: LayoutOption[] = [
+  { id: "vertical-full",    frameNum: "01", label: "VERTICAL",   description: "Full bleed", preview: <SoloFullPreview aspect={FRAME_ASPECT.vertical} /> },
+  { id: "vertical-frame",   frameNum: "02", label: "VERTICAL",   description: "Framed",     preview: <SoloFramePreview aspect={FRAME_ASPECT.vertical} /> },
+  { id: "horizontal-full",  frameNum: "03", label: "HORIZONTAL", description: "Full bleed", preview: <SoloFullPreview aspect={FRAME_ASPECT.horizontal} /> },
+  { id: "horizontal-frame", frameNum: "04", label: "HORIZONTAL", description: "Framed",     preview: <SoloFramePreview aspect={FRAME_ASPECT.horizontal} /> },
+];
+
+function getLayouts(mode: TemplateModeId): LayoutOption[] {
+  if (mode === "4-cuts") return FOUR_CUTS_LAYOUTS;
+  if (mode === "solo") return SOLO_LAYOUTS;
+  return SBS_LAYOUTS;
+}
+
+// ── 레이아웃 카드 ─────────────────────────────────────────────────────────────
+
+function LayoutCard({ layout, isSelected, onSelect }: {
+  layout: LayoutOption;
+  isSelected: boolean;
+  onSelect: () => void;
+}) {
+  const timestamp = useTimestamp();
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={isSelected}
+      style={{
+        position: "relative",
+        background: "#fff",
+        border: "none",
+        borderRadius: 0,
+        boxShadow: isSelected
+          ? "0 6px 0 -1px #0b0b0b, 0 0 0 1.5px #0b0b0b"
+          : "0 0 0 1.5px #0b0b0b",
+        padding: isSelected ? "18px 10px 12px" : "10px 10px 12px",
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+        textAlign: "left",
+        cursor: "pointer",
+        transform: isSelected ? "translateY(-2px) rotate(-0.3deg)" : "none",
+        transition: "transform 0.15s ease, box-shadow 0.15s ease",
+      }}
+    >
+      {isSelected && (
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            top: 0, left: 0, right: 0,
+            height: 8,
+            background: "#C6FD09",
+          }}
+        />
+      )}
+
+      <span style={{
+        fontFamily: FONT_TECH,
+        fontSize: 9,
+        fontWeight: 700,
+        letterSpacing: 1.2,
+        background: "#0b0b0b",
+        color: "#fff",
+        padding: "4px 8px 3px",
+        display: "inline-flex",
+        alignItems: "center",
+        lineHeight: 1,
+        alignSelf: "flex-start",
+        flexShrink: 0,
+        whiteSpace: "nowrap",
+      }}>
+        FRAME · {layout.frameNum}
+      </span>
+
+      <div style={{ width: "100%" }}>
+        {layout.preview}
+      </div>
+
+      <p style={{
+        fontFamily: "var(--font-space-mono), 'Space Mono', monospace",
+        fontSize: 8,
+        letterSpacing: 0.5,
+        color: "#0b0b0b",
+        lineHeight: 1,
+        margin: 0,
+        textAlign: "right",
+        alignSelf: "stretch",
+      }}>
+        {timestamp}
+      </p>
+
+      <div
+        aria-hidden
+        style={{
+          height: 1,
+          backgroundImage: "linear-gradient(to right, #0b0b0b 50%, transparent 50%)",
+          backgroundSize: "6px 1px",
+          backgroundRepeat: "repeat-x",
+        }}
+      />
+
+      <div>
+        <p style={{
+          fontFamily: FONT_TECH,
+          fontSize: 20,
+          fontWeight: 700,
+          letterSpacing: "-0.3px",
+          lineHeight: 1,
+          color: "#0b0b0b",
+          margin: 0,
+        }}>
+          {layout.label}
+        </p>
+        <p style={{
+          fontSize: 13,
+          color: "#6b6b6b",
+          margin: "3px 0 0",
+          lineHeight: 1.3,
+        }}>
+          {layout.description}
+        </p>
+      </div>
+    </button>
+  );
+}
+
+// ── 메인 컴포넌트 ─────────────────────────────────────────────────────────────
+
 interface Props {
-  selected: TemplateId;
+  mode: TemplateModeId;
+  selected: TemplateId | null;
   onSelect: (id: TemplateId) => void;
   onNext: () => void;
 }
 
-export function LayoutSelector({ selected, onSelect, onNext }: Props) {
-  return (
-    <div className="flex flex-col flex-1">
-      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-2">
-        <p className="text-sm text-muted-foreground mb-4">Pick a frame for your side-by-side</p>
+export function LayoutSelector({ mode, selected, onSelect, onNext }: Props) {
+  const layouts = getLayouts(mode);
 
-        <div className="grid grid-cols-2 gap-3">
-          {LAYOUTS.map((layout) => {
-            const isSelected = selected === layout.id;
-            return (
-              <button
-                key={layout.id}
-                type="button"
-                onClick={() => onSelect(layout.id)}
-                className={`relative flex flex-col gap-2 p-2 rounded-2xl border-2 transition-all text-left ${
-                  isSelected ? "border-brand bg-brand/5" : "border-border bg-muted/20"
-                }`}
-              >
-                {isSelected && (
-                  <div className="absolute top-2 right-2 z-10 size-5 rounded-full bg-brand flex items-center justify-center">
-                    <Check className="size-3 text-black" strokeWidth={3} />
-                  </div>
-                )}
-                <div className="w-full">{layout.preview}</div>
-                <div className="px-1 pb-1">
-                  <p className="text-xs font-semibold">{layout.label}</p>
-                  <p className="text-[11px] text-muted-foreground">{layout.description}</p>
-                </div>
-              </button>
-            );
-          })}
+  return (
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, background: "var(--background)" }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px 8px" }}>
+        <div style={{ marginBottom: 16 }}>
+          <h2 style={{
+            fontSize: 22,
+            fontWeight: 700,
+            lineHeight: 1.1,
+            color: "#0b0b0b",
+            margin: 0,
+          }}>
+            Pick your frame
+          </h2>
+          <p style={{
+            fontSize: 14,
+            color: "#666",
+            margin: "4px 0 0",
+          }}>
+            Vertical or horizontal.
+          </p>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          {layouts.map((layout) => (
+            <LayoutCard
+              key={layout.id}
+              layout={layout}
+              isSelected={selected === layout.id}
+              onSelect={() => onSelect(layout.id)}
+            />
+          ))}
         </div>
       </div>
 
-      <div className="px-4 py-3 shrink-0">
+      <div style={{ padding: "12px 16px", flexShrink: 0 }}>
         <button
           type="button"
           onClick={onNext}
-          className="w-full py-3 rounded-full font-semibold text-sm bg-brand text-black"
+          disabled={selected === null}
+          style={{
+            width: "100%",
+            padding: "14px 0",
+            borderRadius: 9999,
+            background: selected === null ? "#e5e5e5" : "#C6FD09",
+            border: "none",
+            fontWeight: 700,
+            fontSize: 16,
+            color: selected === null ? "#aaa" : "#0b0b0b",
+            cursor: selected === null ? "default" : "pointer",
+          }}
         >
           Next
         </button>

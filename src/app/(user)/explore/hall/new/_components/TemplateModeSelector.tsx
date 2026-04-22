@@ -341,7 +341,7 @@ function TicketCard({ mode, isSelected, onSelect }: {
 // ── 메인 컴포넌트 ─────────────────────────────────────────────────────────────
 
 interface Props {
-  selected: TemplateModeId;
+  selected: TemplateModeId | null;
   onSelect: (id: TemplateModeId) => void;
   onNext: () => void;
 }
@@ -386,16 +386,17 @@ export function TemplateModeSelector({ selected, onSelect, onNext }: Props) {
         <button
           type="button"
           onClick={onNext}
+          disabled={selected === null}
           style={{
             width: "100%",
             padding: "14px 0",
             borderRadius: 9999,
-            background: "#C6FD09",
+            background: selected === null ? "#e5e5e5" : "#C6FD09",
             border: "none",
             fontWeight: 700,
             fontSize: 16,
-            color: "#0b0b0b",
-            cursor: "pointer",
+            color: selected === null ? "#aaa" : "#0b0b0b",
+            cursor: selected === null ? "default" : "pointer",
           }}
         >
           Continue
