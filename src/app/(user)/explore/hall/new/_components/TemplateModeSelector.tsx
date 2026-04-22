@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import type { TemplateModeId } from "./editor/editor-types";
+import { FONT_TECH, FONT_MONO, PersonIcon, PersonIconFull, StepNextButton } from "./editor/editor-shared";
 
 // ── 시리얼 번호 훅 ─────────────────────────────────────────────────────────────
 
@@ -19,30 +20,6 @@ function useSerialNumber(typeCode: TypeCode) {
   }, [typeCode]);
 
   return serial;
-}
-
-// ── 아이콘 ────────────────────────────────────────────────────────────────────
-
-function PersonIcon({ color, size = 14 }: { color: string; size?: number }) {
-  return (
-    <svg viewBox="0 0 40 56" width={size} height={Math.round(size * 1.4)} fill="none" aria-hidden>
-      <circle cx="20" cy="12" r="9" stroke={color} strokeWidth="3.5" />
-      <path d="M6 48 C6 36 10 30 20 30 C30 30 34 36 34 48" stroke={color} strokeWidth="3.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function PersonIconFull({ color, size = 11 }: { color: string; size?: number }) {
-  return (
-    <svg viewBox="0 0 40 80" width={size} height={Math.round(size * 2)} fill="none" aria-hidden>
-      <circle cx="20" cy="9" r="7.5" stroke={color} strokeWidth="3" />
-      <path d="M20 18 L20 46" stroke={color} strokeWidth="3" strokeLinecap="round" />
-      <path d="M20 24 L8 34" stroke={color} strokeWidth="3" strokeLinecap="round" />
-      <path d="M20 24 L32 34" stroke={color} strokeWidth="3" strokeLinecap="round" />
-      <path d="M20 46 L12 68" stroke={color} strokeWidth="3" strokeLinecap="round" />
-      <path d="M20 46 L28 68" stroke={color} strokeWidth="3" strokeLinecap="round" />
-    </svg>
-  );
 }
 
 // ── 바코드 ────────────────────────────────────────────────────────────────────
@@ -83,10 +60,10 @@ function IllustrationBox({ kind }: { kind: TemplateModeId }) {
     return (
       <div style={{ ...boxStyle, display: "flex", flexDirection: "column", gap: 3 }}>
         <div style={{ flex: 1, background: "#C6FD09", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <PersonIcon color="#3a6a00" size={20} />
+          <PersonIcon color="#3a6a00" size={20} strokeWidth={3.5} />
         </div>
         <div style={{ flex: 1, background: "#CDE3F2", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <PersonIcon color="#1a5a80" size={20} />
+          <PersonIcon color="#1a5a80" size={20} strokeWidth={3.5} />
         </div>
       </div>
     );
@@ -103,7 +80,7 @@ function IllustrationBox({ kind }: { kind: TemplateModeId }) {
       <div style={{ ...boxStyle, display: "grid", gridTemplateColumns: "1fr 1fr", gridTemplateRows: "1fr 1fr", gap: 3 }}>
         {cells.map((c, i) => (
           <div key={i} style={{ background: c.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <PersonIconFull color={c.fg} size={12} />
+            <PersonIconFull color={c.fg} size={12} strokeWidth={3} />
           </div>
         ))}
       </div>
@@ -113,7 +90,7 @@ function IllustrationBox({ kind }: { kind: TemplateModeId }) {
   return (
     <div style={{ ...boxStyle, display: "flex" }}>
       <div style={{ flex: 1, background: "#CDE3F2", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <PersonIconFull color="#1a5a80" size={22} />
+        <PersonIconFull color="#1a5a80" size={22} strokeWidth={3} />
       </div>
     </div>
   );
@@ -162,9 +139,6 @@ const MODES: ModeOption[] = [
 ];
 
 // ── 티켓 카드 ─────────────────────────────────────────────────────────────────
-
-const FONT_TECH = "var(--font-chakra-petch), 'Chakra Petch', sans-serif";
-const FONT_MONO = "var(--font-space-mono), 'Space Mono', monospace";
 
 function TicketCard({ mode, isSelected, onSelect }: {
   mode: ModeOption;
@@ -224,7 +198,7 @@ function TicketCard({ mode, isSelected, onSelect }: {
         </p>
       </div>
 
-      {/* 세로 점선 구분선 (dash 3px + gap 3px, color #0b0b0b) */}
+      {/* 세로 점선 구분선 */}
       <div
         aria-hidden
         style={{
@@ -350,7 +324,6 @@ export function TemplateModeSelector({ selected, onSelect, onNext }: Props) {
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1, background: "var(--background)" }}>
       <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px 8px", display: "flex", flexDirection: "column", gap: 12 }}>
-        {/* 헤더 */}
         <div style={{ marginBottom: 4 }}>
           <h2 style={{
             fontSize: 22,
@@ -370,7 +343,6 @@ export function TemplateModeSelector({ selected, onSelect, onNext }: Props) {
           </p>
         </div>
 
-        {/* 티켓 카드 */}
         {MODES.map((mode) => (
           <TicketCard
             key={mode.id}
@@ -381,27 +353,7 @@ export function TemplateModeSelector({ selected, onSelect, onNext }: Props) {
         ))}
       </div>
 
-      {/* Continue 버튼 */}
-      <div style={{ padding: "12px 16px", flexShrink: 0 }}>
-        <button
-          type="button"
-          onClick={onNext}
-          disabled={selected === null}
-          style={{
-            width: "100%",
-            padding: "14px 0",
-            borderRadius: 9999,
-            background: selected === null ? "#e5e5e5" : "#C6FD09",
-            border: "none",
-            fontWeight: 700,
-            fontSize: 16,
-            color: selected === null ? "#aaa" : "#0b0b0b",
-            cursor: selected === null ? "default" : "pointer",
-          }}
-        >
-          Continue
-        </button>
-      </div>
+      <StepNextButton label="Continue" onClick={onNext} disabled={selected === null} />
     </div>
   );
 }

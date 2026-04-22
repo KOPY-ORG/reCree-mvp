@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import type { TemplateId, TemplateModeId } from "./editor-types";
+import { FONT_TECH, FONT_MONO, PersonIcon, PersonIconFull, StepNextButton } from "./editor-shared";
 
-// ── 시리얼 번호 훅 ─────────────────────────────────────────────────────────────
+// ── 타임스탬프 훅 ─────────────────────────────────────────────────────────────
 
 function useTimestamp() {
   const [ts, setTs] = useState("····-····-····");
@@ -22,36 +23,10 @@ function useTimestamp() {
   return ts;
 }
 
-const FONT_TECH = "var(--font-chakra-petch), 'Chakra Petch', sans-serif";
-
 const FRAME_ASPECT = {
   vertical: "4 / 5",
   horizontal: "5 / 4",
 } as const;
-
-// ── 아이콘 (side-by-side 전용) ────────────────────────────────────────────────
-
-function PersonIcon({ color, size = 28 }: { color: string; size?: number }) {
-  return (
-    <svg viewBox="0 0 40 56" width={size} height={Math.round(size * 1.4)} fill="none" aria-hidden>
-      <circle cx="20" cy="12" r="9" stroke={color} strokeWidth="2.5" />
-      <path d="M6 48 C6 36 10 30 20 30 C30 30 34 36 34 48" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function PersonIconFull({ color, size = 28 }: { color: string; size?: number }) {
-  return (
-    <svg viewBox="0 0 40 80" width={size} height={Math.round(size * 2)} fill="none" aria-hidden>
-      <circle cx="20" cy="9" r="7.5" stroke={color} strokeWidth="2.5" />
-      <path d="M20 18 L20 46" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
-      <path d="M20 24 L8 34" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
-      <path d="M20 24 L32 34" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
-      <path d="M20 46 L12 68" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
-      <path d="M20 46 L28 68" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
-    </svg>
-  );
-}
 
 // ── 프리뷰: Side by side ──────────────────────────────────────────────────────
 
@@ -124,23 +99,23 @@ const FOUR_CUTS_CELLS = [
   { bg: "#EECFE4", fg: "#7B2D8B" },
 ];
 
-function FourCutsFullPreview({ aspect }: { aspect: string }) {
-  const iconSize = aspect === FRAME_ASPECT.vertical ? 20 : 16;
+function FourCutsPreview({ aspect, framed }: { aspect: string; framed: boolean }) {
+  const iconSize = framed
+    ? (aspect === FRAME_ASPECT.vertical ? 16 : 13)
+    : (aspect === FRAME_ASPECT.vertical ? 20 : 16);
   return (
-    <div style={{ width: "100%", aspectRatio: aspect, display: "grid", gridTemplateColumns: "1fr 1fr", gridTemplateRows: "1fr 1fr", overflow: "hidden", border: "1px solid #0b0b0b", boxSizing: "border-box" }}>
-      {FOUR_CUTS_CELLS.map((c, i) => (
-        <div key={i} style={{ background: c.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <PersonIconFull color={c.fg} size={iconSize} />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function FourCutsFramePreview({ aspect }: { aspect: string }) {
-  const iconSize = aspect === FRAME_ASPECT.vertical ? 16 : 13;
-  return (
-    <div style={{ width: "100%", aspectRatio: aspect, background: "#fff", border: "1px solid #0b0b0b", display: "grid", gridTemplateColumns: "1fr 1fr", gridTemplateRows: "1fr 1fr", gap: 5, padding: 8, boxSizing: "border-box" }}>
+    <div style={{
+      width: "100%",
+      aspectRatio: aspect,
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr",
+      gridTemplateRows: "1fr 1fr",
+      border: "1px solid #0b0b0b",
+      boxSizing: "border-box",
+      ...(framed
+        ? { background: "#fff", padding: 8, gap: 5 }
+        : { overflow: "hidden" }),
+    }}>
       {FOUR_CUTS_CELLS.map((c, i) => (
         <div key={i} style={{ background: c.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <PersonIconFull color={c.fg} size={iconSize} />
@@ -152,20 +127,26 @@ function FourCutsFramePreview({ aspect }: { aspect: string }) {
 
 // ── 프리뷰: Solo ──────────────────────────────────────────────────────────────
 
-function SoloFullPreview({ aspect }: { aspect: string }) {
+function SoloPreview({ aspect, framed }: { aspect: string; framed: boolean }) {
+  const iconSize = framed ? 28 : 32;
   return (
-    <div style={{ width: "100%", aspectRatio: aspect, background: "#CDE3F2", border: "1px solid #0b0b0b", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <PersonIconFull color="#1a5a80" size={32} />
-    </div>
-  );
-}
-
-function SoloFramePreview({ aspect }: { aspect: string }) {
-  return (
-    <div style={{ width: "100%", aspectRatio: aspect, background: "#fff", border: "1px solid #0b0b0b", padding: 8, boxSizing: "border-box", display: "flex" }}>
-      <div style={{ flex: 1, background: "#CDE3F2", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <PersonIconFull color="#1a5a80" size={28} />
-      </div>
+    <div style={{
+      width: "100%",
+      aspectRatio: aspect,
+      border: "1px solid #0b0b0b",
+      boxSizing: "border-box",
+      display: "flex",
+      ...(framed
+        ? { background: "#fff", padding: 8 }
+        : { background: "#CDE3F2", alignItems: "center", justifyContent: "center" }),
+    }}>
+      {framed ? (
+        <div style={{ flex: 1, background: "#CDE3F2", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <PersonIconFull color="#1a5a80" size={iconSize} />
+        </div>
+      ) : (
+        <PersonIconFull color="#1a5a80" size={iconSize} />
+      )}
     </div>
   );
 }
@@ -188,17 +169,17 @@ const SBS_LAYOUTS: LayoutOption[] = [
 ];
 
 const FOUR_CUTS_LAYOUTS: LayoutOption[] = [
-  { id: "vertical-full",    frameNum: "01", label: "VERTICAL",   description: "Full bleed", preview: <FourCutsFullPreview aspect={FRAME_ASPECT.vertical} /> },
-  { id: "vertical-frame",   frameNum: "02", label: "VERTICAL",   description: "Framed",     preview: <FourCutsFramePreview aspect={FRAME_ASPECT.vertical} /> },
-  { id: "horizontal-full",  frameNum: "03", label: "HORIZONTAL", description: "Full bleed", preview: <FourCutsFullPreview aspect={FRAME_ASPECT.horizontal} /> },
-  { id: "horizontal-frame", frameNum: "04", label: "HORIZONTAL", description: "Framed",     preview: <FourCutsFramePreview aspect={FRAME_ASPECT.horizontal} /> },
+  { id: "vertical-full",    frameNum: "01", label: "VERTICAL",   description: "Full bleed", preview: <FourCutsPreview aspect={FRAME_ASPECT.vertical}   framed={false} /> },
+  { id: "vertical-frame",   frameNum: "02", label: "VERTICAL",   description: "Framed",     preview: <FourCutsPreview aspect={FRAME_ASPECT.vertical}   framed={true}  /> },
+  { id: "horizontal-full",  frameNum: "03", label: "HORIZONTAL", description: "Full bleed", preview: <FourCutsPreview aspect={FRAME_ASPECT.horizontal} framed={false} /> },
+  { id: "horizontal-frame", frameNum: "04", label: "HORIZONTAL", description: "Framed",     preview: <FourCutsPreview aspect={FRAME_ASPECT.horizontal} framed={true}  /> },
 ];
 
 const SOLO_LAYOUTS: LayoutOption[] = [
-  { id: "vertical-full",    frameNum: "01", label: "VERTICAL",   description: "Full bleed", preview: <SoloFullPreview aspect={FRAME_ASPECT.vertical} /> },
-  { id: "vertical-frame",   frameNum: "02", label: "VERTICAL",   description: "Framed",     preview: <SoloFramePreview aspect={FRAME_ASPECT.vertical} /> },
-  { id: "horizontal-full",  frameNum: "03", label: "HORIZONTAL", description: "Full bleed", preview: <SoloFullPreview aspect={FRAME_ASPECT.horizontal} /> },
-  { id: "horizontal-frame", frameNum: "04", label: "HORIZONTAL", description: "Framed",     preview: <SoloFramePreview aspect={FRAME_ASPECT.horizontal} /> },
+  { id: "vertical-full",    frameNum: "01", label: "VERTICAL",   description: "Full bleed", preview: <SoloPreview aspect={FRAME_ASPECT.vertical}   framed={false} /> },
+  { id: "vertical-frame",   frameNum: "02", label: "VERTICAL",   description: "Framed",     preview: <SoloPreview aspect={FRAME_ASPECT.vertical}   framed={true}  /> },
+  { id: "horizontal-full",  frameNum: "03", label: "HORIZONTAL", description: "Full bleed", preview: <SoloPreview aspect={FRAME_ASPECT.horizontal} framed={false} /> },
+  { id: "horizontal-frame", frameNum: "04", label: "HORIZONTAL", description: "Framed",     preview: <SoloPreview aspect={FRAME_ASPECT.horizontal} framed={true}  /> },
 ];
 
 function getLayouts(mode: TemplateModeId): LayoutOption[] {
@@ -209,12 +190,12 @@ function getLayouts(mode: TemplateModeId): LayoutOption[] {
 
 // ── 레이아웃 카드 ─────────────────────────────────────────────────────────────
 
-function LayoutCard({ layout, isSelected, onSelect }: {
+function LayoutCard({ layout, isSelected, onSelect, timestamp }: {
   layout: LayoutOption;
   isSelected: boolean;
   onSelect: () => void;
+  timestamp: string;
 }) {
-  const timestamp = useTimestamp();
   return (
     <button
       type="button"
@@ -235,7 +216,7 @@ function LayoutCard({ layout, isSelected, onSelect }: {
         textAlign: "left",
         cursor: "pointer",
         transform: isSelected ? "translateY(-2px) rotate(-0.3deg)" : "none",
-        transition: "transform 0.15s ease, box-shadow 0.15s ease",
+        transition: "transform 0.15s ease, box-shadow 0.15s ease, padding-top 0.15s ease",
       }}
     >
       {isSelected && (
@@ -273,7 +254,7 @@ function LayoutCard({ layout, isSelected, onSelect }: {
       </div>
 
       <p style={{
-        fontFamily: "var(--font-space-mono), 'Space Mono', monospace",
+        fontFamily: FONT_MONO,
         fontSize: 8,
         letterSpacing: 0.5,
         color: "#0b0b0b",
@@ -331,6 +312,7 @@ interface Props {
 
 export function LayoutSelector({ mode, selected, onSelect, onNext }: Props) {
   const layouts = getLayouts(mode);
+  const timestamp = useTimestamp();
 
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1, background: "var(--background)" }}>
@@ -361,31 +343,13 @@ export function LayoutSelector({ mode, selected, onSelect, onNext }: Props) {
               layout={layout}
               isSelected={selected === layout.id}
               onSelect={() => onSelect(layout.id)}
+              timestamp={timestamp}
             />
           ))}
         </div>
       </div>
 
-      <div style={{ padding: "12px 16px", flexShrink: 0 }}>
-        <button
-          type="button"
-          onClick={onNext}
-          disabled={selected === null}
-          style={{
-            width: "100%",
-            padding: "14px 0",
-            borderRadius: 9999,
-            background: selected === null ? "#e5e5e5" : "#C6FD09",
-            border: "none",
-            fontWeight: 700,
-            fontSize: 16,
-            color: selected === null ? "#aaa" : "#0b0b0b",
-            cursor: selected === null ? "default" : "pointer",
-          }}
-        >
-          Next
-        </button>
-      </div>
+      <StepNextButton label="Next" onClick={onNext} disabled={selected === null} />
     </div>
   );
 }
