@@ -2,21 +2,19 @@
 
 import { useEffect, useState, useMemo, useRef } from "react";
 import Image from "next/image";
-import { MapPin, Star, Target, Loader2, Search, X, Plus, Check, ImageIcon } from "lucide-react";
+import { MapPin, Loader2, Search, X, Check, ImageIcon } from "lucide-react";
 import { isExternalImage } from "@/lib/image";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { LabelBadge } from "@/components/LabelBadge";
-import { getActiveStickers } from "@/lib/actions/sticker-actions";
-import { previewMatchScore, searchPlaces, getPopularPlaces } from "@/app/(user)/_actions/recreeshot-actions";
+import { searchPlaces, getPopularPlaces } from "@/app/(user)/_actions/recreeshot-actions";
 import {
   computeTopicEffectiveColors,
   resolveTagColors,
-  labelBackground,
   badgeRingStyle,
   DEFAULT_COLOR,
   DEFAULT_TEXT,
 } from "@/lib/post-labels";
-import type { EditorLayer, StickerBadgeOption } from "./editor-types";
+import type { StickerBadgeOption } from "./editor-types";
 
 // ── 타입 ──────────────────────────────────────────────────────────────────────
 
@@ -70,20 +68,6 @@ export interface PostResult {
   tagIds: string[];
 }
 
-interface ActiveSticker {
-  id: string;
-  name: string;
-  imageUrl: string;
-  mimeType: string;
-}
-
-const BADGE_W = 300;
-const BADGE_H = 72;
-const LOC_W = 360;
-const LOC_H = 80;
-const SCORE_W = 200;
-const SCORE_H = 120;
-
 // ── Topic 유틸 ─────────────────────────────────────────────────────────────────
 
 type AnyTopic = TopicItem & { children: AnyTopic[] };
@@ -109,7 +93,7 @@ function getAllDescendantIds(node: AnyTopic): string[] {
   return ids;
 }
 
-// ── Badge 옵션 계산 ────────────────────────────────────────────────────────────
+// ── Badge 옵션 계산 (EditorToolbar 색상 계산용) ───────────────────────────────
 
 export function resolveBadgeOptions(
   topics: TopicItem[],
@@ -144,11 +128,10 @@ export function resolveBadgeOptions(
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 interface Props {
-  canvasWidth: number;
-  canvasHeight: number;
-  uploadedReferenceUrl: string | null;
-  uploadedShotUrl: string | null;
-  onAddLayer: (layer: Omit<EditorLayer, "id">) => void;
+  locationSheetOpen: boolean;
+  onLocationSheetChange: (v: boolean) => void;
+  tagSheetOpen: boolean;
+  onTagSheetChange: (v: boolean) => void;
   selectedPlace: PlaceResult | null;
   onPlaceChange: (place: PlaceResult | null) => void;
   linkedPosts: PostResult[];
@@ -164,11 +147,10 @@ interface Props {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function StickerPanel({
-  canvasWidth,
-  canvasHeight,
-  uploadedReferenceUrl,
-  uploadedShotUrl,
-  onAddLayer,
+  locationSheetOpen,
+  onLocationSheetChange,
+  tagSheetOpen,
+  onTagSheetChange,
   selectedPlace,
   onPlaceChange,
   linkedPosts,
@@ -180,25 +162,15 @@ export function StickerPanel({
   tagGroups,
   topics,
 }: Props) {
-  const [stickers, setStickers] = useState<ActiveSticker[]>([]);
-  const [loadingScore, setLoadingScore] = useState(false);
-  const [scoreResult, setScoreResult] = useState<number | null>(null);
-  const [scoreError, setScoreError] = useState<string | null>(null);
-
-  const [locationSheetOpen, setLocationSheetOpen] = useState(false);
   const [locationQuery, setLocationQuery] = useState("");
   const [popularPlaces, setPopularPlaces] = useState<PlaceResult[]>([]);
   const [placeResults, setPlaceResults] = useState<PlaceResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [typeSheetOpen, setTypeSheetOpen] = useState(false);
   const [activeThemeL0Id, setActiveThemeL0Id] = useState<string | null>(null);
   const [themeSearchQuery, setThemeSearchQuery] = useState("");
-
-  useEffect(() => {
-    getActiveStickers().then(setStickers).catch(() => {});
-  }, []);
+  const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!locationSheetOpen || popularPlaces.length > 0) return;
@@ -220,10 +192,10 @@ export function StickerPanel({
   const topicColorMap = useMemo(() => computeTopicEffectiveColors(topics), [topics]);
 
   useEffect(() => {
-    if (typeSheetOpen && topicTree.length > 0 && !activeThemeL0Id) {
+    if (tagSheetOpen && topicTree.length > 0 && !activeThemeL0Id) {
       setActiveThemeL0Id(topicTree[0].id);
     }
-  }, [typeSheetOpen, topicTree, activeThemeL0Id]);
+  }, [tagSheetOpen, topicTree, activeThemeL0Id]);
 
   const activeThemeTopics = useMemo(() => {
     const resolvedL0Id = activeThemeL0Id ?? topicTree[0]?.id;
@@ -245,54 +217,9 @@ export function StickerPanel({
     return topicTree.find((t) => t.id === resolvedL0Id)?.nameEn === "K-POP";
   }, [activeThemeL0Id, topicTree]);
 
-  const placeName = selectedPlace?.nameEn ?? selectedPlace?.nameKo ?? null;
-  const badgeOptions = useMemo(
-    () => resolveBadgeOptions(topics, tagGroups, selectedTopicIds, selectedTagIds),
-    [topics, tagGroups, selectedTopicIds, selectedTagIds],
-  );
-  const selectedTagCount = selectedTagIds.length + selectedTopicIds.length;
-
-  function centerPos(w: number, h: number) {
-    return { x: 0.5 - w / 2 / canvasWidth, y: 0.5 - h / 2 / canvasHeight };
-  }
-
-  function addLocationTag() {
-    if (!placeName) return;
-    const { x, y } = centerPos(LOC_W, LOC_H);
-    onAddLayer({ type: "location-tag", x, y, scale: 1, rotation: 0, placeName });
-  }
-
-  function addBadge(opt: StickerBadgeOption) {
-    const { x, y } = centerPos(BADGE_W, BADGE_H);
-    onAddLayer({ type: "label-badge", x, y, scale: 1, rotation: 0, topicId: opt.type === "topic" ? opt.id : undefined, tagId: opt.type === "tag" ? opt.id : undefined, badgeName: opt.name, badgeColorHex: opt.colorHex, badgeColorHex2: opt.colorHex2, badgeGradientDir: opt.gradientDir, badgeGradientStop: opt.gradientStop, badgeTextColorHex: opt.textColorHex });
-  }
-
-  async function handleGetScore() {
-    if (!uploadedReferenceUrl || !uploadedShotUrl) return;
-    setLoadingScore(true);
-    setScoreError(null);
-    try {
-      const result = await previewMatchScore(uploadedReferenceUrl, uploadedShotUrl);
-      if ("error" in result) setScoreError("Score calculation failed.");
-      else setScoreResult(result.score);
-    } finally {
-      setLoadingScore(false);
-    }
-  }
-
-  function addMatchScore() {
-    if (scoreResult === null) return;
-    const { x, y } = centerPos(SCORE_W, SCORE_H);
-    onAddLayer({ type: "match-score", x, y, scale: 1, rotation: 0, score: scoreResult });
-  }
-
-  function addSticker(s: ActiveSticker) {
-    onAddLayer({ type: "sticker", x: 0.5 - 200 / 2 / canvasWidth, y: 0.5 - 200 / 2 / canvasHeight, scale: 1, rotation: 0, stickerId: s.id, stickerUrl: s.imageUrl });
-  }
-
   function handleSelectPlace(place: PlaceResult) {
     onPlaceChange(place);
-    setLocationSheetOpen(false);
+    onLocationSheetChange(false);
     setLocationQuery("");
   }
 
@@ -311,161 +238,9 @@ export function StickerPanel({
   }
 
   return (
-    <div className="space-y-4 py-1">
-      {/* 장소 선택 */}
-      <div>
-        <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Location</p>
-        {selectedPlace ? (
-          <div className="flex items-center gap-2 border border-brand rounded-xl px-3 py-2">
-            <MapPin className="size-3.5 text-muted-foreground shrink-0" />
-            <span className="flex-1 text-xs">{selectedPlace.nameEn ?? selectedPlace.nameKo}</span>
-            <button type="button" onClick={() => onPlaceChange(null)} className="text-muted-foreground">
-              <X className="size-3.5" />
-            </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setLocationSheetOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dashed border-border text-xs text-muted-foreground w-full"
-          >
-            <MapPin className="size-3.5" />
-            Set location
-          </button>
-        )}
-      </div>
-
-      {/* 연결 포스트 */}
-      {linkedPosts.length > 0 && (
-        <div>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Related post</p>
-          <div className="space-y-1.5">
-            {linkedPosts.map((post) => {
-              const selected = linkedPostId === post.id;
-              const title = post.titleEn ?? post.titleKo ?? "";
-              return (
-                <button
-                  key={post.id}
-                  type="button"
-                  onClick={() => {
-                    if (selected) {
-                      onLinkedPostChange(undefined);
-                      onTagsChange([], []);
-                    } else {
-                      onLinkedPostChange(post.id, post.tagIds, post.topicIds);
-                      onTagsChange(post.tagIds, post.topicIds);
-                    }
-                  }}
-                  className={`flex items-center gap-2.5 w-full rounded-xl border overflow-hidden text-left transition-all ${selected ? "border-brand bg-brand/5" : "border-border"}`}
-                >
-                  <div className="relative flex-shrink-0 w-12 h-12 bg-muted">
-                    {post.thumbnailUrl ? (
-                      <Image src={post.thumbnailUrl} alt={title} fill unoptimized className="object-cover" sizes="48px" />
-                    ) : (
-                      <div className="flex items-center justify-center w-full h-full">
-                        <ImageIcon className="size-3.5 text-muted-foreground/40" />
-                      </div>
-                    )}
-                  </div>
-                  <p className="flex-1 text-xs font-medium line-clamp-2 leading-snug py-1 pr-1">{title}</p>
-                  <div className={`flex-shrink-0 size-4 rounded-full border-2 flex items-center justify-center mr-2.5 transition-all ${selected ? "bg-brand border-brand" : "border-border"}`}>
-                    {selected && <Check className="size-2.5 text-black" />}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* 태그 선택 */}
-      <div>
-        <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Tags</p>
-        <div className="flex flex-wrap gap-1.5 items-center">
-          {selectedTagIds.map((id) => {
-            const groupData = tagGroups.find((g) => g.tags.some((t) => t.id === id));
-            const tag = groupData?.tags.find((t) => t.id === id);
-            if (!tag || !groupData) return null;
-            const resolved = resolveTagColors(tag, groupData);
-            return (
-              <span key={id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: labelBackground({ text: "", ...resolved }), color: resolved.textColorHex }}>
-                {tag.name}
-                <button type="button" onClick={() => toggleTag(id)} className="opacity-70"><X className="size-2.5" /></button>
-              </span>
-            );
-          })}
-          {selectedTopicIds.map((id) => {
-            const colors = topicColorMap.get(id);
-            const topic = topics.find((t) => t.id === id);
-            if (!topic || !colors) return null;
-            const bg = colors.hex2 ? `linear-gradient(${colors.dir}, ${colors.hex}, ${colors.hex2} ${colors.stop}%)` : colors.hex;
-            return (
-              <span key={id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: bg, color: colors.textHex }}>
-                {topic.nameEn}
-                <button type="button" onClick={() => toggleTopic(id)} className="opacity-70"><X className="size-2.5" /></button>
-              </span>
-            );
-          })}
-          <button
-            type="button"
-            onClick={() => setTypeSheetOpen(true)}
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-dashed border-border text-[11px] text-muted-foreground"
-          >
-            <Plus className="size-3" />
-            Add tag
-          </button>
-        </div>
-      </div>
-
-      {/* 특수 스티커 */}
-      <div>
-        <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Special</p>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" disabled={!placeName} onClick={addLocationTag} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border text-xs font-medium disabled:opacity-40">
-            <MapPin className="size-3.5" />
-            {placeName ?? "Location tag"}
-          </button>
-
-          {badgeOptions.map((opt) => (
-            <button key={opt.id} type="button" onClick={() => addBadge(opt)} className="px-3 py-1.5 rounded-full text-xs font-semibold" style={{ background: opt.colorHex2 ? `linear-gradient(${opt.gradientDir}, ${opt.colorHex}, ${opt.colorHex2} ${opt.gradientStop}%)` : opt.colorHex, color: opt.textColorHex }}>
-              {opt.name}
-            </button>
-          ))}
-
-          <div className="flex items-center gap-1.5">
-            {scoreResult !== null ? (
-              <button type="button" onClick={addMatchScore} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-brand text-xs font-semibold text-brand">
-                <Target className="size-3.5" />
-                {scoreResult}% — Add
-              </button>
-            ) : (
-              <button type="button" onClick={handleGetScore} disabled={loadingScore || !uploadedReferenceUrl || !uploadedShotUrl} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border text-xs font-medium disabled:opacity-40">
-                {loadingScore ? <Loader2 className="size-3.5 animate-spin" /> : <Star className="size-3.5" />}
-                Match Score
-              </button>
-            )}
-            {scoreError && <span className="text-[10px] text-red-500">{scoreError}</span>}
-          </div>
-        </div>
-      </div>
-
-      {/* 기본 스티커 */}
-      {stickers.length > 0 && (
-        <div>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Stickers</p>
-          <div className="flex flex-wrap gap-2">
-            {stickers.map((s) => (
-              <button key={s.id} type="button" onClick={() => addSticker(s)} className="size-12 rounded-lg border border-border/60 bg-muted/20 flex items-center justify-center overflow-hidden" title={s.name}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={s.imageUrl} alt={s.name} className="size-10 object-contain" />
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
+    <>
       {/* 장소 검색 시트 */}
-      <Sheet open={locationSheetOpen} onOpenChange={(v) => { setLocationSheetOpen(v); if (!v) setLocationQuery(""); }}>
+      <Sheet open={locationSheetOpen} onOpenChange={(v) => { onLocationSheetChange(v); if (!v) setLocationQuery(""); }}>
         <SheetContent side="bottom" showCloseButton={false} className="rounded-t-2xl max-h-[85vh] p-0 flex flex-col gap-0">
           <SheetTitle className="sr-only">Search location</SheetTitle>
           <div className="flex justify-center pt-3 pb-1 shrink-0">
@@ -499,17 +274,69 @@ export function StickerPanel({
       </Sheet>
 
       {/* 태그 시트 */}
-      <Sheet open={typeSheetOpen} onOpenChange={(v) => { setTypeSheetOpen(v); if (!v) setThemeSearchQuery(""); }}>
+      <Sheet open={tagSheetOpen} onOpenChange={(v) => { onTagSheetChange(v); if (!v) setThemeSearchQuery(""); }}>
         <SheetContent side="bottom" showCloseButton={false} className="rounded-t-2xl max-h-[90vh] p-0 flex flex-col gap-0">
           <SheetTitle className="sr-only">Tag</SheetTitle>
           <div className="flex justify-center pt-3 pb-1 shrink-0">
             <div className="w-9 h-1 rounded-full bg-muted-foreground/25" />
           </div>
           <div className="px-5 pt-1 pb-3 shrink-0">
-            <p className="text-base font-bold">Tag</p>
+            <p className="text-base font-bold">Add tags</p>
           </div>
 
-          {selectedTagCount > 0 && (
+          {/* 연결 포스트 */}
+          {linkedPosts.length > 0 && (
+            <div className="px-4 pb-3 shrink-0">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Related post</p>
+              <div className="space-y-1.5">
+                {linkedPosts.map((post) => {
+                  const selected = linkedPostId === post.id;
+                  const title = post.titleEn ?? post.titleKo ?? "";
+                  return (
+                    <button
+                      key={post.id}
+                      type="button"
+                      onClick={() => {
+                        if (selected) {
+                          onLinkedPostChange(undefined);
+                          onTagsChange(
+                            selectedTagIds.filter((id) => !post.tagIds.includes(id)),
+                            selectedTopicIds.filter((id) => !post.topicIds.includes(id)),
+                          );
+                        } else {
+                          onLinkedPostChange(post.id, post.tagIds, post.topicIds);
+                          onTagsChange(
+                            [...new Set([...selectedTagIds, ...post.tagIds])],
+                            [...new Set([...selectedTopicIds, ...post.topicIds])],
+                          );
+                        }
+                      }}
+                      className={`flex items-center gap-3 w-full rounded-2xl p-2 text-left transition-all shadow-sm ${
+                        selected ? "bg-brand/10 ring-1.5 ring-brand ring-inset" : "bg-background"
+                      }`}
+                    >
+                      <div className="relative flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden bg-muted">
+                        {post.thumbnailUrl ? (
+                          <Image src={post.thumbnailUrl} alt={title} fill unoptimized className="object-cover" sizes="56px" />
+                        ) : (
+                          <div className="flex items-center justify-center w-full h-full">
+                            <ImageIcon className="size-4 text-muted-foreground/40" />
+                          </div>
+                        )}
+                      </div>
+                      <p className="flex-1 text-xs font-medium line-clamp-3 leading-snug min-w-0">{title}</p>
+                      <div className={`flex-shrink-0 size-5 rounded-full border flex items-center justify-center transition-all ${selected ? "bg-brand border-brand" : "border-border/40 bg-muted/30"}`}>
+                        {selected && <Check className="size-3 text-black" />}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 선택된 태그 요약 */}
+          {(selectedTagIds.length > 0 || selectedTopicIds.length > 0) && (
             <div className="px-4 pb-3 shrink-0">
               <div className="flex flex-wrap gap-1.5 [--pill-py:0.25rem]">
                 {selectedTagIds.map((id) => {
@@ -517,8 +344,11 @@ export function StickerPanel({
                   const tag = groupData?.tags.find((t) => t.id === id);
                   if (!tag || !groupData) return null;
                   const resolved = resolveTagColors(tag, groupData);
+                  const bg = resolved.colorHex2
+                    ? `linear-gradient(${resolved.gradientDir}, ${resolved.colorHex}, ${resolved.colorHex2} ${resolved.gradientStop}%)`
+                    : resolved.colorHex;
                   return (
-                    <span key={id} className="pill-badge text-xs" style={{ background: labelBackground({ text: "", ...resolved }), color: resolved.textColorHex }}>
+                    <span key={id} className="pill-badge text-xs" style={{ background: bg, color: resolved.textColorHex }}>
                       {tag.name}
                       <button type="button" onClick={() => toggleTag(id)} className="opacity-60 hover:opacity-100 -mr-0.5"><X className="size-3" /></button>
                     </span>
@@ -548,8 +378,11 @@ export function StickerPanel({
                   {group.tags.map((tag) => {
                     const isActive = selectedTagIds.includes(tag.id);
                     const resolved = resolveTagColors(tag, group);
+                    const bg = isActive
+                      ? (resolved.colorHex2 ? `linear-gradient(${resolved.gradientDir}, ${resolved.colorHex}, ${resolved.colorHex2} ${resolved.gradientStop}%)` : resolved.colorHex)
+                      : DEFAULT_COLOR;
                     return (
-                      <LabelBadge key={tag.id} as="button" text={tag.name} background={isActive ? labelBackground({ text: "", ...resolved }) : DEFAULT_COLOR} color={isActive ? resolved.textColorHex : DEFAULT_TEXT} className="shrink-0 transition-all active:opacity-70" style={badgeRingStyle(resolved.colorHex, isActive)} onClick={() => toggleTag(tag.id)} />
+                      <LabelBadge key={tag.id} as="button" text={tag.name} background={bg} color={isActive ? resolved.textColorHex : DEFAULT_TEXT} className="shrink-0 transition-all active:opacity-70" style={badgeRingStyle(resolved.colorHex, isActive)} onClick={() => toggleTag(tag.id)} />
                     );
                   })}
                 </div>
@@ -574,30 +407,104 @@ export function StickerPanel({
                   <input type="text" placeholder={`Search in ${topicTree.find((t) => t.id === (activeThemeL0Id ?? topicTree[0]?.id))?.nameEn ?? ""}...`} value={themeSearchQuery} onChange={(e) => setThemeSearchQuery(e.target.value)} className="flex-1 text-sm bg-transparent outline-none placeholder:text-muted-foreground" />
                   {themeSearchQuery && <button type="button" onClick={() => setThemeSearchQuery("")}><X className="size-3.5 text-muted-foreground" /></button>}
                 </div>
-                <div className="flex flex-wrap gap-x-2 gap-y-3">
-                  {filteredThemeTopics.map((topic) => {
+                {(() => {
+                  if (filteredThemeTopics.length === 0) {
+                    return <p className="text-sm text-muted-foreground py-2">No results</p>;
+                  }
+
+                  function renderBadge(topic: TopicItem) {
                     const colors = topicColorMap.get(topic.id);
                     const isSelected = selectedTopicIds.includes(topic.id);
-                    const bg = colors?.hex2 ? `linear-gradient(${colors.dir}, ${colors.hex}, ${colors.hex2} ${colors.stop}%)` : (colors?.hex ?? DEFAULT_COLOR);
+                    const bg = colors?.hex2
+                      ? `linear-gradient(${colors.dir}, ${colors.hex}, ${colors.hex2} ${colors.stop}%)`
+                      : (colors?.hex ?? DEFAULT_COLOR);
                     const fg = colors?.textHex ?? DEFAULT_TEXT;
                     return (
                       <LabelBadge key={topic.id} as="button" text={topic.nameEn} background={themeAlwaysColor || isSelected ? bg : DEFAULT_COLOR} color={themeAlwaysColor || isSelected ? fg : DEFAULT_TEXT} className="shrink-0 transition-all active:opacity-70" style={badgeRingStyle(colors?.hex ?? null, isSelected)} onClick={() => toggleTopic(topic.id)} />
                     );
-                  })}
-                  {filteredThemeTopics.length === 0 && <p className="text-sm text-muted-foreground py-2">No results</p>}
-                </div>
+                  }
+
+                  if (themeSearchQuery.trim()) {
+                    return <div className="flex flex-wrap gap-x-2 gap-y-3">{filteredThemeTopics.map(renderBadge)}</div>;
+                  }
+
+                  const inSet = new Set(filteredThemeTopics.map((t) => t.id));
+                  const parents = filteredThemeTopics.filter((t) => !t.parentId || !inSet.has(t.parentId));
+                  const childrenOf = (parentId: string) => filteredThemeTopics.filter((t) => t.parentId === parentId);
+
+                  return (
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap gap-x-2 gap-y-3">
+                        {parents.map((parent) => {
+                          const members = childrenOf(parent.id);
+                          const hasMembers = members.length > 0;
+                          const isExpanded = expandedGroupId === parent.id;
+                          const colors = topicColorMap.get(parent.id);
+                          const isSelected = selectedTopicIds.includes(parent.id);
+                          const bg = colors?.hex2
+                            ? `linear-gradient(${colors.dir}, ${colors.hex}, ${colors.hex2} ${colors.stop}%)`
+                            : (colors?.hex ?? DEFAULT_COLOR);
+                          const fg = colors?.textHex ?? DEFAULT_TEXT;
+                          const showColor = themeAlwaysColor || isSelected || isExpanded;
+
+                          if (hasMembers) {
+                            return (
+                              <div
+                                key={parent.id}
+                                className="inline-flex items-center rounded-full font-medium leading-none shrink-0 overflow-hidden transition-all"
+                                style={{
+                                  background: showColor ? bg : DEFAULT_COLOR,
+                                  color: showColor ? fg : DEFAULT_TEXT,
+                                  ...badgeRingStyle(colors?.hex ?? null, isSelected),
+                                }}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => toggleTopic(parent.id)}
+                                  className="pl-2.5 pr-1.5 active:opacity-70"
+                                  style={{ paddingTop: "var(--pill-py, 0.1875rem)", paddingBottom: "var(--pill-py, 0.1875rem)", fontSize: "var(--pill-fs, var(--text-xs))" }}
+                                >
+                                  {parent.nameEn}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setExpandedGroupId(isExpanded ? null : parent.id)}
+                                  className="pr-2 active:opacity-70 text-[10px] leading-none"
+                                  style={{ paddingTop: "var(--pill-py, 0.1875rem)", paddingBottom: "var(--pill-py, 0.1875rem)" }}
+                                >
+                                  {isExpanded ? "▴" : "▾"}
+                                </button>
+                              </div>
+                            );
+                          }
+                          return renderBadge(parent);
+                        })}
+                      </div>
+
+                      {expandedGroupId && (() => {
+                        const members = childrenOf(expandedGroupId);
+                        if (!members.length) return null;
+                        return (
+                          <div className="flex flex-wrap gap-x-2 gap-y-3 pl-3 border-l-2 border-border/40">
+                            {members.map(renderBadge)}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>
 
           <div className="px-4 pb-6 pt-3 shrink-0">
-            <button type="button" onClick={() => setTypeSheetOpen(false)} className="w-full py-3 rounded-full font-semibold text-sm bg-brand text-black">
+            <button type="button" onClick={() => onTagSheetChange(false)} className="w-full py-3 rounded-full font-semibold text-sm bg-brand text-black">
               Done
             </button>
           </div>
         </SheetContent>
       </Sheet>
-    </div>
+    </>
   );
 }
 

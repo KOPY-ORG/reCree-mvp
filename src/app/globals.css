@@ -213,3 +213,9 @@
   color: var(--palette-gray-900) !important;
 }
 
+
+@keyframes scanline {
+  0%   { top: 0%; opacity: 1; }
+  90%  { top: 100%; opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}

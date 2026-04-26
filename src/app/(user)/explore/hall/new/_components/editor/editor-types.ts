@@ -1,5 +1,7 @@
 export type TemplateModeId = "side-by-side" | "4-cuts" | "solo";
 
+export type StickerStyle = "pill" | "stamp" | "ribbon" | "ticket";
+
 export type TemplateId =
   | "vertical-full"
   | "vertical-frame"

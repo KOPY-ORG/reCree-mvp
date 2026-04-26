@@ -49,7 +49,7 @@ function FrameCanvasPreview({
         width: "100%",
         aspectRatio: `${canvasWidth} / ${canvasHeight}`,
         background: frame ? "#ffffff" : "transparent",
-        boxShadow: "0 0 0 1.5px #0b0b0b",
+        boxShadow: "0 4px 20px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06)",
         overflow: "hidden",
         boxSizing: "border-box",
       }}
@@ -70,8 +70,8 @@ function FrameCanvasPreview({
               width:  pct(slot.width,  canvasWidth),
               height: pct(slot.height, canvasHeight),
               overflow: "hidden",
-              background: d.previewUrl ? "transparent" : "#f8f8f8",
-              outline: showOutline ? "1.5px dashed #0b0b0b" : "none",
+              background: d.previewUrl ? "transparent" : (i === 0 ? "var(--palette-brand-sub3)" : "var(--palette-brand-sub2)"),
+              outline: showOutline ? "1.5px dashed #a8cc00" : "none",
               outlineOffset: "-1px",
               boxSizing: "border-box",
               cursor: d.previewUrl ? "default" : "pointer",
@@ -138,63 +138,7 @@ function FrameCanvasPreview({
         );
       })}
 
-      {/* Full-bleed 슬롯 구분선 — slot 경계에서 자동 계산 */}
-      {!frame && slots.length >= 2 && (() => {
-        const s0 = slots[0];
-        const isStacked = s0.y + s0.height < canvasHeight; // 상하 배치
-        return isStacked ? (
-          <div style={{
-            position: "absolute",
-            left: 0, right: 0,
-            top: pct(s0.y + s0.height, canvasHeight),
-            height: 1,
-            background: "#0b0b0b",
-            zIndex: 1,
-          }} />
-        ) : (
-          <div style={{
-            position: "absolute",
-            top: 0, bottom: 0,
-            left: pct(s0.x + s0.width, canvasWidth),
-            width: 1,
-            background: "#0b0b0b",
-            zIndex: 1,
-          }} />
-        );
-      })()}
 
-      {/* Framed 레이블 */}
-      {frame &&
-        slots.map((slot, i) => (
-          <div
-            key={`label-${i}`}
-            style={{
-              position: "absolute",
-              left:   pct(slot.x,               canvasWidth),
-              top:    pct(slot.y + slot.height,  canvasHeight),
-              width:  pct(slot.width,            canvasWidth),
-              height: pct(frame.labelHeight,     canvasHeight),
-              display: "flex",
-              alignItems: "flex-start",
-              justifyContent: "center",
-              paddingTop: 5,
-            }}
-          >
-            <p
-              style={{
-                fontFamily: FONT_TECH,
-                fontSize: 13,
-                fontWeight: 700,
-                color: "#0b0b0b",
-                margin: 0,
-                lineHeight: 1,
-                letterSpacing: 0.5,
-              }}
-            >
-              {frame.defaultLabels[i]}
-            </p>
-          </div>
-        ))}
     </div>
   );
 }
@@ -277,7 +221,7 @@ export function PhotoPlacer({
     : `Add ${remaining} more to continue`;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1, background: "var(--background)" }}>
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, background: "#F4F3EF" }}>
       <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px 8px" }}>
 
         {/* 헤더 */}

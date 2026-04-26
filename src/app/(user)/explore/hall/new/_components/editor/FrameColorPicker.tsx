@@ -21,8 +21,14 @@ interface Props {
 }
 
 export function FrameColorPicker({ value, onChange, extraColors = [] }: Props) {
-  const colorsLower = COLORS.map((c) => c.toLowerCase());
-  const allColors = [...COLORS, ...extraColors.filter((c) => !colorsLower.includes(c.toLowerCase()))];
+  const seen = new Set(COLORS.map((c) => c.toLowerCase()));
+  const extras = extraColors.filter((c) => {
+    const lower = c.toLowerCase();
+    if (seen.has(lower)) return false;
+    seen.add(lower);
+    return true;
+  });
+  const allColors = [...COLORS, ...extras];
   return (
     <div className="flex flex-wrap gap-3 py-1">
       {allColors.map((color, i) => {
