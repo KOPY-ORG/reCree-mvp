@@ -1,72 +1,195 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, X } from "lucide-react";
+import { ImagePlus, X } from "lucide-react";
 import { ImageCropOverlay } from "../ImageCropOverlay";
 import { getTemplateConfig } from "./template-config";
+import { FONT_TECH, FONT_MONO } from "./editor-shared";
 import type { TemplateId } from "./editor-types";
 
-// 슬롯 크롭 비율 (width/height) — template-config의 슬롯 치수에서 도출
-function getSlotCropRatio(templateId: TemplateId): number {
+// ── 헬퍼 ──────────────────────────────────────────────────────────────────────
+
+const FRAME_NUM: Record<TemplateId, string> = {
+  "vertical-full":    "01",
+  "vertical-frame":   "02",
+  "horizontal-full":  "03",
+  "horizontal-frame": "04",
+};
+
+function getSlotCropRatio(templateId: TemplateId, slotIndex: number): number {
   const config = getTemplateConfig(templateId);
-  const slot = config.slots[0];
+  const slot = config.slots[slotIndex];
   return slot.width / slot.height;
 }
 
-interface PhotoSlotProps {
-  label: string;
-  sublabel: string;
+// ── 프레임 캔버스 미리보기 ─────────────────────────────────────────────────────
+
+interface SlotEntry {
   previewUrl: string | null;
-  onPickFile: () => void;
+  onClick: () => void;
   onRemove: () => void;
-  aspectRatio: string; // CSS aspect-ratio value e.g. "16/9"
+  sublabel: string;
 }
 
-function PhotoSlotCard({ label, sublabel, previewUrl, onPickFile, onRemove, aspectRatio }: PhotoSlotProps) {
+function FrameCanvasPreview({
+  templateId,
+  slots: slotData,
+}: {
+  templateId: TemplateId;
+  slots: SlotEntry[];
+}) {
+  const config = getTemplateConfig(templateId);
+  const { canvasWidth, canvasHeight, frame, slots } = config;
+  const pct = (v: number, total: number) => `${(v / total * 100).toFixed(3)}%`;
+
   return (
-    <div className="flex-1 flex flex-col gap-1.5">
-      <p className="text-xs font-semibold text-muted-foreground">{label}</p>
-      <div
-        className="relative w-full overflow-hidden rounded-xl bg-muted/40 border border-border"
-        style={{ aspectRatio }}
-      >
-        {previewUrl ? (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={previewUrl} alt={label} className="w-full h-full object-cover" />
-            <button
-              type="button"
-              onClick={onRemove}
-              className="absolute top-1.5 right-1.5 size-6 rounded-full bg-black/50 flex items-center justify-center"
-            >
-              <X className="size-3.5 text-white" />
-            </button>
-          </>
-        ) : (
-          <button
-            type="button"
-            onClick={onPickFile}
-            className="absolute inset-0 flex flex-col items-center justify-center gap-2"
+    <div
+      style={{
+        position: "relative",
+        width: "100%",
+        aspectRatio: `${canvasWidth} / ${canvasHeight}`,
+        background: frame ? "#ffffff" : "transparent",
+        boxShadow: "0 0 0 1.5px #0b0b0b",
+        overflow: "hidden",
+        boxSizing: "border-box",
+      }}
+    >
+      {/* 사진 슬롯 */}
+      {slots.map((slot, i) => {
+        const d = slotData[i];
+        if (!d) return null;
+        // full-bleed: 슬롯이 캔버스 끝까지 닿으므로 outline 생략 (캔버스 실선과 겹침 방지)
+        const showOutline = !!frame && !d.previewUrl;
+        return (
+          <div
+            key={i}
+            style={{
+              position: "absolute",
+              left:   pct(slot.x,      canvasWidth),
+              top:    pct(slot.y,      canvasHeight),
+              width:  pct(slot.width,  canvasWidth),
+              height: pct(slot.height, canvasHeight),
+              overflow: "hidden",
+              background: d.previewUrl ? "transparent" : "#f5f5f5",
+              outline: showOutline ? "1.5px dashed #0b0b0b" : "none",
+              outlineOffset: "-1px",
+              boxSizing: "border-box",
+              cursor: d.previewUrl ? "default" : "pointer",
+            }}
+            onClick={!d.previewUrl ? d.onClick : undefined}
           >
-            <div className="size-10 rounded-full bg-muted flex items-center justify-center">
-              <Plus className="size-5 text-muted-foreground" />
-            </div>
-            <p className="text-xs text-muted-foreground">{sublabel}</p>
-          </button>
-        )}
-      </div>
-      {previewUrl && (
-        <button
-          type="button"
-          onClick={onPickFile}
-          className="text-xs text-muted-foreground underline underline-offset-2 text-center"
-        >
-          Change photo
-        </button>
-      )}
+            {d.previewUrl ? (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={d.previewUrl}
+                  alt=""
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); d.onRemove(); }}
+                  style={{
+                    position: "absolute", top: 6, right: 6,
+                    width: 24, height: 24, borderRadius: "50%",
+                    background: "rgba(0,0,0,0.55)",
+                    border: "none", cursor: "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    zIndex: 1,
+                  }}
+                >
+                  <X size={12} color="#fff" />
+                </button>
+              </>
+            ) : (
+              <div
+                style={{
+                  position: "absolute", inset: 0,
+                  display: "flex", flexDirection: "column",
+                  alignItems: "center", justifyContent: "center", gap: 8,
+                }}
+              >
+                <ImagePlus size={28} color="#aaa" strokeWidth={1.5} />
+                <p
+                  style={{
+                    fontFamily: FONT_TECH,
+                    fontSize: 10,
+                    fontWeight: 600,
+                    color: "#888",
+                    margin: 0,
+                    letterSpacing: 0.5,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {d.sublabel}
+                </p>
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {/* Full-bleed 슬롯 구분선 — slot 경계에서 자동 계산 */}
+      {!frame && slots.length >= 2 && (() => {
+        const s0 = slots[0];
+        const isStacked = s0.y + s0.height < canvasHeight; // 상하 배치
+        return isStacked ? (
+          <div style={{
+            position: "absolute",
+            left: 0, right: 0,
+            top: pct(s0.y + s0.height, canvasHeight),
+            height: 1,
+            background: "#0b0b0b",
+            zIndex: 1,
+          }} />
+        ) : (
+          <div style={{
+            position: "absolute",
+            top: 0, bottom: 0,
+            left: pct(s0.x + s0.width, canvasWidth),
+            width: 1,
+            background: "#0b0b0b",
+            zIndex: 1,
+          }} />
+        );
+      })()}
+
+      {/* Framed 레이블 */}
+      {frame &&
+        slots.map((slot, i) => (
+          <div
+            key={`label-${i}`}
+            style={{
+              position: "absolute",
+              left:   pct(slot.x,               canvasWidth),
+              top:    pct(slot.y + slot.height,  canvasHeight),
+              width:  pct(slot.width,            canvasWidth),
+              height: pct(frame.labelHeight,     canvasHeight),
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <p
+              style={{
+                fontFamily: FONT_TECH,
+                fontSize: 11,
+                fontWeight: 700,
+                color: "#0b0b0b",
+                margin: 0,
+                lineHeight: 1,
+                letterSpacing: 0.5,
+              }}
+            >
+              {frame.defaultLabels[i]}
+            </p>
+          </div>
+        ))}
     </div>
   );
 }
+
+// ── 메인 컴포넌트 ──────────────────────────────────────────────────────────────
 
 interface Props {
   templateId: TemplateId;
@@ -91,14 +214,15 @@ export function PhotoPlacer({
   onNext,
   isUploading,
 }: Props) {
-  const [pendingCrop, setPendingCrop] = useState<{ file: File; type: "reference" | "shot" } | null>(null);
-
-  const cropRatio = getSlotCropRatio(templateId);
-  const isVertical = templateId.startsWith("vertical");
-  // CSS aspect-ratio: vertical 슬롯은 landscape(16/9), horizontal 슬롯은 portrait(5/8)
-  const slotAspect = isVertical ? "16/9" : "5/8";
+  const [pendingCrop, setPendingCrop] = useState<{
+    file: File;
+    type: "reference" | "shot";
+    cropRatio: number;
+  } | null>(null);
 
   const canProceed = !!shotPreviewUrl;
+  const photoCount = (referencePreviewUrl ? 1 : 0) + (shotPreviewUrl ? 1 : 0);
+  const remaining = 2 - photoCount;
 
   function openFilePicker(type: "reference" | "shot") {
     const input = document.createElement("input");
@@ -106,7 +230,10 @@ export function PhotoPlacer({
     input.accept = "image/jpeg,image/png,image/webp";
     input.onchange = (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) setPendingCrop({ file, type });
+      if (file) {
+        const cropRatio = getSlotCropRatio(templateId, type === "reference" ? 0 : 1);
+        setPendingCrop({ file, type, cropRatio });
+      }
     };
     input.click();
   }
@@ -118,53 +245,104 @@ export function PhotoPlacer({
     setPendingCrop(null);
   }
 
-  return (
-    <div className="flex flex-col flex-1">
-      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-2 space-y-4">
-        <p className="text-sm text-muted-foreground">Add your photos to the selected layout</p>
+  const slotEntries: SlotEntry[] = [
+    {
+      previewUrl: referencePreviewUrl,
+      onClick:    () => openFilePicker("reference"),
+      onRemove:   onReferenceRemove,
+      sublabel:   "Add artist photo",
+    },
+    {
+      previewUrl: shotPreviewUrl,
+      onClick:    () => openFilePicker("shot"),
+      onRemove:   onShotRemove,
+      sublabel:   "Add your photo",
+    },
+  ];
 
-        {/* 세로 템플릿: 상하 배치 / 가로 템플릿: 좌우 배치 */}
-        <div className={`flex gap-3 ${isVertical ? "flex-col" : "flex-row items-start"}`}>
-          <PhotoSlotCard
-            label="Original"
-            sublabel="Add original photo"
-            previewUrl={referencePreviewUrl}
-            onPickFile={() => openFilePicker("reference")}
-            onRemove={onReferenceRemove}
-            aspectRatio={slotAspect}
-          />
-          <PhotoSlotCard
-            label="Me"
-            sublabel="Add your recreation"
-            previewUrl={shotPreviewUrl}
-            onPickFile={() => openFilePicker("shot")}
-            onRemove={onShotRemove}
-            aspectRatio={slotAspect}
-          />
+  const buttonLabel = isUploading
+    ? "Uploading..."
+    : canProceed
+    ? "Next"
+    : `Add ${remaining} more to continue`;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, background: "var(--background)" }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px 8px" }}>
+
+        {/* 헤더 */}
+        <div style={{ marginBottom: 16 }}>
+          <h2 style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.1, color: "#0b0b0b", margin: 0 }}>
+            Add photos
+          </h2>
+          <p style={{ fontSize: 14, color: "#666", margin: "4px 0 0" }}>
+            Upload the artist reference & your shot
+          </p>
         </div>
 
-        {!canProceed && (
-          <p className="text-xs text-muted-foreground text-center pt-1">
-            Add your recreation photo to continue
-          </p>
-        )}
+        {/* FRAME 뱃지 */}
+        <span
+          style={{
+            fontFamily: FONT_TECH,
+            fontSize: 9,
+            fontWeight: 700,
+            letterSpacing: 1.2,
+            background: "#0b0b0b",
+            color: "#fff",
+            padding: "4px 8px 3px",
+            display: "inline-flex",
+            alignItems: "center",
+            lineHeight: 1,
+            marginBottom: 6,
+          }}
+        >
+          FRAME · {FRAME_NUM[templateId]}
+        </span>
+
+        {/* 캔버스 미리보기 */}
+        <FrameCanvasPreview templateId={templateId} slots={slotEntries} />
+
+        {/* 카운터 */}
+        <p
+          style={{
+            fontFamily: FONT_MONO,
+            fontSize: 10,
+            color: "#888",
+            margin: "6px 0 0",
+            textAlign: "right",
+            letterSpacing: 0.5,
+          }}
+        >
+          {photoCount} / 2 photos
+        </p>
       </div>
 
-      <div className="px-4 py-3 shrink-0">
+      {/* 하단 버튼 */}
+      <div style={{ padding: "12px 16px", flexShrink: 0 }}>
         <button
           type="button"
           onClick={onNext}
-          disabled={!canProceed || isUploading}
-          className="w-full py-3 rounded-full font-semibold text-sm bg-brand text-black disabled:opacity-40 disabled:cursor-not-allowed"
+          disabled={!canProceed || !!isUploading}
+          style={{
+            width: "100%",
+            padding: "14px 0",
+            borderRadius: 9999,
+            background: canProceed && !isUploading ? "#C6FD09" : "#e5e5e5",
+            border: "none",
+            fontWeight: 700,
+            fontSize: 16,
+            color: canProceed && !isUploading ? "#0b0b0b" : "#aaa",
+            cursor: canProceed && !isUploading ? "pointer" : "default",
+          }}
         >
-          {isUploading ? "Uploading..." : "Next"}
+          {buttonLabel}
         </button>
       </div>
 
       {pendingCrop && (
         <ImageCropOverlay
           file={pendingCrop.file}
-          cropRatio={cropRatio}
+          cropRatio={pendingCrop.cropRatio}
           onConfirm={handleCropConfirm}
           onClose={() => setPendingCrop(null)}
         />

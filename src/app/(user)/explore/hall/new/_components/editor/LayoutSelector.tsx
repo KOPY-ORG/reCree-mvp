@@ -32,7 +32,7 @@ const FRAME_ASPECT = {
 
 function SbsVerticalFullPreview() {
   return (
-    <div style={{ width: "100%", aspectRatio: FRAME_ASPECT.vertical, display: "flex", flexDirection: "column", overflow: "hidden", border: "1px solid #0b0b0b", boxSizing: "border-box" }}>
+    <div style={{ width: "100%", aspectRatio: FRAME_ASPECT.vertical, display: "flex", flexDirection: "column", overflow: "hidden", border: "1px solid var(--palette-gray-700)", boxSizing: "border-box" }}>
       <div style={{ flex: 1, background: "#C6FD09", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <PersonIcon color="#4a7a00" size={28} />
       </div>
@@ -45,7 +45,7 @@ function SbsVerticalFullPreview() {
 
 function SbsVerticalFramePreview() {
   return (
-    <div style={{ width: "100%", aspectRatio: FRAME_ASPECT.vertical, background: "#fff", border: "1px solid #0b0b0b", display: "flex", flexDirection: "column", gap: 4, padding: 8, boxSizing: "border-box" }}>
+    <div style={{ width: "100%", aspectRatio: FRAME_ASPECT.vertical, background: "#fff", border: "1px solid var(--palette-gray-700)", display: "flex", flexDirection: "column", gap: 4, padding: 8, boxSizing: "border-box" }}>
       <div style={{ flex: 1, background: "#C6FD09", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <PersonIcon color="#4a7a00" size={20} />
       </div>
@@ -60,7 +60,7 @@ function SbsVerticalFramePreview() {
 
 function SbsHorizontalFullPreview() {
   return (
-    <div style={{ width: "100%", aspectRatio: FRAME_ASPECT.horizontal, display: "flex", flexDirection: "row", overflow: "hidden", border: "1px solid #0b0b0b", boxSizing: "border-box" }}>
+    <div style={{ width: "100%", aspectRatio: FRAME_ASPECT.horizontal, display: "flex", flexDirection: "row", overflow: "hidden", border: "1px solid var(--palette-gray-700)", boxSizing: "border-box" }}>
       <div style={{ flex: 1, background: "#C6FD09", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <PersonIconFull color="#4a7a00" size={24} />
       </div>
@@ -73,7 +73,7 @@ function SbsHorizontalFullPreview() {
 
 function SbsHorizontalFramePreview() {
   return (
-    <div style={{ width: "100%", aspectRatio: FRAME_ASPECT.horizontal, background: "#fff", border: "1px solid #0b0b0b", display: "flex", flexDirection: "row", gap: 4, padding: 8, boxSizing: "border-box" }}>
+    <div style={{ width: "100%", aspectRatio: FRAME_ASPECT.horizontal, background: "#fff", border: "1px solid var(--palette-gray-700)", display: "flex", flexDirection: "row", gap: 4, padding: 8, boxSizing: "border-box" }}>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
         <div style={{ flex: 1, width: "100%", background: "#C6FD09", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <PersonIconFull color="#4a7a00" size={16} />
@@ -110,7 +110,7 @@ function FourCutsPreview({ aspect, framed }: { aspect: string; framed: boolean }
       display: "grid",
       gridTemplateColumns: "1fr 1fr",
       gridTemplateRows: "1fr 1fr",
-      border: "1px solid #0b0b0b",
+      border: "1px solid var(--palette-gray-700)",
       boxSizing: "border-box",
       ...(framed
         ? { background: "#fff", padding: 8, gap: 5 }
@@ -133,7 +133,7 @@ function SoloPreview({ aspect, framed }: { aspect: string; framed: boolean }) {
     <div style={{
       width: "100%",
       aspectRatio: aspect,
-      border: "1px solid #0b0b0b",
+      border: "1px solid var(--palette-gray-700)",
       boxSizing: "border-box",
       display: "flex",
       ...(framed
