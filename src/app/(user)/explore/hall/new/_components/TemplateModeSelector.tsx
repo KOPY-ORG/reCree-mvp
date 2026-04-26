@@ -210,7 +210,7 @@ function HeroTicketCard({ mode, isSelected, onSelect }: {
             /* ── Revealed: 긁힌 후 드러난 영역 ── */
             <div style={{
               width: "100%", height: 60,
-              background: "var(--brand-sub2)",
+              background: "linear-gradient(140deg, #fafff0 0%, #e7ffb3 35%, #C8FF09 70%, #e0ffaa 100%)",
               display: "flex", alignItems: "center", justifyContent: "space-between",
               padding: "0 12px", boxSizing: "border-box",
             }}>

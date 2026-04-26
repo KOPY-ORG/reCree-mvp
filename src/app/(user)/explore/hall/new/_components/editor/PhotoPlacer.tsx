@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { ImagePlus, X } from "lucide-react";
+import { X } from "lucide-react";
 import { ImageCropOverlay } from "../ImageCropOverlay";
 import { getTemplateConfig } from "./template-config";
-import { FONT_TECH, FONT_MONO } from "./editor-shared";
+import { FONT_TECH, FONT_MONO, PersonIcon } from "./editor-shared";
 import type { TemplateId } from "./editor-types";
 
 // ── 헬퍼 ──────────────────────────────────────────────────────────────────────
@@ -70,7 +70,7 @@ function FrameCanvasPreview({
               width:  pct(slot.width,  canvasWidth),
               height: pct(slot.height, canvasHeight),
               overflow: "hidden",
-              background: d.previewUrl ? "transparent" : "#f5f5f5",
+              background: d.previewUrl ? "transparent" : "#f8f8f8",
               outline: showOutline ? "1.5px dashed #0b0b0b" : "none",
               outlineOffset: "-1px",
               boxSizing: "border-box",
@@ -106,23 +106,32 @@ function FrameCanvasPreview({
                 style={{
                   position: "absolute", inset: 0,
                   display: "flex", flexDirection: "column",
-                  alignItems: "center", justifyContent: "center", gap: 8,
+                  alignItems: "center", justifyContent: "center", gap: 10,
                 }}
               >
-                <ImagePlus size={28} color="#aaa" strokeWidth={1.5} />
+                <PersonIcon color="#d0d0d0" size={52} strokeWidth={1.2} />
                 <p
                   style={{
                     fontFamily: FONT_TECH,
-                    fontSize: 10,
-                    fontWeight: 600,
-                    color: "#888",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "#c0c0c0",
                     margin: 0,
-                    letterSpacing: 0.5,
+                    letterSpacing: 1,
                     whiteSpace: "nowrap",
                   }}
                 >
                   {d.sublabel}
                 </p>
+                {/* + 버튼 */}
+                <div style={{
+                  position: "absolute", bottom: 8, right: 8,
+                  width: 22, height: 22,
+                  background: "#0b0b0b",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  <span style={{ color: "var(--brand)", fontSize: 16, lineHeight: "22px", fontWeight: 300, display: "block" }}>+</span>
+                </div>
               </div>
             )}
           </div>
@@ -166,14 +175,15 @@ function FrameCanvasPreview({
               width:  pct(slot.width,            canvasWidth),
               height: pct(frame.labelHeight,     canvasHeight),
               display: "flex",
-              alignItems: "center",
+              alignItems: "flex-start",
               justifyContent: "center",
+              paddingTop: 5,
             }}
           >
             <p
               style={{
                 fontFamily: FONT_TECH,
-                fontSize: 11,
+                fontSize: 13,
                 fontWeight: 700,
                 color: "#0b0b0b",
                 margin: 0,
