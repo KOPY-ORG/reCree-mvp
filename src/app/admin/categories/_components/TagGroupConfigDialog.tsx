@@ -108,8 +108,8 @@ export function TagGroupConfigDialog({ open, mode, groupConfig, onClose, onCreat
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
+      <DialogContent className="max-w-sm max-h-[90vh] flex flex-col gap-0 p-0">
+        <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
           <DialogTitle>
             {mode === "create"
               ? "새 Tag 그룹 추가"
@@ -117,7 +117,7 @@ export function TagGroupConfigDialog({ open, mode, groupConfig, onClose, onCreat
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
+        <div className="space-y-4 px-6 py-2 overflow-y-auto flex-1">
           {/* 영어 라벨 이름 */}
           <div className="space-y-1.5">
             <Label htmlFor="groupNameEn">그룹 이름 (영어) *</Label>
@@ -183,7 +183,7 @@ export function TagGroupConfigDialog({ open, mode, groupConfig, onClose, onCreat
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="px-6 pb-6 pt-4 shrink-0 border-t">
           <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
             취소
           </Button>

@@ -246,7 +246,7 @@ export function PlacesTable({ places, isFiltered, currentPage = 1 }: Props) {
           if (!open && !isPending) setDeleteTarget(null);
         }}
       >
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>장소 삭제</DialogTitle>
           </DialogHeader>

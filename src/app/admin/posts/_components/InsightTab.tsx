@@ -137,7 +137,9 @@ export function InsightTab({
           <Textarea
             value={activeEntry.contextKo}
             onChange={(e) => updatePlaceInsight(activePlaceIndex, "contextKo", e.target.value)}
-            className="min-h-[80px] max-h-[80px] resize-none"
+            ref={(el) => { if (el) { el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; } }}
+            onInput={(e) => { const el = e.currentTarget; el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; }}
+            className="min-h-[80px] resize-none overflow-hidden"
             placeholder="이 장소에 대한 소개"
           />
           <Button
@@ -157,7 +159,9 @@ export function InsightTab({
           <Textarea
             value={activeEntry.contextEn}
             onChange={(e) => updatePlaceInsight(activePlaceIndex, "contextEn", e.target.value)}
-            className="min-h-[80px] max-h-[80px] resize-none"
+            ref={(el) => { if (el) { el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; } }}
+            onInput={(e) => { const el = e.currentTarget; el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; }}
+            className="min-h-[80px] resize-none overflow-hidden"
             placeholder="Introduction about this place"
           />
         </div>
@@ -229,7 +233,9 @@ export function InsightTab({
           <Textarea
             value={activeEntry.mustTryKo}
             onChange={(e) => updatePlaceInsight(activePlaceIndex, "mustTryKo", e.target.value)}
-            className="min-h-[80px] max-h-[80px] resize-none"
+            ref={(el) => { if (el) { el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; } }}
+            onInput={(e) => { const el = e.currentTarget; el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; }}
+            className="min-h-[80px] resize-none overflow-hidden"
             placeholder="꼭 먹어봐야 할 것, 경험해야 할 것"
           />
           <Button
@@ -249,7 +255,9 @@ export function InsightTab({
           <Textarea
             value={activeEntry.mustTryEn}
             onChange={(e) => updatePlaceInsight(activePlaceIndex, "mustTryEn", e.target.value)}
-            className="min-h-[80px] max-h-[80px] resize-none"
+            ref={(el) => { if (el) { el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; } }}
+            onInput={(e) => { const el = e.currentTarget; el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; }}
+            className="min-h-[80px] resize-none overflow-hidden"
             placeholder="What you must try here"
           />
         </div>
@@ -265,7 +273,9 @@ export function InsightTab({
           <Textarea
             value={activeEntry.tipKo}
             onChange={(e) => updatePlaceInsight(activePlaceIndex, "tipKo", e.target.value)}
-            className="min-h-[80px] max-h-[80px] resize-none"
+            ref={(el) => { if (el) { el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; } }}
+            onInput={(e) => { const el = e.currentTarget; el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; }}
+            className="min-h-[80px] resize-none overflow-hidden"
             placeholder="방문 팁"
           />
           <Button
@@ -285,7 +295,9 @@ export function InsightTab({
           <Textarea
             value={activeEntry.tipEn}
             onChange={(e) => updatePlaceInsight(activePlaceIndex, "tipEn", e.target.value)}
-            className="min-h-[80px] max-h-[80px] resize-none"
+            ref={(el) => { if (el) { el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; } }}
+            onInput={(e) => { const el = e.currentTarget; el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; }}
+            className="min-h-[80px] resize-none overflow-hidden"
             placeholder="Visiting tips"
           />
         </div>

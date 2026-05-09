@@ -12,8 +12,10 @@ export default defineConfig({
     // Prisma v7: seed는 prisma.config.ts의 migrations.seed로 설정
     seed: "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts",
   },
-  // Migrate용 직접 연결 URL (Supabase의 connection pooler 우회)
   datasource: {
+    // ⚠️ Prisma CLI(migrate, introspect, db push) 전용 연결 설정.
+    // - 런타임 쿼리는 src/lib/prisma.ts의 pg 어댑터가 DATABASE_URL(pooler) 사용
+    // - 마이그레이션은 DIRECT_URL(port 5432) 사용 — pooler에서는 마이그레이션 불가
     url: process.env.DIRECT_URL ?? process.env.DATABASE_URL,
   },
 });

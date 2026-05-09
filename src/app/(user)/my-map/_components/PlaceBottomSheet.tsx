@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useSheetDrag } from "../_hooks/useSheetDrag";
 import { useToast } from "../../_hooks/useToast";
 import Image from "next/image";
-import { isExternalImage } from "@/lib/image";
+import { isExternalImage, buildPlaceCarouselUrls } from "@/lib/image";
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import { CloseButton } from "./CloseButton";
@@ -134,18 +134,7 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
   };
 
   function copyToClipboard(text: string) {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(text);
-    } else {
-      const el = document.createElement("textarea");
-      el.value = text;
-      el.style.position = "fixed";
-      el.style.opacity = "0";
-      document.body.appendChild(el);
-      el.select();
-      document.execCommand("copy");
-      document.body.removeChild(el);
-    }
+    navigator.clipboard.writeText(text).catch(() => {});
     showToast("Address copied");
   }
 
@@ -215,24 +204,7 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
 
       {/* 스크롤 영역 */}
       {(() => {
-        // 캐러셀에 표시할 URL 목록: 장소 이미지 → 배너 → 소스 순, URL 기준 중복 제거
-        // PostCard 썸네일도 이 Set을 참조해 전체 시트에서 중복 표시를 막는다
-        const shownUrls = new Set<string>();
-        const carouselUrls: string[] = [];
-
-        const add = (url: string | null | undefined) => {
-          if (url && !shownUrls.has(url)) { shownUrls.add(url); carouselUrls.push(url); }
-        };
-
-        // 1순위: 장소 전용 이미지 (sortOrder 순)
-        place.placeImages.forEach((img) => add(img.url));
-        // 2순위: 장소 imageUrl fallback (placeImages 없을 때)
-        if (carouselUrls.length === 0) add(place.imageUrl);
-        // 3순위: 관련 포스트 배너 이미지
-        place.posts.forEach((post) => add(post.imageUrl));
-        // 4순위: 관련 포스트 소스 이미지
-        place.posts.forEach((post) => post.images.forEach(add));
-
+        const carouselUrls = buildPlaceCarouselUrls(place);
         return (
           <div className="flex-1 overflow-y-auto">
             {/* 이미지 슬라이더 */}

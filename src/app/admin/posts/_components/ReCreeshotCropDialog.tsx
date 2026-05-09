@@ -82,7 +82,7 @@ export function ReCreeshotCropDialog({ open, imageSrc, onConfirm, onClose }: Pro
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>리크리샷 기준 이미지 자르기</DialogTitle>
         </DialogHeader>

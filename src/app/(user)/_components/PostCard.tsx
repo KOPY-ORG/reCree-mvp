@@ -109,13 +109,13 @@ export function PostCard({
         <div className="absolute top-2 left-2 right-2">
           <PostBadges post={post} tagGroupMap={tagGroupMap} />
         </div>
-        <div className="absolute bottom-2 left-2 right-10">
-          <p className="text-white text-xs font-semibold line-clamp-2 leading-snug drop-shadow">
+        <div className="absolute bottom-2 left-2 right-2 flex items-end gap-1.5">
+          <p className="flex-1 text-white text-xs font-semibold line-clamp-2 leading-snug drop-shadow min-w-0">
             {post.postPlaces[0]?.place.nameEn ?? post.postPlaces[0]?.place.nameKo ?? post.titleEn}
           </p>
-        </div>
-        <div className="absolute bottom-2 right-2 z-10">
-          <ScrapButton postId={post.id} initialSaved={isSaved ?? false} size="sm" />
+          <div className="shrink-0 z-10">
+            <ScrapButton postId={post.id} initialSaved={isSaved ?? false} size="sm" />
+          </div>
         </div>
       </div>
     </Link>

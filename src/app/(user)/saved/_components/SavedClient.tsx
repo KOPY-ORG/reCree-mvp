@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { isExternalImage } from "@/lib/image";
+import { isExternalImage, focalStyle } from "@/lib/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ReCreeshotImage } from "@/components/recreeshot-image";
 import { ScrapButton } from "../../_components/ScrapButton";
@@ -49,6 +49,7 @@ function SavedPostCard({ post, tagGroupMap }: { post: PostItem; tagGroupMap: Tag
             fill
             unoptimized={isExternalImage(post.postImages[0].url)}
             className="object-cover"
+            style={focalStyle(post.postImages[0].focalX, post.postImages[0].focalY, post.postImages[0].zoom)}
             sizes="88px"
           />
         ) : (
@@ -137,7 +138,8 @@ export function SavedClient({ posts, recreeshots, tagGroupConfigs }: Props) {
               </p>
             </div>
           ) : (
-            <div className="px-4 py-4"><div className="grid grid-cols-2 gap-2">
+            <div className="px-4 py-4">
+            <div className="grid grid-cols-2 gap-2">
               {recreeshots.map((shot) => (
                 <Link
                   key={shot.id}
@@ -157,7 +159,8 @@ export function SavedClient({ posts, recreeshots, tagGroupConfigs }: Props) {
                   />
                 </Link>
               ))}
-            </div></div>
+            </div>
+          </div>
           )}
         </div>
       )}

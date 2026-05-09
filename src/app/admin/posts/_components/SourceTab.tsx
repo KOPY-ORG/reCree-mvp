@@ -25,6 +25,7 @@ const PLATFORMS: { value: SourcePlatform; label: string }[] = [
   { value: "X",         label: "X (Twitter)" },
   { value: "PINTEREST", label: "Pinterest" },
   { value: "NETFLIX",   label: "Netflix" },
+  { value: "WEVERSE",   label: "Weverse" },
   { value: "BLOG",      label: "Blog" },
   { value: "ARTICLE",   label: "기사/뉴스" },
   { value: "OTHER",     label: "기타" },

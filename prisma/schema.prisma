@@ -206,6 +206,7 @@ model PostImage {
   imageType   ImageType
   imageSource ImageSource @default(UPLOAD)
   url         String
+  originalUrl String?     // 크롭 전 원본 이미지 URL (재크롭용)
   linkUrl     String?     // 카드 클릭 시 이동 URL (ORIGINAL 이미지용)
   isThumbnail Boolean     @default(false)
   sortOrder   Int         @default(0)

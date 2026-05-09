@@ -200,7 +200,7 @@ export function AIDraftReviewDialog({
         onOpenChange(o);
       }}
     >
-      <DialogContent className="!w-[900px] !max-w-[900px] h-[700px] flex flex-col p-0 gap-0 overflow-hidden !rounded-[32px]">
+      <DialogContent className="w-full sm:max-w-[900px] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden !rounded-[32px]">
         {/* 헤더 */}
         <DialogHeader className="px-6 pt-5 pb-3 shrink-0 border-b">
           <DialogTitle className="text-base mb-3">AI 초안 검토</DialogTitle>
@@ -268,30 +268,28 @@ export function AIDraftReviewDialog({
                   {/* AI값 */}
                   <div>
                     <p className="text-[11px] text-zinc-400 mb-1">AI 초안</p>
-                    {field.multiline ? (
-                      <textarea
-                        value={editedValues[field.key]}
-                        onChange={(e) =>
-                          setEditedValues((prev) => ({ ...prev, [field.key]: e.target.value }))
+                    <textarea
+                      value={editedValues[field.key]}
+                      onChange={(e) =>
+                        setEditedValues((prev) => ({ ...prev, [field.key]: e.target.value }))
+                      }
+                      ref={(el) => {
+                        if (el) {
+                          el.style.height = "auto";
+                          el.style.height = `${el.scrollHeight}px`;
                         }
-                        disabled={!isChecked}
-                        className={`w-full bg-white border rounded-lg px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring min-h-[80px] [field-sizing:content] transition-opacity ${
-                          isChecked ? "opacity-100" : "opacity-40"
-                        }`}
-                      />
-                    ) : (
-                      <input
-                        type="text"
-                        value={editedValues[field.key]}
-                        onChange={(e) =>
-                          setEditedValues((prev) => ({ ...prev, [field.key]: e.target.value }))
-                        }
-                        disabled={!isChecked}
-                        className={`w-full bg-white border rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-opacity ${
-                          isChecked ? "opacity-100" : "opacity-40"
-                        }`}
-                      />
-                    )}
+                      }}
+                      onInput={(e) => {
+                        const el = e.currentTarget;
+                        el.style.height = "auto";
+                        el.style.height = `${el.scrollHeight}px`;
+                      }}
+                      disabled={!isChecked}
+                      rows={1}
+                      className={`w-full bg-white border rounded-lg px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px] overflow-hidden transition-opacity ${
+                        isChecked ? "opacity-100" : "opacity-40"
+                      }`}
+                    />
                   </div>
                 </div>
               </div>
