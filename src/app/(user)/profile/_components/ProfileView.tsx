@@ -9,6 +9,7 @@ import {
   ChevronRight,
   MapPin,
   Bookmark,
+  Heart,
   Pencil,
   LogOut,
   Trash2,
@@ -146,6 +147,13 @@ export function ProfileView({
           >
             <Bookmark className="size-4" />
             Saved
+          </Link>
+          <Link
+            href="/profile/following"
+            className="flex flex-1 items-center justify-center gap-2 py-2 rounded-full bg-muted text-sm font-medium"
+          >
+            <Heart className="size-4" />
+            Following
           </Link>
         </div>
       </div>
