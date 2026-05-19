@@ -85,7 +85,7 @@ export type Level0TopicDeep = Awaited<ReturnType<typeof getLevel0TopicsDeep>>[nu
 
 export async function getTopicBySlug(slug: string) {
   return prisma.topic.findUnique({
-    where: { slug, isActive: true },
+    where: { slug, isActive: true, level: 2 },
     select: {
       id: true,
       nameEn: true,

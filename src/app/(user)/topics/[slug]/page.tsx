@@ -6,8 +6,8 @@ import { isUserFollowing, countTopicFollowers } from "@/lib/follow-queries";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import type { TagGroupColorMap } from "@/lib/post-labels";
+import { TopicDetailHeader } from "./_components/TopicDetailHeader";
 import { TopicHero } from "./_components/TopicHero";
-import { TopicTabs } from "./_components/TopicTabs";
 import { PostsGrid } from "./_components/PostsGrid";
 
 type Params = { slug: string };
@@ -74,19 +74,20 @@ export default async function TopicDetailPage({
 
   return (
     <div className="max-w-2xl mx-auto pb-14">
+      <TopicDetailHeader />
       <TopicHero
         topic={topic}
         isFollowing={isFollowing}
         isLoggedIn={!!user}
         initialFollowerCount={followerCount}
       />
-      <TopicTabs>
+      <div className="px-4 py-4">
         <PostsGrid
           posts={posts}
           tagGroupMap={tagGroupMap}
           savedPostIds={savedPostIds}
         />
-      </TopicTabs>
+      </div>
     </div>
   );
 }
