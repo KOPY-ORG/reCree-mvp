@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Heart } from "lucide-react";
+import { Heart, ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { getMyFollows } from "@/lib/follow-queries";
@@ -36,11 +36,21 @@ export default async function FollowingPage() {
 
   return (
     <div className="max-w-2xl mx-auto pb-14">
-      <header className="px-4 py-4 border-b border-border/50 sticky top-12 bg-background z-10">
-        <h1 className="text-xl font-semibold">Following</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          {follows.length} {follows.length === 1 ? "topic" : "topics"}
-        </p>
+      <header className="app-header">
+        <div className="h-12 flex items-center gap-1 px-2">
+          <Link
+            href="/profile"
+            className="flex items-center justify-center h-8 w-8 shrink-0"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+          <div className="min-w-0">
+            <p className="text-base font-semibold leading-tight">Following</p>
+            <p className="text-xs text-muted-foreground leading-tight">
+              {follows.length} {follows.length === 1 ? "topic" : "topics"}
+            </p>
+          </div>
+        </div>
       </header>
       <FollowingList initialFollows={follows} />
     </div>
