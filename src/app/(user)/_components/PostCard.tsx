@@ -13,6 +13,7 @@ import {
   type ResolvedLabel,
 } from "@/lib/post-labels";
 import { LabelBadge } from "@/components/LabelBadge";
+import { TopicLabelLink } from "./TopicLabelLink";
 import type { PostItem } from "@/lib/post-queries";
 import { ScrapButton } from "./ScrapButton";
 
@@ -26,6 +27,7 @@ function resolvePostLabels(
     name: topic.nameEn,
     displayLabel: null,
     colors: resolveTopicColors(topic),
+    slug: topic.slug,
   }));
 
   const kmediaSlots: LabelSlot[] = post.postTags
@@ -61,14 +63,24 @@ export function PostBadges({
 
   return (
     <div className="flex flex-wrap gap-1 [--pill-fs:0.625rem]">
-      {labels.map((label, i) => (
-        <LabelBadge
-          key={i}
-          text={label.text}
-          background={labelBackground(label)}
-          color={label.textColorHex}
-        />
-      ))}
+      {labels.map((label, i) =>
+        label.slug ? (
+          <TopicLabelLink
+            key={i}
+            slug={label.slug}
+            text={label.text}
+            background={labelBackground(label)}
+            color={label.textColorHex}
+          />
+        ) : (
+          <LabelBadge
+            key={i}
+            text={label.text}
+            background={labelBackground(label)}
+            color={label.textColorHex}
+          />
+        )
+      )}
     </div>
   );
 }
