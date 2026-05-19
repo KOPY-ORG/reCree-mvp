@@ -1,21 +1,6 @@
 import { prisma } from "@/lib/prisma";
 
-export type FollowWithTopic = {
-  id: string;
-  topic: {
-    id: string;
-    slug: string;
-    nameEn: string;
-    nameKo: string;
-    level: number;
-    colorHex: string | null;
-    colorHex2: string | null;
-    textColorHex: string | null;
-  };
-  createdAt: Date;
-};
-
-export async function getMyFollows(userId: string): Promise<FollowWithTopic[]> {
+export async function getMyFollows(userId: string) {
   return prisma.topicFollow.findMany({
     where: { userId },
     include: {
@@ -28,13 +13,44 @@ export async function getMyFollows(userId: string): Promise<FollowWithTopic[]> {
           level: true,
           colorHex: true,
           colorHex2: true,
+          gradientDir: true,
+          gradientStop: true,
           textColorHex: true,
+          parent: {
+            select: {
+              colorHex: true,
+              colorHex2: true,
+              gradientDir: true,
+              gradientStop: true,
+              textColorHex: true,
+              parent: {
+                select: {
+                  colorHex: true,
+                  colorHex2: true,
+                  gradientDir: true,
+                  gradientStop: true,
+                  textColorHex: true,
+                  parent: {
+                    select: {
+                      colorHex: true,
+                      colorHex2: true,
+                      gradientDir: true,
+                      gradientStop: true,
+                      textColorHex: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       },
     },
     orderBy: { createdAt: "desc" },
   });
 }
+
+export type FollowWithTopic = Awaited<ReturnType<typeof getMyFollows>>[number];
 
 export async function isUserFollowing(
   userId: string,
