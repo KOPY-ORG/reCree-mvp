@@ -31,6 +31,7 @@ export async function getPostsWithLabels(
           topic: {
             select: {
               nameEn: true,
+              slug: true,
               colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true,
               parent: {
                 select: {

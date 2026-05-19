@@ -102,6 +102,7 @@ export type ResolvedLabel = {
   gradientDir: string;
   gradientStop: number;
   textColorHex: string;
+  slug?: string;
 };
 
 export function resolveTagColors(
@@ -135,7 +136,8 @@ export type LabelSlot = {
   group: string;
   name: string;
   displayLabel: string | null;
-  colors: Omit<ResolvedLabel, "text">;
+  colors: Omit<ResolvedLabel, "text" | "slug">;
+  slug?: string;
 };
 
 /** 슬롯 배열을 ResolvedLabel[]로 변환 (정렬 + displayLabel 결정 포함) */
@@ -144,7 +146,7 @@ function finalizeSlots(selected: LabelSlot[]): ResolvedLabel[] {
   return selected.map((slot) => {
     const hasOtherGroup = selected.some((s) => s.group !== slot.group);
     const text = slot.displayLabel && hasOtherGroup ? slot.displayLabel : slot.name;
-    return { text, ...slot.colors };
+    return { text, ...slot.colors, ...(slot.slug ? { slug: slot.slug } : {}) };
   });
 }
 
