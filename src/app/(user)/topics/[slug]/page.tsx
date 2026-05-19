@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getTopicBySlug } from "@/lib/topic-queries";
+import { getTopicBySlug, getDescendantTopicIds } from "@/lib/topic-queries";
 import { getPostsWithLabels, getSavedPostIds } from "@/lib/post-queries";
 import { isUserFollowing, countTopicFollowers } from "@/lib/follow-queries";
 import { createClient } from "@/lib/supabase/server";
@@ -41,6 +41,8 @@ export default async function TopicDetailPage({
   const topic = await getTopicBySlug(slug);
   if (!topic) notFound();
 
+  const descendantIds = await getDescendantTopicIds(topic.id);
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -51,7 +53,15 @@ export default async function TopicDetailPage({
       countTopicFollowers(topic.id),
       user ? isUserFollowing(user.id, topic.id) : Promise.resolve(false),
       getPostsWithLabels(
-        { status: "PUBLISHED", postTopics: { some: { topicId: topic.id, isVisible: true } } },
+        {
+          status: "PUBLISHED",
+          postTopics: {
+            some: {
+              topicId: { in: descendantIds },
+              isVisible: true,
+            },
+          },
+        },
         { take: 20, orderBy: { createdAt: "desc" } }
       ),
       prisma.tagGroupConfig.findMany({
