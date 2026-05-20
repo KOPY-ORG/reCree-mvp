@@ -9,6 +9,12 @@ import { PlacesPagination } from "../places/_components/PlacesPagination";
 
 const PAGE_SIZE = 20;
 
+const SORT_MAP: Record<string, Prisma.PostOrderByWithRelationInput> = {
+  latest: { createdAt: "desc" },
+  updated: { updatedAt: "desc" },
+  views: { viewCount: "desc" },
+};
+
 export default async function PostsPage({
   searchParams,
 }: {
@@ -16,12 +22,15 @@ export default async function PostsPage({
     page?: string;
     search?: string;
     status?: string;
+    sort?: string;
   }>;
 }) {
   const params = await searchParams;
   const page = Math.max(1, Number(params.page) || 1);
   const search = params.search?.trim() ?? "";
   const status = params.status ?? "";
+  const sort = params.sort ?? "";
+  const sortKey = sort && sort in SORT_MAP ? sort : "latest";
 
   const where: Prisma.PostWhereInput = {
     ...(search && {
@@ -42,6 +51,7 @@ export default async function PostsPage({
         titleEn: true,
         slug: true,
         status: true,
+        viewCount: true,
         publishedAt: true,
         createdAt: true,
         updatedAt: true,
@@ -97,7 +107,7 @@ export default async function PostsPage({
           },
         },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: SORT_MAP[sortKey],
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
     }),
@@ -148,6 +158,7 @@ export default async function PostsPage({
   const filterParams = new URLSearchParams();
   if (search) filterParams.set("search", search);
   if (status) filterParams.set("status", status);
+  if (sortKey !== "latest") filterParams.set("sort", sortKey);
   const filterQuery = filterParams.toString();
 
   return (
@@ -167,7 +178,7 @@ export default async function PostsPage({
         </Button>
       </div>
 
-      <PostsFilters currentSearch={search} currentStatus={status} />
+      <PostsFilters currentSearch={search} currentStatus={status} currentSort={sortKey} />
 
       <PostsTable posts={postsWithResolvedColors} isFiltered={isFiltered} currentPage={page} />
       <PlacesPagination

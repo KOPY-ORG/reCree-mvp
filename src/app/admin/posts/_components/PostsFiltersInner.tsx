@@ -15,20 +15,22 @@ import {
 interface Props {
   currentSearch: string;
   currentStatus: string;
+  currentSort: string;
 }
 
 function buildUrl(
   pathname: string,
-  values: { search: string; status: string },
+  values: { search: string; status: string; sort: string },
 ): string {
   const sp = new URLSearchParams();
   if (values.search) sp.set("search", values.search);
   if (values.status) sp.set("status", values.status);
+  if (values.sort && values.sort !== "latest") sp.set("sort", values.sort);
   const qs = sp.toString();
   return qs ? `${pathname}?${qs}` : pathname;
 }
 
-export function PostsFiltersInner({ currentSearch, currentStatus }: Props) {
+export function PostsFiltersInner({ currentSearch, currentStatus, currentSort }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const [searchValue, setSearchValue] = useState(currentSearch);
@@ -41,7 +43,7 @@ export function PostsFiltersInner({ currentSearch, currentStatus }: Props) {
     }
     const t = setTimeout(() => {
       router.push(
-        buildUrl(pathname, { search: searchValue, status: currentStatus }),
+        buildUrl(pathname, { search: searchValue, status: currentStatus, sort: currentSort }),
       );
     }, 300);
     return () => clearTimeout(t);
@@ -50,7 +52,11 @@ export function PostsFiltersInner({ currentSearch, currentStatus }: Props) {
 
   const handleStatusChange = (value: string) => {
     const status = value === "all" ? "" : value;
-    router.push(buildUrl(pathname, { search: searchValue, status }));
+    router.push(buildUrl(pathname, { search: searchValue, status, sort: currentSort }));
+  };
+
+  const handleSortChange = (sort: string) => {
+    router.push(buildUrl(pathname, { search: searchValue, status: currentStatus, sort }));
   };
 
   return (
@@ -76,6 +82,20 @@ export function PostsFiltersInner({ currentSearch, currentStatus }: Props) {
           <SelectItem value="all">전체 상태</SelectItem>
           <SelectItem value="DRAFT">임시저장</SelectItem>
           <SelectItem value="PUBLISHED">발행됨</SelectItem>
+        </SelectContent>
+      </Select>
+
+      <Select
+        value={currentSort || "latest"}
+        onValueChange={handleSortChange}
+      >
+        <SelectTrigger className="w-36 rounded-lg bg-white shadow-sm border-0">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="latest">생성일순</SelectItem>
+          <SelectItem value="updated">수정일순</SelectItem>
+          <SelectItem value="views">조회수순</SelectItem>
         </SelectContent>
       </Select>
     </div>
