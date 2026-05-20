@@ -30,6 +30,7 @@ export type PostRow = {
   titleEn: string;
   slug: string;
   status: PostStatus;
+  viewCount: number;
   publishedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -140,6 +141,9 @@ export function PostsTable({ posts, isFiltered, currentPage = 1 }: Props) {
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">
                   수정일
                 </th>
+                <th className="text-right px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">
+                  조회수
+                </th>
                 <th className="w-24 px-2 py-3" />
               </tr>
             </thead>
@@ -147,7 +151,7 @@ export function PostsTable({ posts, isFiltered, currentPage = 1 }: Props) {
               {posts.length === 0 && (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="px-4 py-16 text-center text-sm text-muted-foreground"
                   >
                     {isFiltered
@@ -249,6 +253,11 @@ export function PostsTable({ posts, isFiltered, currentPage = 1 }: Props) {
                   {/* 수정일 */}
                   <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                     {formatDate(post.updatedAt)}
+                  </td>
+
+                  {/* 조회수 */}
+                  <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap text-right">
+                    {post.viewCount.toLocaleString()}
                   </td>
 
                   {/* 액션 */}

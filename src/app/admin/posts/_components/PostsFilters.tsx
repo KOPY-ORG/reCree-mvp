@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 interface Props {
   currentSearch: string;
   currentStatus: string;
+  currentSort: string;
 }
 
 const PostsFiltersInner = dynamic(
