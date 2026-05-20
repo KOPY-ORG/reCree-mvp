@@ -22,6 +22,7 @@ interface Props {
   boundsKey?: string;
   onMarkerClick: (placeId: string) => void;
   className?: string;
+  bottomOffset?: number;
 }
 
 function MapContent({
@@ -30,12 +31,13 @@ function MapContent({
   highlightedIds,
   boundsKey,
   onMarkerClick,
+  bottomOffset = 64,
 }: Omit<Props, "className">) {
   const map = useMap();
 
   useEffect(() => {
     if (!boundsKey || !map || places.length === 0) return;
-    const containerH = window.innerHeight - 64;
+    const containerH = window.innerHeight - bottomOffset;
     const sheetPeekH = Math.round(containerH * 0.4);
     if (places.length === 1) {
       map.panTo({ lat: places[0].latitude, lng: places[0].longitude });
@@ -58,7 +60,7 @@ function MapContent({
     const place = places.find((p) => p.id === selectedPlaceId);
     if (!place) return;
     map.panTo({ lat: place.latitude, lng: place.longitude });
-    const offsetY = Math.round((window.innerHeight - 64) * 0.25);
+    const offsetY = Math.round((window.innerHeight - bottomOffset) * 0.25);
     map.panBy(0, offsetY);
   }, [map, selectedPlaceId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -97,7 +99,7 @@ function MapContent({
   );
 }
 
-export function InteractiveMap({ places, selectedPlaceId, highlightedIds, boundsKey, onMarkerClick, className }: Props) {
+export function InteractiveMap({ places, selectedPlaceId, highlightedIds, boundsKey, onMarkerClick, className, bottomOffset = 64 }: Props) {
   if (!API_KEY) {
     return (
       <div className={`flex items-center justify-center bg-muted/50 text-sm text-muted-foreground ${className ?? ""}`}>
@@ -115,6 +117,7 @@ export function InteractiveMap({ places, selectedPlaceId, highlightedIds, bounds
           highlightedIds={highlightedIds}
           boundsKey={boundsKey}
           onMarkerClick={onMarkerClick}
+          bottomOffset={bottomOffset}
         />
       </APIProvider>
     </div>
