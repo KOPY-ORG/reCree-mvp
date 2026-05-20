@@ -15,6 +15,7 @@ import { TopicFilterRow } from "./_components/TopicFilterRow";
 import { TagFilterRow } from "./_components/TagFilterRow";
 import { ExploreSearchActiveBar } from "./_components/ExploreSearchActiveBar";
 import { ExploreMapView } from "./_components/ExploreMapView";
+import { ViewToggleButton } from "./_components/ViewToggleButton";
 
 // ─── 서브 컴포넌트 ────────────────────────────────────────────────────────────
 
@@ -115,41 +116,47 @@ export default async function ExplorePage({
 
   if (isMapView && allPlaces) {
     return (
-      <ExploreMapView
-        allPlaces={allPlaces}
-        savedPostIds={[...savedPostIds]}
-        tagGroupConfigs={tagGroupConfigs}
-      />
+      <>
+        <ExploreMapView
+          allPlaces={allPlaces}
+          savedPostIds={[...savedPostIds]}
+          tagGroupConfigs={tagGroupConfigs}
+        />
+        <ViewToggleButton />
+      </>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto pb-14">
+    <>
+      <div className="max-w-2xl mx-auto pb-14">
 
-      {/* 필터 영역 */}
-      <div className="border-b border-border/50">
-        {q && <ExploreSearchActiveBar q={q} />}
-        <TopicFilterRow topics={level0Topics} />
-        <TagFilterRow tagGroups={tagGroups} />
-      </div>
+        {/* 필터 영역 */}
+        <div className="border-b border-border/50">
+          {q && <ExploreSearchActiveBar q={q} />}
+          <TopicFilterRow topics={level0Topics} />
+          <TagFilterRow tagGroups={tagGroups} />
+        </div>
 
-      {/* Posts */}
-      <div className="px-4">
-        {(posts ?? []).length === 0 ? (
-          <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
-            Coming soon!
-          </div>
-        ) : (
-          (posts ?? []).map((post) => (
-            <PostListItem
-              key={post.id}
-              post={post}
-              tagGroupMap={tagGroupMap}
-              isSaved={savedPostIds.has(post.id)}
-            />
-          ))
-        )}
+        {/* Posts */}
+        <div className="px-4">
+          {(posts ?? []).length === 0 ? (
+            <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
+              Coming soon!
+            </div>
+          ) : (
+            (posts ?? []).map((post) => (
+              <PostListItem
+                key={post.id}
+                post={post}
+                tagGroupMap={tagGroupMap}
+                isSaved={savedPostIds.has(post.id)}
+              />
+            ))
+          )}
+        </div>
       </div>
-    </div>
+      <ViewToggleButton />
+    </>
   );
 }
