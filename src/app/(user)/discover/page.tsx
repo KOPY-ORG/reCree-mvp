@@ -119,7 +119,6 @@ export default async function ExplorePage({
       ...place,
       isSaved: place.posts.some((p) => savedPostIds.has(p.id)),
     }));
-    console.log("[8a] saved places:", placesWithSaved.filter((p) => p.isSaved).length);
     return (
       <>
         <ExploreMapView
