@@ -500,6 +500,7 @@ export function PostForm({
     if (!titleEn.trim()) { toast.error("영어 제목을 입력해주세요."); return; }
     if (!slug.trim()) { toast.error("슬러그를 입력해주세요."); return; }
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug.trim())) { toast.error("슬러그 형식을 확인해주세요."); return; }
+    if (slugStatus === "checking") { toast.error("슬러그 확인 중입니다. 잠시 후 다시 시도해주세요."); return; }
     if (slugStatus === "error") { toast.error("슬러그가 이미 사용 중입니다."); return; }
 
     if (finalStatus === "PUBLISHED") {
@@ -616,7 +617,7 @@ export function PostForm({
 
             <Button
               size="sm"
-              disabled={isPending || slugStatus === "error" || slugStatus === "invalid"}
+              disabled={isPending || slugStatus === "checking" || slugStatus === "error" || slugStatus === "invalid"}
               onClick={() => {
                 if (status === "PUBLISHED") handleSubmit("PUBLISHED");
                 else handleSubmit("DRAFT");
@@ -630,7 +631,7 @@ export function PostForm({
               <Button
                 size="sm"
                 className="bg-brand text-black hover:bg-brand/90"
-                disabled={isPending || slugStatus === "error" || slugStatus === "invalid"}
+                disabled={isPending || slugStatus === "checking" || slugStatus === "error" || slugStatus === "invalid"}
                 onClick={() => handleSubmit("PUBLISHED")}
               >
                 발행
