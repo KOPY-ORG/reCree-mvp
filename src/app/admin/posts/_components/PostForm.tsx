@@ -285,7 +285,7 @@ export function PostForm({
   const [activePlaceIndex, setActivePlaceIndex] = useState(0);
 
   // ── UI 상태 ─────────────────────────────────────────────────────────────────
-  const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "ok" | "error">("idle");
+  const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "ok" | "error" | "invalid">("idle");
   const [placePickerOpen, setPlacePickerOpen] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
   const [isTranslatingTitle, setIsTranslatingTitle] = useState(false);
@@ -318,6 +318,10 @@ export function PostForm({
   useEffect(() => {
     if (!slug.trim()) {
       setSlugStatus("idle");
+      return;
+    }
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug.trim())) {
+      setSlugStatus("invalid");
       return;
     }
     setSlugStatus("checking");
@@ -495,6 +499,7 @@ export function PostForm({
     if (!titleKo.trim()) { toast.error("한국어 제목을 입력해주세요."); return; }
     if (!titleEn.trim()) { toast.error("영어 제목을 입력해주세요."); return; }
     if (!slug.trim()) { toast.error("슬러그를 입력해주세요."); return; }
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug.trim())) { toast.error("슬러그 형식을 확인해주세요."); return; }
     if (slugStatus === "error") { toast.error("슬러그가 이미 사용 중입니다."); return; }
 
     if (finalStatus === "PUBLISHED") {
@@ -611,7 +616,7 @@ export function PostForm({
 
             <Button
               size="sm"
-              disabled={isPending || slugStatus === "error"}
+              disabled={isPending || slugStatus === "error" || slugStatus === "invalid"}
               onClick={() => {
                 if (status === "PUBLISHED") handleSubmit("PUBLISHED");
                 else handleSubmit("DRAFT");
@@ -625,7 +630,7 @@ export function PostForm({
               <Button
                 size="sm"
                 className="bg-brand text-black hover:bg-brand/90"
-                disabled={isPending || slugStatus === "error"}
+                disabled={isPending || slugStatus === "error" || slugStatus === "invalid"}
                 onClick={() => handleSubmit("PUBLISHED")}
               >
                 발행
@@ -704,21 +709,32 @@ export function PostForm({
                     {/* 슬러그 */}
                     <div className="space-y-1.5">
                       <div className="flex items-center h-6">
-                        <span className="text-xs font-medium text-muted-foreground">슬러그</span>
+                        <span className="text-xs font-medium text-muted-foreground">슬러그 <span className="text-red-500">*</span></span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <input
                           value={slug}
-                          onChange={(e) => { setSlug(e.target.value); }}
+                          onChange={(e) => {
+                            const normalized = e.target.value
+                              .toLowerCase()
+                              .replace(/\s+/g, "-");
+                            setSlug(normalized);
+                          }}
                           placeholder="url-friendly-slug"
                           className={`w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring ${
-                            slugStatus === "error" ? "border-destructive" : slugStatus === "ok" ? "border-green-500" : ""
+                            slugStatus === "error" || slugStatus === "invalid" ? "border-destructive" : slugStatus === "ok" ? "border-green-500" : ""
                           }`}
                         />
                         {slugStatus === "checking" && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />}
                         {slugStatus === "ok" && <Check className="h-4 w-4 text-green-600 shrink-0" />}
-                        {slugStatus === "error" && <span className="text-xs text-destructive shrink-0">중복</span>}
+                        {(slugStatus === "error" || slugStatus === "invalid") && <X className="h-4 w-4 text-destructive shrink-0" />}
                       </div>
+                      {slugStatus === "invalid" && (
+                        <p className="text-xs text-destructive">소문자, 숫자, 하이픈(-)만 사용할 수 있어요.</p>
+                      )}
+                      {slugStatus === "error" && (
+                        <p className="text-xs text-destructive">이미 사용 중인 슬러그입니다.</p>
+                      )}
                     </div>
 
                   </CardContent>
