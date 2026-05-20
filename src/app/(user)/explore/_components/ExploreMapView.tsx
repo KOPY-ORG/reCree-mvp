@@ -4,7 +4,8 @@ import { useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { InteractiveMap } from "@/components/maps/InteractiveMap";
 import { PlaceBottomSheet } from "@/components/maps/PlaceBottomSheet";
-import { getTopicMarkerColor, type MapPlace } from "@/lib/map-queries";
+import type { MapPlace } from "@/lib/map-queries";
+import { getTopicMarkerColor } from "@/lib/map-utils";
 
 type TagGroupConfig = {
   group: string;

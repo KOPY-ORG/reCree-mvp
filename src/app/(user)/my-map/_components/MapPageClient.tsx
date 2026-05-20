@@ -9,7 +9,7 @@ import Link from "next/link";
 import { Search, User, Star, AlignJustify, X, MapPin } from "lucide-react";
 import { CloseButton } from "@/components/maps/CloseButton";
 import type { MapPlace } from "@/lib/map-queries";
-import { getTopicMarkerColor } from "@/lib/map-queries";
+import { getTopicMarkerColor } from "@/lib/map-utils";
 import type { TagGroupColorMap } from "@/lib/post-labels";
 import { MapTopicFilterRow } from "./MapTopicFilterRow";
 import { MapTagFilterRow } from "./MapTagFilterRow";
