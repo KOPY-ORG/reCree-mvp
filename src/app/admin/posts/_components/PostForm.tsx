@@ -205,17 +205,6 @@ const EMPTY_SOURCE: PostSourceInput = {
   isOriginalLink: false,
 };
 
-// ─── 유틸 ──────────────────────────────────────────────────────────────────────
-
-function generateSlug(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
-}
-
 // ─── PostForm 컴포넌트 ──────────────────────────────────────────────────────────
 
 export function PostForm({
@@ -297,7 +286,6 @@ export function PostForm({
 
   // ── UI 상태 ─────────────────────────────────────────────────────────────────
   const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "ok" | "error">("idle");
-  const [slugManual, setSlugManual] = useState(false);
   const [placePickerOpen, setPlacePickerOpen] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
   const [isTranslatingTitle, setIsTranslatingTitle] = useState(false);
@@ -325,13 +313,7 @@ export function PostForm({
     [tagGroups],
   );
 
-  // ── Slug 자동 생성 + 중복 체크 ─────────────────────────────────────────────
-  useEffect(() => {
-    if (slugManual) return;
-    if (!titleEn.trim()) return;
-    setSlug(generateSlug(titleEn));
-  }, [titleEn, slugManual]);
-
+  // ── Slug 중복 체크 ────────────────────────────────────────────────────────
   const slugCheckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!slug.trim()) {
@@ -727,7 +709,7 @@ export function PostForm({
                       <div className="flex items-center gap-1.5">
                         <input
                           value={slug}
-                          onChange={(e) => { setSlugManual(true); setSlug(e.target.value); }}
+                          onChange={(e) => { setSlug(e.target.value); }}
                           placeholder="url-friendly-slug"
                           className={`w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring ${
                             slugStatus === "error" ? "border-destructive" : slugStatus === "ok" ? "border-green-500" : ""
@@ -737,11 +719,6 @@ export function PostForm({
                         {slugStatus === "ok" && <Check className="h-4 w-4 text-green-600 shrink-0" />}
                         {slugStatus === "error" && <span className="text-xs text-destructive shrink-0">중복</span>}
                       </div>
-                      {slugManual && (
-                        <button type="button" className="text-xs text-muted-foreground underline" onClick={() => { setSlugManual(false); setSlug(generateSlug(titleEn)); }}>
-                          자동 생성으로 되돌리기
-                        </button>
-                      )}
                     </div>
 
                   </CardContent>
