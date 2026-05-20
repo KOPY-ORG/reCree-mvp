@@ -4,6 +4,7 @@ import { isExternalImage, focalStyle } from "@/lib/image";
 import { prisma } from "@/lib/prisma";
 import { getSavedPostIds, type PostItem } from "@/lib/post-queries";
 import { getFilteredPosts, getTagGroupsWithTags } from "@/lib/filter-queries";
+import { getAllMapPlaces, type MapPlace } from "@/lib/map-queries";
 import { getLevel0TopicsDeep } from "@/lib/topic-queries";
 import { type TagGroupColorMap } from "@/lib/post-labels";
 import { getCurrentUser } from "@/lib/auth";
@@ -77,15 +78,17 @@ export default async function ExplorePage({
     topicId?: string | string[];
     tagId?: string | string[];
     tagGroup?: string;
+    view?: string;
   }>;
 }) {
-  const { q, topicId, tagId, tagGroup } = await searchParams;
+  const { q, topicId, tagId, tagGroup, view } = await searchParams;
+  const isMapView = view === "map";
   const isUUID = (v: string) => topicIdSchema.safeParse(v).success;
   const topicIds = (topicId ? (Array.isArray(topicId) ? topicId : [topicId]) : []).filter(isUUID);
   const tagIds = (tagId ? (Array.isArray(tagId) ? tagId : [tagId]) : []).filter(isUUID);
   const currentUser = await getCurrentUser();
 
-  const [level0Topics, tagGroups, tagGroupConfigs, savedPostIds] =
+  const [level0Topics, tagGroups, tagGroupConfigs, savedPostIds, allPlaces, posts] =
     await Promise.all([
       getLevel0TopicsDeep(),
       getTagGroupsWithTags(),
@@ -101,13 +104,17 @@ export default async function ExplorePage({
         },
       }),
       getSavedPostIds(currentUser?.id ?? null),
+      isMapView ? getAllMapPlaces() : Promise.resolve(null as MapPlace[] | null),
+      isMapView ? Promise.resolve(null) : getFilteredPosts({ q, topicIds, tagIds, tagGroupName: tagGroup }),
     ]);
+
+  if (isMapView && allPlaces) {
+    console.log(`[3b] map places: ${allPlaces.length}`);
+  }
 
   const tagGroupMap: TagGroupColorMap = new Map(
     tagGroupConfigs.map((c) => [c.group, c])
   );
-
-  const posts = await getFilteredPosts({ q, topicIds, tagIds, tagGroupName: tagGroup });
 
   return (
     <div className="max-w-2xl mx-auto pb-14">
@@ -120,22 +127,24 @@ export default async function ExplorePage({
       </div>
 
       {/* Posts */}
-      <div className="px-4">
-        {posts.length === 0 ? (
-          <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
-            Coming soon!
-          </div>
-        ) : (
-          posts.map((post) => (
-            <PostListItem
-              key={post.id}
-              post={post}
-              tagGroupMap={tagGroupMap}
-              isSaved={savedPostIds.has(post.id)}
-            />
-          ))
-        )}
-      </div>
+      {!isMapView && (
+        <div className="px-4">
+          {(posts ?? []).length === 0 ? (
+            <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
+              Coming soon!
+            </div>
+          ) : (
+            (posts ?? []).map((post) => (
+              <PostListItem
+                key={post.id}
+                post={post}
+                tagGroupMap={tagGroupMap}
+                isSaved={savedPostIds.has(post.id)}
+              />
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }
