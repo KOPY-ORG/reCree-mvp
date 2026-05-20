@@ -3,7 +3,12 @@
 import { usePathname } from "next/navigation";
 import { BottomNav } from "./BottomNav";
 
-export function ConditionalBottomNav() {
+interface Props {
+  isLoggedIn: boolean;
+  profileImageUrl: string | null;
+}
+
+export function ConditionalBottomNav({ isLoggedIn, profileImageUrl }: Props) {
   const pathname = usePathname();
   if (
     pathname === "/search" ||
@@ -12,5 +17,5 @@ export function ConditionalBottomNav() {
     pathname.startsWith("/policy/") ||
     pathname === "/onboarding"
   ) return null;
-  return <BottomNav />;
+  return <BottomNav isLoggedIn={isLoggedIn} profileImageUrl={profileImageUrl} />;
 }
