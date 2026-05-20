@@ -102,6 +102,8 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
             select: {
               id: true,
               nameEn: true,
+              slug: true,
+              level: true,
               colorHex: true,
               colorHex2: true,
               gradientDir: true,
@@ -220,7 +222,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
   const configMap = new Map(tagGroupConfigs.map((c) => [c.group, c]));
 
   const labels: ResolvedLabel[] = [
-    ...post.postTopics.map(({ topic }) => ({ text: topic.nameEn, ...resolveTopicColors(topic) })),
+    ...post.postTopics.map(({ topic }) => ({ text: topic.nameEn, slug: topic.level === 2 ? (topic.slug ?? undefined) : undefined, ...resolveTopicColors(topic) })),
     ...post.postTags.filter(({ tag }) => tag.group === K_MEDIA_GROUP).map(({ tag }) => ({ text: tag.name, ...resolveTagColors(tag, configMap.get(tag.group)) })),
     ...post.postTags.filter(({ tag }) => tag.group !== K_MEDIA_GROUP).map(({ tag }) => ({ text: tag.name, ...resolveTagColors(tag, configMap.get(tag.group)) })),
   ];

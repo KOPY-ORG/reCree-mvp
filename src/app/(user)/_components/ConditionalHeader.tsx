@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 
-const NO_HEADER_PATHS = ["/search", "/my-map", "/profile", "/policy", "/onboarding"];
+const NO_HEADER_PATHS = ["/search", "/my-map", "/profile", "/policy", "/onboarding", "/topics"];
 const EXPLORE_PATHS = ["/explore"];
 
 const SAVED_PATHS = ["/saved"];

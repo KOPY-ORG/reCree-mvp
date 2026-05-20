@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { Search, LayoutGrid } from "lucide-react";
 // import { LanguageSelector } from "./LanguageSelector";
 
 const NAV_LINKS = [
@@ -31,7 +31,15 @@ export function AppHeader() {
         </div>
 
         {/* 오른쪽: 검색 + 언어 */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
+          {/* 모바일 Topics 아이콘 */}
+          <Link
+            href="/topics"
+            className="lg:hidden text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center size-8"
+          >
+            <LayoutGrid className="size-5" />
+          </Link>
+
           {/* 데스크탑 전용 검색 버튼 */}
           <Link
             href="/search"
