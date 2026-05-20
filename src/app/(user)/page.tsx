@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Heart } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { HomeBannerCarousel, type BannerItem } from "./_components/HomeBannerCarousel";
 import { getPostsWithLabels, getSavedPostIds, type PostItem } from "@/lib/post-queries";
@@ -38,6 +38,7 @@ import { SearchBar } from "./_components/SearchBar";
 import { GuideVideoCard } from "./_components/GuideVideoCard";
 import { getCurrentUser } from "@/lib/auth";
 import { ReCreeshotImage } from "@/components/recreeshot-image";
+import { getMyFollows } from "@/lib/follow-queries";
 
 // ─── 가로 스크롤 섹션 ────────────────────────────────────────────────────────
 
@@ -73,9 +74,41 @@ function HScrollSection({
   );
 }
 
+// ─── 탭 바 ───────────────────────────────────────────────────────────────────
+
+function TabBar({ activeTab }: { activeTab: "highlights" | "follow" }) {
+  return (
+    <div className="flex border-b border-secondary mb-4">
+      <Link
+        href="/"
+        className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors ${
+          activeTab === "highlights"
+            ? "border-foreground text-foreground"
+            : "border-transparent text-muted-foreground hover:text-foreground"
+        }`}
+      >
+        Highlights
+      </Link>
+      <Link
+        href="/?tab=follow"
+        className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors ${
+          activeTab === "follow"
+            ? "border-foreground text-foreground"
+            : "border-transparent text-muted-foreground hover:text-foreground"
+        }`}
+      >
+        Follow
+      </Link>
+    </div>
+  );
+}
+
 // ─── 메인 페이지 ──────────────────────────────────────────────────────────────
 
-export default async function HomePage() {
+export default async function HomePage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+  const { tab } = await searchParams;
+  const activeTab = tab === "follow" ? "follow" : "highlights";
+
   const currentUser = await getCurrentUser();
 
   const guideVideo = await prisma.guideVideo.findFirst({ where: { isActive: true } });
@@ -223,9 +256,26 @@ export default async function HomePage() {
   const hasBanners = homeBanners.length > 0;
   const hasSections = sectionData.some((d) => d.items.length > 0);
 
+  // Follow 탭 데이터 (tab=follow이고 로그인 상태일 때만)
+  let followPosts: PostItem[] = [];
+  let followedIds: string[] = [];
+  if (activeTab === "follow" && currentUser) {
+    const follows = await getMyFollows(currentUser.id);
+    followedIds = follows.map((f) => f.topic.id);
+    if (followedIds.length > 0) {
+      followPosts = await getPostsWithLabels(
+        {
+          status: "PUBLISHED",
+          postTopics: { some: { topicId: { in: followedIds } } },
+        },
+        { take: 20, orderBy: { createdAt: "desc" } }
+      );
+    }
+  }
+
   // ─── 폴백 ───────────────────────────────────────────────────────────────────
 
-  if (!hasBanners && !hasSections) {
+  if (!hasBanners && !hasSections && activeTab !== "follow") {
     const fallbackPosts = await getPostsWithLabels(
       { status: "PUBLISHED" },
       { orderBy: { createdAt: "desc" } }
@@ -243,6 +293,7 @@ export default async function HomePage() {
     return (
       <div className="px-4 py-4 max-w-2xl mx-auto">
         <div className="mb-5"><SearchBar /></div>
+        <TabBar activeTab={activeTab} />
         <div className="grid grid-cols-2 gap-3">
           {fallbackPosts.map((post) => (
             <PostCard key={post.id} post={post} tagGroupMap={tagGroupMap} isSaved={savedPostIds.has(post.id)} variant="grid" />
@@ -277,76 +328,128 @@ export default async function HomePage() {
       <div className="px-4 mb-3">
         <SearchBar />
       </div>
+      <TabBar activeTab={activeTab} />
 
-      {hasBanners && (
-        <div className="px-4 mb-4">
-          <HomeBannerCarousel banners={bannerItems} />
-        </div>
-      )}
-
-      {sections.map((section, i) => {
-        const data = sectionData[i];
-        if (!data || data.items.length === 0) return null;
-
-        // POST AUTO 섹션은 필터 조건을 지도에 그대로 전달
-        function getPostMoreHref() {
-          if (section.type === "MANUAL") return "/explore";
-          if (section.filterTopicId) return `/my-map?topicId=${section.filterTopicId}`;
-          if (section.filterTagId) return `/my-map?tagId=${section.filterTagId}`;
-          if (section.filterTagGroup) return `/my-map?tagGroup=${section.filterTagGroup}`;
-          return "/my-map";
-        }
-
-        if (data.kind === "reCreeshots") {
-          return (
-            <HScrollSection key={section.id} title={section.titleEn}>
-              {guideVideo && (
-                <div className="shrink-0 w-[120px]">
-                  <GuideVideoCard
-                    videoUrl={guideVideo.videoUrl}
-                    thumbnailUrl={guideVideo.thumbnailUrl}
-                    titleEn={guideVideo.titleEn}
-                    className="aspect-[4/5] rounded-lg"
-                  />
-                </div>
-              )}
-              {data.items.map((shot) => (
-                <Link key={shot.id} href={`/explore/hall/${shot.id}`} className="shrink-0 w-[120px] block">
-                  <ReCreeshotImage
-                    shotUrl={shot.imageUrl}
-                    referenceUrl={shot.referencePhotoUrl}
-                    matchScore={shot.matchScore}
-                    showBadge={shot.showBadge}
-                    referencePosition="top-left"
-                    badgePosition="top-right"
-                    variant="thumb-sm"
-                    className="aspect-[4/5]"
-                    sizes="120px"
-                  />
-                </Link>
-              ))}
-            </HScrollSection>
-          );
-        }
-
-        return (
-          <HScrollSection key={section.id} title={section.titleEn} moreHref={getPostMoreHref()}>
-            {data.items.map((post) => (
-              <PostCard key={post.id} post={post} tagGroupMap={tagGroupMap} isSaved={savedPostIds.has(post.id)} />
+      {activeTab === "follow" ? (
+        !currentUser ? (
+          <div className="flex flex-col items-center justify-center h-[50vh] gap-4 text-center px-4">
+            <Heart className="h-10 w-10 text-muted-foreground" strokeWidth={1.5} />
+            <div className="space-y-1">
+              <p className="text-lg font-semibold">Sign in to follow topics</p>
+              <p className="text-sm text-muted-foreground">
+                Follow K-POP and K-CONTENT topics to see posts here.
+              </p>
+            </div>
+            <Link
+              href="/login"
+              className="mt-2 px-5 py-2.5 rounded-full bg-brand text-black text-sm font-semibold transition-opacity hover:opacity-80"
+            >
+              Sign in
+            </Link>
+          </div>
+        ) : followedIds.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-[50vh] gap-4 text-center px-4">
+            <Heart className="h-10 w-10 text-muted-foreground" strokeWidth={1.5} />
+            <div className="space-y-1">
+              <p className="text-lg font-semibold">No topics followed yet</p>
+              <p className="text-sm text-muted-foreground">
+                Follow topics to curate your own feed.
+              </p>
+            </div>
+            <Link
+              href="/topics"
+              className="mt-2 px-5 py-2.5 rounded-full bg-brand text-black text-sm font-semibold transition-opacity hover:opacity-80"
+            >
+              Browse Topics
+            </Link>
+          </div>
+        ) : followPosts.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-[50vh] gap-2 text-center px-4">
+            <p className="text-lg font-semibold">No posts yet</p>
+            <p className="text-sm text-muted-foreground">
+              Check back soon for posts from your followed topics.
+            </p>
+          </div>
+        ) : (
+          <div className="px-4 grid grid-cols-2 gap-3">
+            {followPosts.map((post) => (
+              <PostCard key={post.id} post={post} tagGroupMap={tagGroupMap} isSaved={savedPostIds.has(post.id)} variant="grid" />
             ))}
-          </HScrollSection>
-        );
-      })}
-        <footer className="px-4 pt-8 pb-6 text-sm text-muted-foreground">
-        <div className="flex flex-wrap gap-4 justify-center">
-          <Link href="/policy/privacy" className="hover:text-foreground underline underline-offset-4">
-            Privacy Policy
-          </Link>
-          <Link href="/policy/terms" className="hover:text-foreground underline underline-offset-4">
-            Terms of Service
-          </Link>
-        </div>
-      </footer>
+          </div>
+        )
+      ) : (
+        <>
+          {hasBanners && (
+            <div className="px-4 mb-4">
+              <HomeBannerCarousel banners={bannerItems} />
+            </div>
+          )}
+
+          {sections.map((section, i) => {
+            const data = sectionData[i];
+            if (!data || data.items.length === 0) return null;
+
+            // POST AUTO 섹션은 필터 조건을 지도에 그대로 전달
+            function getPostMoreHref() {
+              if (section.type === "MANUAL") return "/explore";
+              if (section.filterTopicId) return `/my-map?topicId=${section.filterTopicId}`;
+              if (section.filterTagId) return `/my-map?tagId=${section.filterTagId}`;
+              if (section.filterTagGroup) return `/my-map?tagGroup=${section.filterTagGroup}`;
+              return "/my-map";
+            }
+
+            if (data.kind === "reCreeshots") {
+              return (
+                <HScrollSection key={section.id} title={section.titleEn}>
+                  {guideVideo && (
+                    <div className="shrink-0 w-[120px]">
+                      <GuideVideoCard
+                        videoUrl={guideVideo.videoUrl}
+                        thumbnailUrl={guideVideo.thumbnailUrl}
+                        titleEn={guideVideo.titleEn}
+                        className="aspect-[4/5] rounded-lg"
+                      />
+                    </div>
+                  )}
+                  {data.items.map((shot) => (
+                    <Link key={shot.id} href={`/explore/hall/${shot.id}`} className="shrink-0 w-[120px] block">
+                      <ReCreeshotImage
+                        shotUrl={shot.imageUrl}
+                        referenceUrl={shot.referencePhotoUrl}
+                        matchScore={shot.matchScore}
+                        showBadge={shot.showBadge}
+                        referencePosition="top-left"
+                        badgePosition="top-right"
+                        variant="thumb-sm"
+                        className="aspect-[4/5]"
+                        sizes="120px"
+                      />
+                    </Link>
+                  ))}
+                </HScrollSection>
+              );
+            }
+
+            return (
+              <HScrollSection key={section.id} title={section.titleEn} moreHref={getPostMoreHref()}>
+                {data.items.map((post) => (
+                  <PostCard key={post.id} post={post} tagGroupMap={tagGroupMap} isSaved={savedPostIds.has(post.id)} />
+                ))}
+              </HScrollSection>
+            );
+          })}
+          <footer className="px-4 pt-8 pb-6 text-sm text-muted-foreground">
+            <div className="flex flex-wrap gap-4 justify-center">
+              <Link href="/policy/privacy" className="hover:text-foreground underline underline-offset-4">
+                Privacy Policy
+              </Link>
+              <Link href="/policy/terms" className="hover:text-foreground underline underline-offset-4">
+                Terms of Service
+              </Link>
+            </div>
+          </footer>
+        </>
+      )}
     </div>
   );
 }

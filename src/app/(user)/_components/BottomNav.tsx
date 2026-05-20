@@ -8,9 +8,9 @@ import { useState } from "react";
 const TABS = [
   { label: "Home", icon: House, href: "/" },
   { label: "Discover", icon: MapPin, href: "/explore" },
-  { label: "Plan", icon: Route, href: "/plan" },
+  { label: "Trips", icon: Route, href: "/plan" },
   { label: "recreeshot", icon: Camera, href: "/recreeshot" },
-  { label: "Me", icon: User, href: "/profile" },
+  { label: "Profile", icon: User, href: "/profile" },
 ] as const;
 
 interface Props {
