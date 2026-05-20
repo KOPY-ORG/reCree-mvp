@@ -4,8 +4,7 @@ import { Search } from "lucide-react";
 
 const NAV_LINKS = [
   { label: "Home", href: "/" },
-  { label: "Category", href: "/category" },
-  { label: "Explore", href: "/explore" },
+  { label: "Discover", href: "/explore" },
   { label: "My Map", href: "/my-map" },
   { label: "Saved", href: "/saved" },
 ];
