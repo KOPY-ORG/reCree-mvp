@@ -12,7 +12,7 @@ import type { MapPlace } from "@/lib/map-queries";
 import type { TagGroupColorMap } from "@/lib/post-labels";
 import { MapTopicFilterRow } from "./MapTopicFilterRow";
 import { MapTagFilterRow } from "./MapTagFilterRow";
-import { InteractiveMap } from "./InteractiveMap";
+import { InteractiveMap } from "@/components/maps/InteractiveMap";
 import { PlaceBottomSheet } from "./PlaceBottomSheet";
 import type { Level0Topic } from "@/components/TopicFilterRow";
 import type { TagGroupForFilter as TagGroup } from "@/components/TagFilterRow";
