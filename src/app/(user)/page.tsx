@@ -47,19 +47,21 @@ function HScrollSection({
   children,
 }: {
   title: string;
-  moreHref: string;
+  moreHref?: string;
   children: React.ReactNode;
 }) {
   return (
     <section className="mb-6">
       <div className="flex items-center justify-between mb-3 px-4">
         <h2 className="font-bold text-lg">{title}</h2>
-        <Link
-          href={moreHref}
-          className="text-sm text-muted-foreground flex items-center gap-0.5 hover:text-foreground transition-colors"
-        >
-          More <ChevronRight className="size-3.5" />
-        </Link>
+        {moreHref && (
+          <Link
+            href={moreHref}
+            className="text-sm text-muted-foreground flex items-center gap-0.5 hover:text-foreground transition-colors"
+          >
+            More <ChevronRight className="size-3.5" />
+          </Link>
+        )}
       </div>
       <div className="overflow-x-auto scrollbar-hide">
         <div className="flex gap-3 pl-4 pb-1">
@@ -297,7 +299,7 @@ export default async function HomePage() {
 
         if (data.kind === "reCreeshots") {
           return (
-            <HScrollSection key={section.id} title={section.titleEn} moreHref="/explore?tab=hall">
+            <HScrollSection key={section.id} title={section.titleEn}>
               {guideVideo && (
                 <div className="shrink-0 w-[120px]">
                   <GuideVideoCard

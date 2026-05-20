@@ -1,21 +1,17 @@
 import Link from "next/link";
 import Image from "next/image";
 import { isExternalImage, focalStyle } from "@/lib/image";
-import { ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getSavedPostIds, type PostItem } from "@/lib/post-queries";
 import { getFilteredPosts, getTagGroupsWithTags } from "@/lib/filter-queries";
 import { getLevel0TopicsDeep } from "@/lib/topic-queries";
-import { type TagGroupColorMap, resolveTopicColors, resolveTagColors, labelBackground } from "@/lib/post-labels";
+import { type TagGroupColorMap } from "@/lib/post-labels";
 import { getCurrentUser } from "@/lib/auth";
 import { ScrapButton } from "../_components/ScrapButton";
 import { PostBadges } from "../_components/PostCard";
 import { TopicFilterRow } from "./_components/TopicFilterRow";
 import { TagFilterRow } from "./_components/TagFilterRow";
-import { ExploreTabBar } from "./_components/ExploreTabBar";
 import { ExploreSearchActiveBar } from "./_components/ExploreSearchActiveBar";
-import { HallGrid } from "./_components/HallGrid";
-import { ReCreeshotImage } from "@/components/recreeshot-image";
 
 // ─── 서브 컴포넌트 ────────────────────────────────────────────────────────────
 
@@ -70,65 +66,24 @@ function PostListItem({
   );
 }
 
-function RecreeshotInlineSection({
-  shots,
-}: {
-  shots: { id: string; imageUrl: string; matchScore: number | null; showBadge: boolean; referencePhotoUrl: string | null }[];
-}) {
-  if (shots.length === 0) return null;
-  return (
-    <div className="py-4 border-b border-border/50">
-      <div className="flex items-center justify-between mb-3">
-        <p className="font-bold text-sm">See How They reCreated</p>
-        <Link
-          href="/explore?tab=hall"
-          className="text-xs text-muted-foreground flex items-center gap-0.5 hover:text-foreground transition-colors"
-        >
-          more <ChevronRight className="size-3" />
-        </Link>
-      </div>
-      <div className="flex gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory">
-        {shots.map((shot) => (
-          <Link key={shot.id} href={`/explore/hall/${shot.id}`} className="snap-start shrink-0 w-[90px] block">
-            <ReCreeshotImage
-              shotUrl={shot.imageUrl}
-              referenceUrl={shot.referencePhotoUrl}
-              matchScore={shot.matchScore}
-              showBadge={shot.showBadge}
-              referencePosition="top-left"
-              badgePosition="top-right"
-              variant="thumb-sm"
-              className="aspect-[4/5]"
-              sizes="90px"
-            />
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ─── 메인 페이지 ──────────────────────────────────────────────────────────────
 
 export default async function ExplorePage({
   searchParams,
 }: {
   searchParams: Promise<{
-    tab?: string;
     q?: string;
     topicId?: string | string[];
     tagId?: string | string[];
     tagGroup?: string;
   }>;
 }) {
-  const { tab = "posts", q, topicId, tagId, tagGroup } = await searchParams;
+  const { q, topicId, tagId, tagGroup } = await searchParams;
   const topicIds = topicId ? (Array.isArray(topicId) ? topicId : [topicId]) : [];
   const tagIds = tagId ? (Array.isArray(tagId) ? tagId : [tagId]) : [];
   const currentUser = await getCurrentUser();
 
-  const guideVideo = await prisma.guideVideo.findFirst({ where: { isActive: true } });
-
-  const [level0Topics, tagGroups, tagGroupConfigs, recreeshots, savedPostIds] =
+  const [level0Topics, tagGroups, tagGroupConfigs, savedPostIds] =
     await Promise.all([
       getLevel0TopicsDeep(),
       getTagGroupsWithTags(),
@@ -143,44 +98,6 @@ export default async function ExplorePage({
           textColorHex: true,
         },
       }),
-      prisma.reCreeshot.findMany({
-        where: { status: "ACTIVE" },
-        orderBy: { createdAt: "desc" },
-        select: {
-          id: true,
-          imageUrl: true,
-          matchScore: true,
-          showBadge: true,
-          referencePhotoUrl: true,
-          reCreeshotTopics: {
-            take: 1,
-            orderBy: { createdAt: "asc" },
-            select: {
-              topic: {
-                select: {
-                  nameEn: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true,
-                  parent: {
-                    select: {
-                      colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true,
-                      parent: {
-                        select: {
-                          colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true,
-                          parent: { select: { colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true } },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-          reCreeshotTags: {
-            take: 1,
-            orderBy: { createdAt: "asc" },
-            select: { tag: { select: { name: true, group: true, colorHex: true, colorHex2: true, textColorHex: true } } },
-          },
-        },
-      }),
       getSavedPostIds(currentUser?.id ?? null),
     ]);
 
@@ -188,89 +105,35 @@ export default async function ExplorePage({
     tagGroupConfigs.map((c) => [c.group, c])
   );
 
-  const posts =
-    tab === "posts" ? await getFilteredPosts({ q, topicIds, tagIds, tagGroupName: tagGroup }) : [];
-
-  const hasFilter = !!(q || topicIds.length || tagIds.length || tagGroup);
-
-  const hallShots = recreeshots.map((shot) => {
-    const topicLabels = shot.reCreeshotTopics.map((t) => {
-      const resolved = resolveTopicColors(t.topic);
-      return { text: t.topic.nameEn, background: labelBackground({ text: t.topic.nameEn, ...resolved }), color: resolved.textColorHex };
-    });
-    const tagLabels = shot.reCreeshotTags.map((t) => {
-      const resolved = resolveTagColors(t.tag, tagGroupMap.get(t.tag.group));
-      return { text: t.tag.name, background: labelBackground({ text: t.tag.name, ...resolved }), color: resolved.textColorHex };
-    });
-    const labels = [...topicLabels, ...tagLabels].slice(0, 2);
-    return { id: shot.id, imageUrl: shot.imageUrl, matchScore: shot.matchScore, showBadge: shot.showBadge, referencePhotoUrl: shot.referencePhotoUrl, labels };
-  });
+  const posts = await getFilteredPosts({ q, topicIds, tagIds, tagGroupName: tagGroup });
 
   return (
     <div className="max-w-2xl mx-auto pb-14">
 
-      {/* 필터 영역 (Posts 탭에서만) */}
-      {tab !== "hall" && (
-        <div className="border-b border-border/50">
-          {q && <ExploreSearchActiveBar q={q} />}
-          <TopicFilterRow topics={level0Topics} />
-          <TagFilterRow tagGroups={tagGroups} />
-        </div>
-      )}
+      {/* 필터 영역 */}
+      <div className="border-b border-border/50">
+        {q && <ExploreSearchActiveBar q={q} />}
+        <TopicFilterRow topics={level0Topics} />
+        <TagFilterRow tagGroups={tagGroups} />
+      </div>
 
-      {/* 탭 바 (sticky top-14 = AppHeader 높이) */}
-      <ExploreTabBar isLoggedIn={!!currentUser} />
-
-      {/* Posts 탭 */}
-      {tab === "posts" && (
-        <div className="px-4">
-          {posts.length === 0 ? (
-            <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
-              Coming soon!
-            </div>
-          ) : hasFilter ? (
-            posts.map((post) => (
-              <PostListItem
-                key={post.id}
-                post={post}
-                tagGroupMap={tagGroupMap}
-                isSaved={savedPostIds.has(post.id)}
-              />
-            ))
-          ) : (
-            <>
-              {posts.slice(0, 3).map((post) => (
-                <PostListItem
-                  key={post.id}
-                  post={post}
-                  tagGroupMap={tagGroupMap}
-                  isSaved={savedPostIds.has(post.id)}
-                />
-              ))}
-
-              {recreeshots.length > 0 && (
-                <RecreeshotInlineSection shots={recreeshots.slice(0, 6)} />
-              )}
-
-              {posts.slice(3).map((post) => (
-                <PostListItem
-                  key={post.id}
-                  post={post}
-                  tagGroupMap={tagGroupMap}
-                  isSaved={savedPostIds.has(post.id)}
-                />
-              ))}
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Hall 탭 */}
-      {tab === "hall" && (
-        <div className="px-4 py-4">
-          <HallGrid shots={hallShots} guideVideo={guideVideo} />
-        </div>
-      )}
+      {/* Posts */}
+      <div className="px-4">
+        {posts.length === 0 ? (
+          <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
+            Coming soon!
+          </div>
+        ) : (
+          posts.map((post) => (
+            <PostListItem
+              key={post.id}
+              post={post}
+              tagGroupMap={tagGroupMap}
+              isSaved={savedPostIds.has(post.id)}
+            />
+          ))
+        )}
+      </div>
     </div>
   );
 }
