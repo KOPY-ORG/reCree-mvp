@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import type { PostStatus, SourceType } from "@prisma/client";
+import { Prisma, type PostStatus, type SourceType } from "@prisma/client";
 import type { SourcePlatform } from "@/types";
 import { makeStorageExtractor, deleteStorageFiles } from "@/lib/storage";
 
@@ -242,12 +242,26 @@ function buildPostRelations(data: PostFormData) {
   };
 }
 
+// ─── slug 검증 ──────────────────────────────────────────────────────────────────
+
+// 정규식은 PostForm.tsx 클라이언트 검증과 동일하게 유지할 것
+const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+function validateSlug(slug: string): string | null {
+  if (!slug.trim()) return "슬러그를 입력해주세요.";
+  if (!SLUG_REGEX.test(slug.trim())) return "슬러그는 소문자, 숫자, 하이픈(-)만 사용할 수 있습니다.";
+  return null;
+}
+
 // ─── 포스트 생성 ────────────────────────────────────────────────────────────────
 
 export async function createPost(
   data: PostFormData,
   returnUrl?: string,
 ): Promise<{ error?: string; id?: string }> {
+  const slugError = validateSlug(data.slug);
+  if (slugError) return { error: slugError };
+
   let newId: string | undefined;
   try {
     const user = await getCurrentUser();
@@ -256,7 +270,7 @@ export async function createPost(
       data: {
         titleKo: data.titleKo,
         titleEn: data.titleEn,
-        slug: data.slug,
+        slug: data.slug.trim(),
         bodyKo: data.bodyKo || null,
         bodyEn: data.bodyEn || null,
         status: data.status,
@@ -274,6 +288,9 @@ export async function createPost(
     revalidatePath("/explore");
   } catch (e) {
     console.error(e);
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return { error: "이미 사용 중인 슬러그입니다. 다른 슬러그를 입력해주세요." };
+    }
     return { error: "포스트를 생성하는 중 오류가 발생했습니다." };
   }
   if (returnUrl) redirect(returnUrl);
@@ -287,6 +304,9 @@ export async function updatePost(
   data: PostFormData,
   returnUrl?: string,
 ): Promise<{ error?: string }> {
+  const slugError = validateSlug(data.slug);
+  if (slugError) return { error: slugError };
+
   try {
     // Storage 정리를 위해 기존 데이터 먼저 조회
     const existing = await prisma.post.findUnique({
@@ -309,7 +329,7 @@ export async function updatePost(
         data: {
           titleKo: data.titleKo,
           titleEn: data.titleEn,
-          slug: data.slug,
+          slug: data.slug.trim(),
           bodyKo: data.bodyKo || null,
           bodyEn: data.bodyEn || null,
           status: data.status,
@@ -353,6 +373,9 @@ export async function updatePost(
     revalidatePath("/explore");
   } catch (e) {
     console.error(e);
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return { error: "이미 사용 중인 슬러그입니다. 다른 슬러그를 입력해주세요." };
+    }
     return { error: "포스트를 수정하는 중 오류가 발생했습니다." };
   }
   if (returnUrl) redirect(returnUrl);
