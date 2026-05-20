@@ -7,6 +7,7 @@ import { getFilteredPosts, getTagGroupsWithTags } from "@/lib/filter-queries";
 import { getLevel0TopicsDeep } from "@/lib/topic-queries";
 import { type TagGroupColorMap } from "@/lib/post-labels";
 import { getCurrentUser } from "@/lib/auth";
+import { topicIdSchema } from "@/lib/validators/follow";
 import { ScrapButton } from "../_components/ScrapButton";
 import { PostBadges } from "../_components/PostCard";
 import { TopicFilterRow } from "./_components/TopicFilterRow";
@@ -79,8 +80,9 @@ export default async function ExplorePage({
   }>;
 }) {
   const { q, topicId, tagId, tagGroup } = await searchParams;
-  const topicIds = topicId ? (Array.isArray(topicId) ? topicId : [topicId]) : [];
-  const tagIds = tagId ? (Array.isArray(tagId) ? tagId : [tagId]) : [];
+  const isUUID = (v: string) => topicIdSchema.safeParse(v).success;
+  const topicIds = (topicId ? (Array.isArray(topicId) ? topicId : [topicId]) : []).filter(isUUID);
+  const tagIds = (tagId ? (Array.isArray(tagId) ? tagId : [tagId]) : []).filter(isUUID);
   const currentUser = await getCurrentUser();
 
   const [level0Topics, tagGroups, tagGroupConfigs, savedPostIds] =
