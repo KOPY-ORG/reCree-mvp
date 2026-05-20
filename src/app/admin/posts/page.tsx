@@ -158,7 +158,7 @@ export default async function PostsPage({
   const filterParams = new URLSearchParams();
   if (search) filterParams.set("search", search);
   if (status) filterParams.set("status", status);
-  if (sort && sort in SORT_MAP) filterParams.set("sort", sort);
+  if (sortKey !== "latest") filterParams.set("sort", sortKey);
   const filterQuery = filterParams.toString();
 
   return (
