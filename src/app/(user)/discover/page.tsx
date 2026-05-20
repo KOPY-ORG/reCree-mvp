@@ -115,12 +115,18 @@ export default async function ExplorePage({
   );
 
   if (isMapView && allPlaces) {
+    const placesWithSaved = allPlaces.map((place) => ({
+      ...place,
+      isSaved: place.posts.some((p) => savedPostIds.has(p.id)),
+    }));
+    console.log("[8a] saved places:", placesWithSaved.filter((p) => p.isSaved).length);
     return (
       <>
         <ExploreMapView
-          allPlaces={allPlaces}
+          allPlaces={placesWithSaved}
           savedPostIds={[...savedPostIds]}
           tagGroupConfigs={tagGroupConfigs}
+          isLoggedIn={!!currentUser}
         />
         <ViewToggleButton />
       </>

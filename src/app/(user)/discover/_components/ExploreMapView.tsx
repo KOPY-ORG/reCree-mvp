@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { InteractiveMap } from "@/components/maps/InteractiveMap";
 import { PlaceBottomSheet } from "@/components/maps/PlaceBottomSheet";
+import { SavedToggleButton } from "./SavedToggleButton";
 import type { MapPlace } from "@/lib/map-queries";
 import { getTopicMarkerColor } from "@/lib/map-utils";
 
@@ -18,15 +19,17 @@ type TagGroupConfig = {
 };
 
 interface Props {
-  allPlaces: MapPlace[];
+  allPlaces: (MapPlace & { isSaved?: boolean })[];
   savedPostIds: string[];
   tagGroupConfigs: TagGroupConfig[];
+  isLoggedIn: boolean;
 }
 
-export function ExploreMapView({ allPlaces, savedPostIds, tagGroupConfigs }: Props) {
+export function ExploreMapView({ allPlaces, savedPostIds, tagGroupConfigs, isLoggedIn }: Props) {
   const searchParams = useSearchParams();
   const router = useRouter();
 
+  const isSavedView = searchParams.get("saved") === "1";
   const selectedPlaceId = searchParams.get("place");
 
   function setSelectedPlaceId(id: string | null) {
@@ -54,15 +57,21 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroupConfigs }: Pro
     [allPlaces]
   );
 
+  const visiblePlaces = useMemo(
+    () => isSavedView ? markerPlaces.filter((p) => p.isSaved) : markerPlaces,
+    [isSavedView, markerPlaces]
+  );
+
   return (
     // header(h-12=48px) + bottomnav(h-16=64px) = 112px
     <div className="relative h-[calc(100dvh-112px)] overflow-hidden">
       <InteractiveMap
-        places={markerPlaces}
+        places={visiblePlaces}
         selectedPlaceId={selectedPlaceId}
         onMarkerClick={handleMarkerClick}
         className="absolute inset-0"
       />
+      <SavedToggleButton isLoggedIn={isLoggedIn} />
       <PlaceBottomSheet
         place={selectedPlace}
         savedPostIds={savedPostIdsSet}

@@ -13,6 +13,7 @@ type MarkerPlace = {
   nameEn: string;
   markerColor?: string;
   markerGlyphColor?: string;
+  isSaved?: boolean;
 };
 
 interface Props {
@@ -91,7 +92,11 @@ function MapContent({
               borderColor={isSelected ? "white" : color}
               glyphColor={glyphColor}
               scale={isSelected ? 1.3 : isHighlighted ? 1.1 : 1}
-            />
+            >
+              {place.isSaved && (
+                <span style={{ fontSize: "11px", lineHeight: 1, color: "white" }}>★</span>
+              )}
+            </Pin>
           </AdvancedMarker>
         );
       })}
