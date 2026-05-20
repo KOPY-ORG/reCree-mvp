@@ -14,6 +14,7 @@ import { PostBadges } from "../_components/PostCard";
 import { TopicFilterRow } from "./_components/TopicFilterRow";
 import { TagFilterRow } from "./_components/TagFilterRow";
 import { ExploreSearchActiveBar } from "./_components/ExploreSearchActiveBar";
+import { ExploreMapView } from "./_components/ExploreMapView";
 
 // ─── 서브 컴포넌트 ────────────────────────────────────────────────────────────
 
@@ -108,13 +109,19 @@ export default async function ExplorePage({
       isMapView ? Promise.resolve(null) : getFilteredPosts({ q, topicIds, tagIds, tagGroupName: tagGroup }),
     ]);
 
-  if (isMapView && allPlaces) {
-    console.log(`[3b] map places: ${allPlaces.length}`);
-  }
-
   const tagGroupMap: TagGroupColorMap = new Map(
     tagGroupConfigs.map((c) => [c.group, c])
   );
+
+  if (isMapView && allPlaces) {
+    return (
+      <ExploreMapView
+        allPlaces={allPlaces}
+        savedPostIds={[...savedPostIds]}
+        tagGroupConfigs={tagGroupConfigs}
+      />
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto pb-14">
@@ -127,24 +134,22 @@ export default async function ExplorePage({
       </div>
 
       {/* Posts */}
-      {!isMapView && (
-        <div className="px-4">
-          {(posts ?? []).length === 0 ? (
-            <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
-              Coming soon!
-            </div>
-          ) : (
-            (posts ?? []).map((post) => (
-              <PostListItem
-                key={post.id}
-                post={post}
-                tagGroupMap={tagGroupMap}
-                isSaved={savedPostIds.has(post.id)}
-              />
-            ))
-          )}
-        </div>
-      )}
+      <div className="px-4">
+        {(posts ?? []).length === 0 ? (
+          <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
+            Coming soon!
+          </div>
+        ) : (
+          (posts ?? []).map((post) => (
+            <PostListItem
+              key={post.id}
+              post={post}
+              tagGroupMap={tagGroupMap}
+              isSaved={savedPostIds.has(post.id)}
+            />
+          ))
+        )}
+      </div>
     </div>
   );
 }
