@@ -271,7 +271,7 @@ export async function createPost(
 
     newId = post.id;
     revalidatePath("/");
-    revalidatePath("/explore");
+    revalidatePath("/discover");
   } catch (e) {
     console.error(e);
     return { error: "포스트를 생성하는 중 오류가 발생했습니다." };
@@ -350,7 +350,7 @@ export async function updatePost(
     }
 
     revalidatePath("/");
-    revalidatePath("/explore");
+    revalidatePath("/discover");
   } catch (e) {
     console.error(e);
     return { error: "포스트를 수정하는 중 오류가 발생했습니다." };
@@ -384,7 +384,7 @@ export async function deletePost(id: string): Promise<{ error?: string }> {
     await prisma.post.delete({ where: { id } });
     revalidatePath("/admin/posts");
     revalidatePath("/");
-    revalidatePath("/explore");
+    revalidatePath("/discover");
     return {};
   } catch (e) {
     console.error(e);
@@ -427,7 +427,7 @@ export async function publishPost(
     });
     revalidatePath("/admin/posts");
     revalidatePath("/");
-    revalidatePath("/explore");
+    revalidatePath("/discover");
     return {};
   } catch (e) {
     console.error(e);
@@ -443,7 +443,7 @@ export async function unpublishPost(id: string): Promise<{ error?: string }> {
     });
     revalidatePath("/admin/posts");
     revalidatePath("/");
-    revalidatePath("/explore");
+    revalidatePath("/discover");
     return {};
   } catch (e) {
     console.error(e);

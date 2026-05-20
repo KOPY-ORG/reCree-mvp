@@ -108,7 +108,7 @@ export function RecreeshotTable({ rows }: { rows: RecreeshotRow[] }) {
               >
                 {/* 썸네일 */}
                 <td className="px-4 py-3">
-                  <Link href={`/explore/hall/${row.id}`} target="_blank" rel="noopener noreferrer">
+                  <Link href={`/discover/hall/${row.id}`} target="_blank" rel="noopener noreferrer">
                     <div className="relative w-10 aspect-[4/5] rounded overflow-hidden bg-muted hover:opacity-80 transition-opacity">
                       <Image src={row.imageUrl} alt="recreeshot" fill unoptimized={isExternalImage(row.imageUrl)} className="object-cover" sizes="40px" />
                     </div>

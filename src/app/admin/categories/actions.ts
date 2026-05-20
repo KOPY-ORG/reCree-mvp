@@ -15,7 +15,7 @@ export async function reorderTopics(orderedIds: string[]) {
   );
   revalidatePath("/admin/categories");
   revalidatePath("/category");
-  revalidatePath("/explore");
+  revalidatePath("/discover");
 }
 
 // ─── CRUD 공통 타입 ──────────────────────────────────────────────────────────
@@ -99,7 +99,7 @@ export async function createTopic(
 
     revalidatePath("/admin/categories");
   revalidatePath("/category");
-  revalidatePath("/explore");
+  revalidatePath("/discover");
     return { created };
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -184,7 +184,7 @@ export async function updateTopic(
     await updateDescendantLevels(id, level);
     revalidatePath("/admin/categories");
   revalidatePath("/category");
-  revalidatePath("/explore");
+  revalidatePath("/discover");
     return {};
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -210,7 +210,7 @@ export async function deleteTopic(
 
     revalidatePath("/admin/categories");
   revalidatePath("/category");
-  revalidatePath("/explore");
+  revalidatePath("/discover");
     return {};
   } catch {
     return { error: "삭제 중 오류가 발생했습니다." };
@@ -250,7 +250,7 @@ export async function reorderTags(orderedIds: string[]) {
   );
   revalidatePath("/admin/categories");
   revalidatePath("/category");
-  revalidatePath("/explore");
+  revalidatePath("/discover");
 }
 
 export type TagSavedData = {
@@ -293,7 +293,7 @@ export async function createTag(data: TagFormData): Promise<{ error?: string; cr
 
     revalidatePath("/admin/categories");
   revalidatePath("/category");
-  revalidatePath("/explore");
+  revalidatePath("/discover");
     return { created };
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -326,7 +326,7 @@ export async function updateTag(id: string, data: TagFormData): Promise<{ error?
 
     revalidatePath("/admin/categories");
   revalidatePath("/category");
-  revalidatePath("/explore");
+  revalidatePath("/discover");
     return { updated };
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -345,7 +345,7 @@ export async function deleteTag(id: string): Promise<{ error?: string }> {
     await prisma.tag.delete({ where: { id } });
     revalidatePath("/admin/categories");
   revalidatePath("/category");
-  revalidatePath("/explore");
+  revalidatePath("/discover");
     return {};
   } catch {
     return { error: "삭제 중 오류가 발생했습니다." };
@@ -402,7 +402,7 @@ export async function upsertTagGroupConfig(
     });
     revalidatePath("/admin/categories");
   revalidatePath("/category");
-  revalidatePath("/explore");
+  revalidatePath("/discover");
     return { updated };
   } catch {
     return { error: "저장 중 오류가 발생했습니다." };
@@ -417,7 +417,7 @@ export async function reorderTagGroups(orderedGroups: string[]): Promise<void> {
   );
   revalidatePath("/admin/categories");
   revalidatePath("/category");
-  revalidatePath("/explore");
+  revalidatePath("/discover");
 }
 
 export type TagGroupConfigCreated = {
@@ -449,7 +449,7 @@ export async function createTagGroup(
     });
     revalidatePath("/admin/categories");
   revalidatePath("/category");
-  revalidatePath("/explore");
+  revalidatePath("/discover");
     return { created };
   } catch {
     return { error: "그룹 생성 중 오류가 발생했습니다." };
@@ -472,7 +472,7 @@ export async function toggleTagGroupVisibility(
     });
     revalidatePath("/admin/categories");
     revalidatePath("/category");
-    revalidatePath("/explore");
+    revalidatePath("/discover");
     return { isVisible: updated.isVisible };
   } catch {
     return { error: "변경 중 오류가 발생했습니다." };
@@ -488,7 +488,7 @@ export async function deleteTagGroup(group: string): Promise<{ error?: string }>
     await prisma.tagGroupConfig.delete({ where: { group } });
     revalidatePath("/admin/categories");
   revalidatePath("/category");
-  revalidatePath("/explore");
+  revalidatePath("/discover");
     return {};
   } catch {
     return { error: "그룹 삭제 중 오류가 발생했습니다." };

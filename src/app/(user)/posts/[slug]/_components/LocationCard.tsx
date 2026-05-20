@@ -33,7 +33,7 @@ export function LocationCard({ placeId, nameEn, nameKo, addressEn, latitude, lon
         </div>
       </div>
 
-      {/* 지도 임베드 (클릭 시 my-map으로 이동) */}
+      {/* 지도 임베드 (클릭 시 discover 지도 뷰로 이동) */}
       {embedUrl && (
         <div className="mx-4 mb-1 h-40 rounded-xl overflow-hidden bg-muted relative">
           <iframe
@@ -44,7 +44,7 @@ export function LocationCard({ placeId, nameEn, nameKo, addressEn, latitude, lon
             title={displayName}
           />
           <Link
-            href={`/my-map?place=${placeId}`}
+            href={`/discover?view=map&place=${placeId}`}
             className="absolute inset-0 z-10"
             aria-label={`View ${displayName} on map`}
           />

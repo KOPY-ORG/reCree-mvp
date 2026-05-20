@@ -106,7 +106,7 @@ export function ProfileView({
               <span className="text-xs text-muted-foreground">recreeshots</span>
             </div>
             <Link
-              href="/explore/hall/new"
+              href="/discover/hall/new"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-black text-xs font-medium"
               style={{ background: "var(--color-brand-sub3)" }}
             >
@@ -135,7 +135,7 @@ export function ProfileView({
         {/* 단축 버튼 */}
         <div className="flex gap-2 my-6">
           <Link
-            href="/my-map?tab=my-maps"
+            href="/discover?view=map&saved=1"
             className="flex flex-1 items-center justify-center gap-2 py-2 rounded-full bg-muted text-sm font-medium"
           >
             <MapPin className="size-4" />
@@ -163,7 +163,7 @@ export function ProfileView({
         <div className="flex-1 flex flex-col items-center justify-center gap-2 py-16 text-muted-foreground">
           <p className="text-sm font-medium">No recreeshots yet</p>
           <Link
-            href="/explore/hall/new"
+            href="/discover/hall/new"
             className="text-xs underline underline-offset-2"
           >
             Share your first recreeshot
@@ -177,7 +177,7 @@ export function ProfileView({
               <button
                 key={shot.id}
                 type="button"
-                onClick={() => router.push(`/explore/hall/${shot.id}?from=profile`)}
+                onClick={() => router.push(`/discover/hall/${shot.id}?from=profile`)}
                 className="relative block w-full"
               >
                 <ReCreeshotImage
