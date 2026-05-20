@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { User, Search } from "lucide-react";
-import { getCurrentUser } from "@/lib/auth";
+import { Search } from "lucide-react";
 // import { LanguageSelector } from "./LanguageSelector";
 
 const NAV_LINKS = [
@@ -11,10 +10,7 @@ const NAV_LINKS = [
   { label: "Saved", href: "/saved" },
 ];
 
-export async function AppHeader() {
-  const user = await getCurrentUser();
-  const initial = user?.email?.[0]?.toUpperCase() ?? null;
-
+export function AppHeader() {
   return (
     <header className="app-header">
       <div className="h-12 flex items-center justify-between px-4 md:px-6 lg:px-10 xl:px-16">
@@ -35,7 +31,7 @@ export async function AppHeader() {
           </nav>
         </div>
 
-        {/* 오른쪽: 검색 + 언어 + 프로필 */}
+        {/* 오른쪽: 검색 + 언어 */}
         <div className="flex items-center gap-2">
           {/* 데스크탑 전용 검색 버튼 */}
           <Link
@@ -48,29 +44,6 @@ export async function AppHeader() {
 
           {/* 다국어 선택 */}
           {/* <LanguageSelector /> */}
-
-          {/* 프로필 / 로그인 */}
-          <Link
-            href={user ? "/profile" : "/login"}
-            className="text-foreground hover:text-muted-foreground transition-colors"
-          >
-            {user ? (
-              <div className="size-7 rounded-full bg-brand flex items-center justify-center text-xs font-semibold text-black overflow-hidden">
-                {user.profileImageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={user.profileImageUrl}
-                    alt="Profile"
-                    className="size-7 object-cover"
-                  />
-                ) : (
-                  initial
-                )}
-              </div>
-            ) : (
-              <User className="size-5 text-muted-foreground" />
-            )}
-          </Link>
         </div>
       </div>
     </header>
