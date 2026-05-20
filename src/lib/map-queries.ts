@@ -338,3 +338,22 @@ export async function getSavedMapPlaces(userId: string): Promise<MapPlace[]> {
   });
   return groupByPlace(rows);
 }
+
+// ─── 마커 색상 유틸 ────────────────────────────────────────────────────────────
+
+function resolveTopicColorHex(t: MapPostTopic): string | null {
+  return t.colorHex ?? (t.parent ? resolveTopicColorHex(t.parent as MapPostTopic) : null);
+}
+
+export function getTopicMarkerColor(posts: MapPlace["posts"]): string | undefined {
+  const sorted = [...posts].sort((a, b) =>
+    (b.topics.length > 0 ? 1 : 0) - (a.topics.length > 0 ? 1 : 0)
+  );
+  for (const post of sorted) {
+    for (const topic of post.topics) {
+      const color = resolveTopicColorHex(topic);
+      if (color) return color;
+    }
+  }
+  return undefined;
+}
