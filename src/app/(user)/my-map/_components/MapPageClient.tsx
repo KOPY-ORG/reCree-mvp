@@ -2,18 +2,19 @@
 
 import { useState, useMemo, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useSheetDrag } from "../_hooks/useSheetDrag";
+import { useSheetDrag } from "@/app/(user)/_hooks/useSheetDrag";
 import Image from "next/image";
 import { isExternalImage, buildPlaceCarouselUrls } from "@/lib/image";
 import Link from "next/link";
 import { Search, User, Star, AlignJustify, X, MapPin } from "lucide-react";
-import { CloseButton } from "./CloseButton";
+import { CloseButton } from "@/components/maps/CloseButton";
 import type { MapPlace } from "@/lib/map-queries";
+import { getTopicMarkerColor } from "@/lib/map-queries";
 import type { TagGroupColorMap } from "@/lib/post-labels";
 import { MapTopicFilterRow } from "./MapTopicFilterRow";
 import { MapTagFilterRow } from "./MapTagFilterRow";
 import { InteractiveMap } from "@/components/maps/InteractiveMap";
-import { PlaceBottomSheet } from "./PlaceBottomSheet";
+import { PlaceBottomSheet } from "@/components/maps/PlaceBottomSheet";
 import type { Level0Topic } from "@/components/TopicFilterRow";
 import type { TagGroupForFilter as TagGroup } from "@/components/TagFilterRow";
 
@@ -22,22 +23,6 @@ import type { TagGroupForFilter as TagGroup } from "@/components/TagFilterRow";
 type Tab = "places" | "my-maps";
 type SheetState = "collapsed" | "tab-only" | "peek" | "expanded";
 
-type TopicColorNode = { colorHex: string | null; parent?: TopicColorNode | null };
-function resolveTopicColor(t: TopicColorNode): string | null {
-  return t.colorHex ?? (t.parent ? resolveTopicColor(t.parent) : null);
-}
-function getTopicMarkerColor(posts: MapPlace["posts"]): string | undefined {
-  const sorted = [...posts].sort((a, b) =>
-    (b.topics.length > 0 ? 1 : 0) - (a.topics.length > 0 ? 1 : 0)
-  );
-  for (const post of sorted) {
-    for (const topic of post.topics) {
-      const color = resolveTopicColor(topic);
-      if (color) return color;
-    }
-  }
-  return undefined;
-}
 
 type TagGroupConfig = {
   group: string;

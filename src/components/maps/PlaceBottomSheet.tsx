@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { useSheetDrag } from "../_hooks/useSheetDrag";
-import { useToast } from "../../_hooks/useToast";
+import { useSheetDrag } from "@/app/(user)/_hooks/useSheetDrag";
+import { useToast } from "@/app/(user)/_hooks/useToast";
 import Image from "next/image";
 import { isExternalImage, buildPlaceCarouselUrls } from "@/lib/image";
 import Link from "next/link";
@@ -19,7 +19,7 @@ import {
   type TagGroupColorMap,
 } from "@/lib/post-labels";
 import type { MapPlace, MapPost } from "@/lib/map-queries";
-import { ScrapButton } from "../../_components/ScrapButton";
+import { ScrapButton } from "@/app/(user)/_components/ScrapButton";
 
 type PlaceSheetState = "tab-only" | "half" | "full";
 
