@@ -197,7 +197,7 @@ export function ReCreeshotUploadFlow({ tagGroups, topics, userId, prefillPostId,
   function handleBack() {
     if (state.step === 3) {
       // Step3는 이미 DB 저장 완료 → 바로 이동
-      router.push("/explore?tab=hall");
+      router.push("/discover?tab=hall");
       return;
     }
     if (state.step === 2) {

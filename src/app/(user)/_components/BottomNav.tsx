@@ -7,7 +7,7 @@ import { useState } from "react";
 
 const TABS = [
   { label: "Home", icon: House, href: "/" },
-  { label: "Discover", icon: Map, href: "/explore" },
+  { label: "Discover", icon: Map, href: "/discover" },
   { label: "Trips", icon: MapPinned, href: "/plan" },
   { label: "recreeshot", icon: Camera, href: "/recreeshot" },
   { label: "Profile", icon: User, href: "/profile" },

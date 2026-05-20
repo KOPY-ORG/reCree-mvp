@@ -18,14 +18,14 @@ export function TopicFilterRow({ topics }: { topics: Level0Topic[] }) {
     }
     if (topicId) params.append("topicId", topicId);
     params.delete("tab");
-    router.push(`/explore?${params.toString()}`);
+    router.push(`/discover?${params.toString()}`);
   }
 
   function handleClearAll() {
     const params = new URLSearchParams(searchParams.toString());
     params.delete("topicId");
     params.delete("tab");
-    router.push(`/explore?${params.toString()}`);
+    router.push(`/discover?${params.toString()}`);
   }
 
   return (

@@ -48,7 +48,7 @@ export function HallGrid({ shots, guideVideo }: Props) {
         />
       )}
       {shots.map((shot) => (
-        <Link key={shot.id} href={`/explore/hall/${shot.id}`} className="block relative">
+        <Link key={shot.id} href={`/discover/hall/${shot.id}`} className="block relative">
           <ReCreeshotImage
             shotUrl={shot.imageUrl}
             referenceUrl={shot.referencePhotoUrl}

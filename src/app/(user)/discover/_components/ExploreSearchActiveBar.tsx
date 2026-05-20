@@ -10,7 +10,7 @@ export function ExploreSearchActiveBar({ q }: { q: string }) {
   const handleClear = () => {
     const params = new URLSearchParams(searchParams.toString());
     params.delete("q");
-    router.push(`/explore?${params.toString()}`);
+    router.push(`/discover?${params.toString()}`);
   };
 
   return (

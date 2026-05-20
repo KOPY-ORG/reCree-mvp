@@ -12,7 +12,7 @@ export function ConditionalBottomNav({ isLoggedIn, profileImageUrl }: Props) {
   const pathname = usePathname();
   if (
     pathname === "/search" ||
-    pathname.startsWith("/explore/hall/") ||
+    pathname.startsWith("/discover/hall/") ||
     pathname.endsWith("/edit") ||
     pathname.startsWith("/policy/") ||
     pathname === "/onboarding"

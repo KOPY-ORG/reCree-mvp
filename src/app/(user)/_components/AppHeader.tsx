@@ -4,8 +4,7 @@ import { Search, LayoutGrid } from "lucide-react";
 
 const NAV_LINKS = [
   { label: "Home", href: "/" },
-  { label: "Discover", href: "/explore" },
-  { label: "My Map", href: "/my-map" },
+  { label: "Discover", href: "/discover" },
   { label: "Saved", href: "/saved" },
 ];
 

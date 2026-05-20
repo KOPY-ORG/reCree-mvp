@@ -147,7 +147,7 @@ export function ReportList({ rows }: { rows: ReportRow[] }) {
                 {/* 리크리샷 썸네일 */}
                 <td className="px-4 py-3">
                   {row.reCreeshot ? (
-                    <Link href={`/explore/hall/${row.reCreeshot.id}`} target="_blank" rel="noopener noreferrer">
+                    <Link href={`/discover/hall/${row.reCreeshot.id}`} target="_blank" rel="noopener noreferrer">
                       <div className="relative w-10 aspect-[4/5] rounded overflow-hidden bg-muted hover:opacity-80 transition-opacity">
                         <Image src={row.reCreeshot.imageUrl} alt="recreeshot" fill unoptimized={isExternalImage(row.reCreeshot.imageUrl)} className="object-cover" sizes="40px" />
                       </div>

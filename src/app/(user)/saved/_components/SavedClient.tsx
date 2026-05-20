@@ -113,7 +113,7 @@ export function SavedClient({ posts, recreeshots, tagGroupConfigs }: Props) {
                 Tap the bookmark icon on any post to save it here.
               </p>
               <Link
-                href="/explore?tab=posts"
+                href="/discover?tab=posts"
                 className="mt-2 px-5 py-2.5 rounded-full bg-brand text-black text-sm font-semibold"
               >
                 Explore posts
@@ -143,7 +143,7 @@ export function SavedClient({ posts, recreeshots, tagGroupConfigs }: Props) {
               {recreeshots.map((shot) => (
                 <Link
                   key={shot.id}
-                  href={`/explore/hall/${shot.id}?from=saved&savedTab=recreeshots`}
+                  href={`/discover/hall/${shot.id}?from=saved&savedTab=recreeshots`}
                   className="block"
                 >
                   <ReCreeshotImage

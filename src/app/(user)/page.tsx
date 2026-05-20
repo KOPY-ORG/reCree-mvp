@@ -391,11 +391,11 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
             // POST AUTO 섹션은 필터 조건을 지도에 그대로 전달
             function getPostMoreHref() {
-              if (section.type === "MANUAL") return "/explore";
-              if (section.filterTopicId) return `/my-map?topicId=${section.filterTopicId}`;
-              if (section.filterTagId) return `/my-map?tagId=${section.filterTagId}`;
-              if (section.filterTagGroup) return `/my-map?tagGroup=${section.filterTagGroup}`;
-              return "/my-map";
+              if (section.type === "MANUAL") return "/discover";
+              if (section.filterTopicId) return `/discover?view=map&topicId=${section.filterTopicId}`;
+              if (section.filterTagId) return `/discover?view=map&tagId=${section.filterTagId}`;
+              if (section.filterTagGroup) return `/discover?view=map&tagGroup=${section.filterTagGroup}`;
+              return "/discover?view=map";
             }
 
             if (data.kind === "reCreeshots") {
@@ -412,7 +412,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                     </div>
                   )}
                   {data.items.map((shot) => (
-                    <Link key={shot.id} href={`/explore/hall/${shot.id}`} className="shrink-0 w-[120px] block">
+                    <Link key={shot.id} href={`/discover/hall/${shot.id}`} className="shrink-0 w-[120px] block">
                       <ReCreeshotImage
                         shotUrl={shot.imageUrl}
                         referenceUrl={shot.referencePhotoUrl}

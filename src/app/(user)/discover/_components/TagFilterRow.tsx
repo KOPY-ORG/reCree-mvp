@@ -27,13 +27,13 @@ export function TagFilterRow({ tagGroups }: { tagGroups: TagGroupForFilter[] }) 
   function handleSelect(tagId: string | null, tagGroup: string | null) {
     const groupName = tagGroup ?? "";
     const params = buildGroupParams(groupName, tagId);
-    router.push(`/explore?${params.toString()}`);
+    router.push(`/discover?${params.toString()}`);
   }
 
   function handleClearGroup(groupName: string) {
     const params = buildGroupParams(groupName, null);
     params.delete("tagGroup");
-    router.push(`/explore?${params.toString()}`);
+    router.push(`/discover?${params.toString()}`);
   }
 
   function handleClearAll() {
@@ -41,7 +41,7 @@ export function TagFilterRow({ tagGroups }: { tagGroups: TagGroupForFilter[] }) 
     params.delete("tagId");
     params.delete("tagGroup");
     params.delete("tab");
-    router.push(`/explore?${params.toString()}`);
+    router.push(`/discover?${params.toString()}`);
   }
 
   return (
