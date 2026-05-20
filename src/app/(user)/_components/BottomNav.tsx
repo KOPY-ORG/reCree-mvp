@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { House, MapPin, Camera, Route, User } from "lucide-react";
+import { House, Camera, User, MapPinned, Map } from "lucide-react";
 import { useState } from "react";
 
 const TABS = [
   { label: "Home", icon: House, href: "/" },
-  { label: "Discover", icon: MapPin, href: "/explore" },
-  { label: "Trips", icon: Route, href: "/plan" },
+  { label: "Discover", icon: Map, href: "/explore" },
+  { label: "Trips", icon: MapPinned, href: "/plan" },
   { label: "recreeshot", icon: Camera, href: "/recreeshot" },
   { label: "Profile", icon: User, href: "/profile" },
 ] as const;
