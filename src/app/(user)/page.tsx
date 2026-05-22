@@ -69,7 +69,7 @@ function HScrollSection({
       <div className="overflow-x-auto scrollbar-hide">
         <div className="flex gap-3 pl-4 pb-1">
           {children}
-          <div className="shrink-0 w-4" />
+          <div className="shrink-0 w-1" />
         </div>
       </div>
     </section>
@@ -123,6 +123,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         id: true,
         post: {
           select: {
+            id: true,
             slug: true,
             titleEn: true,
             postImages: {
@@ -180,7 +181,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       },
     }),
     prisma.curatedSection.findMany({
-      where: { isActive: true },
+      where: { isActive: true, showOnHome: true },
       orderBy: { order: "asc" },
     }),
     prisma.tagGroupConfig.findMany({
@@ -310,6 +311,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const bannerItems: BannerItem[] = homeBanners.map((b) => {
     const labels = resolveBannerLabels(b.post.postTopics, b.post.postTags, tagGroupMap);
     return {
+      id: b.post.id,
       slug: b.post.slug,
       titleEn: b.post.titleEn,
       displayName:
@@ -321,6 +323,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       focalY: b.post.postImages[0]?.focalY ?? null,
       zoom: b.post.postImages[0]?.zoom ?? null,
       labels,
+      isSaved: savedPostIds.has(b.post.id),
     };
   });
 
@@ -383,7 +386,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       ) : (
         <>
           {hasBanners && (
-            <div className="px-4 mb-4">
+            <div className="mb-4">
               <HomeBannerCarousel banners={bannerItems} />
             </div>
           )}

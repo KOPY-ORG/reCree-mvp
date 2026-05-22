@@ -20,44 +20,49 @@ export function FeedCard({
     post.postPlaces[0]?.place.nameEn ?? post.postPlaces[0]?.place.nameKo;
 
   return (
-    <Link href={`/posts/${post.slug}`}>
-      <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
-        {post.postImages[0]?.url ? (
-          <Image
-            src={post.postImages[0].url}
-            alt={post.titleEn}
-            fill
-            unoptimized={isExternalImage(post.postImages[0].url)}
-            className="object-cover"
-            style={focalStyle(
-              post.postImages[0].focalX,
-              post.postImages[0].focalY,
-              post.postImages[0].zoom,
-            )}
-            sizes="(max-width: 672px) 100vw, 672px"
-          />
-        ) : (
-          <div className="w-full h-full bg-muted" />
-        )}
-      </div>
-      <div className="mt-2.5 flex flex-col gap-1">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex-1 min-w-0 flex flex-col gap-1">
-            <PostBadges post={post} tagGroupMap={tagGroupMap} variant="list" />
-            {placeName && (
-              <div className="flex items-center gap-0.5 text-xs text-muted-foreground">
-                <MapPin className="h-3 w-3 shrink-0" />
-                <span className="line-clamp-1">{placeName}</span>
-              </div>
-            )}
-          </div>
-          <div className="shrink-0">
-            <ScrapButton postId={post.id} initialSaved={isSaved ?? false} size="md" />
-          </div>
+    <Link href={`/posts/${post.slug}`} className="block">
+      <div className="flex flex-col gap-2">
+        {/* 사진 */}
+        <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
+          {post.postImages[0]?.url ? (
+            <Image
+              src={post.postImages[0].url}
+              alt={post.titleEn}
+              fill
+              unoptimized={isExternalImage(post.postImages[0].url)}
+              className="object-cover"
+              style={focalStyle(
+                post.postImages[0].focalX,
+                post.postImages[0].focalY,
+                post.postImages[0].zoom,
+              )}
+              sizes="(max-width: 672px) 100vw, 672px"
+            />
+          ) : (
+            <div className="w-full h-full bg-muted" />
+          )}
         </div>
-        <h3 className="text-base font-semibold leading-snug line-clamp-2 text-foreground">
+
+        {/* 칩 + 북마크 */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <PostBadges post={post} tagGroupMap={tagGroupMap} variant="list" />
+          </div>
+          <ScrapButton postId={post.id} initialSaved={isSaved ?? false} size="md" />
+        </div>
+
+        {/* 제목 */}
+        <h3 className="text-base font-semibold leading-relaxed line-clamp-2 text-foreground">
           {post.titleEn}
         </h3>
+
+        {/* 장소명 */}
+        {placeName && (
+          <div className="flex items-center gap-0.5 text-[11px] text-muted-foreground">
+            <MapPin className="h-2.5 w-2.5 shrink-0" />
+            <span className="line-clamp-1">{placeName}</span>
+          </div>
+        )}
       </div>
     </Link>
   );

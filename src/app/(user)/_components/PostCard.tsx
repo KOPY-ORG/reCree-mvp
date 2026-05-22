@@ -115,7 +115,7 @@ export function PostCard({
             {post.postPlaces[0]?.place.nameEn ?? post.postPlaces[0]?.place.nameKo ?? post.titleEn}
           </p>
           <div className="shrink-0 z-10">
-            <ScrapButton postId={post.id} initialSaved={isSaved ?? false} size="sm" />
+            <ScrapButton postId={post.id} initialSaved={isSaved ?? false} size="sm" unsavedClassName="text-white/80 hover:text-white" />
           </div>
         </div>
       </div>

@@ -117,3 +117,8 @@ export async function toggleSectionActive(id: string, isActive: boolean) {
   await prisma.curatedSection.update({ where: { id }, data: { isActive } });
   revalidate();
 }
+
+export async function toggleHomeSection(id: string, showOnHome: boolean) {
+  await prisma.curatedSection.update({ where: { id }, data: { showOnHome } });
+  revalidate();
+}
