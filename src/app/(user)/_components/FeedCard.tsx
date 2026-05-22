@@ -46,7 +46,7 @@ export function FeedCard({
         {/* 칩 + 북마크 */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <PostBadges post={post} tagGroupMap={tagGroupMap} variant="list" />
+            <PostBadges post={post} tagGroupMap={tagGroupMap} variant="list" pillFontSize="0.75rem" />
           </div>
           <ScrapButton postId={post.id} initialSaved={isSaved ?? false} size="md" />
         </div>
