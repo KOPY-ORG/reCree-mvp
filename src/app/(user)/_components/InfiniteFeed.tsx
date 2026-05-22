@@ -1,16 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
-import { fetchLatestFeed } from "../_actions/feed-actions";
 import { FeedCard } from "./FeedCard";
 import type { PostItem } from "@/lib/post-queries";
 import { type TagGroupColorMap } from "@/lib/post-labels";
+
+type FetchFn = (args: { cursor?: string }) => Promise<{ posts: PostItem[]; nextCursor: string | null }>;
 
 interface Props {
   initialPosts: PostItem[];
   initialCursor: string | null;
   savedIds: string[];
   tagGroupMap: TagGroupColorMap;
+  fetchFn: FetchFn;
 }
 
 export function InfiniteFeed({
@@ -18,6 +20,7 @@ export function InfiniteFeed({
   initialCursor,
   savedIds,
   tagGroupMap,
+  fetchFn,
 }: Props) {
   const [posts, setPosts] = useState<PostItem[]>(initialPosts);
   const [isLoading, setIsLoading] = useState(false);
@@ -41,7 +44,7 @@ export function InfiniteFeed({
     loadingRef.current = true;
     setIsLoading(true);
     try {
-      const result = await fetchLatestFeed({ cursor: cursorRef.current });
+      const result = await fetchFn({ cursor: cursorRef.current ?? undefined });
       setPosts((prev) => [...prev, ...result.posts]);
       cursorRef.current = result.nextCursor;
       if (result.nextCursor === null) {
@@ -55,9 +58,10 @@ export function InfiniteFeed({
       loadingRef.current = false;
       setIsLoading(false);
     }
-  }, []);
+  }, [fetchFn]);
 
-  // loadMore는 useCallback([])으로 안정적 → 이 effect는 마운트 시 단 한 번만 실행
+  // loadMore는 fetchFn이 안정적인 참조(server action)일 때 단 한 번만 등록됨
+
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
