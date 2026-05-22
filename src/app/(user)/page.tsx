@@ -39,6 +39,8 @@ import { GuideVideoCard } from "./_components/GuideVideoCard";
 import { getCurrentUser } from "@/lib/auth";
 import { ReCreeshotImage } from "@/components/recreeshot-image";
 import { getMyFollows } from "@/lib/follow-queries";
+import { fetchLatestFeed } from "./_actions/feed-actions";
+import { InfiniteFeed } from "./_components/InfiniteFeed";
 
 // ─── 가로 스크롤 섹션 ────────────────────────────────────────────────────────
 
@@ -113,7 +115,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   const guideVideo = await prisma.guideVideo.findFirst({ where: { isActive: true } });
 
-  const [homeBanners, sections, tagGroupConfigs, savedPostIds] = await Promise.all([
+  const [homeBanners, sections, tagGroupConfigs, savedPostIds, latestFeedResult] = await Promise.all([
     prisma.homeBanner.findMany({
       where: { isActive: true },
       orderBy: { order: "asc" },
@@ -185,6 +187,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       select: { group: true, displayLabel: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true },
     }),
     getSavedPostIds(currentUser?.id ?? null),
+    fetchLatestFeed({}),
   ]);
 
   type SectionData =
@@ -438,6 +441,18 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               </HScrollSection>
             );
           })}
+          <div className="flex items-center justify-between mb-3 px-4 mt-2">
+            <h2 className="font-bold text-lg">Latest</h2>
+          </div>
+          <div className="px-4">
+            <InfiniteFeed
+              initialPosts={latestFeedResult.posts}
+              initialCursor={latestFeedResult.nextCursor}
+              savedIds={[...savedPostIds]}
+              tagGroupMap={tagGroupMap}
+            />
+          </div>
+
           <footer className="px-4 pt-8 pb-6 text-sm text-muted-foreground">
             <div className="flex flex-wrap gap-4 justify-center">
               <Link href="/policy/privacy" className="hover:text-foreground underline underline-offset-4">

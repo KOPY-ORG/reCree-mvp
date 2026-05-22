@@ -7,12 +7,14 @@ export async function getPostsWithLabels(
   options?: {
     take?: number;
     orderBy?: Prisma.PostOrderByWithRelationInput | Prisma.PostOrderByWithRelationInput[];
+    cursor?: string;
   }
 ) {
   return prisma.post.findMany({
     where,
     take: options?.take,
     orderBy: options?.orderBy,
+    ...(options?.cursor ? { cursor: { id: options.cursor }, skip: 1 } : {}),
     select: {
       id: true,
       slug: true,
