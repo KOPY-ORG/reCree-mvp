@@ -48,7 +48,7 @@ export function HomeBannerCarousel({ banners }: { banners: BannerItem[] }) {
                   unoptimized={isExternalImage(banner.thumbnailUrl)}
                   className="object-cover"
                   style={focalStyle(banner.focalX, banner.focalY, banner.zoom)}
-                  sizes="(max-width: 672px) 88vw, 565px"
+                  sizes="(max-width: 672px) 85vw, 560px"
                   priority
                 />
               ) : (

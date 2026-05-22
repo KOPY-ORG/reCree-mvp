@@ -20,7 +20,6 @@ export function InfiniteFeed({
   tagGroupMap,
 }: Props) {
   const [posts, setPosts] = useState<PostItem[]>(initialPosts);
-  const [cursor, setCursor] = useState<string | null>(initialCursor);
   const [isLoading, setIsLoading] = useState(false);
   const [isEnd, setIsEnd] = useState(initialCursor === null);
   const [error, setError] = useState(false);
@@ -45,7 +44,6 @@ export function InfiniteFeed({
       const result = await fetchLatestFeed({ cursor: cursorRef.current });
       setPosts((prev) => [...prev, ...result.posts]);
       cursorRef.current = result.nextCursor;
-      setCursor(result.nextCursor);
       if (result.nextCursor === null) {
         isEndRef.current = true;
         setIsEnd(true);
@@ -92,7 +90,7 @@ export function InfiniteFeed({
         <div className="flex flex-col gap-10 mt-6">
           {[0, 1].map((i) => (
             <div key={i} className="animate-pulse">
-              <div className="aspect-[4/3] rounded-lg bg-muted" />
+              <div className="aspect-video rounded-lg bg-muted" />
               <div className="mt-2.5 flex flex-col gap-2">
                 <div className="h-4 w-20 rounded bg-muted" />
                 <div className="h-3 w-32 rounded bg-muted" />
@@ -117,6 +115,12 @@ export function InfiniteFeed({
           >
             Try again
           </button>
+        </p>
+      )}
+
+      {isEnd && !isLoading && !error && posts.length > 0 && (
+        <p className="mt-8 text-center text-sm text-muted-foreground">
+          You're all caught up.
         </p>
       )}
 
