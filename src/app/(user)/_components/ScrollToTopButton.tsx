@@ -8,6 +8,7 @@ export function ScrollToTopButton() {
 
   useEffect(() => {
     let ticking = false;
+    let rafId = 0;
 
     const check = () => {
       setVisible(window.scrollY > 600);
@@ -16,7 +17,7 @@ export function ScrollToTopButton() {
 
     const handleScroll = () => {
       if (!ticking) {
-        requestAnimationFrame(check);
+        rafId = requestAnimationFrame(check);
         ticking = true;
       }
     };
@@ -25,7 +26,10 @@ export function ScrollToTopButton() {
     setVisible(window.scrollY > 600);
 
     window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      cancelAnimationFrame(rafId);
+    };
   }, []);
 
   return (
@@ -38,6 +42,7 @@ export function ScrollToTopButton() {
         size-10 rounded-full
         flex items-center justify-center
         backdrop-blur-sm
+        bg-white/80
         shadow-[0_4px_16px_rgba(0,0,0,0.18)]
         transition-all duration-200
         focus-visible:outline-none focus-visible:ring-2
@@ -48,8 +53,6 @@ export function ScrollToTopButton() {
         }
       `}
       style={{
-        /* brand(#C8FF09) → brand-sub(#D0FF6C) 반투명 라임 그라데이션 */
-        background: "linear-gradient(135deg, rgba(208,255,108,0.85), rgba(200,255,9,0.85))",
         /* 0.5px 테두리 — Tailwind border는 1px 고정이라 style로 지정 */
         border: "0.5px solid rgba(255,255,255,0.5)",
       }}

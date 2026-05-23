@@ -36,7 +36,7 @@ export function HomeBannerCarousel({ banners }: { banners: BannerItem[] }) {
           <Link
             key={banner.slug}
             href={`/posts/${banner.slug}`}
-            className={`shrink-0 w-[85%] rounded-xl overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.06)] bg-white${index === banners.length - 1 ? " mr-4" : ""}`}
+            className={`shrink-0 w-[85%] rounded-xl overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.06)] bg-background${index === banners.length - 1 ? " mr-4" : ""}`}
           >
             {/* 사진 영역 */}
             <div className="relative aspect-video overflow-hidden bg-muted">

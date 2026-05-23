@@ -110,6 +110,7 @@ export function InfiniteFeed({
         <p className="mt-8 text-center text-sm text-muted-foreground">
           Something went wrong.{" "}
           <button
+            type="button"
             className="underline"
             onClick={() => {
               errorRef.current = false;
