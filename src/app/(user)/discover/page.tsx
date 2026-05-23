@@ -4,18 +4,22 @@ import { isExternalImage, focalStyle } from "@/lib/image";
 import { prisma } from "@/lib/prisma";
 import { getSavedPostIds, type PostItem } from "@/lib/post-queries";
 import { getFilteredPosts, getTagGroupsWithTags } from "@/lib/filter-queries";
-import { getAllMapPlaces, type MapPlace } from "@/lib/map-queries";
+import { getAllMapPlaces, getFilteredMapPlaces, type MapPlace } from "@/lib/map-queries";
 import { getLevel0TopicsDeep } from "@/lib/topic-queries";
 import { type TagGroupColorMap } from "@/lib/post-labels";
 import { getCurrentUser } from "@/lib/auth";
 import { topicIdSchema } from "@/lib/validators/follow";
+import { getCuratedSections, getSectionData, getPostMoreHref, type SectionData } from "@/lib/curation-queries";
 import { ScrapButton } from "../_components/ScrapButton";
-import { PostBadges } from "../_components/PostCard";
+import { PostBadges, PostCard } from "../_components/PostCard";
+import { GuideVideoCard } from "../_components/GuideVideoCard";
 import { TopicFilterRow } from "./_components/TopicFilterRow";
 import { TagFilterRow } from "./_components/TagFilterRow";
 import { ExploreSearchActiveBar } from "./_components/ExploreSearchActiveBar";
 import { ExploreMapView } from "./_components/ExploreMapView";
 import { ViewToggleButton } from "./_components/ViewToggleButton";
+import { HScrollSection } from "@/components/curation/HScrollSection";
+import { ReCreeshotImage } from "@/components/recreeshot-image";
 
 // ─── 서브 컴포넌트 ────────────────────────────────────────────────────────────
 
@@ -91,6 +95,12 @@ export default async function ExplorePage({
   const isUUID = (v: string) => topicIdSchema.safeParse(v).success;
   const topicIds = (topicId ? (Array.isArray(topicId) ? topicId : [topicId]) : []).filter(isUUID);
   const tagIds = (tagId ? (Array.isArray(tagId) ? tagId : [tagId]) : []).filter(isUUID);
+
+  // 세 모드가 상호 배타적으로 구분됨
+  const hasFilters = !!(q || topicIds.length > 0 || tagIds.length > 0 || tagGroup);
+  const isFilterMode = !isMapView && hasFilters;
+  const isCurationMode = !isMapView && !hasFilters;
+
   const currentUser = await getCurrentUser();
 
   const [level0Topics, tagGroups, tagGroupConfigs, savedPostIds, allPlaces, posts] =
@@ -109,14 +119,20 @@ export default async function ExplorePage({
         },
       }),
       getSavedPostIds(currentUser?.id ?? null),
-      isMapView ? getAllMapPlaces() : Promise.resolve(null as MapPlace[] | null),
-      isMapView ? Promise.resolve(null) : getFilteredPosts({ q, topicIds, tagIds, tagGroupName: tagGroup }),
+      isMapView
+        ? (hasFilters
+            ? getFilteredMapPlaces({ q, topicIds, tagIds, tagGroupName: tagGroup })
+            : getAllMapPlaces())
+        : Promise.resolve(null as MapPlace[] | null),
+      // 필터 모드에서만 포스트 조회 (큐레이션 모드에선 불필요)
+      isFilterMode ? getFilteredPosts({ q, topicIds, tagIds, tagGroupName: tagGroup }) : Promise.resolve(null),
     ]);
 
   const tagGroupMap: TagGroupColorMap = new Map(
     tagGroupConfigs.map((c) => [c.group, c])
   );
 
+  // ─── 지도 뷰 ─────────────────────────────────────────────────────────────────
   if (isMapView && allPlaces) {
     const placesWithSaved = allPlaces.map((place) => ({
       ...place,
@@ -135,35 +151,116 @@ export default async function ExplorePage({
     );
   }
 
+  // ─── 큐레이션 데이터 (필터 없음 모드에서만 조회) ──────────────────────────────
+  let curSections: Awaited<ReturnType<typeof getCuratedSections>> = [];
+  let curSectionData: SectionData[] = [];
+  let guideVideo: Awaited<ReturnType<typeof prisma.guideVideo.findFirst>> = null;
+
+  if (isCurationMode) {
+    const [rawSections, gv] = await Promise.all([
+      getCuratedSections({}),
+      prisma.guideVideo.findFirst({ where: { isActive: true } }),
+    ]);
+    curSections = rawSections;
+    guideVideo = gv;
+    curSectionData = await getSectionData(curSections);
+  }
+
+  // ─── 리스트 / 큐레이션 뷰 ────────────────────────────────────────────────────
   return (
     <>
       <div className="max-w-2xl mx-auto pb-14">
 
-        {/* 필터 영역 */}
+        {/* 필터 영역 — 항상 표시. 칩 선택 시 isFilterMode로 자연스럽게 전환 */}
         <div className="border-b border-border/50">
           {q && <ExploreSearchActiveBar q={q} />}
           <TopicFilterRow topics={level0Topics} />
           <TagFilterRow tagGroups={tagGroups} />
         </div>
 
-        {/* Posts */}
-        <div className="px-4">
-          {(posts ?? []).length === 0 ? (
-            <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
-              Coming soon!
-            </div>
-          ) : (
-            (posts ?? []).map((post, index) => (
-              <PostListItem
-                key={post.id}
-                post={post}
-                tagGroupMap={tagGroupMap}
-                isSaved={savedPostIds.has(post.id)}
-                priority={index === 0}
-              />
-            ))
-          )}
-        </div>
+        {/* 큐레이션 모드: 가로 스크롤 섹션 행들 */}
+        {isCurationMode && (
+          <div className="pt-2">
+            {curSections.map((section, i) => {
+              const data = curSectionData[i];
+              if (!data || data.items.length === 0) return null;
+
+              if (data.kind === "reCreeshots") {
+                return (
+                  <HScrollSection key={section.id} title={section.titleEn}>
+                    {guideVideo && (
+                      <div className="shrink-0 w-[120px]">
+                        <GuideVideoCard
+                          videoUrl={guideVideo.videoUrl}
+                          thumbnailUrl={guideVideo.thumbnailUrl}
+                          titleEn={guideVideo.titleEn}
+                          className="aspect-[4/5] rounded-lg"
+                        />
+                      </div>
+                    )}
+                    {data.items.map((shot) => (
+                      <Link key={shot.id} href={`/discover/hall/${shot.id}`} className="shrink-0 w-[120px] block">
+                        <ReCreeshotImage
+                          shotUrl={shot.imageUrl}
+                          referenceUrl={shot.referencePhotoUrl}
+                          matchScore={shot.matchScore}
+                          showBadge={shot.showBadge}
+                          referencePosition="top-left"
+                          badgePosition="top-right"
+                          variant="thumb-sm"
+                          className="aspect-[4/5]"
+                          sizes="120px"
+                        />
+                      </Link>
+                    ))}
+                  </HScrollSection>
+                );
+              }
+
+              return (
+                <HScrollSection key={section.id} title={section.titleEn} moreHref={getPostMoreHref(section)}>
+                  {data.items.map((post, index) => (
+                    <PostCard
+                      key={post.id}
+                      post={post}
+                      tagGroupMap={tagGroupMap}
+                      isSaved={savedPostIds.has(post.id)}
+                      priority={index === 0}
+                    />
+                  ))}
+                </HScrollSection>
+              );
+            })}
+
+            {/* 모든 섹션이 비었거나 섹션 자체가 0개일 때 */}
+            {(curSections.length === 0 || curSectionData.every((d) => d.items.length === 0)) && (
+              <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
+                Coming soon!
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 필터 모드: 기존 가로형 리스트 */}
+        {isFilterMode && (
+          <div className="px-4">
+            {(posts ?? []).length === 0 ? (
+              <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
+                Coming soon!
+              </div>
+            ) : (
+              (posts ?? []).map((post, index) => (
+                <PostListItem
+                  key={post.id}
+                  post={post}
+                  tagGroupMap={tagGroupMap}
+                  isSaved={savedPostIds.has(post.id)}
+                  priority={index === 0}
+                />
+              ))
+            )}
+          </div>
+        )}
       </div>
       <ViewToggleButton />
     </>

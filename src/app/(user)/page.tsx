@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ChevronRight, Heart } from "lucide-react";
+import { Heart } from "lucide-react";
+import { HScrollSection } from "@/components/curation/HScrollSection";
 import { prisma } from "@/lib/prisma";
 import { HomeBannerCarousel, type BannerItem } from "./_components/HomeBannerCarousel";
 import { getPostsWithLabels, getSavedPostIds, type PostItem } from "@/lib/post-queries";
@@ -41,40 +42,6 @@ import { getCurrentUser } from "@/lib/auth";
 import { ReCreeshotImage } from "@/components/recreeshot-image";
 import { fetchLatestFeed, fetchFollowFeed } from "./_actions/feed-actions";
 import { InfiniteFeed } from "./_components/InfiniteFeed";
-
-// ─── 가로 스크롤 섹션 ────────────────────────────────────────────────────────
-
-function HScrollSection({
-  title,
-  moreHref,
-  children,
-}: {
-  title: string;
-  moreHref?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="mb-6">
-      <div className="flex items-center justify-between mb-3 px-4">
-        <h2 className="font-bold text-lg">{title}</h2>
-        {moreHref && (
-          <Link
-            href={moreHref}
-            className="text-sm text-muted-foreground flex items-center gap-0.5 hover:text-foreground transition-colors"
-          >
-            More <ChevronRight className="size-3.5" />
-          </Link>
-        )}
-      </div>
-      <div className="overflow-x-auto scrollbar-hide">
-        <div className="flex gap-3 pl-4 pb-1">
-          {children}
-          <div className="shrink-0 w-1" />
-        </div>
-      </div>
-    </section>
-  );
-}
 
 // ─── 탭 바 ───────────────────────────────────────────────────────────────────
 
