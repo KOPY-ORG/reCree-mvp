@@ -98,7 +98,7 @@ function TabBar({ activeTab }: { activeTab: "highlights" | "follow" }) {
             : "border-transparent text-muted-foreground hover:text-foreground"
         }`}
       >
-        Follow
+        Following
       </Link>
     </div>
   );
