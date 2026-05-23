@@ -52,15 +52,15 @@ export function FeedCard({
         </div>
 
         {/* 제목 */}
-        <h3 className="text-base font-semibold leading-relaxed line-clamp-2 text-foreground">
+        <h3 className="text-base font-semibold leading-snug line-clamp-2 text-foreground">
           {post.titleEn}
         </h3>
 
         {/* 장소명 */}
         {placeName && (
-          <div className="flex items-center gap-0.5 text-[11px] text-muted-foreground">
+          <div className="flex items-center gap-0.5 text-xs text-muted-foreground">
             <MapPin className="h-2.5 w-2.5 shrink-0" />
-            <span className="line-clamp-1">{placeName}</span>
+            <span className="line-clamp-1 font-medium">{placeName}</span>
           </div>
         )}
       </div>

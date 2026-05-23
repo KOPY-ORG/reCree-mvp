@@ -79,7 +79,8 @@ export function HomeBannerCarousel({ banners }: { banners: BannerItem[] }) {
 
             {/* 텍스트 영역 */}
             <div className="px-3 pt-2 pb-2">
-              <p className="text-base font-semibold leading-relaxed line-clamp-2 min-h-[3.25em] text-foreground">
+              {/* min-h: leading-snug 2줄 높이(2×1.375em=2.75em)에 맞춘 값. leading 변경 시 함께 조정 필요 */}
+              <p className="text-base font-semibold leading-snug line-clamp-2 min-h-[2.75em] text-foreground">
                 {banner.titleEn}
               </p>
               <div className="flex items-center gap-0.5 text-[11px] text-muted-foreground mt-1 min-h-[1rem]">
