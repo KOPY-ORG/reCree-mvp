@@ -3,6 +3,7 @@ import { ChevronRight, Heart } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { HomeBannerCarousel, type BannerItem } from "./_components/HomeBannerCarousel";
 import { getPostsWithLabels, getSavedPostIds, type PostItem } from "@/lib/post-queries";
+import { getCuratedSections, getSectionData, getPostMoreHref, type SectionData } from "@/lib/curation-queries";
 import {
   resolveTopicColors,
   resolveTagColors,
@@ -179,10 +180,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         },
       },
     }),
-    prisma.curatedSection.findMany({
-      where: { isActive: true, showOnHome: true },
-      orderBy: { order: "asc" },
-    }),
+    getCuratedSections({ showOnHome: true }),
     prisma.tagGroupConfig.findMany({
       select: { group: true, displayLabel: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true },
     }),
@@ -190,69 +188,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     fetchLatestFeed({}),
   ]);
 
-  type SectionData =
-    | { kind: "posts"; items: PostItem[] }
-    | { kind: "reCreeshots"; items: { id: string; imageUrl: string; matchScore: number | null; showBadge: boolean; referencePhotoUrl: string | null }[] };
-
-  const sectionData: SectionData[] = await Promise.all(
-    sections.map(async (section): Promise<SectionData> => {
-      if (section.contentType === "RECREESHOT") {
-        const items = await prisma.reCreeshot.findMany({
-          where: {
-            status: "ACTIVE",
-            ...(section.filterTopicId
-              ? { reCreeshotTopics: { some: { topicId: section.filterTopicId } } }
-              : {}),
-            ...(section.filterTagId
-              ? { reCreeshotTags: { some: { tagId: section.filterTagId } } }
-              : section.filterTagGroup
-              ? { reCreeshotTags: { some: { tag: { group: section.filterTagGroup } } } }
-              : {}),
-          },
-          orderBy: { createdAt: "desc" },
-          take: section.maxCount,
-          select: { id: true, imageUrl: true, matchScore: true, showBadge: true, referencePhotoUrl: true },
-        });
-        return { kind: "reCreeshots", items };
-      }
-
-      // postIds가 지정된 경우(MANUAL 또는 AUTO 고정 순서): 해당 포스트를 그 순서로 표시
-      if (section.postIds.length > 0) {
-        const posts = await getPostsWithLabels({
-          id: { in: section.postIds },
-          status: "PUBLISHED",
-        });
-        const map = new Map(posts.map((p) => [p.id, p]));
-        return {
-          kind: "posts",
-          items: section.postIds.map((id) => map.get(id)).filter((p): p is PostItem => !!p),
-        };
-      }
-
-      // MANUAL인데 postIds가 없으면 빈 섹션
-      if (section.type === "MANUAL") return { kind: "posts", items: [] };
-
-      // AUTO: 필터 + 자동 정렬
-      const items = await getPostsWithLabels(
-        {
-          status: "PUBLISHED",
-          ...(section.filterTopicId
-            ? { postTopics: { some: { topicId: section.filterTopicId } } }
-            : {}),
-          ...(section.filterTagId
-            ? { postTags: { some: { tagId: section.filterTagId } } }
-            : section.filterTagGroup
-            ? { postTags: { some: { tag: { group: section.filterTagGroup } } } }
-            : {}),
-        },
-        {
-          take: section.maxCount,
-          orderBy: section.type === "AUTO_HOT" ? { viewCount: "desc" } : { createdAt: "desc" },
-        }
-      );
-      return { kind: "posts", items };
-    })
-  );
+  const sectionData: SectionData[] = await getSectionData(sections);
 
   const tagGroupMap: TagGroupColorMap = new Map(tagGroupConfigs.map((c) => [c.group, c]));
 
@@ -383,15 +319,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             const data = sectionData[i];
             if (!data || data.items.length === 0) return null;
 
-            // POST AUTO 섹션은 필터 조건을 지도에 그대로 전달
-            function getPostMoreHref() {
-              if (section.type === "MANUAL") return "/discover";
-              if (section.filterTopicId) return `/discover?view=map&topicId=${section.filterTopicId}`;
-              if (section.filterTagId) return `/discover?view=map&tagId=${section.filterTagId}`;
-              if (section.filterTagGroup) return `/discover?view=map&tagGroup=${section.filterTagGroup}`;
-              return "/discover?view=map";
-            }
-
             if (data.kind === "reCreeshots") {
               return (
                 <HScrollSection key={section.id} title={section.titleEn}>
@@ -425,7 +352,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             }
 
             return (
-              <HScrollSection key={section.id} title={section.titleEn} moreHref={getPostMoreHref()}>
+              <HScrollSection key={section.id} title={section.titleEn} moreHref={getPostMoreHref(section)}>
                 {data.items.map((post, index) => (
                   <PostCard key={post.id} post={post} tagGroupMap={tagGroupMap} isSaved={savedPostIds.has(post.id)} priority={index === 0} />
                 ))}
