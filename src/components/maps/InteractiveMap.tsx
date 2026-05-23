@@ -79,6 +79,8 @@ function MapContent({
         const isHighlighted = highlightedIds?.has(place.id) ?? false;
         const color = place.markerColor ?? "#C8FF09";
         const glyphColor = place.markerGlyphColor ?? "white";
+        // saved 핀은 흰색 테두리로 구분 (선택됨과는 scale로 구분)
+        const borderColor = isSelected ? "white" : place.isSaved ? "white" : color;
         return (
           <AdvancedMarker
             key={place.id}
@@ -87,16 +89,13 @@ function MapContent({
             title={place.nameEn}
             zIndex={isSelected ? 10 : isHighlighted ? 5 : 1}
           >
+            {/* glyph prop / children 미사용: <gmp-pin>.glyph deprecated 경고 방지 */}
             <Pin
               background={color}
-              borderColor={isSelected ? "white" : color}
+              borderColor={borderColor}
               glyphColor={glyphColor}
               scale={isSelected ? 1.3 : isHighlighted ? 1.1 : 1}
-            >
-              {place.isSaved && (
-                <span style={{ fontSize: "11px", lineHeight: 1, color: "white" }}>★</span>
-              )}
-            </Pin>
+            />
           </AdvancedMarker>
         );
       })}

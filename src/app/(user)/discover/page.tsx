@@ -23,10 +23,12 @@ function PostListItem({
   post,
   tagGroupMap,
   isSaved,
+  priority = false,
 }: {
   post: PostItem;
   tagGroupMap: TagGroupColorMap;
   isSaved: boolean;
+  priority?: boolean;
 }) {
   return (
     <Link
@@ -43,6 +45,7 @@ function PostListItem({
             className="object-cover"
             style={focalStyle(post.postImages[0].focalX, post.postImages[0].focalY, post.postImages[0].zoom)}
             sizes="88px"
+            priority={priority}
           />
         ) : (
           <div className="w-full h-full bg-muted" />
@@ -150,12 +153,13 @@ export default async function ExplorePage({
               Coming soon!
             </div>
           ) : (
-            (posts ?? []).map((post) => (
+            (posts ?? []).map((post, index) => (
               <PostListItem
                 key={post.id}
                 post={post}
                 tagGroupMap={tagGroupMap}
                 isSaved={savedPostIds.has(post.id)}
+                priority={index === 0}
               />
             ))
           )}

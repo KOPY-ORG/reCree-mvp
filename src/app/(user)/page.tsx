@@ -290,8 +290,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         <div className="mb-5"><SearchBar /></div>
         <TabBar activeTab={activeTab} />
         <div className="grid grid-cols-2 gap-3">
-          {fallbackPosts.map((post) => (
-            <PostCard key={post.id} post={post} tagGroupMap={tagGroupMap} isSaved={savedPostIds.has(post.id)} variant="grid" />
+          {fallbackPosts.map((post, index) => (
+            <PostCard key={post.id} post={post} tagGroupMap={tagGroupMap} isSaved={savedPostIds.has(post.id)} variant="grid" priority={index === 0} />
           ))}
         </div>
       </div>
@@ -426,8 +426,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
             return (
               <HScrollSection key={section.id} title={section.titleEn} moreHref={getPostMoreHref()}>
-                {data.items.map((post) => (
-                  <PostCard key={post.id} post={post} tagGroupMap={tagGroupMap} isSaved={savedPostIds.has(post.id)} />
+                {data.items.map((post, index) => (
+                  <PostCard key={post.id} post={post} tagGroupMap={tagGroupMap} isSaved={savedPostIds.has(post.id)} priority={index === 0} />
                 ))}
               </HScrollSection>
             );

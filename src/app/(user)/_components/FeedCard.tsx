@@ -11,10 +11,12 @@ export function FeedCard({
   post,
   tagGroupMap,
   isSaved,
+  priority = false,
 }: {
   post: PostItem;
   tagGroupMap: TagGroupColorMap;
   isSaved?: boolean;
+  priority?: boolean;
 }) {
   const placeName =
     post.postPlaces[0]?.place.nameEn ?? post.postPlaces[0]?.place.nameKo;
@@ -37,6 +39,7 @@ export function FeedCard({
                 post.postImages[0].zoom,
               )}
               sizes="(max-width: 672px) 100vw, 672px"
+              priority={priority}
             />
           ) : (
             <div className="w-full h-full bg-muted" />
