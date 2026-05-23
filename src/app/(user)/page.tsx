@@ -38,7 +38,8 @@ import { SearchBar } from "./_components/SearchBar";
 import { GuideVideoCard } from "./_components/GuideVideoCard";
 import { getCurrentUser } from "@/lib/auth";
 import { ReCreeshotImage } from "@/components/recreeshot-image";
-import { getMyFollows } from "@/lib/follow-queries";
+import { fetchLatestFeed, fetchFollowFeed } from "./_actions/feed-actions";
+import { InfiniteFeed } from "./_components/InfiniteFeed";
 
 // ─── 가로 스크롤 섹션 ────────────────────────────────────────────────────────
 
@@ -67,7 +68,7 @@ function HScrollSection({
       <div className="overflow-x-auto scrollbar-hide">
         <div className="flex gap-3 pl-4 pb-1">
           {children}
-          <div className="shrink-0 w-4" />
+          <div className="shrink-0 w-1" />
         </div>
       </div>
     </section>
@@ -97,7 +98,7 @@ function TabBar({ activeTab }: { activeTab: "highlights" | "follow" }) {
             : "border-transparent text-muted-foreground hover:text-foreground"
         }`}
       >
-        Follow
+        Following
       </Link>
     </div>
   );
@@ -113,7 +114,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   const guideVideo = await prisma.guideVideo.findFirst({ where: { isActive: true } });
 
-  const [homeBanners, sections, tagGroupConfigs, savedPostIds] = await Promise.all([
+  const [homeBanners, sections, tagGroupConfigs, savedPostIds, latestFeedResult] = await Promise.all([
     prisma.homeBanner.findMany({
       where: { isActive: true },
       orderBy: { order: "asc" },
@@ -121,6 +122,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         id: true,
         post: {
           select: {
+            id: true,
             slug: true,
             titleEn: true,
             postImages: {
@@ -178,13 +180,14 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       },
     }),
     prisma.curatedSection.findMany({
-      where: { isActive: true },
+      where: { isActive: true, showOnHome: true },
       orderBy: { order: "asc" },
     }),
     prisma.tagGroupConfig.findMany({
       select: { group: true, displayLabel: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true },
     }),
     getSavedPostIds(currentUser?.id ?? null),
+    fetchLatestFeed({}),
   ]);
 
   type SectionData =
@@ -256,21 +259,13 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const hasBanners = homeBanners.length > 0;
   const hasSections = sectionData.some((d) => d.items.length > 0);
 
-  // Follow 탭 데이터 (tab=follow이고 로그인 상태일 때만)
-  let followPosts: PostItem[] = [];
-  let followedIds: string[] = [];
-  if (activeTab === "follow" && currentUser) {
-    const follows = await getMyFollows(currentUser.id);
-    followedIds = follows.map((f) => f.topic.id);
-    if (followedIds.length > 0) {
-      followPosts = await getPostsWithLabels(
-        {
-          status: "PUBLISHED",
-          postTopics: { some: { topicId: { in: followedIds } } },
-        },
-        { take: 20, orderBy: { createdAt: "desc" } }
-      );
-    }
+  // Follow 탭 첫 페이지 SSR (인증·팔로우 필터는 fetchFollowFeed 내부에서 처리)
+  let followFirstPosts: PostItem[] = [];
+  let followInitialCursor: string | null = null;
+  if (activeTab === "follow") {
+    const followResult = await fetchFollowFeed({});
+    followFirstPosts = followResult.posts;
+    followInitialCursor = followResult.nextCursor;
   }
 
   // ─── 폴백 ───────────────────────────────────────────────────────────────────
@@ -307,6 +302,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const bannerItems: BannerItem[] = homeBanners.map((b) => {
     const labels = resolveBannerLabels(b.post.postTopics, b.post.postTags, tagGroupMap);
     return {
+      id: b.post.id,
       slug: b.post.slug,
       titleEn: b.post.titleEn,
       displayName:
@@ -318,6 +314,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       focalY: b.post.postImages[0]?.focalY ?? null,
       zoom: b.post.postImages[0]?.zoom ?? null,
       labels,
+      isSaved: savedPostIds.has(b.post.id),
     };
   });
 
@@ -347,13 +344,13 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               Sign in
             </Link>
           </div>
-        ) : followedIds.length === 0 ? (
+        ) : followFirstPosts.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-[50vh] gap-4 text-center px-4">
             <Heart className="h-10 w-10 text-muted-foreground" strokeWidth={1.5} />
             <div className="space-y-1">
-              <p className="text-lg font-semibold">No topics followed yet</p>
+              <p className="text-lg font-semibold">No posts yet</p>
               <p className="text-sm text-muted-foreground">
-                Follow topics to curate your own feed.
+                Follow topics to see posts here.
               </p>
             </div>
             <Link
@@ -363,24 +360,21 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               Browse Topics
             </Link>
           </div>
-        ) : followPosts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-[50vh] gap-2 text-center px-4">
-            <p className="text-lg font-semibold">No posts yet</p>
-            <p className="text-sm text-muted-foreground">
-              Check back soon for posts from your followed topics.
-            </p>
-          </div>
         ) : (
-          <div className="px-4 grid grid-cols-2 gap-3">
-            {followPosts.map((post) => (
-              <PostCard key={post.id} post={post} tagGroupMap={tagGroupMap} isSaved={savedPostIds.has(post.id)} variant="grid" />
-            ))}
+          <div className="px-4">
+            <InfiniteFeed
+              fetchFn={fetchFollowFeed}
+              initialPosts={followFirstPosts}
+              initialCursor={followInitialCursor}
+              savedIds={[...savedPostIds]}
+              tagGroupMap={tagGroupMap}
+            />
           </div>
         )
       ) : (
         <>
           {hasBanners && (
-            <div className="px-4 mb-4">
+            <div className="mb-4">
               <HomeBannerCarousel banners={bannerItems} />
             </div>
           )}
@@ -438,6 +432,19 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               </HScrollSection>
             );
           })}
+          <div className="flex items-center justify-between mb-3 px-4 mt-2">
+            <h2 className="font-bold text-lg">Latest</h2>
+          </div>
+          <div className="px-4">
+            <InfiniteFeed
+              initialPosts={latestFeedResult.posts}
+              initialCursor={latestFeedResult.nextCursor}
+              savedIds={[...savedPostIds]}
+              tagGroupMap={tagGroupMap}
+              fetchFn={fetchLatestFeed}
+            />
+          </div>
+
           <footer className="px-4 pt-8 pb-6 text-sm text-muted-foreground">
             <div className="flex flex-wrap gap-4 justify-center">
               <Link href="/policy/privacy" className="hover:text-foreground underline underline-offset-4">

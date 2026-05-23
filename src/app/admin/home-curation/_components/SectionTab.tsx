@@ -23,6 +23,7 @@ import {
   deleteSection,
   reorderSections,
   toggleSectionActive,
+  toggleHomeSection,
 } from "../_actions/home-curation-actions";
 import { SectionDialog } from "./SectionDialog";
 import type { PickablePost } from "./PostPickerDialog";
@@ -44,6 +45,7 @@ export type SectionRow = {
   maxCount: number;
   order: number;
   isActive: boolean;
+  showOnHome: boolean;
 };
 
 function SortableSectionRow({
@@ -54,6 +56,7 @@ function SortableSectionRow({
   onEdit,
   onRemove,
   onToggle,
+  onSetHome,
 }: {
   section: SectionRow;
   topics: TopicOption[];
@@ -62,6 +65,7 @@ function SortableSectionRow({
   onEdit: (s: SectionRow) => void;
   onRemove: (id: string) => void;
   onToggle: (id: string, v: boolean) => void;
+  onSetHome: (id: string, v: boolean) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: section.id });
@@ -119,6 +123,12 @@ function SortableSectionRow({
         </div>
         <p className="text-xs text-muted-foreground mt-0.5 truncate">{getDescription()}</p>
       </div>
+
+      <Switch
+        checked={section.showOnHome}
+        onCheckedChange={(v) => onSetHome(section.id, v)}
+        className="shrink-0 data-[state=checked]:bg-brand"
+      />
 
       <Switch
         checked={section.isActive}
@@ -192,6 +202,13 @@ export function SectionTab({
     startTransition(() => toggleSectionActive(id, isActive));
   }
 
+  function handleSetHome(id: string, showOnHome: boolean) {
+    setSections((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, showOnHome } : s))
+    );
+    startTransition(() => toggleHomeSection(id, showOnHome));
+  }
+
   function handleRemove(id: string) {
     setSections((prev) => prev.filter((s) => s.id !== id));
     startTransition(() => deleteSection(id));
@@ -229,7 +246,8 @@ export function SectionTab({
           <div className="bg-zinc-50 border-b border-zinc-100 flex items-center gap-3 px-4 py-3">
             <span className="size-4 shrink-0" />
             <span className="flex-1 text-xs font-medium text-muted-foreground">섹션</span>
-            <span className="shrink-0 text-xs font-medium text-muted-foreground">활성</span>
+            <span className="shrink-0 w-11 text-center text-xs font-medium text-muted-foreground">홈</span>
+            <span className="shrink-0 w-11 text-center text-xs font-medium text-muted-foreground">활성</span>
             <span className="size-4 shrink-0" />
             <span className="size-4 shrink-0" />
           </div>
@@ -253,6 +271,7 @@ export function SectionTab({
                   onEdit={openEdit}
                   onRemove={handleRemove}
                   onToggle={handleToggle}
+                  onSetHome={handleSetHome}
                 />
               ))}
             </SortableContext>

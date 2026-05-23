@@ -4,6 +4,7 @@ import { SavedHeader } from "./_components/SavedHeader";
 import { ConditionalHeader } from "./_components/ConditionalHeader";
 import { ConditionalBottomNav } from "./_components/ConditionalBottomNav";
 import { ActivityTracker } from "./_components/ActivityTracker";
+import { ScrollToTopButton } from "./_components/ScrollToTopButton";
 import { getCurrentUser } from "@/lib/auth";
 
 export default async function UserLayout({
@@ -24,6 +25,7 @@ export default async function UserLayout({
           profileImageUrl={user?.profileImageUrl ?? null}
         />
       </div>
+      <ScrollToTopButton />
     </div>
   );
 }

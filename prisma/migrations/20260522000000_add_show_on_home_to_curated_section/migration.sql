@@ -1,0 +1,1 @@
+ALTER TABLE "CuratedSection" ADD COLUMN "showOnHome" BOOLEAN NOT NULL DEFAULT true;

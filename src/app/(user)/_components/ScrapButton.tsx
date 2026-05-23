@@ -9,15 +9,16 @@ interface Props {
   postId: string;
   initialSaved: boolean;
   size?: "sm" | "md";
+  unsavedClassName?: string;
 }
 
-export function ScrapButton({ postId, initialSaved, size = "md" }: Props) {
+export function ScrapButton({ postId, initialSaved, size = "md", unsavedClassName }: Props) {
   const [saved, setSaved] = useState(initialSaved);
   const [isPending, startTransition] = useTransition();
   const { toast, showToast } = useToast();
 
   const iconSize = size === "sm" ? "h-4 w-4" : "h-5 w-5";
-  const unsavedClass = "text-muted-foreground hover:text-foreground";
+  const unsavedClass = unsavedClassName ?? "text-muted-foreground hover:text-foreground";
 
   function handleClick(e: React.MouseEvent) {
     e.preventDefault();

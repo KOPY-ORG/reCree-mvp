@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
-import { Noto_Sans, Noto_Sans_KR } from "next/font/google";
+import { Noto_Sans_KR, Plus_Jakarta_Sans } from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ToastProvider } from "@/components/toast-provider";
 import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import { VercelAnalytics } from "@/components/VercelAnalytics";
 import "./globals.css";
 
-const notoSans = Noto_Sans({
-  variable: "--font-noto-sans",
+const plusJakarta = Plus_Jakarta_Sans({
+  variable: "--font-plus-jakarta",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  display: "swap",
 });
 
 const notoSansKR = Noto_Sans_KR({
@@ -55,7 +55,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko" suppressHydrationWarning>
-      <body className={`${notoSans.variable} ${notoSansKR.variable} font-sans antialiased`} suppressHydrationWarning>
+      <body className={`${plusJakarta.variable} ${notoSansKR.variable} font-sans antialiased`} suppressHydrationWarning>
         <GoogleAnalytics />
         <ToastProvider>{children}</ToastProvider>
         <VercelAnalytics />

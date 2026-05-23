@@ -7,7 +7,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-noto-sans-kr), var(--font-noto-sans);
+  --font-sans: var(--font-plus-jakarta), var(--font-noto-sans-kr);
   --color-gray-900: var(--palette-gray-900);
 
   /* ── Typography Scale ───────────────── */
@@ -132,6 +132,7 @@
   }
   body {
     @apply bg-background text-foreground;
+    letter-spacing: 0.01em;
   }
 }
 
@@ -139,9 +140,9 @@
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
 /* ── 공통 Pill 뱃지 스타일 ── */
-/* --pill-py (기본 py-0.75), --pill-fs (기본 text-sm) 를 부모에서 오버라이드 가능 */
+/* --pill-py (기본 py-0.75), --pill-fs (기본 text-xs, 12px) 를 부모에서 오버라이드 가능 */
 .pill-badge {
-  @apply inline-flex items-center gap-1 px-2 rounded-full font-medium leading-none;
+  @apply inline-flex items-center gap-1 px-2 rounded-full font-semibold leading-none;
   padding-top: var(--pill-py, 0.1875rem);
   padding-bottom: var(--pill-py, 0.1875rem);
   font-size: var(--pill-fs, var(--text-xs));
