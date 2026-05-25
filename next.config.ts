@@ -1,6 +1,19 @@
 import type { NextConfig } from "next";
+import { POST_SLUG_REDIRECTS } from "./src/lib/post-redirects";
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      { source: "/explore", destination: "/discover", permanent: true },
+      { source: "/explore/hall/:id*", destination: "/discover/hall/:id*", permanent: true },
+      { source: "/my-map", destination: "/discover", permanent: false },
+      ...POST_SLUG_REDIRECTS.map((r) => ({
+        source: `/posts/${r.from}`,
+        destination: `/posts/${r.to}`,
+        permanent: true,
+      })),
+    ];
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: "20mb",
