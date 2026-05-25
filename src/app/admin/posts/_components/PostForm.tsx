@@ -24,6 +24,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { isExternalImage, focalStyle } from "@/lib/image";
 import dynamic from "next/dynamic";
@@ -56,6 +57,14 @@ import { SourceTab } from "./SourceTab";
 import { PostImageSection } from "./PostImageSection";
 import { LabelVisibilityCard } from "./LabelVisibilityCard";
 import { AIDraftReviewDialog, type AIDraftData } from "./AIDraftReviewSheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // ─── 타입 ──────────────────────────────────────────────────────────────────────
 
@@ -205,6 +214,27 @@ const EMPTY_SOURCE: PostSourceInput = {
   isOriginalLink: false,
 };
 
+// ─── Draft 상수 ──────────────────────────────────────────────────────────────────
+
+const DRAFT_AUTOSAVE_DELAY_MS = 700;
+const DRAFT_KEY_PREFIX = "admin:post-draft";
+
+// ─── Draft 시간 포맷 헬퍼 ────────────────────────────────────────────────────────
+
+function formatDraftTime(isoString: string): string {
+  try {
+    const d = new Date(isoString);
+    return d.toLocaleString("ko-KR", {
+      month: "numeric",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "";
+  }
+}
+
 // ─── PostForm 컴포넌트 ──────────────────────────────────────────────────────────
 
 export function PostForm({
@@ -220,6 +250,7 @@ export function PostForm({
 }: PostFormProps) {
   const [isPending, startTransition] = useTransition();
   const isEdit = mode === "edit";
+  const router = useRouter();
 
   // ── 탭 상태 ─────────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<TabId>("place");
@@ -273,6 +304,25 @@ export function PostForm({
   type PostTopicState = { topicId: string; isVisible: boolean; displayOrder: number };
   type PostTagState = { tagId: string; isVisible: boolean; displayOrder: number };
 
+  // ── Draft 타입 ──────────────────────────────────────────────────────────────
+  type PostDraftState = {
+    titleKo: string;
+    titleEn: string;
+    slug: string;
+    bodyKo: string;
+    bodyEn: string;
+    memo: string;
+    collectedBy: string;
+    collectedAt: string;
+    sources: PostSourceInput[];
+    postTopics: PostTopicState[];
+    postTags: PostTagState[];
+    placeEntries: PlaceEntry[];
+    images: PostImageInput[];
+    recreePhotoUrl: string | null;
+    savedAt: string;
+  };
+
   const [postTopics, setPostTopics] = useState<PostTopicState[]>(initialData?.postTopics ?? []);
   const [postTags, setPostTags] = useState<PostTagState[]>(initialData?.postTags ?? []);
 
@@ -292,6 +342,18 @@ export function PostForm({
   const [isGeneratingDraft, setIsGeneratingDraft] = useState(false);
   const [draftResult, setDraftResult] = useState<AIDraftData | null>(null);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+
+  // ── Draft 관리 ──────────────────────────────────────────────────────────────
+  const draftKey = mode === "create" ? `${DRAFT_KEY_PREFIX}:new` : `${DRAFT_KEY_PREFIX}:${postId ?? "unknown"}`;
+  const [showRestoreBanner, setShowRestoreBanner] = useState(false);
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
+  const pendingDraftRef = useRef<PostDraftState | null>(null);
+  const hasDraftRef = useRef(false);
+  const formHasContentRef = useRef(false);
+  const draftSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 커스텀 모달로 이탈 동의를 받은 경우 beforeunload 중복 경고를 skip
+  const isLeavingRef = useRef(false);
 
   // ── 파생값 ─────────────────────────────────────────────────────────────────
   const { topicEffectiveStyleMap, topicEffectiveInfoMap } = useMemo(() => {
@@ -334,6 +396,86 @@ export function PostForm({
       if (slugCheckTimerRef.current) clearTimeout(slugCheckTimerRef.current);
     };
   }, [slug, isEdit, postId]);
+
+  // ── Draft 로드 (마운트 시 1회) ─────────────────────────────────────────────
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return;
+      const draft = JSON.parse(raw) as PostDraftState;
+
+      if (mode === "create") {
+        // 신규 작성: 자동 복원 (무음)
+        if (draft.titleKo) setTitleKo(draft.titleKo);
+        if (draft.titleEn) setTitleEn(draft.titleEn);
+        if (draft.slug) setSlug(draft.slug);
+        if (draft.bodyKo) setBodyKo(draft.bodyKo);
+        if (draft.bodyEn) setBodyEn(draft.bodyEn);
+        if (draft.memo) setMemo(draft.memo);
+        if (draft.collectedBy) setCollectedBy(draft.collectedBy);
+        if (draft.collectedAt) setCollectedAt(draft.collectedAt);
+        if (Array.isArray(draft.sources) && draft.sources.length) setSources(draft.sources);
+        if (Array.isArray(draft.postTopics) && draft.postTopics.length) setPostTopics(draft.postTopics);
+        if (Array.isArray(draft.postTags) && draft.postTags.length) setPostTags(draft.postTags);
+        if (Array.isArray(draft.placeEntries) && draft.placeEntries.length) setPlaceEntries(draft.placeEntries);
+        if (Array.isArray(draft.images) && draft.images.length) setImages(draft.images);
+        if (draft.recreePhotoUrl !== undefined) setRecreePhotoUrl(draft.recreePhotoUrl);
+        hasDraftRef.current = true;
+      } else {
+        // 수정 모드: 배너만 표시, 사용자가 복원 여부 선택
+        pendingDraftRef.current = draft;
+        setDraftSavedAt(draft.savedAt ?? null);
+        setShowRestoreBanner(true);
+      }
+    } catch {
+      // 손상된 JSON → 무시하고 빈 상태 진행
+    }
+  }, [draftKey, mode]); // draftKey·mode는 컴포넌트 수명 동안 불변 → 실질적으로 마운트 1회만
+
+  // ── 자동저장 (모든 폼 필드 변경 시 700ms debounce) ────────────────────────
+  useEffect(() => {
+    if (draftSaveTimerRef.current) clearTimeout(draftSaveTimerRef.current);
+    draftSaveTimerRef.current = setTimeout(() => {
+      try {
+        const draft: PostDraftState = {
+          titleKo, titleEn, slug, bodyKo, bodyEn,
+          memo, collectedBy, collectedAt,
+          sources, postTopics, postTags, placeEntries,
+          images, recreePhotoUrl,
+          savedAt: new Date().toISOString(),
+        };
+        localStorage.setItem(draftKey, JSON.stringify(draft));
+        hasDraftRef.current = true;
+      } catch {
+        // localStorage 쓰기 실패 (private browsing 등) → 무시
+      }
+    }, DRAFT_AUTOSAVE_DELAY_MS);
+    return () => {
+      if (draftSaveTimerRef.current) clearTimeout(draftSaveTimerRef.current);
+    };
+  }, [draftKey, titleKo, titleEn, slug, bodyKo, bodyEn, memo, collectedBy, collectedAt,
+      sources, postTopics, postTags, placeEntries, images, recreePhotoUrl]);
+
+  // ── 폼 콘텐츠 존재 여부 추적 (beforeunload 판단용) ────────────────────────
+  useEffect(() => {
+    formHasContentRef.current = !!(
+      titleKo || titleEn || slug || bodyKo || bodyEn ||
+      memo || sources.length > 0 || placeEntries.length > 0 || images.length > 0
+    );
+  }, [titleKo, titleEn, slug, bodyKo, bodyEn, memo, sources.length, placeEntries.length, images.length]);
+
+  // ── beforeunload: 미저장 내용 있으면 브라우저 기본 경고 ──────────────────
+  // isLeavingRef가 true면 커스텀 모달로 이미 동의를 받은 것이므로 경고 skip
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isLeavingRef.current) return;
+      if (!hasDraftRef.current || !formHasContentRef.current) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
 
   // ── 출처 핸들러 ─────────────────────────────────────────────────────────────
   const addSource = () => setSources((prev) => [...prev, { ...EMPTY_SOURCE }]);
@@ -458,6 +600,61 @@ export function PostForm({
     toast.success("AI 초안이 적용되었습니다. 내용을 검토 후 저장하세요.");
   }
 
+  // ── Draft 복원 (edit 모드 배너에서 [복원] 클릭) ───────────────────────────
+  function handleRestoreDraft() {
+    const draft = pendingDraftRef.current;
+    if (!draft) return;
+    setTitleKo(draft.titleKo ?? "");
+    setTitleEn(draft.titleEn ?? "");
+    setSlug(draft.slug ?? "");
+    setBodyKo(draft.bodyKo ?? "");
+    setBodyEn(draft.bodyEn ?? "");
+    setMemo(draft.memo ?? "");
+    setCollectedBy(draft.collectedBy ?? "");
+    setCollectedAt(draft.collectedAt ?? "");
+    if (Array.isArray(draft.sources)) setSources(draft.sources);
+    if (Array.isArray(draft.postTopics)) setPostTopics(draft.postTopics);
+    if (Array.isArray(draft.postTags)) setPostTags(draft.postTags);
+    if (Array.isArray(draft.placeEntries)) setPlaceEntries(draft.placeEntries);
+    if (Array.isArray(draft.images)) setImages(draft.images);
+    setRecreePhotoUrl(draft.recreePhotoUrl ?? null);
+    hasDraftRef.current = true;
+    setShowRestoreBanner(false);
+  }
+
+  // ── Draft 삭제 헬퍼 ──────────────────────────────────────────────────────────
+  function clearDraft() {
+    try { localStorage.removeItem(draftKey); } catch {}
+    hasDraftRef.current = false;
+  }
+
+  // ── Draft 무시 ([무시] 클릭 또는 배너 닫기) ──────────────────────────────
+  function handleDismissDraft() {
+    clearDraft();
+    pendingDraftRef.current = null;
+    setShowRestoreBanner(false);
+  }
+
+  // ── 취소 확인 모달 ──────────────────────────────────────────────────────────
+  function handleCancelClick() {
+    // 폼에 내용이 없으면 모달 없이 바로 이탈
+    if (!formHasContentRef.current) {
+      handleConfirmLeave();
+      return;
+    }
+    setCancelConfirmOpen(true);
+  }
+
+  function handleConfirmLeave() {
+    clearDraft();
+    setCancelConfirmOpen(false);
+    // router.push 전에 플래그를 세팅해 beforeunload 중복 경고를 차단
+    // 정상 이동 시엔 언마운트되므로 리셋 불필요. 이동 실패 시 1초 후 복구(안전장치).
+    isLeavingRef.current = true;
+    setTimeout(() => { isLeavingRef.current = false; }, 1000);
+    router.push(returnUrl);
+  }
+
   // ── 제출 ───────────────────────────────────────────────────────────────────
 
   function buildFormData(finalStatus: PostStatus): PostFormData {
@@ -515,6 +712,11 @@ export function PostForm({
     startTransition(async () => {
       const data = buildFormData(finalStatus);
       const redirectTarget = onSuccess ? undefined : returnUrl;
+
+      // redirect()는 Next.js 내부에서 throw 방식으로 동작하므로,
+      // 서버액션 호출 이전에 draft를 먼저 삭제해야 cleanup이 보장된다.
+      clearDraft();
+
       let result: { error?: string };
       if (isEdit && postId) {
         const { updatePost } = await import("../_actions/post-actions");
@@ -525,6 +727,8 @@ export function PostForm({
       }
 
       if (result.error) {
+        // 저장 실패 시 draft 복구 (다음 자동저장 tick에서 재저장됨)
+        hasDraftRef.current = true;
         toast.error(result.error);
       } else {
         toast.success(isEdit ? "포스트가 수정되었습니다." : "포스트가 저장되었습니다.");
@@ -572,12 +776,13 @@ export function PostForm({
                 <ArrowLeft className="h-4 w-4" />
               </button>
             ) : (
-              <Link
-                href={returnUrl}
+              <button
+                type="button"
+                onClick={handleCancelClick}
                 className="flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-muted"
               >
                 <ArrowLeft className="h-4 w-4" />
-              </Link>
+              </button>
             )}
             <h1 className="text-base font-semibold">
               {isEdit ? "포스트 수정" : "포스트 작성"}
@@ -604,8 +809,8 @@ export function PostForm({
                 <Link href={`/admin/posts/${postId}/edit`}>전체 편집 페이지</Link>
               </Button>
             ) : (
-              <Button variant="outline" size="sm" asChild>
-                <Link href={returnUrl}>취소</Link>
+              <Button variant="outline" size="sm" onClick={handleCancelClick}>
+                취소
               </Button>
             )}
 
@@ -640,6 +845,41 @@ export function PostForm({
           </div>
         </div>
       </div>
+
+      {/* ── Draft 복원 배너 (edit 모드 전용) ─────────────────────────────── */}
+      {showRestoreBanner && (
+        <div className="shrink-0 border-b bg-amber-50 px-6 py-2.5">
+          <div className="mx-auto flex max-w-[1400px] items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-amber-800">
+              <Clock className="h-4 w-4 shrink-0" />
+              <span>
+                저장되지 않은 작성 내용이 있습니다.
+                {draftSavedAt && (
+                  <span className="ml-1 text-xs text-amber-600">
+                    ({formatDraftTime(draftSavedAt)})
+                  </span>
+                )}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleRestoreDraft}
+                className="rounded-md bg-amber-700 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-amber-800"
+              >
+                복원
+              </button>
+              <button
+                type="button"
+                onClick={handleDismissDraft}
+                className="rounded-md border border-amber-300 px-3 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100"
+              >
+                무시
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── 본문 ─────────────────────────────────────────────────────────── */}
       <div className="flex-1 px-6 py-6">
@@ -1152,6 +1392,34 @@ export function PostForm({
         }}
         onApply={handleApplyDraft}
       />
+
+      {/* ── 취소 확인 모달 ────────────────────────────────────────────────── */}
+      <Dialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
+        <DialogContent showCloseButton={false} className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>페이지를 나가시겠습니까?</DialogTitle>
+            <DialogDescription>
+              작성 중인 내용이 사라집니다. 페이지를 나가시겠습니까?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-row justify-end gap-2 sm:flex-row">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setCancelConfirmOpen(false)}
+            >
+              계속 작성
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleConfirmLeave}
+            >
+              나가기
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
