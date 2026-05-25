@@ -214,6 +214,11 @@ const EMPTY_SOURCE: PostSourceInput = {
   isOriginalLink: false,
 };
 
+// ─── Draft 상수 ──────────────────────────────────────────────────────────────────
+
+const DRAFT_AUTOSAVE_DELAY_MS = 700;
+const DRAFT_KEY_PREFIX = "admin:post-draft";
+
 // ─── Draft 시간 포맷 헬퍼 ────────────────────────────────────────────────────────
 
 function formatDraftTime(isoString: string): string {
@@ -340,7 +345,7 @@ export function PostForm({
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
 
   // ── Draft 관리 ──────────────────────────────────────────────────────────────
-  const draftKey = mode === "create" ? "admin:post-draft:new" : `admin:post-draft:${postId ?? "unknown"}`;
+  const draftKey = mode === "create" ? `${DRAFT_KEY_PREFIX}:new` : `${DRAFT_KEY_PREFIX}:${postId ?? "unknown"}`;
   const [showRestoreBanner, setShowRestoreBanner] = useState(false);
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
   const pendingDraftRef = useRef<PostDraftState | null>(null);
@@ -393,7 +398,6 @@ export function PostForm({
   }, [slug, isEdit, postId]);
 
   // ── Draft 로드 (마운트 시 1회) ─────────────────────────────────────────────
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     try {
       const raw = localStorage.getItem(draftKey);
@@ -426,7 +430,7 @@ export function PostForm({
     } catch {
       // 손상된 JSON → 무시하고 빈 상태 진행
     }
-  }, []); // 마운트 1회만
+  }, [draftKey, mode]); // draftKey·mode는 컴포넌트 수명 동안 불변 → 실질적으로 마운트 1회만
 
   // ── 자동저장 (모든 폼 필드 변경 시 700ms debounce) ────────────────────────
   useEffect(() => {
@@ -445,7 +449,7 @@ export function PostForm({
       } catch {
         // localStorage 쓰기 실패 (private browsing 등) → 무시
       }
-    }, 700);
+    }, DRAFT_AUTOSAVE_DELAY_MS);
     return () => {
       if (draftSaveTimerRef.current) clearTimeout(draftSaveTimerRef.current);
     };
@@ -618,10 +622,15 @@ export function PostForm({
     setShowRestoreBanner(false);
   }
 
-  // ── Draft 무시 ([무시] 클릭 또는 배너 닫기) ──────────────────────────────
-  function handleDismissDraft() {
+  // ── Draft 삭제 헬퍼 ──────────────────────────────────────────────────────────
+  function clearDraft() {
     try { localStorage.removeItem(draftKey); } catch {}
     hasDraftRef.current = false;
+  }
+
+  // ── Draft 무시 ([무시] 클릭 또는 배너 닫기) ──────────────────────────────
+  function handleDismissDraft() {
+    clearDraft();
     pendingDraftRef.current = null;
     setShowRestoreBanner(false);
   }
@@ -637,12 +646,12 @@ export function PostForm({
   }
 
   function handleConfirmLeave() {
-    // draft 삭제
-    try { localStorage.removeItem(draftKey); } catch {}
-    hasDraftRef.current = false;
+    clearDraft();
     setCancelConfirmOpen(false);
     // router.push 전에 플래그를 세팅해 beforeunload 중복 경고를 차단
+    // 정상 이동 시엔 언마운트되므로 리셋 불필요. 이동 실패 시 1초 후 복구(안전장치).
     isLeavingRef.current = true;
+    setTimeout(() => { isLeavingRef.current = false; }, 1000);
     router.push(returnUrl);
   }
 
@@ -706,8 +715,7 @@ export function PostForm({
 
       // redirect()는 Next.js 내부에서 throw 방식으로 동작하므로,
       // 서버액션 호출 이전에 draft를 먼저 삭제해야 cleanup이 보장된다.
-      try { localStorage.removeItem(draftKey); } catch {}
-      hasDraftRef.current = false;
+      clearDraft();
 
       let result: { error?: string };
       if (isEdit && postId) {
