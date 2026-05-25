@@ -1,6 +1,8 @@
 import { MetadataRoute } from "next";
 import { prisma } from "@/lib/prisma";
 
+export const revalidate = 3600;
+
 const BASE_URL = "https://recree.io";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
