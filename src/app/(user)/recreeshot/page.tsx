@@ -1,6 +1,27 @@
-import { Camera } from "lucide-react";
-import { ComingSoon } from "../_components/ComingSoon";
+import { prisma } from "@/lib/prisma";
+import { HallGrid } from "../discover/_components/HallGrid";
 
-export default function ReCreeshotPage() {
-  return <ComingSoon title="recreeshot" icon={Camera} />;
+export default async function ReCreeshotPage() {
+  const shots = await prisma.reCreeshot.findMany({
+    where: { status: "ACTIVE" },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      imageUrl: true,
+      matchScore: true,
+      showBadge: true,
+      referencePhotoUrl: true,
+    },
+  });
+
+  const hallShots = shots.map((shot) => ({
+    ...shot,
+    labels: [],
+  }));
+
+  return (
+    <div className="px-4 py-4 max-w-2xl mx-auto">
+      <HallGrid shots={hallShots} />
+    </div>
+  );
 }
