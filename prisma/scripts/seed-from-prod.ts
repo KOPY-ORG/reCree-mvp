@@ -28,7 +28,7 @@ function createClient(connectionString: string): PrismaClient {
 
 // ─── 진행 추적 ────────────────────────────────────────────────────────────────
 
-const TOTAL = 18;
+const TOTAL = 19;
 let step = 0;
 let totalRows = 0;
 
@@ -42,13 +42,15 @@ function log(table: string, count: number) {
 
 async function wipeDevDb(devDb: PrismaClient) {
   console.log("\n🗑  dev DB 초기화 중... (TRUNCATE CASCADE)");
-  // CASCADE로 ReCreeshot 등 의존 테이블도 자동 처리
+  // User는 제외 — dev 현재 계정 보존
+  // CASCADE로 ReCreeshotLike / Report / TopicFollow 등 의존 테이블 자동 처리
   await devDb.$executeRaw`
     TRUNCATE TABLE
       "GuideVideo", "Policy", "CuratedSection", "HomeBanner",
+      "ReCreeshotTag", "ReCreeshotTopic", "ReCreeshot",
       "PostTopic", "PostTag", "PostSource", "PostPlace", "PostImage", "Post",
       "PlaceImage", "Place", "PlaceType", "Area",
-      "Tag", "TagGroupConfig", "Topic", "User"
+      "Tag", "TagGroupConfig", "Topic"
     CASCADE
   `;
   console.log("✅ 초기화 완료\n");
@@ -113,49 +115,54 @@ async function main() {
     process.exit(0);
   }
 
+  // Post.authorId / ReCreeshot.userId 를 치환할 dev 계정 UUID
+  const TARGET_USER_ID = "6a693df3-1c02-4558-b25f-a44343f798cf";
+
   const prodDb = createClient(PROD_URL);
   const devDb = createClient(DEV_URL);
 
   try {
+    // ── 치환 대상 계정 검증 (wipe 전에 확인) ──────────────────────────────────
+    // User는 복사하지 않으므로, dev에 이 계정이 실제 존재해야 함
+    const targetUser = await devDb.user.findUnique({ where: { id: TARGET_USER_ID } });
+    if (!targetUser) {
+      console.error(`\n❌ dev DB에 치환 대상 계정이 없습니다: ${TARGET_USER_ID}`);
+      console.error("   이 계정이 dev User 테이블에 존재해야 합니다. 중단합니다.");
+      process.exit(1);
+    }
+    console.log(`✅ 치환 계정 확인: ${targetUser.nickname ?? targetUser.email} (${TARGET_USER_ID})\n`);
+
     if (mode === "wipe") await wipeDevDb(devDb);
 
     const skipDuplicates = mode === "skip";
     console.log("📥 데이터 import 시작\n");
 
-    // 1. User (ADMIN/EDITOR only) — 먼저 import해야 Post.authorId FK 충족
-    const users = await prodDb.user.findMany({
-      where: { role: { in: ["ADMIN", "EDITOR"] } },
-    });
-    await devDb.user.createMany({ data: users, skipDuplicates });
-    log("User (ADMIN/EDITOR)", users.length);
-    const adminIds = new Set(users.map((u) => u.id));
-
-    // 2. TagGroupConfig
+    // 1. TagGroupConfig
     const tagGroupConfigs = await prodDb.tagGroupConfig.findMany({});
     await devDb.tagGroupConfig.createMany({ data: tagGroupConfigs, skipDuplicates });
     log("TagGroupConfig", tagGroupConfigs.length);
 
-    // 3. Topic — level 오름차순 정렬 (parentId 자기참조: 부모 먼저)
+    // 2. Topic — level 오름차순 정렬 (parentId 자기참조: 부모 먼저)
     const topics = await prodDb.topic.findMany({ orderBy: { level: "asc" } });
     await devDb.topic.createMany({ data: topics, skipDuplicates });
     log("Topic", topics.length);
 
-    // 4. Tag
+    // 3. Tag
     const tags = await prodDb.tag.findMany({});
     await devDb.tag.createMany({ data: tags, skipDuplicates });
     log("Tag", tags.length);
 
-    // 5. Area — level 오름차순 정렬 (parentId 자기참조: 부모 먼저)
+    // 4. Area — level 오름차순 정렬 (parentId 자기참조: 부모 먼저)
     const areas = await prodDb.area.findMany({ orderBy: { level: "asc" } });
     await devDb.area.createMany({ data: areas, skipDuplicates });
     log("Area", areas.length);
 
-    // 6. PlaceType
+    // 5. PlaceType
     const placeTypes = await prodDb.placeType.findMany({});
     await devDb.placeType.createMany({ data: placeTypes, skipDuplicates });
     log("PlaceType", placeTypes.length);
 
-    // 7. Place
+    // 6. Place
     const places = await prodDb.place.findMany({});
     await devDb.place.createMany({
       data: places.map((p) => ({ ...p, operatingHours: p.operatingHours ?? Prisma.DbNull })),
@@ -163,29 +170,28 @@ async function main() {
     });
     log("Place", places.length);
 
-    // 8. PlaceImage
+    // 7. PlaceImage
     const placeImages = await prodDb.placeImage.findMany({});
     await devDb.placeImage.createMany({ data: placeImages, skipDuplicates });
     log("PlaceImage", placeImages.length);
 
-    // 9. Post — authorId가 dev에 없는 user를 가리키면 null 처리
+    // 8. Post — authorId를 TARGET_USER_ID로 치환 (prod 작성자는 dev에 없음)
     const posts = await prodDb.post.findMany({});
-    const sanitizedPosts = posts.map((p) => ({
-      ...p,
-      authorId: p.authorId && adminIds.has(p.authorId) ? p.authorId : null,
-    }));
-    await devDb.post.createMany({ data: sanitizedPosts, skipDuplicates });
+    await devDb.post.createMany({
+      data: posts.map((p) => ({ ...p, authorId: TARGET_USER_ID })),
+      skipDuplicates,
+    });
     log("Post", posts.length);
     const postIds = posts.map((p) => p.id);
 
-    // 10. PostImage
+    // 9. PostImage
     const postImages = await prodDb.postImage.findMany({
       where: { postId: { in: postIds } },
     });
     await devDb.postImage.createMany({ data: postImages, skipDuplicates });
     log("PostImage", postImages.length);
 
-    // 11. PostPlace
+    // 10. PostPlace
     const postPlaces = await prodDb.postPlace.findMany({
       where: { postId: { in: postIds } },
     });
@@ -195,28 +201,28 @@ async function main() {
     });
     log("PostPlace", postPlaces.length);
 
-    // 12. PostSource
+    // 11. PostSource
     const postSources = await prodDb.postSource.findMany({
       where: { postId: { in: postIds } },
     });
     await devDb.postSource.createMany({ data: postSources, skipDuplicates });
     log("PostSource", postSources.length);
 
-    // 13. PostTag
+    // 12. PostTag
     const postTags = await prodDb.postTag.findMany({
       where: { postId: { in: postIds } },
     });
     await devDb.postTag.createMany({ data: postTags, skipDuplicates });
     log("PostTag", postTags.length);
 
-    // 14. PostTopic
+    // 13. PostTopic
     const postTopics = await prodDb.postTopic.findMany({
       where: { postId: { in: postIds } },
     });
     await devDb.postTopic.createMany({ data: postTopics, skipDuplicates });
     log("PostTopic", postTopics.length);
 
-    // 15. HomeBanner
+    // 14. HomeBanner
     const homeBanners = await prodDb.homeBanner.findMany({
       where: { postId: { in: postIds } },
     });
@@ -226,20 +232,45 @@ async function main() {
     });
     log("HomeBanner", homeBanners.length);
 
-    // 16. CuratedSection
-    const curatedSections = await prodDb.curatedSection.findMany({});
-    await devDb.curatedSection.createMany({ data: curatedSections, skipDuplicates });
-    log("CuratedSection", curatedSections.length);
+    // 15. CuratedSection — prod schema drift(P2022) 로 스킵
+    // const curatedSections = await prodDb.curatedSection.findMany({});
+    // await devDb.curatedSection.createMany({ data: curatedSections, skipDuplicates });
+    // log("CuratedSection", curatedSections.length);
 
-    // 17. Policy
+    // 15. Policy
     const policies = await prodDb.policy.findMany({});
     await devDb.policy.createMany({ data: policies, skipDuplicates });
     log("Policy", policies.length);
 
-    // 18. GuideVideo
+    // 16. GuideVideo
     const guideVideos = await prodDb.guideVideo.findMany({});
     await devDb.guideVideo.createMany({ data: guideVideos, skipDuplicates });
     log("GuideVideo", guideVideos.length);
+
+    // 17. ReCreeshot — userId를 TARGET_USER_ID로 치환 (prod 일반 사용자는 dev에 없음)
+    //   - placeId: Place 복사 완료, 정상
+    //   - linkedPostId: DB FK 없음 (schema @relation 미선언), nullable, 그대로 사용
+    const reCreeshots = await prodDb.reCreeshot.findMany({});
+    await devDb.reCreeshot.createMany({
+      data: reCreeshots.map((r) => ({ ...r, userId: TARGET_USER_ID })),
+      skipDuplicates,
+    });
+    log("ReCreeshot", reCreeshots.length);
+    const reCreeshotIds = reCreeshots.map((r) => r.id);
+
+    // 18. ReCreeshotTopic — reCreeshotId(위 복사본), topicId(Topic 복사 완료)
+    const reCreeshotTopics = await prodDb.reCreeshotTopic.findMany({
+      where: { reCreeshotId: { in: reCreeshotIds } },
+    });
+    await devDb.reCreeshotTopic.createMany({ data: reCreeshotTopics, skipDuplicates });
+    log("ReCreeshotTopic", reCreeshotTopics.length);
+
+    // 19. ReCreeshotTag — reCreeshotId(위 복사본), tagId(Tag 복사 완료)
+    const reCreeshotTags = await prodDb.reCreeshotTag.findMany({
+      where: { reCreeshotId: { in: reCreeshotIds } },
+    });
+    await devDb.reCreeshotTag.createMany({ data: reCreeshotTags, skipDuplicates });
+    log("ReCreeshotTag", reCreeshotTags.length);
 
     console.log(`\n✅ 완료: ${TOTAL}개 테이블, 총 ${totalRows} rows imported`);
   } catch (e) {
