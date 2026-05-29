@@ -106,7 +106,7 @@ function SearchPageContent() {
     saveRecent(text);
     logSearch(text).catch(() => {});
     if (from === "map") {
-      router.push(`/discover?view=map&q=${encodeURIComponent(text)}`);
+      router.push(`/discover?q=${encodeURIComponent(text)}`);
     } else {
       router.push(`/discover?q=${encodeURIComponent(text)}`);
     }

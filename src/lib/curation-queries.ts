@@ -98,12 +98,12 @@ export async function getSectionData(sections: CuratedSection[]): Promise<Sectio
 
 /**
  * 섹션의 타입·필터 조건을 기반으로 "더보기" href를 반환.
- * MANUAL → /discover, AUTO → /discover?view=map&{filter}
+ * MANUAL → /discover, AUTO → /discover?{filter}
  */
 export function getPostMoreHref(section: CuratedSection): string {
   if (section.type === "MANUAL") return "/discover";
-  if (section.filterTopicId) return `/discover?view=map&topicId=${section.filterTopicId}`;
-  if (section.filterTagId) return `/discover?view=map&tagId=${section.filterTagId}`;
-  if (section.filterTagGroup) return `/discover?view=map&tagGroup=${section.filterTagGroup}`;
-  return "/discover?view=map";
+  if (section.filterTopicId) return `/discover?topicId=${section.filterTopicId}`;
+  if (section.filterTagId) return `/discover?tagId=${section.filterTagId}`;
+  if (section.filterTagGroup) return `/discover?tagGroup=${section.filterTagGroup}`;
+  return "/discover";
 }
