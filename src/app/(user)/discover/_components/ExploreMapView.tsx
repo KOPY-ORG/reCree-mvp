@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { InteractiveMap } from "@/components/maps/InteractiveMap";
 import { PlaceBottomSheet } from "@/components/maps/PlaceBottomSheet";
-import { SavedToggleButton } from "./SavedToggleButton";
+import { PlaceListSheet, type PlaceListSheetState } from "@/components/maps/PlaceListSheet";
+import { PlaceListSheetCard } from "@/components/maps/PlaceListSheetCard";
+import { DiscoverSearchBar } from "./DiscoverSearchBar";
 import type { MapPlace } from "@/lib/map-queries";
 import { getTopicMarkerColor } from "@/lib/map-utils";
 
@@ -32,6 +34,10 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroupConfigs, isLog
   const isSavedView = searchParams.get("saved") === "1";
   const selectedPlaceId = searchParams.get("place");
 
+  const [sheetState, setSheetState] = useState<PlaceListSheetState>(
+    selectedPlaceId ? "hidden" : "half"
+  );
+
   function setSelectedPlaceId(id: string | null) {
     const params = new URLSearchParams(searchParams.toString());
     if (id) {
@@ -42,8 +48,15 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroupConfigs, isLog
     router.replace(`?${params.toString()}`);
   }
 
-  const handleMarkerClick = (placeId: string) => setSelectedPlaceId(placeId);
-  const handlePlaceClose = () => setSelectedPlaceId(null);
+  const handleMarkerClick = (placeId: string) => {
+    setSelectedPlaceId(placeId);
+    setSheetState("hidden");
+  };
+
+  const handlePlaceClose = () => {
+    setSelectedPlaceId(null);
+    setSheetState("tab-only");
+  };
 
   const selectedPlace = allPlaces.find((p) => p.id === selectedPlaceId) ?? null;
 
@@ -58,20 +71,44 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroupConfigs, isLog
   );
 
   const visiblePlaces = useMemo(
-    () => isSavedView ? markerPlaces.filter((p) => p.isSaved) : markerPlaces,
+    () => (isSavedView ? markerPlaces.filter((p) => p.isSaved) : markerPlaces),
     [isSavedView, markerPlaces]
   );
 
+  const allVisiblePosts = useMemo(
+    () => visiblePlaces.flatMap((place) => place.posts.map((post) => ({ post, place }))),
+    [visiblePlaces]
+  );
+
+  const effectiveSheetState = !selectedPlaceId && sheetState === "hidden" ? "tab-only" : sheetState;
+
   return (
-    // header(h-12=48px) + bottomnav(h-16=64px) = 112px
-    <div className="relative h-[calc(100dvh-112px)] overflow-hidden">
+    // bottomnav(h-16=64px) — ExploreHeader 제거됨
+    <div className="relative h-[calc(100dvh-64px)] overflow-hidden">
       <InteractiveMap
         places={visiblePlaces}
         selectedPlaceId={selectedPlaceId}
         onMarkerClick={handleMarkerClick}
+        boundsKey={isSavedView ? "saved" : undefined}
         className="absolute inset-0"
       />
-      <SavedToggleButton isLoggedIn={isLoggedIn} />
+      <DiscoverSearchBar isLoggedIn={isLoggedIn} />
+
+      {/* 기본 리스트 시트 — z-40 */}
+      <PlaceListSheet state={effectiveSheetState} onStateChange={setSheetState} topOffset={64}>
+        <div className="px-4 pb-4 space-y-2">
+          {allVisiblePosts.map(({ post }) => (
+            <PlaceListSheetCard
+              key={post.id}
+              post={post}
+              isSaved={savedPostIdsSet.has(post.id)}
+              tagGroupMap={tagGroupMap}
+            />
+          ))}
+        </div>
+      </PlaceListSheet>
+
+      {/* 장소 상세 floating 카드 — z-50 */}
       <PlaceBottomSheet
         place={selectedPlace}
         savedPostIds={savedPostIdsSet}
