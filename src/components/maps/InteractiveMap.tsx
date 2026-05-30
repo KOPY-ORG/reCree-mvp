@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { APIProvider, Map, AdvancedMarker, Pin, useMap } from "@vis.gl/react-google-maps";
+import { APIProvider, Map, AdvancedMarker, useMap } from "@vis.gl/react-google-maps";
+import { PlaceMarker } from "./PlaceMarker";
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 const MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID ?? "DEMO_MAP_ID";
@@ -14,6 +15,7 @@ type MarkerPlace = {
   markerColor?: string;
   markerGlyphColor?: string;
   isSaved?: boolean;
+  posts?: { id: string }[];
 };
 
 interface Props {
@@ -78,9 +80,6 @@ function MapContent({
         const isSelected = selectedPlaceId === place.id;
         const isHighlighted = highlightedIds?.has(place.id) ?? false;
         const color = place.markerColor ?? "#C8FF09";
-        const glyphColor = place.markerGlyphColor ?? "white";
-        // saved 핀은 흰색 테두리로 구분 (선택됨과는 scale로 구분)
-        const borderColor = isSelected ? "white" : place.isSaved ? "white" : color;
         return (
           <AdvancedMarker
             key={place.id}
@@ -89,12 +88,12 @@ function MapContent({
             title={place.nameEn}
             zIndex={isSelected ? 10 : isHighlighted ? 5 : 1}
           >
-            {/* glyph prop / children 미사용: <gmp-pin>.glyph deprecated 경고 방지 */}
-            <Pin
-              background={color}
-              borderColor={borderColor}
-              glyphColor={glyphColor}
-              scale={isSelected ? 1.3 : isHighlighted ? 1.1 : 1}
+            <PlaceMarker
+              color={color}
+              isSelected={isSelected}
+              isSaved={place.isSaved ?? false}
+              nameEn={place.nameEn}
+              postCount={place.posts?.length ?? 0}
             />
           </AdvancedMarker>
         );
