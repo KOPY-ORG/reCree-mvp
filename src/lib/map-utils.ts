@@ -19,3 +19,53 @@ export function getTopicMarkerColor(posts: TopicPost[]): string | undefined {
   }
   return undefined;
 }
+
+export type MarkerGradient = {
+  colorHex: string;
+  colorHex2: string | null;
+  gradientDir: string;
+  gradientStop: number;
+};
+
+type TopicGradientNode = {
+  colorHex: string | null;
+  colorHex2: string | null;
+  gradientDir: string;
+  gradientStop: number;
+  parent?: TopicGradientNode | null;
+};
+type TopicGradientPost = { topics: TopicGradientNode[] };
+
+function resolveTopicGradient(t: TopicGradientNode): MarkerGradient | null {
+  if (t.colorHex) {
+    return { colorHex: t.colorHex, colorHex2: t.colorHex2, gradientDir: t.gradientDir, gradientStop: t.gradientStop };
+  }
+  return t.parent ? resolveTopicGradient(t.parent) : null;
+}
+
+export function getTopicMarkerGradient(posts: TopicGradientPost[]): MarkerGradient | undefined {
+  const sorted = [...posts].sort((a, b) =>
+    (b.topics.length > 0 ? 1 : 0) - (a.topics.length > 0 ? 1 : 0)
+  );
+  for (const post of sorted) {
+    for (const topic of post.topics) {
+      const gradient = resolveTopicGradient(topic);
+      if (gradient) return gradient;
+    }
+  }
+  return undefined;
+}
+
+export function gradientDirToSvgCoords(dir: string): { x1: number; y1: number; x2: number; y2: number } {
+  switch (dir.trim()) {
+    case "to bottom":       return { x1: 0, y1: 0, x2: 0, y2: 1 };
+    case "to top":          return { x1: 0, y1: 1, x2: 0, y2: 0 };
+    case "to right":        return { x1: 0, y1: 0, x2: 1, y2: 0 };
+    case "to left":         return { x1: 1, y1: 0, x2: 0, y2: 0 };
+    case "to bottom right": return { x1: 0, y1: 0, x2: 1, y2: 1 };
+    case "to bottom left":  return { x1: 1, y1: 0, x2: 0, y2: 1 };
+    case "to top right":    return { x1: 0, y1: 1, x2: 1, y2: 0 };
+    case "to top left":     return { x1: 1, y1: 1, x2: 0, y2: 0 };
+    default:                return { x1: 0, y1: 0, x2: 0, y2: 1 };
+  }
+}

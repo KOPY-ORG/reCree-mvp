@@ -11,7 +11,7 @@ import { DiscoverSheetHeader } from "./DiscoverSheetHeader";
 import { HotTabStub } from "./HotTabStub";
 import { useRecentSearches } from "../_hooks/useRecentSearches";
 import type { MapPlace } from "@/lib/map-queries";
-import { getTopicMarkerColor } from "@/lib/map-utils";
+import { getTopicMarkerColor, getTopicMarkerGradient } from "@/lib/map-utils";
 
 type TagGroupConfig = {
   group: string;
@@ -77,7 +77,11 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroupConfigs, isLog
     [tagGroupConfigs]
   );
   const markerPlaces = useMemo(
-    () => allPlaces.map((p) => ({ ...p, markerColor: getTopicMarkerColor(p.posts) })),
+    () => allPlaces.map((p) => ({
+      ...p,
+      markerColor: getTopicMarkerColor(p.posts),
+      markerGradient: getTopicMarkerGradient(p.posts),
+    })),
     [allPlaces]
   );
 

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { APIProvider, Map, AdvancedMarker, useMap } from "@vis.gl/react-google-maps";
 import { PlaceMarker } from "./PlaceMarker";
+import type { MarkerGradient } from "@/lib/map-utils";
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 const MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID ?? "DEMO_MAP_ID";
@@ -14,6 +15,7 @@ type MarkerPlace = {
   nameEn: string;
   markerColor?: string;
   markerGlyphColor?: string;
+  markerGradient?: MarkerGradient;
   isSaved?: boolean;
   posts?: { id: string }[];
 };
@@ -94,6 +96,8 @@ function MapContent({
               isSaved={place.isSaved ?? false}
               nameEn={place.nameEn}
               postCount={place.posts?.length ?? 0}
+              placeId={place.id}
+              gradient={place.markerGradient}
             />
           </AdvancedMarker>
         );
