@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { InteractiveMap } from "@/components/maps/InteractiveMap";
 import { PlaceBottomSheet } from "@/components/maps/PlaceBottomSheet";
@@ -9,7 +9,9 @@ import { PlaceListSheetCard } from "@/components/maps/PlaceListSheetCard";
 import { DiscoverSearchBar } from "./DiscoverSearchBar";
 import { DiscoverSheetHeader } from "./DiscoverSheetHeader";
 import { HotTabStub } from "./HotTabStub";
+import { ListScrollTopButton } from "./ListScrollTopButton";
 import { useRecentSearches } from "../_hooks/useRecentSearches";
+import { useDiscoverViewState } from "../_hooks/useDiscoverViewState";
 import type { MapPlace } from "@/lib/map-queries";
 import { getTopicMarkerColor, getTopicMarkerGradient } from "@/lib/map-utils";
 
@@ -44,10 +46,52 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroupConfigs, isLog
   const [sheetState, setSheetState] = useState<PlaceListSheetState>(
     selectedPlaceId ? "hidden" : "half"
   );
+  const [focusedPlaceId, setFocusedPlaceId] = useState<string | null>(null);
   const [contentTab, setContentTab] = useState<"hot" | "list">("list");
   const [query, setQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const listScrollRef = useRef<HTMLDivElement | null>(null);
+  const listScrollMemoRef = useRef<number>(0);
   const { recents, addRecent, removeRecent, clearRecents } = useRecentSearches();
+  const { restored, save, clear } = useDiscoverViewState();
+
+  useEffect(() => {
+    if (!restored) return;
+    setQuery(restored.query);
+    setContentTab(restored.contentTab);
+    clear();
+    const top = restored.scrollTop;
+    if (top > 0) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (listScrollRef.current) listScrollRef.current.scrollTop = top;
+        });
+      });
+    }
+  }, [restored, clear]);
+
+  const handlePostNavigate = () => {
+    save({ query, contentTab, scrollTop: listScrollRef.current?.scrollTop ?? 0 });
+  };
+
+  const handleContentTabChange = (tab: "hot" | "list") => {
+    if (contentTab === "list" && listScrollRef.current) {
+      listScrollMemoRef.current = listScrollRef.current.scrollTop;
+    }
+    setContentTab(tab);
+  };
+
+  useEffect(() => {
+    if (contentTab !== "list") return;
+    const top = listScrollMemoRef.current;
+    if (top > 0) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (listScrollRef.current) listScrollRef.current.scrollTop = top;
+        });
+      });
+    }
+  }, [contentTab]);
 
   function setSelectedPlaceId(id: string | null) {
     const params = new URLSearchParams(searchParams.toString());
@@ -60,13 +104,27 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroupConfigs, isLog
   }
 
   const handleMarkerClick = (placeId: string) => {
+    setFocusedPlaceId(null);
     setSelectedPlaceId(placeId);
-    setSheetState("hidden");
   };
 
   const handlePlaceClose = () => {
     setSelectedPlaceId(null);
-    setSheetState("tab-only");
+  };
+
+  const handleCardTap = (placeId: string) => {
+    if (focusedPlaceId === placeId) {
+      setFocusedPlaceId(null);
+      return;
+    }
+    setSelectedPlaceId(null);
+    setFocusedPlaceId(placeId);
+    setSheetState((prev) => (prev === "full" ? "half" : prev));
+  };
+
+  const handleMapClick = () => {
+    setSelectedPlaceId(null);
+    setFocusedPlaceId(null);
   };
 
   const selectedPlace = allPlaces.find((p) => p.id === selectedPlaceId) ?? null;
@@ -172,7 +230,11 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroupConfigs, isLog
   };
   const handleClearQuery = () => setQuery("");
 
-  const effectiveSheetState = !selectedPlaceId && sheetState === "hidden" ? "tab-only" : sheetState;
+  const effectiveSheetState = selectedPlaceId
+    ? "hidden"
+    : sheetState === "hidden"
+      ? "tab-only"
+      : sheetState;
 
   return (
     // bottomnav(h-16=64px) — ExploreHeader 제거됨
@@ -180,7 +242,9 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroupConfigs, isLog
       <InteractiveMap
         places={searchedPlaces}
         selectedPlaceId={selectedPlaceId}
+        focusedPlaceId={focusedPlaceId}
         onMarkerClick={handleMarkerClick}
+        onMapClick={handleMapClick}
         boundsKey={isResultMode ? `q:${query}` : isSavedView ? "saved" : "all"}
         highlightedIds={isResultMode ? new Set(searchedPlaces.map((p) => p.id)) : undefined}
         className="absolute inset-0"
@@ -206,10 +270,11 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroupConfigs, isLog
         state={effectiveSheetState}
         onStateChange={setSheetState}
         topOffset={64}
+        scrollContainerRef={listScrollRef}
         header={
           <DiscoverSheetHeader
             contentTab={contentTab}
-            onContentTabChange={setContentTab}
+            onContentTabChange={handleContentTabChange}
             placeCount={searchedPlaces.length}
             isResultMode={isResultMode}
             query={query}
@@ -218,13 +283,18 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroupConfigs, isLog
         }
       >
         {(contentTab === "list" || isResultMode) ? (
-          <div className="px-4 pb-4 space-y-2">
-            {allVisiblePosts.map(({ post }) => (
+          <div className="px-4 pt-2 pb-4 space-y-2">
+            {allVisiblePosts.map(({ post, place }) => (
               <PlaceListSheetCard
                 key={post.id}
                 post={post}
+                place={place}
                 isSaved={savedPostIdsSet.has(post.id)}
+                isFocused={focusedPlaceId === place.id}
                 tagGroupMap={tagGroupMap}
+                onCardTap={handleCardTap}
+                onViewPlace={handleSelectPlace}
+                onPostNavigate={handlePostNavigate}
               />
             ))}
           </div>
@@ -232,6 +302,9 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroupConfigs, isLog
           <HotTabStub />
         )}
       </PlaceListSheet>
+
+      {/* 리스트 맨 위로 버튼 — z-30, 시트 위에 absolute */}
+      <ListScrollTopButton scrollRef={listScrollRef} />
 
       {/* 장소 상세 floating 카드 — z-50 */}
       <PlaceBottomSheet

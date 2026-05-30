@@ -45,7 +45,7 @@ export function PlaceMarker({ color, isSelected, isSaved, nameEn, postCount, pla
       {/* 라벨 pill — selected일 때만, 이름만 */}
       {isSelected && (
         <div
-          className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-zinc-900 shadow-lg"
+          className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-zinc-900 shadow-lg max-w-[200px] overflow-hidden text-ellipsis"
           style={{ bottom: "calc(100% + 6px)" }}
         >
           {displayName}

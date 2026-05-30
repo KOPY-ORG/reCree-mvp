@@ -8,18 +8,19 @@ import { useToast } from "../_hooks/useToast";
 interface Props {
   postId: string;
   initialSaved: boolean;
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "lg";
   unsavedClassName?: string;
   savedStyle?: React.CSSProperties;
+  strokeLinejoin?: React.SVGAttributes<SVGElement>["strokeLinejoin"];
   onSaveChange?: (saved: boolean) => void;
 }
 
-export function ScrapButton({ postId, initialSaved, size = "md", unsavedClassName, savedStyle, onSaveChange }: Props) {
+export function ScrapButton({ postId, initialSaved, size = "md", unsavedClassName, savedStyle, strokeLinejoin = "round", onSaveChange }: Props) {
   const [saved, setSaved] = useState(initialSaved);
   const [isPending, startTransition] = useTransition();
   const { toast, showToast } = useToast();
 
-  const iconSize = size === "sm" ? "h-4 w-4" : "h-5 w-5";
+  const iconSize = size === "sm" ? "h-4 w-4" : size === "lg" ? "h-6 w-6" : "h-5 w-5";
   const unsavedClass = unsavedClassName ?? "text-muted-foreground hover:text-foreground";
   const activeSavedStyle = savedStyle ?? { fill: "#C8FF09", stroke: "#C8FF09" };
 
@@ -64,6 +65,7 @@ export function ScrapButton({ postId, initialSaved, size = "md", unsavedClassNam
         <Bookmark
           className={`${iconSize} ${saved ? "" : unsavedClass}`}
           strokeWidth={1.5}
+          strokeLinejoin={strokeLinejoin}
           style={saved ? activeSavedStyle : undefined}
         />
       </button>

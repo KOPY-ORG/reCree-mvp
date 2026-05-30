@@ -16,9 +16,10 @@ interface Props {
   topOffset?: number;
   header?: React.ReactNode;
   children?: React.ReactNode;
+  scrollContainerRef?: React.RefObject<HTMLDivElement | null>;
 }
 
-export function PlaceListSheet({ state, onStateChange, topOffset = 24, header, children }: Props) {
+export function PlaceListSheet({ state, onStateChange, topOffset = 24, header, children, scrollContainerRef }: Props) {
   const sheetRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -93,7 +94,7 @@ export function PlaceListSheet({ state, onStateChange, topOffset = 24, header, c
       )}
 
       {/* 콘텐츠 */}
-      <div className="flex-1 overflow-y-auto">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
         {children}
         {/* 콘텐츠 끝 드래그 spacer */}
         {state !== "hidden" && (
