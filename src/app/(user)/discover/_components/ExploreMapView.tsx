@@ -181,7 +181,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroupConfigs, isLog
         places={searchedPlaces}
         selectedPlaceId={selectedPlaceId}
         onMarkerClick={handleMarkerClick}
-        boundsKey={isResultMode ? `q:${query}` : "all"}
+        boundsKey={isResultMode ? `q:${query}` : isSavedView ? "saved" : "all"}
         highlightedIds={isResultMode ? new Set(searchedPlaces.map((p) => p.id)) : undefined}
         className="absolute inset-0"
       />
