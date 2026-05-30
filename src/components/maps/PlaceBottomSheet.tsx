@@ -39,7 +39,7 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
           {/* 1행: 장소명(슬라이드) + 아이콘 */}
           <div className="flex items-center gap-2">
             <div className="flex-1 overflow-x-auto scrollbar-hide min-w-0">
-              <h2 className="text-lg font-semibold whitespace-nowrap">{place.nameEn ?? place.nameKo}</h2>
+              <h2 className="text-lg font-bold whitespace-nowrap">{place.nameEn ?? place.nameKo}</h2>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
               {place.googleMapsUrl && (

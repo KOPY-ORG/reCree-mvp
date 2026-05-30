@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import { Noto_Sans_KR, Plus_Jakarta_Sans } from "next/font/google";
+import { Noto_Sans_KR, Google_Sans_Flex } from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ToastProvider } from "@/components/toast-provider";
 import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import { VercelAnalytics } from "@/components/VercelAnalytics";
 import "./globals.css";
 
-const plusJakarta = Plus_Jakarta_Sans({
-  variable: "--font-plus-jakarta",
+const googleSans = Google_Sans_Flex({
+  variable: "--font-google-sans",
   subsets: ["latin"],
   display: "swap",
 });
@@ -55,7 +55,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko" suppressHydrationWarning>
-      <body className={`${plusJakarta.variable} ${notoSansKR.variable} font-sans antialiased`} suppressHydrationWarning>
+      <body className={`${googleSans.variable} ${notoSansKR.variable} font-sans antialiased`} suppressHydrationWarning>
         <GoogleAnalytics />
         <ToastProvider>{children}</ToastProvider>
         <VercelAnalytics />
