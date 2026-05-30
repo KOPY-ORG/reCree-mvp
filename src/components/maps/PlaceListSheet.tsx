@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useSheetDrag } from "@/app/(user)/_hooks/useSheetDrag";
 
 export type PlaceListSheetState = "hidden" | "tab-only" | "half" | "full";
@@ -8,7 +8,6 @@ export type PlaceListSheetState = "hidden" | "tab-only" | "half" | "full";
 const DRAGGABLE_STATES = ["tab-only", "half", "full"] as const;
 type DraggableState = (typeof DRAGGABLE_STATES)[number];
 
-const TAB_ONLY_H = 60;
 const BOTTOM_NAV_H = 64;
 
 interface Props {
@@ -21,10 +20,29 @@ interface Props {
 
 export function PlaceListSheet({ state, onStateChange, topOffset = 24, header, children }: Props) {
   const sheetRef = useRef<HTMLDivElement>(null);
+  const handleRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
+
+  // 핸들 + 헤더의 실제 렌더 높이를 측정 — TAB_ONLY_H 하드코딩 제거
+  const [tabOnlyH, setTabOnlyH] = useState(80);
+
+  useEffect(() => {
+    const update = () => {
+      const h =
+        (handleRef.current?.offsetHeight ?? 0) +
+        (headerRef.current?.offsetHeight ?? 0);
+      if (h > 0) setTabOnlyH(h);
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    if (handleRef.current) observer.observe(handleRef.current);
+    if (headerRef.current) observer.observe(headerRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   function getSnapHeights() {
     return [
-      TAB_ONLY_H,
+      tabOnlyH,
       Math.round((window.innerHeight - BOTTOM_NAV_H) * 0.5),
       window.innerHeight - BOTTOM_NAV_H - topOffset,
     ];
@@ -44,7 +62,7 @@ export function PlaceListSheet({ state, onStateChange, topOffset = 24, header, c
       : {
           height:
             state === "tab-only"
-              ? `${TAB_ONLY_H}px`
+              ? `${tabOnlyH}px`
               : state === "half"
               ? `calc((100dvh - ${BOTTOM_NAV_H}px) * 0.5)`
               : `calc(100dvh - ${BOTTOM_NAV_H}px - ${topOffset}px)`,
@@ -60,17 +78,18 @@ export function PlaceListSheet({ state, onStateChange, topOffset = 24, header, c
       {/* 드래그 핸들 */}
       {state !== "hidden" && (
         <div
+          ref={handleRef}
           {...dragHandlers}
           className="shrink-0 flex justify-center items-center bg-white"
-          style={{ height: 32, touchAction: "none" }}
+          style={{ height: 28, touchAction: "none" }}
         >
-          <div className="w-12 h-1.5 rounded-full bg-muted-foreground/40" />
+          <div className="w-14 h-1 rounded-full bg-muted-foreground/30" />
         </div>
       )}
 
       {/* header slot */}
       {state !== "hidden" && header && (
-        <div className="shrink-0">{header}</div>
+        <div ref={headerRef} className="shrink-0">{header}</div>
       )}
 
       {/* 콘텐츠 */}
