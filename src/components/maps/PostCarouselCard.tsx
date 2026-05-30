@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { isExternalImage } from "@/lib/image";
@@ -23,6 +24,7 @@ interface Props {
 }
 
 export function PostCarouselCard({ post, isSaved, tagGroupMap }: Props) {
+  const [localSaved, setLocalSaved] = useState(isSaved);
   const cardImageUrl = post.imageUrl ?? post.images[0] ?? null;
 
   const topicSlots: LabelSlot[] = post.topics.map((topic) => ({
@@ -76,8 +78,14 @@ export function PostCarouselCard({ post, isSaved, tagGroupMap }: Props) {
           </p>
         </div>
         {/* 스크랩 버튼 — 우상단 */}
-        <div className="absolute top-2 right-2 flex items-center justify-center w-7 h-7 rounded-full bg-white shadow">
-          <ScrapButton postId={post.id} initialSaved={isSaved} size="sm" />
+        <div className={`absolute top-2 right-2 flex items-center justify-center w-7 h-7 rounded-full shadow ${localSaved ? "bg-[#C8FF09]" : "bg-white"}`}>
+          <ScrapButton
+            postId={post.id}
+            initialSaved={isSaved}
+            size="sm"
+            savedStyle={{ fill: "black", stroke: "black" }}
+            onSaveChange={setLocalSaved}
+          />
         </div>
       </div>
     </Link>
