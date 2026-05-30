@@ -15,10 +15,11 @@ interface Props {
   state: PlaceListSheetState;
   onStateChange: (state: PlaceListSheetState) => void;
   topOffset?: number;
+  header?: React.ReactNode;
   children?: React.ReactNode;
 }
 
-export function PlaceListSheet({ state, onStateChange, topOffset = 24, children }: Props) {
+export function PlaceListSheet({ state, onStateChange, topOffset = 24, header, children }: Props) {
   const sheetRef = useRef<HTMLDivElement>(null);
 
   function getSnapHeights() {
@@ -65,6 +66,11 @@ export function PlaceListSheet({ state, onStateChange, topOffset = 24, children 
         >
           <div className="w-12 h-1.5 rounded-full bg-muted-foreground/40" />
         </div>
+      )}
+
+      {/* header slot */}
+      {state !== "hidden" && header && (
+        <div className="shrink-0">{header}</div>
       )}
 
       {/* 콘텐츠 */}

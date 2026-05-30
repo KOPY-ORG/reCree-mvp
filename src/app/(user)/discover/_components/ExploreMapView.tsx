@@ -7,6 +7,8 @@ import { PlaceBottomSheet } from "@/components/maps/PlaceBottomSheet";
 import { PlaceListSheet, type PlaceListSheetState } from "@/components/maps/PlaceListSheet";
 import { PlaceListSheetCard } from "@/components/maps/PlaceListSheetCard";
 import { DiscoverSearchBar } from "./DiscoverSearchBar";
+import { DiscoverSheetHeader } from "./DiscoverSheetHeader";
+import { HotTabStub } from "./HotTabStub";
 import type { MapPlace } from "@/lib/map-queries";
 import { getTopicMarkerColor } from "@/lib/map-utils";
 
@@ -37,6 +39,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroupConfigs, isLog
   const [sheetState, setSheetState] = useState<PlaceListSheetState>(
     selectedPlaceId ? "hidden" : "half"
   );
+  const [contentTab, setContentTab] = useState<"hot" | "list">("list");
 
   function setSelectedPlaceId(id: string | null) {
     const params = new URLSearchParams(searchParams.toString());
@@ -95,17 +98,32 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroupConfigs, isLog
       <DiscoverSearchBar isLoggedIn={isLoggedIn} />
 
       {/* 기본 리스트 시트 — z-40 */}
-      <PlaceListSheet state={effectiveSheetState} onStateChange={setSheetState} topOffset={64}>
-        <div className="px-4 pb-4 space-y-2">
-          {allVisiblePosts.map(({ post }) => (
-            <PlaceListSheetCard
-              key={post.id}
-              post={post}
-              isSaved={savedPostIdsSet.has(post.id)}
-              tagGroupMap={tagGroupMap}
-            />
-          ))}
-        </div>
+      <PlaceListSheet
+        state={effectiveSheetState}
+        onStateChange={setSheetState}
+        topOffset={64}
+        header={
+          <DiscoverSheetHeader
+            contentTab={contentTab}
+            onContentTabChange={setContentTab}
+            placeCount={visiblePlaces.length}
+          />
+        }
+      >
+        {contentTab === "list" ? (
+          <div className="px-4 pb-4 space-y-2">
+            {allVisiblePosts.map(({ post }) => (
+              <PlaceListSheetCard
+                key={post.id}
+                post={post}
+                isSaved={savedPostIdsSet.has(post.id)}
+                tagGroupMap={tagGroupMap}
+              />
+            ))}
+          </div>
+        ) : (
+          <HotTabStub />
+        )}
       </PlaceListSheet>
 
       {/* 장소 상세 floating 카드 — z-50 */}
