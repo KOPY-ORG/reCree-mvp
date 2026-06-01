@@ -14,8 +14,8 @@ import { HotTabStub } from "./HotTabStub";
 import { ListScrollTopButton } from "./ListScrollTopButton";
 import { useRecentSearches } from "../_hooks/useRecentSearches";
 import { useDiscoverViewState } from "../_hooks/useDiscoverViewState";
-import type { MapPlace, MapPost, MapPostTopic } from "@/lib/map-queries";
-import { getTopicMarkerColor, getTopicMarkerGradient } from "@/lib/map-utils";
+import type { MapPlace, MapPost } from "@/lib/map-queries";
+import { getTopicMarkerColor, getTopicMarkerGradient, topicMatchesFilter } from "@/lib/map-utils";
 import {
   resolveTopicColors,
   resolveTagColors,
@@ -28,15 +28,6 @@ import type { TagGroupColorMap } from "@/lib/post-labels";
 
 type ChipInfo = { id: string; label: string; bg: string; fg: string };
 const KPOP_NAME = "K-POP";
-
-function topicMatchesFilter(topic: MapPostTopic, topicId: string): boolean {
-  return (
-    topic.id === topicId ||
-    topic.parent?.id === topicId ||
-    topic.parent?.parent?.id === topicId ||
-    topic.parent?.parent?.parent?.id === topicId
-  );
-}
 
 function postMatchesFilters(post: MapPost, topicIds: string[], tagIds: string[]): boolean {
   const topicHit =
@@ -55,21 +46,24 @@ function placeMatchesFilters(
   return place.posts.some((post) => postMatchesFilters(post, topicIds, tagIds));
 }
 
-// 매칭 점수: 선택 토픽 하나당 +2, 선택 태그 하나당 +1
+// 토픽 매칭은 항상 태그보다 위. 같은 급 안에서는 먼저 선택한 필터가 위.
+// TOPIC_BASE(1000)는 태그 선택 최대 합계(실질적으로 수십 개)를 커버하도록 충분히 큰 값.
+const TOPIC_BASE = 1000;
+const TAG_BASE = 1;
 function placeMatchScore(
   place: Pick<MapPlace, "posts">,
   topicIds: string[],
   tagIds: string[]
 ): number {
   let score = 0;
-  for (const topicId of topicIds) {
+  topicIds.forEach((topicId, i) => {
     if (place.posts.some((post) => post.topics.some((t) => topicMatchesFilter(t, topicId))))
-      score += 2;
-  }
-  for (const tagId of tagIds) {
+      score += TOPIC_BASE + (topicIds.length - i);
+  });
+  tagIds.forEach((tagId, j) => {
     if (place.posts.some((post) => post.tags.some((tag) => tag.id === tagId)))
-      score += 1;
-  }
+      score += TAG_BASE + (tagIds.length - j);
+  });
   return score;
 }
 
@@ -317,8 +311,17 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
   }, [query, visiblePlaces]);
 
   const allVisiblePosts = useMemo(
-    () => filteredPlaces.flatMap((place) => place.posts.map((post) => ({ post, place }))),
-    [filteredPlaces]
+    () => filteredPlaces.flatMap((place) => {
+      const posts = hasFilters
+        ? [...place.posts].sort((a, b) => {
+            const aM = postMatchesFilters(a, appliedTopicIds, appliedTagIds) ? 0 : 1;
+            const bM = postMatchesFilters(b, appliedTopicIds, appliedTagIds) ? 0 : 1;
+            return aM - bM;
+          })
+        : place.posts;
+      return posts.map((post) => ({ post, place }));
+    }),
+    [filteredPlaces, hasFilters, appliedTopicIds, appliedTagIds]
   );
 
   const handleSearchOpen = () => {
@@ -450,6 +453,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
                   isSaved={savedPostIdsSet.has(post.id)}
                   isFocused={focusedPlaceId === place.id}
                   tagGroupMap={tagGroupMap}
+                  matchedTopicIds={appliedTopicIds}
                   onCardTap={handleCardTap}
                   onViewPlace={handleSelectPlace}
                   onPostNavigate={handlePostNavigate}

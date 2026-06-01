@@ -56,6 +56,17 @@ export function getTopicMarkerGradient(posts: TopicGradientPost[]): MarkerGradie
   return undefined;
 }
 
+type TopicIdNode = { id: string; parent?: TopicIdNode | null };
+
+export function topicMatchesFilter(topic: TopicIdNode, topicId: string): boolean {
+  return (
+    topic.id === topicId ||
+    topic.parent?.id === topicId ||
+    topic.parent?.parent?.id === topicId ||
+    topic.parent?.parent?.parent?.id === topicId
+  );
+}
+
 export function gradientDirToSvgCoords(dir: string): { x1: number; y1: number; x2: number; y2: number } {
   switch (dir.trim()) {
     case "to bottom":       return { x1: 0, y1: 0, x2: 0, y2: 1 };

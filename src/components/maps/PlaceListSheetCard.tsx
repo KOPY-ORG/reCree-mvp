@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ChevronRight, MapPin } from "lucide-react";
 import { isExternalImage } from "@/lib/image";
+import { topicMatchesFilter } from "@/lib/map-utils";
 import type { MapPost } from "@/lib/map-queries";
 import {
   resolveTagColors,
@@ -33,12 +34,13 @@ interface Props {
   isSaved: boolean;
   isFocused?: boolean;
   tagGroupMap: TagGroupColorMap;
+  matchedTopicIds?: string[];
   onCardTap: (placeId: string) => void;
   onViewPlace: (placeId: string) => void;
   onPostNavigate?: () => void;
 }
 
-export function PlaceListSheetCard({ post, place, isSaved, isFocused, tagGroupMap, onCardTap, onViewPlace, onPostNavigate }: Props) {
+export function PlaceListSheetCard({ post, place, isSaved, isFocused, tagGroupMap, matchedTopicIds, onCardTap, onViewPlace, onPostNavigate }: Props) {
   const cardImageUrl = post.imageUrl ?? post.images[0] ?? null;
 
   const areaLabel = place.area
@@ -46,7 +48,14 @@ export function PlaceListSheetCard({ post, place, isSaved, isFocused, tagGroupMa
       (place.area.parent ? ", " + (place.area.parent.nameEn ?? place.area.parent.nameKo) : "")
     : null;
 
-  const topicSlots: LabelSlot[] = post.topics.map((topic) => ({
+  const sortedTopics = matchedTopicIds?.length
+    ? [...post.topics].sort((a, b) => {
+        const aM = matchedTopicIds.some((id) => topicMatchesFilter(a, id)) ? 0 : 1;
+        const bM = matchedTopicIds.some((id) => topicMatchesFilter(b, id)) ? 0 : 1;
+        return aM - bM;
+      })
+    : post.topics;
+  const topicSlots: LabelSlot[] = sortedTopics.map((topic) => ({
     group: "TOPIC",
     name: topic.nameEn,
     displayLabel: null,
