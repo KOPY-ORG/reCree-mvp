@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { Star, LogIn } from "lucide-react";
+import { Bookmark, LogIn } from "lucide-react";
 import Link from "next/link";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
@@ -24,6 +24,7 @@ export function SavedToggleButton({ isLoggedIn }: Props) {
       return;
     }
     const params = new URLSearchParams(searchParams.toString());
+    params.delete("place");
     if (isSavedView) {
       params.delete("saved");
     } else {
@@ -38,11 +39,11 @@ export function SavedToggleButton({ isLoggedIn }: Props) {
         type="button"
         onClick={toggle}
         aria-label={isSavedView ? "Show all places" : "Show saved places"}
-        className={`absolute top-3 right-3 z-30 flex items-center justify-center size-10 rounded-full shadow-lg active:opacity-70 transition-colors ${
-          isSavedView ? "bg-brand text-black" : "bg-background/90 text-foreground"
+        className={`z-30 flex items-center justify-center size-10 rounded-full shadow-md active:opacity-70 transition-colors ${
+          isSavedView ? "bg-brand text-black" : "bg-white text-foreground"
         }`}
       >
-        <Star className="size-5" fill={isSavedView ? "currentColor" : "none"} />
+        <Bookmark className="size-5" strokeWidth={1.5} fill={isSavedView ? "currentColor" : "none"} />
       </button>
 
       <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>

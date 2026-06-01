@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { ChevronRight, Heart } from "lucide-react";
+import { Heart } from "lucide-react";
+import { HScrollSection } from "@/components/curation/HScrollSection";
 import { prisma } from "@/lib/prisma";
 import { HomeBannerCarousel, type BannerItem } from "./_components/HomeBannerCarousel";
 import { getPostsWithLabels, getSavedPostIds, type PostItem } from "@/lib/post-queries";
+import { getCuratedSections, getSectionData, getPostMoreHref, type SectionData } from "@/lib/curation-queries";
 import {
   resolveTopicColors,
   resolveTagColors,
@@ -40,40 +42,6 @@ import { getCurrentUser } from "@/lib/auth";
 import { ReCreeshotImage } from "@/components/recreeshot-image";
 import { fetchLatestFeed, fetchFollowFeed } from "./_actions/feed-actions";
 import { InfiniteFeed } from "./_components/InfiniteFeed";
-
-// ─── 가로 스크롤 섹션 ────────────────────────────────────────────────────────
-
-function HScrollSection({
-  title,
-  moreHref,
-  children,
-}: {
-  title: string;
-  moreHref?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="mb-6">
-      <div className="flex items-center justify-between mb-3 px-4">
-        <h2 className="font-bold text-lg">{title}</h2>
-        {moreHref && (
-          <Link
-            href={moreHref}
-            className="text-sm text-muted-foreground flex items-center gap-0.5 hover:text-foreground transition-colors"
-          >
-            More <ChevronRight className="size-3.5" />
-          </Link>
-        )}
-      </div>
-      <div className="overflow-x-auto scrollbar-hide">
-        <div className="flex gap-3 pl-4 pb-1">
-          {children}
-          <div className="shrink-0 w-1" />
-        </div>
-      </div>
-    </section>
-  );
-}
 
 // ─── 탭 바 ───────────────────────────────────────────────────────────────────
 
@@ -179,10 +147,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         },
       },
     }),
-    prisma.curatedSection.findMany({
-      where: { isActive: true, showOnHome: true },
-      orderBy: { order: "asc" },
-    }),
+    getCuratedSections({ showOnHome: true }),
     prisma.tagGroupConfig.findMany({
       select: { group: true, displayLabel: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true },
     }),
@@ -190,69 +155,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     fetchLatestFeed({}),
   ]);
 
-  type SectionData =
-    | { kind: "posts"; items: PostItem[] }
-    | { kind: "reCreeshots"; items: { id: string; imageUrl: string; matchScore: number | null; showBadge: boolean; referencePhotoUrl: string | null }[] };
-
-  const sectionData: SectionData[] = await Promise.all(
-    sections.map(async (section): Promise<SectionData> => {
-      if (section.contentType === "RECREESHOT") {
-        const items = await prisma.reCreeshot.findMany({
-          where: {
-            status: "ACTIVE",
-            ...(section.filterTopicId
-              ? { reCreeshotTopics: { some: { topicId: section.filterTopicId } } }
-              : {}),
-            ...(section.filterTagId
-              ? { reCreeshotTags: { some: { tagId: section.filterTagId } } }
-              : section.filterTagGroup
-              ? { reCreeshotTags: { some: { tag: { group: section.filterTagGroup } } } }
-              : {}),
-          },
-          orderBy: { createdAt: "desc" },
-          take: section.maxCount,
-          select: { id: true, imageUrl: true, matchScore: true, showBadge: true, referencePhotoUrl: true },
-        });
-        return { kind: "reCreeshots", items };
-      }
-
-      // postIds가 지정된 경우(MANUAL 또는 AUTO 고정 순서): 해당 포스트를 그 순서로 표시
-      if (section.postIds.length > 0) {
-        const posts = await getPostsWithLabels({
-          id: { in: section.postIds },
-          status: "PUBLISHED",
-        });
-        const map = new Map(posts.map((p) => [p.id, p]));
-        return {
-          kind: "posts",
-          items: section.postIds.map((id) => map.get(id)).filter((p): p is PostItem => !!p),
-        };
-      }
-
-      // MANUAL인데 postIds가 없으면 빈 섹션
-      if (section.type === "MANUAL") return { kind: "posts", items: [] };
-
-      // AUTO: 필터 + 자동 정렬
-      const items = await getPostsWithLabels(
-        {
-          status: "PUBLISHED",
-          ...(section.filterTopicId
-            ? { postTopics: { some: { topicId: section.filterTopicId } } }
-            : {}),
-          ...(section.filterTagId
-            ? { postTags: { some: { tagId: section.filterTagId } } }
-            : section.filterTagGroup
-            ? { postTags: { some: { tag: { group: section.filterTagGroup } } } }
-            : {}),
-        },
-        {
-          take: section.maxCount,
-          orderBy: section.type === "AUTO_HOT" ? { viewCount: "desc" } : { createdAt: "desc" },
-        }
-      );
-      return { kind: "posts", items };
-    })
-  );
+  const sectionData: SectionData[] = await getSectionData(sections);
 
   const tagGroupMap: TagGroupColorMap = new Map(tagGroupConfigs.map((c) => [c.group, c]));
 
@@ -290,8 +193,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         <div className="mb-5"><SearchBar /></div>
         <TabBar activeTab={activeTab} />
         <div className="grid grid-cols-2 gap-3">
-          {fallbackPosts.map((post) => (
-            <PostCard key={post.id} post={post} tagGroupMap={tagGroupMap} isSaved={savedPostIds.has(post.id)} variant="grid" />
+          {fallbackPosts.map((post, index) => (
+            <PostCard key={post.id} post={post} tagGroupMap={tagGroupMap} isSaved={savedPostIds.has(post.id)} variant="grid" priority={index === 0} />
           ))}
         </div>
       </div>
@@ -383,15 +286,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             const data = sectionData[i];
             if (!data || data.items.length === 0) return null;
 
-            // POST AUTO 섹션은 필터 조건을 지도에 그대로 전달
-            function getPostMoreHref() {
-              if (section.type === "MANUAL") return "/discover";
-              if (section.filterTopicId) return `/discover?view=map&topicId=${section.filterTopicId}`;
-              if (section.filterTagId) return `/discover?view=map&tagId=${section.filterTagId}`;
-              if (section.filterTagGroup) return `/discover?view=map&tagGroup=${section.filterTagGroup}`;
-              return "/discover?view=map";
-            }
-
             if (data.kind === "reCreeshots") {
               return (
                 <HScrollSection key={section.id} title={section.titleEn}>
@@ -425,9 +319,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             }
 
             return (
-              <HScrollSection key={section.id} title={section.titleEn} moreHref={getPostMoreHref()}>
-                {data.items.map((post) => (
-                  <PostCard key={post.id} post={post} tagGroupMap={tagGroupMap} isSaved={savedPostIds.has(post.id)} />
+              <HScrollSection key={section.id} title={section.titleEn} moreHref={getPostMoreHref(section)}>
+                {data.items.map((post, index) => (
+                  <PostCard key={post.id} post={post} tagGroupMap={tagGroupMap} isSaved={savedPostIds.has(post.id)} priority={index === 0} />
                 ))}
               </HScrollSection>
             );

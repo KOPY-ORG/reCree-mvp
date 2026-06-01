@@ -1,5 +1,4 @@
 import { AppHeader } from "./_components/AppHeader";
-import { ExploreHeader } from "./_components/ExploreHeader";
 import { SavedHeader } from "./_components/SavedHeader";
 import { ConditionalHeader } from "./_components/ConditionalHeader";
 import { ConditionalBottomNav } from "./_components/ConditionalBottomNav";
@@ -17,7 +16,7 @@ export default async function UserLayout({
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background">
       <ActivityTracker />
-      <ConditionalHeader header={<AppHeader />} exploreHeader={<ExploreHeader />} savedHeader={<SavedHeader />} />
+      <ConditionalHeader header={<AppHeader />} savedHeader={<SavedHeader />} />
       <main className="flex-1 w-full overflow-x-hidden">{children}</main>
       <div className="lg:hidden sticky bottom-0 z-40">
         <ConditionalBottomNav

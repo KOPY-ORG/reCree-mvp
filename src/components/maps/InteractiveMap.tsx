@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import { APIProvider, Map, AdvancedMarker, Pin, useMap } from "@vis.gl/react-google-maps";
+import { APIProvider, Map, AdvancedMarker, useMap } from "@vis.gl/react-google-maps";
+import { PlaceMarker } from "./PlaceMarker";
+import type { MarkerGradient } from "@/lib/map-utils";
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 const MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID ?? "DEMO_MAP_ID";
@@ -13,15 +15,19 @@ type MarkerPlace = {
   nameEn: string;
   markerColor?: string;
   markerGlyphColor?: string;
+  markerGradient?: MarkerGradient;
   isSaved?: boolean;
+  posts?: { id: string }[];
 };
 
 interface Props {
   places: MarkerPlace[];
   selectedPlaceId: string | null;
+  focusedPlaceId?: string | null;
   highlightedIds?: Set<string>;
   boundsKey?: string;
   onMarkerClick: (placeId: string) => void;
+  onMapClick?: () => void;
   className?: string;
   bottomOffset?: number;
 }
@@ -29,9 +35,11 @@ interface Props {
 function MapContent({
   places,
   selectedPlaceId,
+  focusedPlaceId,
   highlightedIds,
   boundsKey,
   onMarkerClick,
+  onMapClick,
   bottomOffset = 64,
 }: Omit<Props, "className">) {
   const map = useMap();
@@ -57,13 +65,18 @@ function MapContent({
   }, [map, boundsKey]);
 
   useEffect(() => {
-    if (!map || !selectedPlaceId) return;
-    const place = places.find((p) => p.id === selectedPlaceId);
+    if (!map) return;
+    const activeId = selectedPlaceId ?? focusedPlaceId;
+    if (!activeId) return;
+    const place = places.find((p) => p.id === activeId);
     if (!place) return;
+    const FOCUS_ZOOM = 12; // 카드 탭 시 도시 레벨 고정 (조정 예정)
+    const isFocusMove = !selectedPlaceId && !!focusedPlaceId;
+    if (isFocusMove) map.setZoom(FOCUS_ZOOM);
     map.panTo({ lat: place.latitude, lng: place.longitude });
     const offsetY = Math.round((window.innerHeight - bottomOffset) * 0.25);
     map.panBy(0, offsetY);
-  }, [map, selectedPlaceId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [map, selectedPlaceId, focusedPlaceId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <Map
@@ -73,12 +86,12 @@ function MapContent({
       gestureHandling="greedy"
       disableDefaultUI
       className="w-full h-full"
+      onClick={() => onMapClick?.()}
     >
       {places.map((place) => {
-        const isSelected = selectedPlaceId === place.id;
+        const isSelected = selectedPlaceId === place.id || focusedPlaceId === place.id;
         const isHighlighted = highlightedIds?.has(place.id) ?? false;
         const color = place.markerColor ?? "#C8FF09";
-        const glyphColor = place.markerGlyphColor ?? "white";
         return (
           <AdvancedMarker
             key={place.id}
@@ -87,16 +100,15 @@ function MapContent({
             title={place.nameEn}
             zIndex={isSelected ? 10 : isHighlighted ? 5 : 1}
           >
-            <Pin
-              background={color}
-              borderColor={isSelected ? "white" : color}
-              glyphColor={glyphColor}
-              scale={isSelected ? 1.3 : isHighlighted ? 1.1 : 1}
-            >
-              {place.isSaved && (
-                <span style={{ fontSize: "11px", lineHeight: 1, color: "white" }}>★</span>
-              )}
-            </Pin>
+            <PlaceMarker
+              color={color}
+              isSelected={isSelected}
+              isSaved={place.isSaved ?? false}
+              nameEn={place.nameEn}
+              postCount={place.posts?.length ?? 0}
+              placeId={place.id}
+              gradient={place.markerGradient}
+            />
           </AdvancedMarker>
         );
       })}
@@ -104,7 +116,7 @@ function MapContent({
   );
 }
 
-export function InteractiveMap({ places, selectedPlaceId, highlightedIds, boundsKey, onMarkerClick, className, bottomOffset = 64 }: Props) {
+export function InteractiveMap({ places, selectedPlaceId, focusedPlaceId, highlightedIds, boundsKey, onMarkerClick, onMapClick, className, bottomOffset = 64 }: Props) {
   if (!API_KEY) {
     return (
       <div className={`flex items-center justify-center bg-muted/50 text-sm text-muted-foreground ${className ?? ""}`}>
@@ -119,9 +131,11 @@ export function InteractiveMap({ places, selectedPlaceId, highlightedIds, bounds
         <MapContent
           places={places}
           selectedPlaceId={selectedPlaceId}
+          focusedPlaceId={focusedPlaceId}
           highlightedIds={highlightedIds}
           boundsKey={boundsKey}
           onMarkerClick={onMarkerClick}
+          onMapClick={onMapClick}
           bottomOffset={bottomOffset}
         />
       </APIProvider>

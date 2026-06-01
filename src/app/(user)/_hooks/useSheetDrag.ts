@@ -66,7 +66,7 @@ export function useSheetDrag<S extends string>({
     if (!isDraggingRef.current) return;
     isDraggingRef.current = false;
 
-    const FLICK_THRESHOLD = 0.5;
+    const FLICK_THRESHOLD = 0.3;
     const cur = stateOrder.indexOf(currentStateRef.current);
     let nextState: S;
 

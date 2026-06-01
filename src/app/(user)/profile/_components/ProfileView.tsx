@@ -135,7 +135,7 @@ export function ProfileView({
         {/* 단축 버튼 */}
         <div className="flex gap-2 my-6">
           <Link
-            href="/discover?view=map&saved=1"
+            href="/discover?saved=1"
             className="flex flex-1 items-center justify-center gap-2 py-2 rounded-full bg-muted text-sm font-medium"
           >
             <MapPin className="size-4" />

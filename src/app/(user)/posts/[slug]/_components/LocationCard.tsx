@@ -44,7 +44,7 @@ export function LocationCard({ placeId, nameEn, nameKo, addressEn, latitude, lon
             title={displayName}
           />
           <Link
-            href={`/discover?view=map&place=${placeId}`}
+            href={`/discover?place=${placeId}`}
             className="absolute inset-0 z-10"
             aria-label={`View ${displayName} on map`}
           />

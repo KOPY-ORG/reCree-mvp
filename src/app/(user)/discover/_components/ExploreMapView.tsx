@@ -1,36 +1,146 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { InteractiveMap } from "@/components/maps/InteractiveMap";
 import { PlaceBottomSheet } from "@/components/maps/PlaceBottomSheet";
-import { SavedToggleButton } from "./SavedToggleButton";
-import type { MapPlace } from "@/lib/map-queries";
-import { getTopicMarkerColor } from "@/lib/map-utils";
+import { PlaceListSheet, type PlaceListSheetState } from "@/components/maps/PlaceListSheet";
+import { PlaceListSheetCard } from "@/components/maps/PlaceListSheetCard";
+import { DiscoverSearchBar } from "./DiscoverSearchBar";
+import { DiscoverFilterSheet } from "./DiscoverFilterSheet";
+import { DiscoverActiveFacets } from "./DiscoverActiveFacets";
+import { DiscoverSheetHeader } from "./DiscoverSheetHeader";
+import { HotTabStub } from "./HotTabStub";
+import { ListScrollTopButton } from "./ListScrollTopButton";
+import { useRecentSearches } from "../_hooks/useRecentSearches";
+import { useDiscoverViewState } from "../_hooks/useDiscoverViewState";
+import type { MapPlace, MapPost } from "@/lib/map-queries";
+import { getTopicMarkerColor, getTopicMarkerGradient, topicMatchesFilter } from "@/lib/map-utils";
+import {
+  resolveTopicColors,
+  resolveTagColors,
+  labelBackground,
+  DEFAULT_TEXT,
+} from "@/lib/post-labels";
+import type { Level0TopicDeep } from "@/lib/topic-queries";
+import type { TagGroupWithTags } from "@/lib/filter-queries";
+import type { TagGroupColorMap } from "@/lib/post-labels";
 
-type TagGroupConfig = {
-  group: string;
-  displayLabel: string | null;
-  colorHex: string;
-  colorHex2: string | null;
-  gradientDir: string;
-  gradientStop: number;
-  textColorHex: string;
-};
+type ChipInfo = { id: string; label: string; bg: string; fg: string };
+const KPOP_NAME = "K-POP";
+
+function postMatchesFilters(post: MapPost, topicIds: string[], tagIds: string[]): boolean {
+  const topicHit =
+    topicIds.length > 0 &&
+    post.topics.some((t) => topicIds.some((id) => topicMatchesFilter(t, id)));
+  const tagHit = tagIds.length > 0 && post.tags.some((tag) => tagIds.includes(tag.id));
+  return topicHit || tagHit;
+}
+
+function placeMatchesFilters(
+  place: Pick<MapPlace, "posts">,
+  topicIds: string[],
+  tagIds: string[]
+): boolean {
+  if (topicIds.length === 0 && tagIds.length === 0) return true;
+  return place.posts.some((post) => postMatchesFilters(post, topicIds, tagIds));
+}
+
+// 토픽 매칭은 항상 태그보다 위. 같은 급 안에서는 먼저 선택한 필터 기준.
+// 합산이 아닌 "가장 먼저 선택된 매칭"의 index만 사용해 선택 순서가 다중 매칭 누적에 묻히지 않도록.
+const TOPIC_BASE = 1000;
+const TAG_BASE = 1;
+function placeMatchScore(
+  place: Pick<MapPlace, "posts">,
+  topicIds: string[],
+  tagIds: string[]
+): number {
+  const bestTopicIdx = topicIds.findIndex((id) =>
+    place.posts.some((post) => post.topics.some((t) => topicMatchesFilter(t, id)))
+  );
+  if (bestTopicIdx !== -1) return TOPIC_BASE + (topicIds.length - bestTopicIdx);
+
+  const bestTagIdx = tagIds.findIndex((id) =>
+    place.posts.some((post) => post.tags.some((tag) => tag.id === id))
+  );
+  if (bestTagIdx !== -1) return TAG_BASE + (tagIds.length - bestTagIdx);
+
+  return 0;
+}
+
+type DiscoverSuggestion =
+  | { type: "keyword"; text: string }
+  | { type: "post"; text: string; placeName: string; placeId: string };
 
 interface Props {
   allPlaces: (MapPlace & { isSaved?: boolean })[];
   savedPostIds: string[];
-  tagGroupConfigs: TagGroupConfig[];
+  tagGroups: TagGroupWithTags[];
+  topicTree: Level0TopicDeep[];
   isLoggedIn: boolean;
 }
 
-export function ExploreMapView({ allPlaces, savedPostIds, tagGroupConfigs, isLoggedIn }: Props) {
+export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, isLoggedIn }: Props) {
   const searchParams = useSearchParams();
   const router = useRouter();
 
   const isSavedView = searchParams.get("saved") === "1";
   const selectedPlaceId = searchParams.get("place");
+
+  const [sheetState, setSheetState] = useState<PlaceListSheetState>(
+    selectedPlaceId ? "hidden" : "half"
+  );
+  const [focusedPlaceId, setFocusedPlaceId] = useState<string | null>(null);
+  const [contentTab, setContentTab] = useState<"hot" | "list">("list");
+  const [query, setQuery] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [stagedTopicIds, setStagedTopicIds] = useState<string[]>([]);
+  const [stagedTagIds, setStagedTagIds] = useState<string[]>([]);
+  const [appliedTopicIds, setAppliedTopicIds] = useState<string[]>([]);
+  const [appliedTagIds, setAppliedTagIds] = useState<string[]>([]);
+  const listScrollRef = useRef<HTMLDivElement | null>(null);
+  const listScrollMemoRef = useRef<number>(0);
+  const { recents, addRecent, removeRecent, clearRecents } = useRecentSearches();
+  const { restored, save, clear } = useDiscoverViewState();
+
+  useEffect(() => {
+    if (!restored) return;
+    setQuery(restored.query);
+    setContentTab(restored.contentTab);
+    clear();
+    const top = restored.scrollTop;
+    if (top > 0) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (listScrollRef.current) listScrollRef.current.scrollTop = top;
+        });
+      });
+    }
+  }, [restored, clear]);
+
+  const handlePostNavigate = () => {
+    save({ query, contentTab, scrollTop: listScrollRef.current?.scrollTop ?? 0 });
+  };
+
+  const handleContentTabChange = (tab: "hot" | "list") => {
+    if (contentTab === "list" && listScrollRef.current) {
+      listScrollMemoRef.current = listScrollRef.current.scrollTop;
+    }
+    setContentTab(tab);
+  };
+
+  useEffect(() => {
+    if (contentTab !== "list") return;
+    const top = listScrollMemoRef.current;
+    if (top > 0) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (listScrollRef.current) listScrollRef.current.scrollTop = top;
+        });
+      });
+    }
+  }, [contentTab]);
 
   function setSelectedPlaceId(id: string | null) {
     const params = new URLSearchParams(searchParams.toString());
@@ -42,41 +152,346 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroupConfigs, isLog
     router.replace(`?${params.toString()}`);
   }
 
-  const handleMarkerClick = (placeId: string) => setSelectedPlaceId(placeId);
-  const handlePlaceClose = () => setSelectedPlaceId(null);
+  const handleMarkerClick = (placeId: string) => {
+    setFocusedPlaceId(null);
+    setSelectedPlaceId(placeId);
+  };
+
+  const handlePlaceClose = () => {
+    setSelectedPlaceId(null);
+  };
+
+  const handleCardTap = (placeId: string) => {
+    if (focusedPlaceId === placeId) {
+      setFocusedPlaceId(null);
+      return;
+    }
+    setSelectedPlaceId(null);
+    setFocusedPlaceId(placeId);
+    setSheetState((prev) => (prev === "full" ? "half" : prev));
+  };
+
+  const handleMapClick = () => {
+    setSelectedPlaceId(null);
+    setFocusedPlaceId(null);
+  };
 
   const selectedPlace = allPlaces.find((p) => p.id === selectedPlaceId) ?? null;
 
   const savedPostIdsSet = useMemo(() => new Set(savedPostIds), [savedPostIds]);
   const tagGroupMap = useMemo(
-    () => new Map(tagGroupConfigs.map((c) => [c.group, c])),
-    [tagGroupConfigs]
+    () => new Map(tagGroups.map((c) => [c.group, c])) as TagGroupColorMap,
+    [tagGroups]
   );
+
+  const topicChipMap = useMemo(() => {
+    const map = new Map<string, ChipInfo>();
+    for (const root of topicTree) {
+      const l1s = root.children;
+      if (l1s.length === 0) continue;
+      if (root.nameEn === KPOP_NAME) {
+        for (const l1 of l1s)
+          for (const l2 of l1.children) {
+            const r = resolveTopicColors({ ...l2, parent: { ...l1, parent: root } });
+            map.set(l2.id, { id: l2.id, label: l2.nameEn, bg: labelBackground({ text: "", ...r }), fg: r.textColorHex });
+          }
+        continue;
+      }
+      const hasL2 = l1s.some((l1) => l1.children.length > 0);
+      if (!hasL2) {
+        for (const l1 of l1s) {
+          const r = resolveTopicColors({ ...l1, parent: root });
+          map.set(l1.id, { id: l1.id, label: l1.nameEn, bg: labelBackground({ text: "", ...r }), fg: r.textColorHex });
+        }
+      } else {
+        for (const l1 of l1s)
+          for (const l2 of l1.children) {
+            const r = resolveTopicColors({ ...l2, parent: { ...l1, parent: root } });
+            map.set(l2.id, { id: l2.id, label: l2.nameEn, bg: labelBackground({ text: "", ...r }), fg: r.textColorHex });
+          }
+      }
+    }
+    return map;
+  }, [topicTree]);
+
+  const tagChipMap = useMemo(() => {
+    const map = new Map<string, ChipInfo>();
+    for (const group of tagGroups)
+      for (const tag of group.tags) {
+        const r = resolveTagColors(tag, group);
+        map.set(tag.id, { id: tag.id, label: tag.name, bg: labelBackground({ text: "", ...r }), fg: tag.textColorHex ?? group.textColorHex ?? DEFAULT_TEXT });
+      }
+    return map;
+  }, [tagGroups]);
+
   const markerPlaces = useMemo(
-    () => allPlaces.map((p) => ({ ...p, markerColor: getTopicMarkerColor(p.posts) })),
+    () => allPlaces.map((p) => ({
+      ...p,
+      markerColor: getTopicMarkerColor(p.posts),
+      markerGradient: getTopicMarkerGradient(p.posts),
+    })),
     [allPlaces]
   );
 
   const visiblePlaces = useMemo(
-    () => isSavedView ? markerPlaces.filter((p) => p.isSaved) : markerPlaces,
+    () => (isSavedView ? markerPlaces.filter((p) => p.isSaved) : markerPlaces),
     [isSavedView, markerPlaces]
   );
 
+  const hasFilters = appliedTopicIds.length > 0 || appliedTagIds.length > 0;
+  const isResultMode = query.trim() !== "" || hasFilters;
+
+  const searchedPlaces = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return visiblePlaces;
+    return visiblePlaces.filter((place) => {
+      const inName =
+        place.nameEn?.toLowerCase().includes(q) ||
+        place.nameKo?.toLowerCase().includes(q);
+      const inPost = place.posts.some((post) =>
+        post.titleEn?.toLowerCase().includes(q)
+      );
+      const inTopic = place.posts.some((post) =>
+        post.topics.some((t) => t.nameEn?.toLowerCase().includes(q))
+      );
+      return Boolean(inName || inPost || inTopic);
+    });
+  }, [query, visiblePlaces]);
+
+  const filteredPlaces = useMemo(() => {
+    if (!hasFilters) return searchedPlaces;
+    const matched = searchedPlaces.filter((p) =>
+      placeMatchesFilters(p, appliedTopicIds, appliedTagIds)
+    );
+    return [...matched].sort(
+      (a, b) =>
+        placeMatchScore(b, appliedTopicIds, appliedTagIds) -
+        placeMatchScore(a, appliedTopicIds, appliedTagIds)
+    );
+  }, [searchedPlaces, hasFilters, appliedTopicIds, appliedTagIds]);
+
+  const suggestions = useMemo((): DiscoverSuggestion[] => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+
+    // 토픽 keyword: q 포함하는 nameEn 수집, 대소문자 무시 dedupe, 최대 3개
+    const seenTopics = new Set<string>();
+    const keywordSuggestions: DiscoverSuggestion[] = [];
+    outer: for (const place of visiblePlaces) {
+      for (const post of place.posts) {
+        for (const t of post.topics) {
+          if (!t.nameEn?.toLowerCase().includes(q)) continue;
+          const key = t.nameEn.toLowerCase();
+          if (seenTopics.has(key)) continue;
+          seenTopics.add(key);
+          keywordSuggestions.push({ type: "keyword", text: t.nameEn });
+          if (keywordSuggestions.length >= 3) break outer;
+        }
+      }
+    }
+
+    // 장소 post: 매칭 place당 첫 번째 매칭 post, 최대 7개
+    const postSuggestions: DiscoverSuggestion[] = [];
+    for (const place of visiblePlaces) {
+      const inName =
+        place.nameEn?.toLowerCase().includes(q) ||
+        place.nameKo?.toLowerCase().includes(q);
+      const matchingPost = place.posts.find(
+        (post) =>
+          post.titleEn?.toLowerCase().includes(q) ||
+          post.topics.some((t) => t.nameEn?.toLowerCase().includes(q))
+      );
+      if (!inName && !matchingPost) continue;
+      const post = matchingPost ?? place.posts[0];
+      if (!post?.titleEn) continue;
+      postSuggestions.push({ type: "post", text: post.titleEn, placeName: place.nameEn, placeId: place.id });
+      if (postSuggestions.length >= 7) break;
+    }
+
+    return [...keywordSuggestions, ...postSuggestions];
+  }, [query, visiblePlaces]);
+
+  const allVisiblePosts = useMemo(
+    () => filteredPlaces.flatMap((place) => {
+      const posts = hasFilters
+        ? [...place.posts].sort((a, b) => {
+            const aM = postMatchesFilters(a, appliedTopicIds, appliedTagIds) ? 0 : 1;
+            const bM = postMatchesFilters(b, appliedTopicIds, appliedTagIds) ? 0 : 1;
+            return aM - bM;
+          })
+        : place.posts;
+      return posts.map((post) => ({ post, place }));
+    }),
+    [filteredPlaces, hasFilters, appliedTopicIds, appliedTagIds]
+  );
+
+  const handleSearchOpen = () => {
+    setSelectedPlaceId(null);
+    setIsSearchOpen(true);
+  };
+  const handleSelectTerm = (trimmed: string) => {
+    setSelectedPlaceId(null);
+    setQuery(trimmed);
+    addRecent(trimmed);
+    setIsSearchOpen(false);
+    setSheetState("half");
+  };
+  const handleSelectPlace = (placeId: string) => {
+    setIsSearchOpen(false);
+    handleMarkerClick(placeId);
+  };
+  const handleClearQuery = () => setQuery("");
+  const exitResultMode = () => {
+    setQuery("");
+    setAppliedTopicIds([]);
+    setAppliedTagIds([]);
+  };
+
+  const openFilter = () => {
+    setStagedTopicIds(appliedTopicIds);
+    setStagedTagIds(appliedTagIds);
+    setIsFilterOpen(true);
+  };
+  const applyFilters = () => {
+    setAppliedTopicIds(stagedTopicIds);
+    setAppliedTagIds(stagedTagIds);
+    setIsFilterOpen(false);
+    setSheetState("half");
+  };
+  const resetStaged = () => { setStagedTopicIds([]); setStagedTagIds([]); };
+  const removeAppliedTopic = (id: string) =>
+    setAppliedTopicIds((prev) => prev.filter((x) => x !== id));
+  const removeAppliedTag = (id: string) =>
+    setAppliedTagIds((prev) => prev.filter((x) => x !== id));
+
+  const toggleTopic = (id: string) =>
+    setStagedTopicIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  const toggleTag = (id: string) =>
+    setStagedTagIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+
+  const effectiveSheetState = selectedPlaceId
+    ? "hidden"
+    : sheetState === "hidden"
+      ? "tab-only"
+      : sheetState;
+
   return (
-    // header(h-12=48px) + bottomnav(h-16=64px) = 112px
-    <div className="relative h-[calc(100dvh-112px)] overflow-hidden">
+    // bottomnav(h-16=64px) — ExploreHeader 제거됨
+    <div className="relative h-[calc(100dvh-64px)] overflow-hidden">
       <InteractiveMap
-        places={visiblePlaces}
+        places={filteredPlaces}
         selectedPlaceId={selectedPlaceId}
+        focusedPlaceId={focusedPlaceId}
         onMarkerClick={handleMarkerClick}
+        onMapClick={handleMapClick}
+        boundsKey={
+          isResultMode
+            ? `q:${query}|t:${[...appliedTopicIds].sort().join(",")}|g:${[...appliedTagIds].sort().join(",")}`
+            : isSavedView ? "saved" : "all"
+        }
+        highlightedIds={isResultMode ? new Set(filteredPlaces.map((p) => p.id)) : undefined}
         className="absolute inset-0"
       />
-      <SavedToggleButton isLoggedIn={isLoggedIn} />
+      <DiscoverSearchBar
+        isLoggedIn={isLoggedIn}
+        query={query}
+        isOpen={isSearchOpen}
+        onOpen={handleSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        onFilterOpen={openFilter}
+        onQueryChange={setQuery}
+        onClearQuery={handleClearQuery}
+        suggestions={suggestions}
+        recents={recents}
+        onSelectTerm={handleSelectTerm}
+        onSelectPlace={handleSelectPlace}
+        onRemoveRecent={removeRecent}
+        onClearRecents={clearRecents}
+      />
+
+      <DiscoverActiveFacets
+        query={query}
+        appliedTopicIds={appliedTopicIds}
+        appliedTagIds={appliedTagIds}
+        topicChipMap={topicChipMap}
+        tagChipMap={tagChipMap}
+        onClearQuery={handleClearQuery}
+        onRemoveTopic={removeAppliedTopic}
+        onRemoveTag={removeAppliedTag}
+      />
+
+      {/* 기본 리스트 시트 — z-40 */}
+      <PlaceListSheet
+        state={effectiveSheetState}
+        onStateChange={setSheetState}
+        topOffset={64}
+        hasActiveFacets={isResultMode}
+        scrollContainerRef={listScrollRef}
+        header={
+          <DiscoverSheetHeader
+            contentTab={contentTab}
+            onContentTabChange={handleContentTabChange}
+            placeCount={filteredPlaces.length}
+            isResultMode={isResultMode}
+            query={query}
+            onExitResultMode={exitResultMode}
+          />
+        }
+      >
+        {(contentTab === "list" || isResultMode) ? (
+          isResultMode && allVisiblePosts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
+              <p className="text-sm font-semibold text-foreground">No places match your filters</p>
+              <p className="text-xs text-muted-foreground mt-1.5">Try removing a filter.</p>
+            </div>
+          ) : (
+            <div className="px-4 pt-2 pb-4 space-y-2">
+              {allVisiblePosts.map(({ post, place }) => (
+                <PlaceListSheetCard
+                  key={post.id}
+                  post={post}
+                  place={place}
+                  isSaved={savedPostIdsSet.has(post.id)}
+                  isFocused={focusedPlaceId === place.id}
+                  tagGroupMap={tagGroupMap}
+                  matchedTopicIds={appliedTopicIds}
+                  onCardTap={handleCardTap}
+                  onViewPlace={handleSelectPlace}
+                  onPostNavigate={handlePostNavigate}
+                />
+              ))}
+            </div>
+          )
+        ) : (
+          <HotTabStub />
+        )}
+      </PlaceListSheet>
+
+      {/* 리스트 맨 위로 버튼 — z-30, 시트 위에 absolute */}
+      <ListScrollTopButton scrollRef={listScrollRef} />
+
+      {/* 장소 상세 floating 카드 — z-50 */}
       <PlaceBottomSheet
         place={selectedPlace}
         savedPostIds={savedPostIdsSet}
         tagGroupMap={tagGroupMap}
         onClose={handlePlaceClose}
+      />
+
+      {/* 필터 시트 — z-[65] */}
+      <DiscoverFilterSheet
+        isOpen={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+        topicTree={topicTree}
+        tagGroups={tagGroups}
+        topicChipMap={topicChipMap}
+        tagChipMap={tagChipMap}
+        stagedTopicIds={stagedTopicIds}
+        stagedTagIds={stagedTagIds}
+        onToggleTopic={toggleTopic}
+        onToggleTag={toggleTag}
+        onReset={resetStaged}
+        onApply={applyFilters}
       />
     </div>
   );

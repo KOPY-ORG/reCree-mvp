@@ -84,11 +84,13 @@ export function PostCard({
   tagGroupMap,
   isSaved,
   variant = "carousel",
+  priority = false,
 }: {
   post: PostItem;
   tagGroupMap: TagGroupColorMap;
   isSaved?: boolean;
   variant?: "carousel" | "grid";
+  priority?: boolean;
 }) {
   const wrapperClass =
     variant === "carousel" ? "snap-start shrink-0 w-[160px] md:w-[200px]" : "";
@@ -107,6 +109,7 @@ export function PostCard({
             className="object-cover"
             style={focalStyle(post.postImages[0].focalX, post.postImages[0].focalY, post.postImages[0].zoom)}
             sizes={imageSizes}
+            priority={priority}
           />
         ) : (
           <div className="w-full h-full bg-muted" />
