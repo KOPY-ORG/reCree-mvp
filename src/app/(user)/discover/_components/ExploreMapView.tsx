@@ -7,6 +7,7 @@ import { PlaceBottomSheet } from "@/components/maps/PlaceBottomSheet";
 import { PlaceListSheet, type PlaceListSheetState } from "@/components/maps/PlaceListSheet";
 import { PlaceListSheetCard } from "@/components/maps/PlaceListSheetCard";
 import { DiscoverSearchBar } from "./DiscoverSearchBar";
+import { DiscoverFilterSheet } from "./DiscoverFilterSheet";
 import { DiscoverSheetHeader } from "./DiscoverSheetHeader";
 import { HotTabStub } from "./HotTabStub";
 import { ListScrollTopButton } from "./ListScrollTopButton";
@@ -44,6 +45,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
   const [contentTab, setContentTab] = useState<"hot" | "list">("list");
   const [query, setQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const listScrollRef = useRef<HTMLDivElement | null>(null);
   const listScrollMemoRef = useRef<number>(0);
   const { recents, addRecent, removeRecent, clearRecents } = useRecentSearches();
@@ -249,6 +251,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
         isOpen={isSearchOpen}
         onOpen={handleSearchOpen}
         onClose={() => setIsSearchOpen(false)}
+        onFilterOpen={() => setIsFilterOpen(true)}
         onQueryChange={setQuery}
         onClearQuery={handleClearQuery}
         suggestions={suggestions}
@@ -306,6 +309,12 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
         savedPostIds={savedPostIdsSet}
         tagGroupMap={tagGroupMap}
         onClose={handlePlaceClose}
+      />
+
+      {/* 필터 시트 — z-[65] */}
+      <DiscoverFilterSheet
+        isOpen={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
       />
     </div>
   );

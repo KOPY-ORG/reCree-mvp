@@ -13,6 +13,7 @@ interface Props {
   isOpen: boolean;
   onOpen: () => void;
   onClose: () => void;
+  onFilterOpen: () => void;
   onQueryChange: (q: string) => void;
   onClearQuery: () => void;
   suggestions: DiscoverSuggestion[];
@@ -29,6 +30,7 @@ export function DiscoverSearchBar({
   isOpen,
   onOpen,
   onClose,
+  onFilterOpen,
   onQueryChange,
   onClearQuery,
   suggestions,
@@ -198,6 +200,7 @@ export function DiscoverSearchBar({
         <button
           type="button"
           aria-label="Filter"
+          onClick={onFilterOpen}
           className="shrink-0 w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-md active:opacity-70 transition-opacity"
         >
           <SlidersHorizontal className="w-4 h-4" />
