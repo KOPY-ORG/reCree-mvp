@@ -78,7 +78,7 @@ export function DiscoverFilterSheet({
 
         {/* Selected 트레이 — 선택 0개면 렌더 안 함 */}
         {totalSelected > 0 && (
-          <div className="shrink-0 border-b border-border px-4 pb-3">
+          <div className="shrink-0 mx-4 mb-4 rounded-xl bg-brand-sub3 px-4 py-3">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-muted-foreground">
                 Selected · {totalSelected}
@@ -280,18 +280,18 @@ export function DiscoverFilterSheet({
         </div>
 
         {/* 하단 바 */}
-        <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-t border-border">
+        <div className="shrink-0 flex items-center gap-3 px-4 py-3">
           <button
             type="button"
             onClick={onReset}
-            className="flex-1 h-11 rounded-full border border-border text-sm font-medium active:opacity-60 transition-opacity"
+            className="flex-[1] h-11 rounded-full border border-border text-sm font-medium active:opacity-60 transition-opacity"
           >
             Reset
           </button>
           <button
             type="button"
             onClick={onApply}
-            className="flex-1 h-11 rounded-full bg-foreground text-background text-sm font-semibold active:opacity-70 transition-opacity"
+            className="flex-[2] h-11 rounded-full bg-foreground text-background text-sm font-semibold active:opacity-70 transition-opacity"
           >
             Apply
           </button>

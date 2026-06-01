@@ -40,7 +40,7 @@ export function DiscoverActiveFacets({
           <button
             type="button"
             onClick={onClearQuery}
-            className="shrink-0 inline-flex items-center gap-1 px-2.5 rounded-full bg-white shadow font-semibold text-xs whitespace-nowrap active:opacity-70 transition-opacity"
+            className="shrink-0 inline-flex items-center gap-1 px-2.5 rounded-full bg-white shadow-md font-semibold text-xs whitespace-nowrap active:opacity-70 transition-opacity"
             style={{ paddingTop: "0.35rem", paddingBottom: "0.35rem" }}
           >
             <Search className="size-3 shrink-0" />
@@ -58,7 +58,7 @@ export function DiscoverActiveFacets({
               text={chip.label}
               background={chip.bg}
               color={chip.fg}
-              className="shrink-0 shadow active:opacity-70"
+              className="shrink-0 shadow-md active:opacity-70"
               onClick={() => onRemoveTopic(id)}
             >
               <X className="size-3" />
@@ -75,7 +75,7 @@ export function DiscoverActiveFacets({
               text={chip.label}
               background={chip.bg}
               color={chip.fg}
-              className="shrink-0 shadow active:opacity-70"
+              className="shrink-0 shadow-md active:opacity-70"
               onClick={() => onRemoveTag(id)}
             >
               <X className="size-3" />
