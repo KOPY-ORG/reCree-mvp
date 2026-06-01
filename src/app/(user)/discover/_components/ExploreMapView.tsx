@@ -14,16 +14,9 @@ import { useRecentSearches } from "../_hooks/useRecentSearches";
 import { useDiscoverViewState } from "../_hooks/useDiscoverViewState";
 import type { MapPlace } from "@/lib/map-queries";
 import { getTopicMarkerColor, getTopicMarkerGradient } from "@/lib/map-utils";
-
-type TagGroupConfig = {
-  group: string;
-  displayLabel: string | null;
-  colorHex: string;
-  colorHex2: string | null;
-  gradientDir: string;
-  gradientStop: number;
-  textColorHex: string;
-};
+import type { Level0TopicDeep } from "@/lib/topic-queries";
+import type { TagGroupWithTags } from "@/lib/filter-queries";
+import type { TagGroupColorMap } from "@/lib/post-labels";
 
 type DiscoverSuggestion =
   | { type: "keyword"; text: string }
@@ -32,11 +25,12 @@ type DiscoverSuggestion =
 interface Props {
   allPlaces: (MapPlace & { isSaved?: boolean })[];
   savedPostIds: string[];
-  tagGroupConfigs: TagGroupConfig[];
+  tagGroups: TagGroupWithTags[];
+  topicTree: Level0TopicDeep[];
   isLoggedIn: boolean;
 }
 
-export function ExploreMapView({ allPlaces, savedPostIds, tagGroupConfigs, isLoggedIn }: Props) {
+export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, isLoggedIn }: Props) {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -131,8 +125,8 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroupConfigs, isLog
 
   const savedPostIdsSet = useMemo(() => new Set(savedPostIds), [savedPostIds]);
   const tagGroupMap = useMemo(
-    () => new Map(tagGroupConfigs.map((c) => [c.group, c])),
-    [tagGroupConfigs]
+    () => new Map(tagGroups.map((c) => [c.group, c])) as TagGroupColorMap,
+    [tagGroups]
   );
   const markerPlaces = useMemo(
     () => allPlaces.map((p) => ({

@@ -1,26 +1,18 @@
-import { prisma } from "@/lib/prisma";
 import { getSavedPostIds } from "@/lib/post-queries";
 import { getAllMapPlaces } from "@/lib/map-queries";
 import { getCurrentUser } from "@/lib/auth";
+import { getTagGroupsWithTags } from "@/lib/filter-queries";
+import { getLevel0TopicsDeep } from "@/lib/topic-queries";
 import { ExploreMapView } from "./_components/ExploreMapView";
 
 export default async function ExplorePage() {
   const currentUser = await getCurrentUser();
 
-  const [tagGroupConfigs, savedPostIds, allPlaces] = await Promise.all([
-    prisma.tagGroupConfig.findMany({
-      select: {
-        group: true,
-        displayLabel: true,
-        colorHex: true,
-        colorHex2: true,
-        gradientDir: true,
-        gradientStop: true,
-        textColorHex: true,
-      },
-    }),
+  const [tagGroups, savedPostIds, allPlaces, topicTree] = await Promise.all([
+    getTagGroupsWithTags(),
     getSavedPostIds(currentUser?.id ?? null),
     getAllMapPlaces(),
+    getLevel0TopicsDeep(),
   ]);
 
   const placesWithSaved = allPlaces.map((place) => ({
@@ -32,7 +24,8 @@ export default async function ExplorePage() {
     <ExploreMapView
       allPlaces={placesWithSaved}
       savedPostIds={[...savedPostIds]}
-      tagGroupConfigs={tagGroupConfigs}
+      tagGroups={tagGroups}
+      topicTree={topicTree}
       isLoggedIn={!!currentUser}
     />
   );
