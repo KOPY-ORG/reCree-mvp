@@ -1,16 +1,118 @@
 "use client";
 
+import { useMemo } from "react";
 import { X } from "lucide-react";
+import { LabelBadge } from "@/components/LabelBadge";
+import {
+  resolveTopicColors,
+  resolveTagColors,
+  labelBackground,
+  badgeRingStyle,
+  DEFAULT_TEXT,
+} from "@/lib/post-labels";
+import type { Level0TopicDeep } from "@/lib/topic-queries";
+import type { TagGroupWithTags } from "@/lib/filter-queries";
+
+const KPOP_NAME = "K-POP";
+
+type ChipInfo = { id: string; label: string; bg: string; fg: string };
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
+  topicTree: Level0TopicDeep[];
+  tagGroups: TagGroupWithTags[];
+  stagedTopicIds: string[];
+  stagedTagIds: string[];
+  onToggleTopic: (id: string) => void;
+  onToggleTag: (id: string) => void;
+  onClearStaged: () => void;
 }
 
-export function DiscoverFilterSheet({ isOpen, onClose }: Props) {
+export function DiscoverFilterSheet({
+  isOpen,
+  onClose,
+  topicTree,
+  tagGroups,
+  stagedTopicIds,
+  stagedTagIds,
+  onToggleTopic,
+  onToggleTag,
+  onClearStaged,
+}: Props) {
+  // ── 토픽 조회맵: 본문 렌더 분기와 동일한 순회 경로 ──────────────────────────
+  const topicChipMap = useMemo(() => {
+    const map = new Map<string, ChipInfo>();
+    for (const root of topicTree) {
+      const l1s = root.children;
+      if (l1s.length === 0) continue; // 分岐D: skip
+
+      if (root.nameEn === KPOP_NAME) { // 分岐A: L2 평탄
+        for (const l1 of l1s) {
+          for (const l2 of l1.children) {
+            const resolved = resolveTopicColors({ ...l2, parent: { ...l1, parent: root } });
+            map.set(l2.id, {
+              id: l2.id,
+              label: l2.nameEn,
+              bg: labelBackground({ text: "", ...resolved }),
+              fg: resolved.textColorHex,
+            });
+          }
+        }
+        continue;
+      }
+
+      const hasL2 = l1s.some((l1) => l1.children.length > 0);
+
+      if (!hasL2) { // 分岐B: L1 평탄
+        for (const l1 of l1s) {
+          const resolved = resolveTopicColors({ ...l1, parent: root });
+          map.set(l1.id, {
+            id: l1.id,
+            label: l1.nameEn,
+            bg: labelBackground({ text: "", ...resolved }),
+            fg: resolved.textColorHex,
+          });
+        }
+      } else { // 分岐C: L2 칩
+        for (const l1 of l1s) {
+          for (const l2 of l1.children) {
+            const resolved = resolveTopicColors({ ...l2, parent: { ...l1, parent: root } });
+            map.set(l2.id, {
+              id: l2.id,
+              label: l2.nameEn,
+              bg: labelBackground({ text: "", ...resolved }),
+              fg: resolved.textColorHex,
+            });
+          }
+        }
+      }
+    }
+    return map;
+  }, [topicTree]);
+
+  // ── 태그 조회맵 ─────────────────────────────────────────────────────────────
+  const tagChipMap = useMemo(() => {
+    const map = new Map<string, ChipInfo>();
+    for (const group of tagGroups) {
+      for (const tag of group.tags) {
+        const resolved = resolveTagColors(tag, group);
+        map.set(tag.id, {
+          id: tag.id,
+          label: tag.name,
+          bg: labelBackground({ text: "", ...resolved }),
+          fg: tag.textColorHex ?? group.textColorHex ?? DEFAULT_TEXT,
+        });
+      }
+    }
+    return map;
+  }, [tagGroups]);
+
+  const totalSelected = stagedTopicIds.length + stagedTagIds.length;
+
   return (
     <>
-      {/* 딤 overlay — 항상 마운트, opacity transition으로 페이드, 닫혀있을 때 pointer-events 차단 해제 */}
+      {/* 딤 overlay — 항상 마운트, opacity 전환 */}
       <div
         className={`absolute inset-0 z-[64] bg-black/40 transition-opacity duration-300 ${
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
@@ -18,7 +120,7 @@ export function DiscoverFilterSheet({ isOpen, onClose }: Props) {
         onClick={onClose}
       />
 
-      {/* 시트 본체 — 항상 마운트, transform으로 숨김/표시 */}
+      {/* 시트 본체 — 항상 마운트, translateY 전환 */}
       <div
         className={`absolute top-12 inset-x-0 bottom-0 z-[65] bg-background rounded-t-2xl flex flex-col shadow-[0_-4px_24px_rgba(0,0,0,0.12)] transition-transform duration-300 ease-in-out ${
           isOpen ? "translate-y-0" : "translate-y-full"
@@ -37,8 +139,208 @@ export function DiscoverFilterSheet({ isOpen, onClose }: Props) {
           </button>
         </div>
 
-        {/* 콘텐츠 (다음 청크에서 채움) */}
-        <div className="flex-1 overflow-y-auto" />
+        {/* Selected 트레이 — 선택 0개면 렌더 안 함 */}
+        {totalSelected > 0 && (
+          <div className="shrink-0 border-b border-border px-4 pb-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-muted-foreground">
+                Selected · {totalSelected}
+              </span>
+              <button
+                type="button"
+                onClick={onClearStaged}
+                className="text-xs text-muted-foreground active:opacity-60"
+              >
+                Clear all
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-x-2 gap-y-2 [--pill-py:0.25rem]">
+              {stagedTopicIds.map((id) => {
+                const chip = topicChipMap.get(id);
+                if (!chip) return null;
+                return (
+                  <LabelBadge
+                    key={id}
+                    as="button"
+                    text={chip.label}
+                    background={chip.bg}
+                    color={chip.fg}
+                    className="shrink-0 active:opacity-70"
+                    onClick={() => onToggleTopic(id)}
+                  >
+                    <X className="size-3" />
+                  </LabelBadge>
+                );
+              })}
+              {stagedTagIds.map((id) => {
+                const chip = tagChipMap.get(id);
+                if (!chip) return null;
+                return (
+                  <LabelBadge
+                    key={id}
+                    as="button"
+                    text={chip.label}
+                    background={chip.bg}
+                    color={chip.fg}
+                    className="shrink-0 active:opacity-70"
+                    onClick={() => onToggleTag(id)}
+                  >
+                    <X className="size-3" />
+                  </LabelBadge>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* 스크롤 본문 */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="px-4 pt-4 pb-8 space-y-6 [--pill-py:0.25rem]">
+
+            {/* ── 토픽 섹션 ── */}
+            {topicTree.map((root) => {
+              const l1s = root.children;
+
+              // 분기 D: L1 없음 → 건너뜀
+              if (l1s.length === 0) return null;
+
+              // 분기 A: K-POP → L1 헤더 없이 모든 L2 평탄
+              if (root.nameEn === KPOP_NAME) {
+                const allL2 = l1s.flatMap((l1) =>
+                  l1.children.map((l2) => ({ l2, l1 }))
+                );
+                return (
+                  <section key={root.id}>
+                    <h3 className="text-sm font-bold mb-3">{root.nameEn}</h3>
+                    <div className="flex flex-wrap gap-x-2 gap-y-2.5">
+                      {allL2.map(({ l2, l1 }) => {
+                        const resolved = resolveTopicColors({
+                          ...l2,
+                          parent: { ...l1, parent: root },
+                        });
+                        const isSelected = stagedTopicIds.includes(l2.id);
+                        return (
+                          <LabelBadge
+                            key={l2.id}
+                            as="button"
+                            text={l2.nameEn}
+                            background={labelBackground({ text: "", ...resolved })}
+                            color={resolved.textColorHex}
+                            className="shrink-0 transition-all active:opacity-70"
+                            style={badgeRingStyle(resolved.colorHex, isSelected)}
+                            onClick={() => onToggleTopic(l2.id)}
+                          />
+                        );
+                      })}
+                    </div>
+                  </section>
+                );
+              }
+
+              const hasL2 = l1s.some((l1) => l1.children.length > 0);
+
+              // 분기 B: L2 없음 → L1 평탄 칩
+              if (!hasL2) {
+                return (
+                  <section key={root.id}>
+                    <h3 className="text-sm font-bold mb-3">{root.nameEn}</h3>
+                    <div className="flex flex-wrap gap-x-2 gap-y-2.5">
+                      {l1s.map((l1) => {
+                        const resolved = resolveTopicColors({ ...l1, parent: root });
+                        const isSelected = stagedTopicIds.includes(l1.id);
+                        return (
+                          <LabelBadge
+                            key={l1.id}
+                            as="button"
+                            text={l1.nameEn}
+                            background={labelBackground({ text: "", ...resolved })}
+                            color={resolved.textColorHex}
+                            className="shrink-0 transition-all active:opacity-70"
+                            style={badgeRingStyle(resolved.colorHex, isSelected)}
+                            onClick={() => onToggleTopic(l1.id)}
+                          />
+                        );
+                      })}
+                    </div>
+                  </section>
+                );
+              }
+
+              // 분기 C: L1 소제목 + L2 칩 (K-CONTENT류)
+              return (
+                <section key={root.id}>
+                  <h3 className="text-sm font-bold mb-3">{root.nameEn}</h3>
+                  <div className="space-y-4">
+                    {l1s.map((l1) => {
+                      if (l1.children.length === 0) return null;
+                      return (
+                        <div key={l1.id}>
+                          <p className="text-xs font-semibold text-muted-foreground mb-2">
+                            {l1.nameEn}
+                          </p>
+                          <div className="flex flex-wrap gap-x-2 gap-y-2.5">
+                            {l1.children.map((l2) => {
+                              const resolved = resolveTopicColors({
+                                ...l2,
+                                parent: { ...l1, parent: root },
+                              });
+                              const isSelected = stagedTopicIds.includes(l2.id);
+                              return (
+                                <LabelBadge
+                                  key={l2.id}
+                                  as="button"
+                                  text={l2.nameEn}
+                                  background={labelBackground({ text: "", ...resolved })}
+                                  color={resolved.textColorHex}
+                                  className="shrink-0 transition-all active:opacity-70"
+                                  style={badgeRingStyle(resolved.colorHex, isSelected)}
+                                  onClick={() => onToggleTopic(l2.id)}
+                                />
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              );
+            })}
+
+            {/* ── 태그 섹션 ── */}
+            {tagGroups
+              .filter((group) => group.tags.length > 0)
+              .map((group) => (
+                <section key={group.group}>
+                  <h3 className="text-sm font-bold mb-3">
+                    {group.nameEn || group.group}
+                  </h3>
+                  <div className="flex flex-wrap gap-x-2 gap-y-2.5">
+                    {group.tags.map((tag) => {
+                      const resolved = resolveTagColors(tag, group);
+                      const isSelected = stagedTagIds.includes(tag.id);
+                      return (
+                        <LabelBadge
+                          key={tag.id}
+                          as="button"
+                          text={tag.name}
+                          background={labelBackground({ text: "", ...resolved })}
+                          color={tag.textColorHex ?? group.textColorHex ?? DEFAULT_TEXT}
+                          className="shrink-0 transition-all active:opacity-70"
+                          style={badgeRingStyle(
+                            tag.colorHex ?? group.colorHex ?? null,
+                            isSelected
+                          )}
+                          onClick={() => onToggleTag(tag.id)}
+                        />
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
+
+          </div>
+        </div>
       </div>
     </>
   );

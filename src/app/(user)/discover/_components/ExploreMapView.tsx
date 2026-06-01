@@ -46,6 +46,8 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
   const [query, setQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [stagedTopicIds, setStagedTopicIds] = useState<string[]>([]);
+  const [stagedTagIds, setStagedTagIds] = useState<string[]>([]);
   const listScrollRef = useRef<HTMLDivElement | null>(null);
   const listScrollMemoRef = useRef<number>(0);
   const { recents, addRecent, removeRecent, clearRecents } = useRecentSearches();
@@ -226,6 +228,12 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
   };
   const handleClearQuery = () => setQuery("");
 
+  const toggleTopic = (id: string) =>
+    setStagedTopicIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  const toggleTag = (id: string) =>
+    setStagedTagIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  const clearStaged = () => { setStagedTopicIds([]); setStagedTagIds([]); };
+
   const effectiveSheetState = selectedPlaceId
     ? "hidden"
     : sheetState === "hidden"
@@ -315,6 +323,13 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
       <DiscoverFilterSheet
         isOpen={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
+        topicTree={topicTree}
+        tagGroups={tagGroups}
+        stagedTopicIds={stagedTopicIds}
+        stagedTagIds={stagedTagIds}
+        onToggleTopic={toggleTopic}
+        onToggleTag={toggleTag}
+        onClearStaged={clearStaged}
       />
     </div>
   );
