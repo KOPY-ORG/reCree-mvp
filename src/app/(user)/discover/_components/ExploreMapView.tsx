@@ -8,6 +8,7 @@ import { PlaceListSheet, type PlaceListSheetState } from "@/components/maps/Plac
 import { PlaceListSheetCard } from "@/components/maps/PlaceListSheetCard";
 import { DiscoverSearchBar } from "./DiscoverSearchBar";
 import { DiscoverFilterSheet } from "./DiscoverFilterSheet";
+import { DiscoverActiveFacets } from "./DiscoverActiveFacets";
 import { DiscoverSheetHeader } from "./DiscoverSheetHeader";
 import { HotTabStub } from "./HotTabStub";
 import { ListScrollTopButton } from "./ListScrollTopButton";
@@ -15,9 +16,18 @@ import { useRecentSearches } from "../_hooks/useRecentSearches";
 import { useDiscoverViewState } from "../_hooks/useDiscoverViewState";
 import type { MapPlace, MapPost, MapPostTopic } from "@/lib/map-queries";
 import { getTopicMarkerColor, getTopicMarkerGradient } from "@/lib/map-utils";
+import {
+  resolveTopicColors,
+  resolveTagColors,
+  labelBackground,
+  DEFAULT_TEXT,
+} from "@/lib/post-labels";
 import type { Level0TopicDeep } from "@/lib/topic-queries";
 import type { TagGroupWithTags } from "@/lib/filter-queries";
 import type { TagGroupColorMap } from "@/lib/post-labels";
+
+type ChipInfo = { id: string; label: string; bg: string; fg: string };
+const KPOP_NAME = "K-POP";
 
 function topicMatchesFilter(topic: MapPostTopic, topicId: string): boolean {
   return (
@@ -160,6 +170,47 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
     () => new Map(tagGroups.map((c) => [c.group, c])) as TagGroupColorMap,
     [tagGroups]
   );
+
+  const topicChipMap = useMemo(() => {
+    const map = new Map<string, ChipInfo>();
+    for (const root of topicTree) {
+      const l1s = root.children;
+      if (l1s.length === 0) continue;
+      if (root.nameEn === KPOP_NAME) {
+        for (const l1 of l1s)
+          for (const l2 of l1.children) {
+            const r = resolveTopicColors({ ...l2, parent: { ...l1, parent: root } });
+            map.set(l2.id, { id: l2.id, label: l2.nameEn, bg: labelBackground({ text: "", ...r }), fg: r.textColorHex });
+          }
+        continue;
+      }
+      const hasL2 = l1s.some((l1) => l1.children.length > 0);
+      if (!hasL2) {
+        for (const l1 of l1s) {
+          const r = resolveTopicColors({ ...l1, parent: root });
+          map.set(l1.id, { id: l1.id, label: l1.nameEn, bg: labelBackground({ text: "", ...r }), fg: r.textColorHex });
+        }
+      } else {
+        for (const l1 of l1s)
+          for (const l2 of l1.children) {
+            const r = resolveTopicColors({ ...l2, parent: { ...l1, parent: root } });
+            map.set(l2.id, { id: l2.id, label: l2.nameEn, bg: labelBackground({ text: "", ...r }), fg: r.textColorHex });
+          }
+      }
+    }
+    return map;
+  }, [topicTree]);
+
+  const tagChipMap = useMemo(() => {
+    const map = new Map<string, ChipInfo>();
+    for (const group of tagGroups)
+      for (const tag of group.tags) {
+        const r = resolveTagColors(tag, group);
+        map.set(tag.id, { id: tag.id, label: tag.name, bg: labelBackground({ text: "", ...r }), fg: tag.textColorHex ?? group.textColorHex ?? DEFAULT_TEXT });
+      }
+    return map;
+  }, [tagGroups]);
+
   const markerPlaces = useMemo(
     () => allPlaces.map((p) => ({
       ...p,
@@ -275,6 +326,10 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
     setIsFilterOpen(false);
   };
   const resetStaged = () => { setStagedTopicIds([]); setStagedTagIds([]); };
+  const removeAppliedTopic = (id: string) =>
+    setAppliedTopicIds((prev) => prev.filter((x) => x !== id));
+  const removeAppliedTag = (id: string) =>
+    setAppliedTagIds((prev) => prev.filter((x) => x !== id));
 
   const toggleTopic = (id: string) =>
     setStagedTopicIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
@@ -319,6 +374,17 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
         onSelectPlace={handleSelectPlace}
         onRemoveRecent={removeRecent}
         onClearRecents={clearRecents}
+      />
+
+      <DiscoverActiveFacets
+        query={query}
+        appliedTopicIds={appliedTopicIds}
+        appliedTagIds={appliedTagIds}
+        topicChipMap={topicChipMap}
+        tagChipMap={tagChipMap}
+        onClearQuery={handleClearQuery}
+        onRemoveTopic={removeAppliedTopic}
+        onRemoveTag={removeAppliedTag}
       />
 
       {/* 기본 리스트 시트 — z-40 */}
@@ -376,6 +442,8 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
         onClose={() => setIsFilterOpen(false)}
         topicTree={topicTree}
         tagGroups={tagGroups}
+        topicChipMap={topicChipMap}
+        tagChipMap={tagChipMap}
         stagedTopicIds={stagedTopicIds}
         stagedTagIds={stagedTagIds}
         onToggleTopic={toggleTopic}

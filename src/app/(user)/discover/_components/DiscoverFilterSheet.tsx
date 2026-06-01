@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { X } from "lucide-react";
 import { LabelBadge } from "@/components/LabelBadge";
 import {
@@ -22,6 +21,8 @@ interface Props {
   onClose: () => void;
   topicTree: Level0TopicDeep[];
   tagGroups: TagGroupWithTags[];
+  topicChipMap: Map<string, ChipInfo>;
+  tagChipMap: Map<string, ChipInfo>;
   stagedTopicIds: string[];
   stagedTagIds: string[];
   onToggleTopic: (id: string) => void;
@@ -35,6 +36,8 @@ export function DiscoverFilterSheet({
   onClose,
   topicTree,
   tagGroups,
+  topicChipMap,
+  tagChipMap,
   stagedTopicIds,
   stagedTagIds,
   onToggleTopic,
@@ -42,74 +45,6 @@ export function DiscoverFilterSheet({
   onReset,
   onApply,
 }: Props) {
-  // ── 토픽 조회맵: 본문 렌더 분기와 동일한 순회 경로 ──────────────────────────
-  const topicChipMap = useMemo(() => {
-    const map = new Map<string, ChipInfo>();
-    for (const root of topicTree) {
-      const l1s = root.children;
-      if (l1s.length === 0) continue; // 分岐D: skip
-
-      if (root.nameEn === KPOP_NAME) { // 分岐A: L2 평탄
-        for (const l1 of l1s) {
-          for (const l2 of l1.children) {
-            const resolved = resolveTopicColors({ ...l2, parent: { ...l1, parent: root } });
-            map.set(l2.id, {
-              id: l2.id,
-              label: l2.nameEn,
-              bg: labelBackground({ text: "", ...resolved }),
-              fg: resolved.textColorHex,
-            });
-          }
-        }
-        continue;
-      }
-
-      const hasL2 = l1s.some((l1) => l1.children.length > 0);
-
-      if (!hasL2) { // 分岐B: L1 평탄
-        for (const l1 of l1s) {
-          const resolved = resolveTopicColors({ ...l1, parent: root });
-          map.set(l1.id, {
-            id: l1.id,
-            label: l1.nameEn,
-            bg: labelBackground({ text: "", ...resolved }),
-            fg: resolved.textColorHex,
-          });
-        }
-      } else { // 分岐C: L2 칩
-        for (const l1 of l1s) {
-          for (const l2 of l1.children) {
-            const resolved = resolveTopicColors({ ...l2, parent: { ...l1, parent: root } });
-            map.set(l2.id, {
-              id: l2.id,
-              label: l2.nameEn,
-              bg: labelBackground({ text: "", ...resolved }),
-              fg: resolved.textColorHex,
-            });
-          }
-        }
-      }
-    }
-    return map;
-  }, [topicTree]);
-
-  // ── 태그 조회맵 ─────────────────────────────────────────────────────────────
-  const tagChipMap = useMemo(() => {
-    const map = new Map<string, ChipInfo>();
-    for (const group of tagGroups) {
-      for (const tag of group.tags) {
-        const resolved = resolveTagColors(tag, group);
-        map.set(tag.id, {
-          id: tag.id,
-          label: tag.name,
-          bg: labelBackground({ text: "", ...resolved }),
-          fg: tag.textColorHex ?? group.textColorHex ?? DEFAULT_TEXT,
-        });
-      }
-    }
-    return map;
-  }, [tagGroups]);
-
   const totalSelected = stagedTopicIds.length + stagedTagIds.length;
 
   return (
