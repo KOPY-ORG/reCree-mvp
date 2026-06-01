@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, X, Flame, List as ListIcon } from "lucide-react";
+import { X, Flame, List as ListIcon } from "lucide-react";
 
 interface DiscoverSheetHeaderProps {
   contentTab: "hot" | "list";
@@ -8,7 +8,7 @@ interface DiscoverSheetHeaderProps {
   placeCount: number;
   isResultMode: boolean;
   query: string;
-  onClearQuery: () => void;
+  onExitResultMode: () => void;
 }
 
 export function DiscoverSheetHeader({
@@ -17,22 +17,21 @@ export function DiscoverSheetHeader({
   placeCount,
   isResultMode,
   query,
-  onClearQuery,
+  onExitResultMode,
 }: DiscoverSheetHeaderProps) {
   return (
     <div className={`flex items-center px-4 ${isResultMode ? "justify-between pt-2 pb-4" : "justify-center pt-1 pb-3"}`}>
       {isResultMode ? (
         <>
-          <div className="flex items-center gap-2 min-w-0">
-            <Search className="w-4 h-4 text-foreground shrink-0" />
+          <div className="flex items-center min-w-0">
             <span className="text-lg font-semibold text-foreground truncate">{query}</span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <span className="text-sm text-muted-foreground">{placeCount} results</span>
             <button
               type="button"
-              onClick={onClearQuery}
-              aria-label="Clear search"
+              onClick={onExitResultMode}
+              aria-label="Exit result mode"
               className="flex items-center justify-center bg-muted rounded-full p-1.5 text-muted-foreground"
             >
               <X className="w-4 h-4" />

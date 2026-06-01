@@ -314,6 +314,11 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
     handleMarkerClick(placeId);
   };
   const handleClearQuery = () => setQuery("");
+  const exitResultMode = () => {
+    setQuery("");
+    setAppliedTopicIds([]);
+    setAppliedTagIds([]);
+  };
 
   const openFilter = () => {
     setStagedTopicIds(appliedTopicIds);
@@ -324,6 +329,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
     setAppliedTopicIds(stagedTopicIds);
     setAppliedTagIds(stagedTagIds);
     setIsFilterOpen(false);
+    setSheetState("half");
   };
   const resetStaged = () => { setStagedTopicIds([]); setStagedTagIds([]); };
   const removeAppliedTopic = (id: string) =>
@@ -400,26 +406,33 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
             placeCount={filteredPlaces.length}
             isResultMode={isResultMode}
             query={query}
-            onClearQuery={handleClearQuery}
+            onExitResultMode={exitResultMode}
           />
         }
       >
         {(contentTab === "list" || isResultMode) ? (
-          <div className="px-4 pt-2 pb-4 space-y-2">
-            {allVisiblePosts.map(({ post, place }) => (
-              <PlaceListSheetCard
-                key={post.id}
-                post={post}
-                place={place}
-                isSaved={savedPostIdsSet.has(post.id)}
-                isFocused={focusedPlaceId === place.id}
-                tagGroupMap={tagGroupMap}
-                onCardTap={handleCardTap}
-                onViewPlace={handleSelectPlace}
-                onPostNavigate={handlePostNavigate}
-              />
-            ))}
-          </div>
+          isResultMode && allVisiblePosts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
+              <p className="text-sm font-semibold text-foreground">No places match your filters</p>
+              <p className="text-xs text-muted-foreground mt-1.5">Try removing a filter.</p>
+            </div>
+          ) : (
+            <div className="px-4 pt-2 pb-4 space-y-2">
+              {allVisiblePosts.map(({ post, place }) => (
+                <PlaceListSheetCard
+                  key={post.id}
+                  post={post}
+                  place={place}
+                  isSaved={savedPostIdsSet.has(post.id)}
+                  isFocused={focusedPlaceId === place.id}
+                  tagGroupMap={tagGroupMap}
+                  onCardTap={handleCardTap}
+                  onViewPlace={handleSelectPlace}
+                  onPostNavigate={handlePostNavigate}
+                />
+              ))}
+            </div>
+          )
         ) : (
           <HotTabStub />
         )}
