@@ -13,11 +13,37 @@ import { HotTabStub } from "./HotTabStub";
 import { ListScrollTopButton } from "./ListScrollTopButton";
 import { useRecentSearches } from "../_hooks/useRecentSearches";
 import { useDiscoverViewState } from "../_hooks/useDiscoverViewState";
-import type { MapPlace } from "@/lib/map-queries";
+import type { MapPlace, MapPost, MapPostTopic } from "@/lib/map-queries";
 import { getTopicMarkerColor, getTopicMarkerGradient } from "@/lib/map-utils";
 import type { Level0TopicDeep } from "@/lib/topic-queries";
 import type { TagGroupWithTags } from "@/lib/filter-queries";
 import type { TagGroupColorMap } from "@/lib/post-labels";
+
+function topicMatchesFilter(topic: MapPostTopic, topicId: string): boolean {
+  return (
+    topic.id === topicId ||
+    topic.parent?.id === topicId ||
+    topic.parent?.parent?.id === topicId ||
+    topic.parent?.parent?.parent?.id === topicId
+  );
+}
+
+function postMatchesFilters(post: MapPost, topicIds: string[], tagIds: string[]): boolean {
+  const topicHit =
+    topicIds.length > 0 &&
+    post.topics.some((t) => topicIds.some((id) => topicMatchesFilter(t, id)));
+  const tagHit = tagIds.length > 0 && post.tags.some((tag) => tagIds.includes(tag.id));
+  return topicHit || tagHit;
+}
+
+function placeMatchesFilters(
+  place: Pick<MapPlace, "posts">,
+  topicIds: string[],
+  tagIds: string[]
+): boolean {
+  if (topicIds.length === 0 && tagIds.length === 0) return true;
+  return place.posts.some((post) => postMatchesFilters(post, topicIds, tagIds));
+}
 
 type DiscoverSuggestion =
   | { type: "keyword"; text: string }
@@ -48,6 +74,8 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [stagedTopicIds, setStagedTopicIds] = useState<string[]>([]);
   const [stagedTagIds, setStagedTagIds] = useState<string[]>([]);
+  const [appliedTopicIds, setAppliedTopicIds] = useState<string[]>([]);
+  const [appliedTagIds, setAppliedTagIds] = useState<string[]>([]);
   const listScrollRef = useRef<HTMLDivElement | null>(null);
   const listScrollMemoRef = useRef<number>(0);
   const { recents, addRecent, removeRecent, clearRecents } = useRecentSearches();
@@ -146,11 +174,12 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
     [isSavedView, markerPlaces]
   );
 
-  const isResultMode = query.trim() !== "";
+  const hasFilters = appliedTopicIds.length > 0 || appliedTagIds.length > 0;
+  const isResultMode = query.trim() !== "" || hasFilters;
 
   const searchedPlaces = useMemo(() => {
-    if (!isResultMode) return visiblePlaces;
     const q = query.trim().toLowerCase();
+    if (!q) return visiblePlaces;
     return visiblePlaces.filter((place) => {
       const inName =
         place.nameEn?.toLowerCase().includes(q) ||
@@ -163,7 +192,14 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
       );
       return Boolean(inName || inPost || inTopic);
     });
-  }, [isResultMode, query, visiblePlaces]);
+  }, [query, visiblePlaces]);
+
+  const filteredPlaces = useMemo(() => {
+    if (!hasFilters) return searchedPlaces;
+    return searchedPlaces.filter((p) =>
+      placeMatchesFilters(p, appliedTopicIds, appliedTagIds)
+    );
+  }, [searchedPlaces, hasFilters, appliedTopicIds, appliedTagIds]);
 
   const suggestions = useMemo((): DiscoverSuggestion[] => {
     const q = query.trim().toLowerCase();
@@ -207,8 +243,8 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
   }, [query, visiblePlaces]);
 
   const allVisiblePosts = useMemo(
-    () => searchedPlaces.flatMap((place) => place.posts.map((post) => ({ post, place }))),
-    [searchedPlaces]
+    () => filteredPlaces.flatMap((place) => place.posts.map((post) => ({ post, place }))),
+    [filteredPlaces]
   );
 
   const handleSearchOpen = () => {
@@ -228,11 +264,22 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
   };
   const handleClearQuery = () => setQuery("");
 
+  const openFilter = () => {
+    setStagedTopicIds(appliedTopicIds);
+    setStagedTagIds(appliedTagIds);
+    setIsFilterOpen(true);
+  };
+  const applyFilters = () => {
+    setAppliedTopicIds(stagedTopicIds);
+    setAppliedTagIds(stagedTagIds);
+    setIsFilterOpen(false);
+  };
+  const resetStaged = () => { setStagedTopicIds([]); setStagedTagIds([]); };
+
   const toggleTopic = (id: string) =>
     setStagedTopicIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
   const toggleTag = (id: string) =>
     setStagedTagIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
-  const clearStaged = () => { setStagedTopicIds([]); setStagedTagIds([]); };
 
   const effectiveSheetState = selectedPlaceId
     ? "hidden"
@@ -244,13 +291,17 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
     // bottomnav(h-16=64px) — ExploreHeader 제거됨
     <div className="relative h-[calc(100dvh-64px)] overflow-hidden">
       <InteractiveMap
-        places={searchedPlaces}
+        places={filteredPlaces}
         selectedPlaceId={selectedPlaceId}
         focusedPlaceId={focusedPlaceId}
         onMarkerClick={handleMarkerClick}
         onMapClick={handleMapClick}
-        boundsKey={isResultMode ? `q:${query}` : isSavedView ? "saved" : "all"}
-        highlightedIds={isResultMode ? new Set(searchedPlaces.map((p) => p.id)) : undefined}
+        boundsKey={
+          isResultMode
+            ? `q:${query}|t:${[...appliedTopicIds].sort().join(",")}|g:${[...appliedTagIds].sort().join(",")}`
+            : isSavedView ? "saved" : "all"
+        }
+        highlightedIds={isResultMode ? new Set(filteredPlaces.map((p) => p.id)) : undefined}
         className="absolute inset-0"
       />
       <DiscoverSearchBar
@@ -259,7 +310,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
         isOpen={isSearchOpen}
         onOpen={handleSearchOpen}
         onClose={() => setIsSearchOpen(false)}
-        onFilterOpen={() => setIsFilterOpen(true)}
+        onFilterOpen={openFilter}
         onQueryChange={setQuery}
         onClearQuery={handleClearQuery}
         suggestions={suggestions}
@@ -280,7 +331,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
           <DiscoverSheetHeader
             contentTab={contentTab}
             onContentTabChange={handleContentTabChange}
-            placeCount={searchedPlaces.length}
+            placeCount={filteredPlaces.length}
             isResultMode={isResultMode}
             query={query}
             onClearQuery={handleClearQuery}
@@ -329,7 +380,8 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
         stagedTagIds={stagedTagIds}
         onToggleTopic={toggleTopic}
         onToggleTag={toggleTag}
-        onClearStaged={clearStaged}
+        onReset={resetStaged}
+        onApply={applyFilters}
       />
     </div>
   );

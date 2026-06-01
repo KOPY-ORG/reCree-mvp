@@ -26,7 +26,8 @@ interface Props {
   stagedTagIds: string[];
   onToggleTopic: (id: string) => void;
   onToggleTag: (id: string) => void;
-  onClearStaged: () => void;
+  onReset: () => void;
+  onApply: () => void;
 }
 
 export function DiscoverFilterSheet({
@@ -38,7 +39,8 @@ export function DiscoverFilterSheet({
   stagedTagIds,
   onToggleTopic,
   onToggleTag,
-  onClearStaged,
+  onReset,
+  onApply,
 }: Props) {
   // ── 토픽 조회맵: 본문 렌더 분기와 동일한 순회 경로 ──────────────────────────
   const topicChipMap = useMemo(() => {
@@ -148,7 +150,7 @@ export function DiscoverFilterSheet({
               </span>
               <button
                 type="button"
-                onClick={onClearStaged}
+                onClick={onReset}
                 className="text-xs text-muted-foreground active:opacity-60"
               >
                 Clear all
@@ -194,7 +196,7 @@ export function DiscoverFilterSheet({
         )}
 
         {/* 스크롤 본문 */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto min-h-0">
           <div className="px-4 pt-4 pb-8 space-y-6 [--pill-py:0.25rem]">
 
             {/* ── 토픽 섹션 ── */}
@@ -340,6 +342,24 @@ export function DiscoverFilterSheet({
               ))}
 
           </div>
+        </div>
+
+        {/* 하단 바 */}
+        <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-t border-border">
+          <button
+            type="button"
+            onClick={onReset}
+            className="flex-1 h-11 rounded-full border border-border text-sm font-medium active:opacity-60 transition-opacity"
+          >
+            Reset
+          </button>
+          <button
+            type="button"
+            onClick={onApply}
+            className="flex-1 h-11 rounded-full bg-foreground text-background text-sm font-semibold active:opacity-70 transition-opacity"
+          >
+            Apply
+          </button>
         </div>
       </div>
     </>
