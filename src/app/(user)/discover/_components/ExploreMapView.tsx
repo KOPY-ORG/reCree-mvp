@@ -55,6 +55,24 @@ function placeMatchesFilters(
   return place.posts.some((post) => postMatchesFilters(post, topicIds, tagIds));
 }
 
+// 매칭 점수: 선택 토픽 하나당 +2, 선택 태그 하나당 +1
+function placeMatchScore(
+  place: Pick<MapPlace, "posts">,
+  topicIds: string[],
+  tagIds: string[]
+): number {
+  let score = 0;
+  for (const topicId of topicIds) {
+    if (place.posts.some((post) => post.topics.some((t) => topicMatchesFilter(t, topicId))))
+      score += 2;
+  }
+  for (const tagId of tagIds) {
+    if (place.posts.some((post) => post.tags.some((tag) => tag.id === tagId)))
+      score += 1;
+  }
+  return score;
+}
+
 type DiscoverSuggestion =
   | { type: "keyword"; text: string }
   | { type: "post"; text: string; placeName: string; placeId: string };
@@ -247,8 +265,13 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
 
   const filteredPlaces = useMemo(() => {
     if (!hasFilters) return searchedPlaces;
-    return searchedPlaces.filter((p) =>
+    const matched = searchedPlaces.filter((p) =>
       placeMatchesFilters(p, appliedTopicIds, appliedTagIds)
+    );
+    return [...matched].sort(
+      (a, b) =>
+        placeMatchScore(b, appliedTopicIds, appliedTagIds) -
+        placeMatchScore(a, appliedTopicIds, appliedTagIds)
     );
   }, [searchedPlaces, hasFilters, appliedTopicIds, appliedTagIds]);
 
@@ -398,6 +421,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
         state={effectiveSheetState}
         onStateChange={setSheetState}
         topOffset={64}
+        hasActiveFacets={isResultMode}
         scrollContainerRef={listScrollRef}
         header={
           <DiscoverSheetHeader

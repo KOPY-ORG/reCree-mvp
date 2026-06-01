@@ -9,17 +9,20 @@ const DRAGGABLE_STATES = ["tab-only", "half", "full"] as const;
 type DraggableState = (typeof DRAGGABLE_STATES)[number];
 
 const BOTTOM_NAV_H = 64;
+// searchbar(60px) + facet 칩(~27px) + pb-2(8px) + 1px buffer
+const FULL_TOP_WITH_FACETS = 96;
 
 interface Props {
   state: PlaceListSheetState;
   onStateChange: (state: PlaceListSheetState) => void;
   topOffset?: number;
+  hasActiveFacets?: boolean;
   header?: React.ReactNode;
   children?: React.ReactNode;
   scrollContainerRef?: React.RefObject<HTMLDivElement | null>;
 }
 
-export function PlaceListSheet({ state, onStateChange, topOffset = 24, header, children, scrollContainerRef }: Props) {
+export function PlaceListSheet({ state, onStateChange, topOffset = 24, hasActiveFacets = false, header, children, scrollContainerRef }: Props) {
   const sheetRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -41,11 +44,13 @@ export function PlaceListSheet({ state, onStateChange, topOffset = 24, header, c
     return () => observer.disconnect();
   }, []);
 
+  const fullTop = hasActiveFacets ? FULL_TOP_WITH_FACETS : topOffset;
+
   function getSnapHeights() {
     return [
       tabOnlyH,
       Math.round((window.innerHeight - BOTTOM_NAV_H) * 0.5),
-      window.innerHeight - BOTTOM_NAV_H - topOffset,
+      window.innerHeight - BOTTOM_NAV_H - fullTop,
     ];
   }
 
@@ -66,7 +71,7 @@ export function PlaceListSheet({ state, onStateChange, topOffset = 24, header, c
               ? `${tabOnlyH}px`
               : state === "half"
               ? `calc((100dvh - ${BOTTOM_NAV_H}px) * 0.5)`
-              : `calc(100dvh - ${BOTTOM_NAV_H}px - ${topOffset}px)`,
+              : `calc(100dvh - ${BOTTOM_NAV_H}px - ${fullTop}px)`,
           transition: isDragging ? "none" : "height 300ms ease",
         };
 
