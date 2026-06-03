@@ -582,7 +582,7 @@ model TopicFollow {
 
 model EventCollection {
   id        String      @id @default(uuid()) @db.Uuid
-  slug      String      @unique // "ARIRANG_BUSAN" — 필터/URL용 식별자
+  slug      String      @unique // "arirang-busan" — 소문자 케밥, URL용 식별자
   status    EventStatus @default(DRAFT)
   sortOrder Int         @default(0)
   createdAt DateTime    @default(now())
@@ -607,6 +607,7 @@ model EventCollectionTranslation {
 
 model Event {
   id                String         @id @default(uuid()) @db.Uuid
+  slug              String         @unique // "galaxy-experience-zone" — 소문자 케밥, URL용
   placeId           String         @db.Uuid
   eventCollectionId String         @db.Uuid
   category          EventCategory

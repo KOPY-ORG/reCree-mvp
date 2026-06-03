@@ -38,6 +38,7 @@ export type BodyBlockData = {
 };
 
 export type EventFormData = {
+  slug: string;
   placeId: string;
   eventCollectionId: string;
   category: EventCategory;
@@ -58,8 +59,23 @@ export type EventFormData = {
   bodyBlocks: BodyBlockData[];
 };
 
+export async function checkEventSlug(
+  slug: string,
+  excludeId?: string,
+): Promise<{ available: boolean }> {
+  const existing = await prisma.event.findFirst({
+    where: {
+      slug,
+      ...(excludeId && { id: { not: excludeId } }),
+    },
+    select: { id: true },
+  });
+  return { available: !existing };
+}
+
 function toEventInput(data: EventFormData) {
   return {
+    slug: data.slug.trim(),
     placeId: data.placeId,
     eventCollectionId: data.eventCollectionId,
     category: data.category,
@@ -126,6 +142,9 @@ function buildPerkTranslationRows(
 export async function createEvent(
   data: EventFormData,
 ): Promise<{ error?: string }> {
+  if (!data.slug.trim()) return { error: "슬러그를 입력해주세요." };
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(data.slug.trim()))
+    return { error: "슬러그는 소문자·숫자·하이픈(-)만 사용할 수 있습니다." };
   if (!data.placeId) return { error: "장소를 선택해주세요." };
   if (!data.eventCollectionId) return { error: "컬렉션을 선택해주세요." };
   if (!data.startDate || !data.endDate) return { error: "기간을 입력해주세요." };
@@ -192,7 +211,14 @@ export async function createEvent(
         }
       }
     });
-  } catch (e) {
+  } catch (e: unknown) {
+    if (
+      typeof e === "object" &&
+      e !== null &&
+      "code" in e &&
+      (e as { code: string }).code === "P2002"
+    )
+      return { error: "이미 사용 중인 슬러그입니다." };
     console.error("이벤트 생성 오류:", e);
     return { error: "이벤트를 생성하는 중 오류가 발생했습니다." };
   }
@@ -205,6 +231,9 @@ export async function updateEvent(
   id: string,
   data: EventFormData,
 ): Promise<{ error?: string }> {
+  if (!data.slug.trim()) return { error: "슬러그를 입력해주세요." };
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(data.slug.trim()))
+    return { error: "슬러그는 소문자·숫자·하이픈(-)만 사용할 수 있습니다." };
   if (!data.placeId) return { error: "장소를 선택해주세요." };
   if (!data.eventCollectionId) return { error: "컬렉션을 선택해주세요." };
   if (!data.startDate || !data.endDate) return { error: "기간을 입력해주세요." };
@@ -278,7 +307,14 @@ export async function updateEvent(
         }
       }
     });
-  } catch (e) {
+  } catch (e: unknown) {
+    if (
+      typeof e === "object" &&
+      e !== null &&
+      "code" in e &&
+      (e as { code: string }).code === "P2002"
+    )
+      return { error: "이미 사용 중인 슬러그입니다." };
     console.error("이벤트 수정 오류:", e);
     return { error: "이벤트를 수정하는 중 오류가 발생했습니다." };
   }
@@ -310,6 +346,7 @@ export async function getEventForEdit(id: string) {
     where: { id },
     select: {
       id: true,
+      slug: true,
       placeId: true,
       eventCollectionId: true,
       category: true,

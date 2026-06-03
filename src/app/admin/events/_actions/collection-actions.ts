@@ -44,7 +44,7 @@ export async function createCollection(
     await prisma.$transaction(async (tx) => {
       const collection = await tx.eventCollection.create({
         data: {
-          slug: data.slug.trim().toUpperCase(),
+          slug: data.slug.trim().toLowerCase().replace(/[\s_]+/g, "-"),
           status: data.status,
           sortOrder: data.sortOrder,
         },
@@ -84,7 +84,7 @@ export async function updateCollection(
       await tx.eventCollection.update({
         where: { id },
         data: {
-          slug: data.slug.trim().toUpperCase(),
+          slug: data.slug.trim().toLowerCase().replace(/[\s_]+/g, "-"),
           status: data.status,
           sortOrder: data.sortOrder,
         },

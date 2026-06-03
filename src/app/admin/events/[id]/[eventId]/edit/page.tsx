@@ -84,6 +84,7 @@ export default async function EditEventPage({
 
   const initialData: EventInitialData = {
     id: event.id,
+    slug: event.slug,
     placeId: event.placeId,
     place,
     eventCollectionId: event.eventCollectionId,

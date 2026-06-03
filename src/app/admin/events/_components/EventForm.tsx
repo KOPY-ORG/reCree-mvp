@@ -1,9 +1,9 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, ChevronDown, ChevronUp, Loader2, MapPin, Plus, Trash2, Upload, X } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, ChevronUp, Loader2, MapPin, Plus, Trash2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +28,7 @@ import {
   EVENT_CATEGORY_LABELS,
 } from "../_constants";
 import {
+  checkEventSlug,
   createEvent,
   updateEvent,
   type EventFormData,
@@ -70,6 +71,7 @@ type EventLocale = (typeof LOCALES)[number]["key"];
 
 export type EventInitialData = {
   id: string;
+  slug: string;
   placeId: string;
   place: PlaceForForm | null;
   eventCollectionId: string;
@@ -642,6 +644,9 @@ export function EventForm({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── 폼 state ────────────────────────────────────────────────────────────────
+  const [slug, setSlug] = useState(initialData?.slug ?? "");
+  const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "ok" | "error" | "invalid">("idle");
+  const slugCheckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<PlaceForForm | null>(
     initialData?.place ?? null,
   );
@@ -679,6 +684,27 @@ export function EventForm({
     initialData?.bodyBlocks ? initialData.bodyBlocks.map((b) => initBodyBlockItem(b)) : [],
   );
 
+  // ── Slug 중복 체크 ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!slug.trim()) {
+      setSlugStatus("idle");
+      return;
+    }
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug.trim())) {
+      setSlugStatus("invalid");
+      return;
+    }
+    setSlugStatus("checking");
+    if (slugCheckTimerRef.current) clearTimeout(slugCheckTimerRef.current);
+    slugCheckTimerRef.current = setTimeout(async () => {
+      const { available } = await checkEventSlug(slug, isEdit ? eventId : undefined);
+      setSlugStatus(available ? "ok" : "error");
+    }, 400);
+    return () => {
+      if (slugCheckTimerRef.current) clearTimeout(slugCheckTimerRef.current);
+    };
+  }, [slug, isEdit, eventId]);
+
   // ── 번역 업데이트 ─────────────────────────────────────────────────────────────
   const updateTranslation = (
     locale: string,
@@ -709,6 +735,10 @@ export function EventForm({
 
   // ── 제출 ───────────────────────────────────────────────────────────────────
   const handleSubmit = () => {
+    if (!slug.trim()) { toast.error("슬러그를 입력해주세요."); setActiveTab("info"); return; }
+    if (slugStatus === "invalid") { toast.error("슬러그는 소문자·숫자·하이픈(-)만 사용할 수 있습니다."); setActiveTab("info"); return; }
+    if (slugStatus === "checking") { toast.error("슬러그 확인 중입니다. 잠시 후 다시 시도해주세요."); return; }
+    if (slugStatus === "error") { toast.error("슬러그가 이미 사용 중입니다."); setActiveTab("info"); return; }
     if (!selectedPlace) { toast.error("장소를 선택해주세요."); return; }
     if (!eventCollectionId) { toast.error("컬렉션을 선택해주세요."); return; }
     if (!startDate || !endDate) { toast.error("기간을 입력해주세요."); return; }
@@ -775,6 +805,7 @@ export function EventForm({
     }));
 
     const data: EventFormData = {
+      slug,
       placeId: selectedPlace.id,
       eventCollectionId,
       category,
@@ -831,7 +862,7 @@ export function EventForm({
             <Button variant="outline" size="sm" asChild>
               <Link href={`/admin/events/${collection.id}`}>취소</Link>
             </Button>
-            <Button size="sm" disabled={isPending} onClick={handleSubmit}>
+            <Button size="sm" disabled={isPending || slugStatus === "checking" || slugStatus === "error" || slugStatus === "invalid"} onClick={handleSubmit}>
               {isPending && (
                 <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
               )}
@@ -879,6 +910,44 @@ export function EventForm({
                             {collection.slug}
                           </span>
                         </div>
+                      </div>
+
+                      {/* 슬러그 */}
+                      <div className="space-y-1.5">
+                        <Label>
+                          슬러그 <span className="text-red-500">*</span>
+                        </Label>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            value={slug}
+                            onChange={(e) => {
+                              const normalized = e.target.value
+                                .toLowerCase()
+                                .replace(/\s+/g, "-");
+                              setSlug(normalized);
+                            }}
+                            placeholder="galaxy-experience-zone"
+                            className={`w-full rounded-md border bg-background px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring ${
+                              slugStatus === "error" || slugStatus === "invalid"
+                                ? "border-destructive"
+                                : slugStatus === "ok"
+                                  ? "border-green-500"
+                                  : ""
+                            }`}
+                          />
+                          {slugStatus === "checking" && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />}
+                          {slugStatus === "ok" && <Check className="h-4 w-4 text-green-600 shrink-0" />}
+                          {(slugStatus === "error" || slugStatus === "invalid") && <X className="h-4 w-4 text-destructive shrink-0" />}
+                        </div>
+                        {slugStatus === "invalid" && (
+                          <p className="text-xs text-destructive">소문자, 숫자, 하이픈(-)만 사용할 수 있어요.</p>
+                        )}
+                        {slugStatus === "error" && (
+                          <p className="text-xs text-destructive">이미 사용 중인 슬러그입니다.</p>
+                        )}
+                        {slugStatus === "idle" && (
+                          <p className="text-xs text-muted-foreground">소문자·숫자·하이픈. URL에 사용됩니다. 예: galaxy-experience-zone</p>
+                        )}
                       </div>
 
                       {/* 카테고리 */}

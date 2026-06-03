@@ -162,12 +162,16 @@ export function CollectionForm({
                 </Label>
                 <Input
                   value={slug}
-                  onChange={(e) => setSlug(e.target.value.toUpperCase())}
-                  placeholder="예: ARIRANG_BUSAN"
+                  onChange={(e) =>
+                    setSlug(
+                      e.target.value.toLowerCase().replace(/[\s_]+/g, "-"),
+                    )
+                  }
+                  placeholder="예: arirang-busan"
                   className="font-mono"
                 />
                 <p className="text-xs text-muted-foreground">
-                  대문자·숫자·밑줄(_) 권장. URL·필터 식별자로 사용됩니다.
+                  소문자·숫자·하이픈(-). URL 식별자로 사용됩니다.
                 </p>
               </div>
 
