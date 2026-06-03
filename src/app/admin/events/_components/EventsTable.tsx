@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Loader2, MoreHorizontal } from "lucide-react";
+import { ImageIcon, Loader2, MoreHorizontal, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
@@ -34,6 +34,7 @@ export type EventRow = {
   startDate: Date;
   endDate: Date;
   createdAt: Date;
+  bannerImageUrl: string | null;
   place: { nameKo: string } | null;
   translations: { name: string }[];
 };
@@ -45,12 +46,10 @@ interface Props {
 }
 
 function formatDateRange(start: Date, end: Date): string {
-  const s = formatDate(start);
-  const e = formatDate(end);
-  return `${s} ~ ${e}`;
+  return `${formatDate(start)} ~ ${formatDate(end)}`;
 }
 
-export function EventsTable({ events, isFiltered, collectionId }: Props) {
+export function EventsGallery({ events, isFiltered, collectionId }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -71,140 +70,106 @@ export function EventsTable({ events, isFiltered, collectionId }: Props) {
     });
   };
 
+  if (events.length === 0) {
+    return (
+      <div className="mt-4 rounded-xl border border-dashed border-zinc-200 p-16 text-center text-sm text-muted-foreground">
+        {isFiltered
+          ? "조건에 맞는 이벤트가 없습니다."
+          : "등록된 이벤트가 없습니다. 첫 이벤트를 만들어보세요."}
+      </div>
+    );
+  }
+
   return (
     <>
-      <div className="mt-4 rounded-xl overflow-hidden shadow-sm bg-white">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-zinc-50 border-b border-zinc-100">
-              <tr>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                  이벤트명 (ko)
-                </th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                  카테고리
-                </th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                  장소
-                </th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">
-                  기간
-                </th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                  상태
-                </th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">
-                  생성일
-                </th>
-                <th className="w-24 px-2 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {events.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={7}
-                    className="px-4 py-16 text-center text-sm text-muted-foreground"
-                  >
-                    {isFiltered
-                      ? "조건에 맞는 이벤트가 없습니다."
-                      : "등록된 이벤트가 없습니다. 첫 이벤트를 만들어보세요."}
-                  </td>
-                </tr>
-              )}
-              {events.map((event) => {
-                const name = event.translations[0]?.name ?? "—";
-                return (
-                  <tr
-                    key={event.id}
-                    className="border-b border-zinc-100 last:border-b-0 transition-colors hover:bg-zinc-50"
-                  >
-                    {/* 이벤트명 */}
-                    <td className="px-4 py-3 min-w-[200px] font-medium">
-                      {name}
-                    </td>
-
-                    {/* 카테고리 */}
-                    <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+      <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {events.map((event) => {
+          const name = event.translations[0]?.name ?? "(제목 없음)";
+          return (
+            <div
+              key={event.id}
+              className="flex flex-col overflow-hidden rounded-xl border border-zinc-100 bg-white shadow-sm"
+            >
+              {/* 배너 이미지 */}
+              <div className="relative aspect-[16/9] shrink-0 bg-zinc-100">
+                {event.bannerImageUrl ? (
+                  <img
+                    src={event.bannerImageUrl}
+                    alt={name}
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-zinc-300">
+                    <ImageIcon className="h-8 w-8" />
+                    <span className="text-xs">
                       {EVENT_CATEGORY_LABELS[event.category]}
-                    </td>
+                    </span>
+                  </div>
+                )}
+                {/* 상태 뱃지 */}
+                <span
+                  className={`absolute right-2 top-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${EVENT_STATUS_COLORS[event.status]}`}
+                >
+                  {EVENT_STATUS_LABELS[event.status]}
+                </span>
+              </div>
 
-                    {/* 장소 */}
-                    <td className="px-4 py-3 min-w-[120px]">
-                      {event.place ? (
-                        <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                          {event.place.nameKo}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-muted-foreground/40">—</span>
-                      )}
-                    </td>
-
-                    {/* 기간 */}
-                    <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                      {formatDateRange(event.startDate, event.endDate)}
-                    </td>
-
-                    {/* 상태 */}
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${EVENT_STATUS_COLORS[event.status]}`}
-                      >
-                        {EVENT_STATUS_LABELS[event.status]}
-                      </span>
-                    </td>
-
-                    {/* 생성일 */}
-                    <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                      {formatDate(event.createdAt)}
-                    </td>
-
-                    {/* 액션 */}
-                    <td className="px-2 py-3">
-                      <div className="flex items-center justify-end gap-1">
+              {/* 카드 하단 */}
+              <div className="flex flex-1 flex-col gap-1.5 p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium leading-snug">
+                      {name}
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {EVENT_CATEGORY_LABELS[event.category]}
+                      {event.place && <> · {event.place.nameKo}</>}
+                    </p>
+                  </div>
+                  {/* 액션 */}
+                  <div className="flex shrink-0 items-center gap-0.5">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() =>
+                        router.push(
+                          `/admin/events/${collectionId}/${event.id}/edit`,
+                        )
+                      }
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8"
-                          onClick={() =>
-                            router.push(
-                              `/admin/events/${collectionId}/${event.id}/edit`,
-                            )
-                          }
+                          className="h-7 w-7"
+                          disabled={isPending}
                         >
-                          <Pencil className="h-3.5 w-3.5" />
+                          <MoreHorizontal className="h-4 w-4" />
                         </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              disabled={isPending}
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              onClick={() =>
-                                setDeleteTarget({ id: event.id, name })
-                              }
-                            >
-                              삭제
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => setDeleteTarget({ id: event.id, name })}
+                        >
+                          삭제
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {formatDateRange(event.startDate, event.endDate)}
+                </p>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* 삭제 확인 Dialog */}

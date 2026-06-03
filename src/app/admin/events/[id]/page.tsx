@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ArrowLeft, Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/prisma";
-import { EventsTable } from "../_components/EventsTable";
+import { EventsGallery } from "../_components/EventsTable";
 import {
   EVENT_STATUS_LABELS,
   EVENT_STATUS_COLORS,
@@ -35,6 +35,7 @@ export default async function CollectionDetailPage({
           startDate: true,
           endDate: true,
           createdAt: true,
+          bannerImageUrl: true,
           place: { select: { nameKo: true } },
           translations: {
             where: { locale: "ko" },
@@ -91,7 +92,7 @@ export default async function CollectionDetailPage({
       </div>
 
       {/* 이벤트 목록 */}
-      <EventsTable
+      <EventsGallery
         events={collection.events}
         isFiltered={false}
         collectionId={id}
