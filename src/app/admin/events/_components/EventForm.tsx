@@ -33,7 +33,8 @@ import {
   type EventFormData,
   type TranslationField,
 } from "../_actions/event-actions";
-import type { CollectionOption } from "../_actions/collection-actions";
+
+type CollectionInfo = { id: string; nameKo: string; slug: string };
 
 // ─── 상수 ──────────────────────────────────────────────────────────────────────
 
@@ -90,7 +91,7 @@ interface EventFormProps {
   mode: "create" | "edit";
   eventId?: string;
   initialData?: EventInitialData;
-  collections: CollectionOption[];
+  collection: CollectionInfo;
 }
 
 // ─── 헬퍼 ──────────────────────────────────────────────────────────────────────
@@ -137,7 +138,7 @@ export function EventForm({
   mode,
   eventId,
   initialData,
-  collections,
+  collection,
 }: EventFormProps) {
   const isEdit = mode === "edit";
   const [isPending, startTransition] = useTransition();
@@ -151,9 +152,7 @@ export function EventForm({
   const [selectedPlace, setSelectedPlace] = useState<PlaceForForm | null>(
     initialData?.place ?? null,
   );
-  const [eventCollectionId, setEventCollectionId] = useState(
-    initialData?.eventCollectionId ?? "",
-  );
+  const [eventCollectionId] = useState(collection.id);
   const [category, setCategory] = useState<EventCategory>(
     initialData?.category ?? "CONCERT",
   );
@@ -256,18 +255,21 @@ export function EventForm({
         <div className="flex h-14 items-center justify-between px-6">
           <div className="flex items-center gap-3">
             <Link
-              href="/admin/events"
+              href={`/admin/events/${collection.id}`}
               className="flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-muted"
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
-            <h1 className="text-base font-semibold">
-              {isEdit ? "이벤트 수정" : "이벤트 작성"}
-            </h1>
+            <div>
+              <h1 className="text-base font-semibold">
+                {isEdit ? "이벤트 수정" : "이벤트 작성"}
+              </h1>
+              <p className="text-xs text-muted-foreground">{collection.nameKo}</p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" asChild>
-              <Link href="/admin/events">취소</Link>
+              <Link href={`/admin/events/${collection.id}`}>취소</Link>
             </Button>
             <Button size="sm" disabled={isPending} onClick={handleSubmit}>
               {isPending && (
@@ -308,41 +310,15 @@ export function EventForm({
                   {/* 기본 정보 탭 */}
                   {activeTab === "info" && (
                     <div className="space-y-5">
-                      {/* 컬렉션 */}
+                      {/* 컬렉션 (고정) */}
                       <div className="space-y-1.5">
-                        <Label>
-                          컬렉션 <span className="text-red-500">*</span>
-                        </Label>
-                        {collections.length === 0 ? (
-                          <p className="text-sm text-muted-foreground">
-                            컬렉션이 없습니다.{" "}
-                            <Link
-                              href="/admin/events/collections/new"
-                              className="underline"
-                            >
-                              컬렉션 만들기
-                            </Link>
-                          </p>
-                        ) : (
-                          <Select
-                            value={eventCollectionId}
-                            onValueChange={setEventCollectionId}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="컬렉션 선택" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {collections.map((c) => (
-                                <SelectItem key={c.id} value={c.id}>
-                                  {c.nameKo}{" "}
-                                  <span className="text-muted-foreground text-xs">
-                                    ({c.slug})
-                                  </span>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
+                        <Label>컬렉션</Label>
+                        <div className="flex h-10 items-center rounded-md border bg-muted/50 px-3 text-sm">
+                          <span className="font-medium">{collection.nameKo}</span>
+                          <span className="ml-2 text-xs text-muted-foreground font-mono">
+                            {collection.slug}
+                          </span>
+                        </div>
                       </div>
 
                       {/* 카테고리 */}

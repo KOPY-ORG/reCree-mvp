@@ -41,6 +41,7 @@ export type EventRow = {
 interface Props {
   events: EventRow[];
   isFiltered: boolean;
+  collectionId: string;
 }
 
 function formatDateRange(start: Date, end: Date): string {
@@ -49,7 +50,7 @@ function formatDateRange(start: Date, end: Date): string {
   return `${s} ~ ${e}`;
 }
 
-export function EventsTable({ events, isFiltered }: Props) {
+export function EventsTable({ events, isFiltered, collectionId }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -166,7 +167,9 @@ export function EventsTable({ events, isFiltered }: Props) {
                           size="icon"
                           className="h-8 w-8"
                           onClick={() =>
-                            router.push(`/admin/events/${event.id}/edit`)
+                            router.push(
+                              `/admin/events/${collectionId}/${event.id}/edit`,
+                            )
                           }
                         >
                           <Pencil className="h-3.5 w-3.5" />

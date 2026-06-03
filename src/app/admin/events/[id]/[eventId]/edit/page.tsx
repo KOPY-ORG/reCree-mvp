@@ -1,20 +1,33 @@
 import { notFound } from "next/navigation";
-import { getEventForEdit } from "../../_actions/event-actions";
-import { getAllCollections } from "../../_actions/collection-actions";
-import { EventForm, type EventInitialData } from "../../_components/EventForm";
+import { prisma } from "@/lib/prisma";
+import { getEventForEdit } from "../../../_actions/event-actions";
+import { EventForm, type EventInitialData } from "../../../_components/EventForm";
 import type { PlaceForForm } from "@/app/admin/posts/_components/PostForm";
 
 export default async function EditEventPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ id: string; eventId: string }>;
 }) {
-  const { id } = await params;
-  const [event, collections] = await Promise.all([
-    getEventForEdit(id),
-    getAllCollections(),
+  const { id, eventId } = await params;
+
+  const [event, collection] = await Promise.all([
+    getEventForEdit(eventId),
+    prisma.eventCollection.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        slug: true,
+        translations: {
+          where: { locale: "ko" },
+          select: { name: true },
+        },
+      },
+    }),
   ]);
-  if (!event) notFound();
+
+  if (!event || !collection) notFound();
+  if (event.eventCollectionId !== id) notFound();
 
   const place: PlaceForForm | null = event.place
     ? {
@@ -74,9 +87,13 @@ export default async function EditEventPage({
   return (
     <EventForm
       mode="edit"
-      eventId={id}
+      eventId={eventId}
       initialData={initialData}
-      collections={collections}
+      collection={{
+        id: collection.id,
+        slug: collection.slug,
+        nameKo: collection.translations[0]?.name ?? collection.slug,
+      }}
     />
   );
 }

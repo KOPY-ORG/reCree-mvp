@@ -115,18 +115,17 @@ export async function updateCollection(
 export async function deleteCollection(
   id: string,
 ): Promise<{ error?: string }> {
+  const count = await prisma.event.count({ where: { eventCollectionId: id } });
+  if (count > 0) {
+    return {
+      error: `하위 이벤트 ${count}개가 있어 삭제할 수 없습니다. 먼저 이벤트를 삭제해주세요.`,
+    };
+  }
   try {
     await prisma.eventCollection.delete({ where: { id } });
     revalidatePath("/admin/events");
     return {};
   } catch (e: unknown) {
-    if (
-      typeof e === "object" &&
-      e !== null &&
-      "code" in e &&
-      (e as { code: string }).code === "P2003"
-    )
-      return { error: "이벤트가 연결된 컬렉션은 삭제할 수 없습니다." };
     console.error("컬렉션 삭제 오류:", e);
     return { error: "컬렉션을 삭제하는 중 오류가 발생했습니다." };
   }

@@ -95,7 +95,8 @@ export async function createEvent(
     return { error: "이벤트를 생성하는 중 오류가 발생했습니다." };
   }
   revalidatePath("/admin/events");
-  redirect("/admin/events");
+  revalidatePath(`/admin/events/${data.eventCollectionId}`);
+  redirect(`/admin/events/${data.eventCollectionId}`);
 }
 
 export async function updateEvent(
@@ -126,13 +127,21 @@ export async function updateEvent(
     return { error: "이벤트를 수정하는 중 오류가 발생했습니다." };
   }
   revalidatePath("/admin/events");
-  redirect("/admin/events");
+  revalidatePath(`/admin/events/${data.eventCollectionId}`);
+  redirect(`/admin/events/${data.eventCollectionId}`);
 }
 
 export async function deleteEvent(id: string): Promise<{ error?: string }> {
   try {
+    const event = await prisma.event.findUnique({
+      where: { id },
+      select: { eventCollectionId: true },
+    });
     await prisma.event.delete({ where: { id } });
     revalidatePath("/admin/events");
+    if (event?.eventCollectionId) {
+      revalidatePath(`/admin/events/${event.eventCollectionId}`);
+    }
     return {};
   } catch (e) {
     console.error("이벤트 삭제 오류:", e);
