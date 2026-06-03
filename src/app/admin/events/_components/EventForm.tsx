@@ -3,7 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Loader2, MapPin, Upload, X, Plus } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, Loader2, MapPin, Plus, Trash2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +32,7 @@ import {
   updateEvent,
   type EventFormData,
   type TranslationField,
+  type PerkData,
 } from "../_actions/event-actions";
 
 type CollectionInfo = { id: string; nameKo: string; slug: string };
@@ -85,6 +86,11 @@ export type EventInitialData = {
   showOnHome: boolean;
   sortOrder: number;
   translations?: Partial<Record<string, TranslationField>>;
+  perks?: Array<{
+    imageUrl: string | null;
+    perkUrl: string;
+    translations: Partial<Record<string, { badge: string; title: string; detail: string }>>;
+  }>;
 };
 
 interface EventFormProps {
@@ -92,6 +98,275 @@ interface EventFormProps {
   eventId?: string;
   initialData?: EventInitialData;
   collection: CollectionInfo;
+}
+
+// ─── Perk 타입 ────────────────────────────────────────────────────────────────
+
+type PerkTranslationField = { badge: string; title: string; detail: string };
+
+type PerkFormItem = {
+  key: string;
+  imageUrl: string | null;
+  uploading: boolean;
+  perkUrl: string;
+  activeLang: EventLocale;
+  translations: Record<EventLocale, PerkTranslationField>;
+};
+
+const emptyPerkTranslation = (): PerkTranslationField => ({
+  badge: "",
+  title: "",
+  detail: "",
+});
+
+function initPerkItem(initial?: {
+  imageUrl: string | null;
+  perkUrl: string;
+  translations?: Partial<Record<string, { badge: string; title: string; detail: string }>>;
+}): PerkFormItem {
+  const translations = {} as Record<EventLocale, PerkTranslationField>;
+  for (const loc of LOCALES) {
+    const t = initial?.translations?.[loc.key];
+    translations[loc.key] = t
+      ? { badge: t.badge ?? "", title: t.title ?? "", detail: t.detail ?? "" }
+      : emptyPerkTranslation();
+  }
+  return {
+    key: crypto.randomUUID(),
+    imageUrl: initial?.imageUrl ?? null,
+    uploading: false,
+    perkUrl: initial?.perkUrl ?? "",
+    activeLang: "ko",
+    translations,
+  };
+}
+
+// ─── PerkCard ────────────────────────────────────────────────────────────────
+
+interface PerkCardProps {
+  item: PerkFormItem;
+  index: number;
+  total: number;
+  onChange: (updater: (item: PerkFormItem) => PerkFormItem) => void;
+  onRemove: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+}
+
+function PerkCard({ item, index, total, onChange, onRemove, onMoveUp, onMoveDown }: PerkCardProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    onChange((prev) => ({ ...prev, uploading: true }));
+    const result = await getEventImagePresignedUrl(file.name, file.type, "events/perks");
+    if ("error" in result) {
+      toast.error(result.error);
+      onChange((prev) => ({ ...prev, uploading: false }));
+    } else {
+      const res = await fetch(result.presignedUrl, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": file.type },
+      });
+      if (!res.ok) {
+        toast.error(`업로드 실패 (${res.status})`);
+        onChange((prev) => ({ ...prev, uploading: false }));
+      } else {
+        onChange((prev) => ({ ...prev, imageUrl: result.cdnUrl, uploading: false }));
+        toast.success("이미지가 업로드되었습니다.");
+      }
+    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const updatePerkTranslation = (field: keyof PerkTranslationField, value: string) => {
+    onChange((prev) => ({
+      ...prev,
+      translations: {
+        ...prev.translations,
+        [prev.activeLang]: {
+          ...prev.translations[prev.activeLang],
+          [field]: value,
+        },
+      },
+    }));
+  };
+
+  return (
+    <div className="rounded-lg border bg-muted/20 overflow-hidden">
+      {/* 헤더 */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b bg-muted/40">
+        <span className="text-sm font-medium text-muted-foreground">혜택 {index + 1}</span>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            disabled={index === 0}
+            onClick={onMoveUp}
+            className="flex h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <ChevronUp className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            disabled={index === total - 1}
+            onClick={onMoveDown}
+            className="flex h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <ChevronDown className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={onRemove}
+            className="flex h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-destructive/10 text-destructive"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* 본문 */}
+      <div className="p-4 space-y-4">
+        {/* 이미지 + 링크 */}
+        <div className="flex gap-4">
+          {/* 이미지 업로드 */}
+          <div className="shrink-0">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handleImageUpload}
+            />
+            {item.imageUrl ? (
+              <div>
+                <div className="relative h-24 w-24 overflow-hidden rounded-md border bg-muted">
+                  <Image
+                    src={item.imageUrl}
+                    alt="혜택 이미지"
+                    fill
+                    unoptimized={isExternalImage(item.imageUrl)}
+                    className="object-cover"
+                  />
+                </div>
+                <div className="mt-1.5 flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={item.uploading}
+                    className="flex h-7 flex-1 items-center justify-center gap-1 rounded-md border bg-background text-xs transition-colors hover:bg-muted disabled:opacity-50"
+                  >
+                    {item.uploading ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Upload className="h-3 w-3" />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onChange((prev) => ({ ...prev, imageUrl: null }))}
+                    className="flex h-7 flex-1 items-center justify-center gap-1 rounded-md border bg-background text-xs text-destructive transition-colors hover:bg-destructive/10"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={item.uploading}
+                className="flex h-24 w-24 flex-col items-center justify-center gap-1 rounded-md border border-dashed text-xs text-muted-foreground transition-colors hover:bg-muted/50 disabled:opacity-50"
+              >
+                {item.uploading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4" />
+                    이미지
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+
+          {/* 혜택 링크 */}
+          <div className="flex-1 space-y-1.5">
+            <label className="text-xs font-medium leading-none">혜택 링크</label>
+            <input
+              type="url"
+              value={item.perkUrl}
+              onChange={(e) => onChange((prev) => ({ ...prev, perkUrl: e.target.value }))}
+              placeholder="https://"
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            />
+          </div>
+        </div>
+
+        {/* 번역 */}
+        <div className="space-y-3">
+          <div className="flex flex-wrap gap-1 border-b">
+            {LOCALES.map((loc) => (
+              <button
+                key={loc.key}
+                type="button"
+                onClick={() => onChange((prev) => ({ ...prev, activeLang: loc.key }))}
+                className={`px-3 py-1.5 text-xs rounded-t-md border-b-2 -mb-px transition-colors ${
+                  item.activeLang === loc.key
+                    ? "border-foreground text-foreground font-medium"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {loc.label}
+                {loc.required && (
+                  <span className="ml-0.5 text-red-500">*</span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-xs font-medium leading-none">Badge</label>
+              <input
+                type="text"
+                value={item.translations[item.activeLang]?.badge ?? ""}
+                onChange={(e) => updatePerkTranslation("badge", e.target.value)}
+                placeholder="예: FIRST 50, FREE, 선착순"
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium leading-none">
+                제목
+                {(item.activeLang === "ko" || item.activeLang === "en") && (
+                  <span className="ml-1 text-red-500">*</span>
+                )}
+              </label>
+              <input
+                type="text"
+                value={item.translations[item.activeLang]?.title ?? ""}
+                onChange={(e) => updatePerkTranslation("title", e.target.value)}
+                placeholder="혜택 제목"
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium leading-none">상세</label>
+              <textarea
+                value={item.translations[item.activeLang]?.detail ?? ""}
+                onChange={(e) => updatePerkTranslation("detail", e.target.value)}
+                placeholder="혜택 상세 설명"
+                rows={2}
+                className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ─── 헬퍼 ──────────────────────────────────────────────────────────────────────
@@ -179,6 +454,9 @@ export function EventForm({
   const [translations, setTranslations] = useState<Record<string, TranslationField>>(
     () => initTranslations(initialData?.translations),
   );
+  const [perks, setPerks] = useState<PerkFormItem[]>(() =>
+    initialData?.perks ? initialData.perks.map((p) => initPerkItem(p)) : [],
+  );
 
   // ── 번역 업데이트 ─────────────────────────────────────────────────────────────
   const updateTranslation = (
@@ -215,6 +493,34 @@ export function EventForm({
     if (!startDate || !endDate) { toast.error("기간을 입력해주세요."); return; }
     if (!translations.ko.name.trim()) { toast.error("한국어 이벤트명을 입력해주세요."); return; }
     if (!translations.en.name.trim()) { toast.error("영어 이벤트명을 입력해주세요."); return; }
+    for (let i = 0; i < perks.length; i++) {
+      if (!perks[i].translations.ko.title.trim()) {
+        toast.error(`혜택 ${i + 1}번의 한국어 제목을 입력해주세요.`);
+        setActiveTab("perks");
+        return;
+      }
+      if (!perks[i].translations.en.title.trim()) {
+        toast.error(`혜택 ${i + 1}번의 영어 제목을 입력해주세요.`);
+        setActiveTab("perks");
+        return;
+      }
+    }
+
+    const perksData: PerkData[] = perks.map((p, i) => ({
+      imageUrl: p.imageUrl,
+      perkUrl: p.perkUrl,
+      sortOrder: i,
+      translations: Object.fromEntries(
+        LOCALES.map((loc) => [
+          loc.key,
+          {
+            badge: p.translations[loc.key].badge,
+            title: p.translations[loc.key].title,
+            detail: p.translations[loc.key].detail,
+          },
+        ]),
+      ),
+    }));
 
     const data: EventFormData = {
       placeId: selectedPlace.id,
@@ -233,6 +539,7 @@ export function EventForm({
       showOnHome,
       sortOrder,
       translations,
+      perks: perksData,
     };
 
     startTransition(async () => {
@@ -621,11 +928,70 @@ export function EventForm({
                     </div>
                   )}
 
-                  {/* 준비 중 탭들 */}
-                  {(activeTab === "perks" || activeTab === "body") && (
+                  {/* 혜택 탭 */}
+                  {activeTab === "perks" && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-muted-foreground">
+                          {perks.length === 0
+                            ? "혜택 항목을 추가하세요."
+                            : `혜택 ${perks.length}개`}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setPerks((prev) => [...prev, initPerkItem()])}
+                          className="inline-flex h-8 items-center gap-1.5 rounded-md border bg-background px-3 text-xs font-medium transition-colors hover:bg-muted"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          혜택 추가
+                        </button>
+                      </div>
+
+                      {perks.length === 0 ? (
+                        <div className="flex h-32 items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">
+                          혜택을 추가해보세요.
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {perks.map((item, index) => (
+                            <PerkCard
+                              key={item.key}
+                              item={item}
+                              index={index}
+                              total={perks.length}
+                              onChange={(updater) =>
+                                setPerks((prev) =>
+                                  prev.map((p) => (p.key === item.key ? updater(p) : p)),
+                                )
+                              }
+                              onRemove={() =>
+                                setPerks((prev) => prev.filter((p) => p.key !== item.key))
+                              }
+                              onMoveUp={() =>
+                                setPerks((prev) => {
+                                  const next = [...prev];
+                                  [next[index - 1], next[index]] = [next[index], next[index - 1]];
+                                  return next;
+                                })
+                              }
+                              onMoveDown={() =>
+                                setPerks((prev) => {
+                                  const next = [...prev];
+                                  [next[index], next[index + 1]] = [next[index + 1], next[index]];
+                                  return next;
+                                })
+                              }
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 본문 탭 (준비 중) */}
+                  {activeTab === "body" && (
                     <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
-                      {TABS.find((t) => t.id === activeTab)?.label} — 다음
-                      단계에서 구현 예정
+                      본문 — 다음 단계에서 구현 예정
                     </div>
                   )}
                 </CardContent>

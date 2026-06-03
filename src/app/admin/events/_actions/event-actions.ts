@@ -13,6 +13,19 @@ export type TranslationField = {
   hoursNote: string;
 };
 
+export type PerkTranslationData = {
+  badge: string;
+  title: string;
+  detail: string;
+};
+
+export type PerkData = {
+  imageUrl: string | null;
+  perkUrl: string;
+  sortOrder: number;
+  translations: Record<string, PerkTranslationData>;
+};
+
 export type EventFormData = {
   placeId: string;
   eventCollectionId: string;
@@ -30,6 +43,7 @@ export type EventFormData = {
   showOnHome: boolean;
   sortOrder: number;
   translations: Record<string, TranslationField>;
+  perks: PerkData[];
 };
 
 function toEventInput(data: EventFormData) {
@@ -69,6 +83,21 @@ function buildTranslationRows(
     }));
 }
 
+function buildPerkTranslationRows(
+  perkId: string,
+  translations: Record<string, PerkTranslationData>,
+) {
+  return Object.entries(translations)
+    .filter(([, t]) => t.title.trim() !== "")
+    .map(([locale, t]) => ({
+      perkId,
+      locale,
+      badge: t.badge.trim() || null,
+      title: t.title.trim(),
+      detail: t.detail.trim() || null,
+    }));
+}
+
 export async function createEvent(
   data: EventFormData,
 ): Promise<{ error?: string }> {
@@ -81,6 +110,12 @@ export async function createEvent(
     return { error: "한국어 이벤트명을 입력해주세요." };
   if (!data.translations?.en?.name?.trim())
     return { error: "영어 이벤트명을 입력해주세요." };
+  for (let i = 0; i < data.perks.length; i++) {
+    if (!data.perks[i].translations.ko?.title?.trim())
+      return { error: `혜택 ${i + 1}번의 한국어 제목을 입력해주세요.` };
+    if (!data.perks[i].translations.en?.title?.trim())
+      return { error: `혜택 ${i + 1}번의 영어 제목을 입력해주세요.` };
+  }
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -88,6 +123,20 @@ export async function createEvent(
       const rows = buildTranslationRows(event.id, data.translations);
       if (rows.length) {
         await tx.eventTranslation.createMany({ data: rows });
+      }
+      for (const p of data.perks) {
+        const perk = await tx.eventPerk.create({
+          data: {
+            eventId: event.id,
+            imageUrl: p.imageUrl || null,
+            perkUrl: p.perkUrl.trim() || null,
+            sortOrder: p.sortOrder,
+          },
+        });
+        const prows = buildPerkTranslationRows(perk.id, p.translations);
+        if (prows.length) {
+          await tx.eventPerkTranslation.createMany({ data: prows });
+        }
       }
     });
   } catch (e) {
@@ -112,14 +161,37 @@ export async function updateEvent(
     return { error: "한국어 이벤트명을 입력해주세요." };
   if (!data.translations?.en?.name?.trim())
     return { error: "영어 이벤트명을 입력해주세요." };
+  for (let i = 0; i < data.perks.length; i++) {
+    if (!data.perks[i].translations.ko?.title?.trim())
+      return { error: `혜택 ${i + 1}번의 한국어 제목을 입력해주세요.` };
+    if (!data.perks[i].translations.en?.title?.trim())
+      return { error: `혜택 ${i + 1}번의 영어 제목을 입력해주세요.` };
+  }
 
   try {
     await prisma.$transaction(async (tx) => {
       await tx.event.update({ where: { id }, data: toEventInput(data) });
       await tx.eventTranslation.deleteMany({ where: { eventId: id } });
+      // 혜택 replace: 자식(translation) 먼저 삭제 후 perk 삭제 (FK 순서)
+      await tx.eventPerkTranslation.deleteMany({ where: { perk: { eventId: id } } });
+      await tx.eventPerk.deleteMany({ where: { eventId: id } });
       const rows = buildTranslationRows(id, data.translations);
       if (rows.length) {
         await tx.eventTranslation.createMany({ data: rows });
+      }
+      for (const p of data.perks) {
+        const perk = await tx.eventPerk.create({
+          data: {
+            eventId: id,
+            imageUrl: p.imageUrl || null,
+            perkUrl: p.perkUrl.trim() || null,
+            sortOrder: p.sortOrder,
+          },
+        });
+        const prows = buildPerkTranslationRows(perk.id, p.translations);
+        if (prows.length) {
+          await tx.eventPerkTranslation.createMany({ data: prows });
+        }
       }
     });
   } catch (e) {
@@ -198,6 +270,18 @@ export async function getEventForEdit(id: string) {
           placeImages: {
             orderBy: { sortOrder: "asc" },
             select: { url: true, isThumbnail: true },
+          },
+        },
+      },
+      perks: {
+        orderBy: { sortOrder: "asc" },
+        select: {
+          id: true,
+          imageUrl: true,
+          perkUrl: true,
+          sortOrder: true,
+          translations: {
+            select: { locale: true, badge: true, title: true, detail: true },
           },
         },
       },

@@ -63,6 +63,17 @@ export default async function EditEventPage({
     ]),
   );
 
+  const perks = event.perks.map((p) => ({
+    imageUrl: p.imageUrl ?? null,
+    perkUrl: p.perkUrl ?? "",
+    translations: Object.fromEntries(
+      p.translations.map((t) => [
+        t.locale,
+        { badge: t.badge ?? "", title: t.title, detail: t.detail ?? "" },
+      ]),
+    ) as Partial<Record<string, { badge: string; title: string; detail: string }>>,
+  }));
+
   const initialData: EventInitialData = {
     id: event.id,
     placeId: event.placeId,
@@ -82,6 +93,7 @@ export default async function EditEventPage({
     showOnHome: event.showOnHome,
     sortOrder: event.sortOrder,
     translations,
+    perks,
   };
 
   return (
