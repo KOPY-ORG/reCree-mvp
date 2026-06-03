@@ -25,6 +25,7 @@ import {
 import type { Level0TopicDeep } from "@/lib/topic-queries";
 import type { TagGroupWithTags } from "@/lib/filter-queries";
 import type { TagGroupColorMap } from "@/lib/post-labels";
+import type { ActiveEventCollection } from "@/lib/event-collection-queries";
 
 type ChipInfo = { id: string; label: string; bg: string; fg: string };
 const KPOP_NAME = "K-POP";
@@ -78,9 +79,10 @@ interface Props {
   tagGroups: TagGroupWithTags[];
   topicTree: Level0TopicDeep[];
   isLoggedIn: boolean;
+  eventCollections?: ActiveEventCollection[];
 }
 
-export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, isLoggedIn }: Props) {
+export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, isLoggedIn, eventCollections = [] }: Props) {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -418,6 +420,8 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
         onClearQuery={handleClearQuery}
         onRemoveTopic={removeAppliedTopic}
         onRemoveTag={removeAppliedTag}
+        eventCollections={eventCollections}
+        onEventCollectionClick={(id) => console.log("event collection clicked:", id)}
       />
 
       {/* 기본 리스트 시트 — z-40 */}
