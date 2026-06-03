@@ -22,7 +22,7 @@ import { PlacePickerSheet } from "@/app/admin/posts/_components/PlacePickerSheet
 import type { PlaceForForm } from "@/app/admin/posts/_components/PostForm";
 import { isExternalImage } from "@/lib/image";
 import { getEventImagePresignedUrl } from "@/lib/actions/upload-actions";
-import type { EventCategory, EventEntryType, EventStatus } from "@prisma/client";
+import type { EventBlockType, EventCategory, EventEntryType, EventStatus } from "@prisma/client";
 import {
   EVENT_STATUS_LABELS,
   EVENT_CATEGORY_LABELS,
@@ -33,6 +33,7 @@ import {
   type EventFormData,
   type TranslationField,
   type PerkData,
+  type BodyBlockData,
 } from "../_actions/event-actions";
 
 type CollectionInfo = { id: string; nameKo: string; slug: string };
@@ -90,6 +91,11 @@ export type EventInitialData = {
     imageUrl: string | null;
     perkUrl: string;
     translations: Partial<Record<string, { badge: string; title: string; detail: string }>>;
+  }>;
+  bodyBlocks?: Array<{
+    type: EventBlockType;
+    imageUrl: string | null;
+    translations: Partial<Record<string, { text: string }>>;
   }>;
 };
 
@@ -369,6 +375,218 @@ function PerkCard({ item, index, total, onChange, onRemove, onMoveUp, onMoveDown
   );
 }
 
+// ─── BodyBlock 타입 ───────────────────────────────────────────────────────────
+
+type BodyBlockFormItem = {
+  key: string;
+  type: EventBlockType;
+  imageUrl: string | null;
+  uploading: boolean;
+  activeLang: EventLocale;
+  translations: Record<EventLocale, { text: string }>;
+};
+
+function initBodyBlockItem(initial?: {
+  type?: EventBlockType;
+  imageUrl?: string | null;
+  translations?: Partial<Record<string, { text: string }>>;
+}): BodyBlockFormItem {
+  const translations = {} as Record<EventLocale, { text: string }>;
+  for (const loc of LOCALES) {
+    translations[loc.key] = { text: initial?.translations?.[loc.key]?.text ?? "" };
+  }
+  return {
+    key: crypto.randomUUID(),
+    type: initial?.type ?? "TEXT",
+    imageUrl: initial?.imageUrl ?? null,
+    uploading: false,
+    activeLang: "ko",
+    translations,
+  };
+}
+
+// ─── BodyBlockCard ────────────────────────────────────────────────────────────
+
+interface BodyBlockCardProps {
+  item: BodyBlockFormItem;
+  index: number;
+  total: number;
+  onChange: (updater: (item: BodyBlockFormItem) => BodyBlockFormItem) => void;
+  onRemove: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+}
+
+function BodyBlockCard({ item, index, total, onChange, onRemove, onMoveUp, onMoveDown }: BodyBlockCardProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    onChange((prev) => ({ ...prev, uploading: true }));
+    const result = await getEventImagePresignedUrl(file.name, file.type, "events/body");
+    if ("error" in result) {
+      toast.error(result.error);
+      onChange((prev) => ({ ...prev, uploading: false }));
+    } else {
+      const res = await fetch(result.presignedUrl, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": file.type },
+      });
+      if (!res.ok) {
+        toast.error(`업로드 실패 (${res.status})`);
+        onChange((prev) => ({ ...prev, uploading: false }));
+      } else {
+        onChange((prev) => ({ ...prev, imageUrl: result.cdnUrl, uploading: false }));
+        toast.success("이미지가 업로드되었습니다.");
+      }
+    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  return (
+    <div className="rounded-lg border bg-muted/20 overflow-hidden">
+      {/* 헤더 */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b bg-muted/40">
+        <span className="text-sm font-medium text-muted-foreground">
+          블록 {index + 1}
+          <span className="ml-2 inline-flex items-center rounded-full bg-muted px-1.5 py-0.5 text-xs font-normal">
+            {item.type === "TEXT" ? "텍스트" : "이미지"}
+          </span>
+        </span>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            disabled={index === 0}
+            onClick={onMoveUp}
+            className="flex h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <ChevronUp className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            disabled={index === total - 1}
+            onClick={onMoveDown}
+            className="flex h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <ChevronDown className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={onRemove}
+            className="flex h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-destructive/10 text-destructive"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* 본문 */}
+      <div className="p-4">
+        {item.type === "TEXT" ? (
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-1 border-b">
+              {LOCALES.map((loc) => (
+                <button
+                  key={loc.key}
+                  type="button"
+                  onClick={() => onChange((prev) => ({ ...prev, activeLang: loc.key }))}
+                  className={`px-3 py-1.5 text-xs rounded-t-md border-b-2 -mb-px transition-colors ${
+                    item.activeLang === loc.key
+                      ? "border-foreground text-foreground font-medium"
+                      : "border-transparent text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {loc.label}
+                  {loc.required && <span className="ml-0.5 text-red-500">*</span>}
+                </button>
+              ))}
+            </div>
+            <textarea
+              value={item.translations[item.activeLang]?.text ?? ""}
+              onChange={(e) =>
+                onChange((prev) => ({
+                  ...prev,
+                  translations: {
+                    ...prev.translations,
+                    [prev.activeLang]: { text: e.target.value },
+                  },
+                }))
+              }
+              placeholder="본문 내용을 입력하세요."
+              rows={5}
+              className="flex min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-y"
+            />
+          </div>
+        ) : (
+          <div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handleImageUpload}
+            />
+            {item.imageUrl ? (
+              <div>
+                <div className="relative w-full overflow-hidden rounded-md border bg-muted" style={{ aspectRatio: "16/9" }}>
+                  <Image
+                    src={item.imageUrl}
+                    alt="본문 이미지"
+                    fill
+                    unoptimized={isExternalImage(item.imageUrl)}
+                    className="object-cover"
+                  />
+                </div>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={item.uploading}
+                    className="inline-flex h-8 items-center gap-1.5 rounded-md border bg-background px-3 text-xs font-medium transition-colors hover:bg-muted disabled:opacity-50"
+                  >
+                    {item.uploading ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Upload className="h-3 w-3" />
+                    )}
+                    변경
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onChange((prev) => ({ ...prev, imageUrl: null }))}
+                    className="inline-flex h-8 items-center gap-1.5 rounded-md border bg-background px-3 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
+                  >
+                    <X className="h-3 w-3" />
+                    제거
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={item.uploading}
+                className="flex h-40 w-full flex-col items-center justify-center gap-2 rounded-md border border-dashed text-sm text-muted-foreground transition-colors hover:bg-muted/50 disabled:opacity-50"
+              >
+                {item.uploading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4" />
+                    클릭하여 이미지 업로드
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── 헬퍼 ──────────────────────────────────────────────────────────────────────
 
 const emptyTranslation = (): TranslationField => ({
@@ -457,6 +675,9 @@ export function EventForm({
   const [perks, setPerks] = useState<PerkFormItem[]>(() =>
     initialData?.perks ? initialData.perks.map((p) => initPerkItem(p)) : [],
   );
+  const [bodyBlocks, setBodyBlocks] = useState<BodyBlockFormItem[]>(() =>
+    initialData?.bodyBlocks ? initialData.bodyBlocks.map((b) => initBodyBlockItem(b)) : [],
+  );
 
   // ── 번역 업데이트 ─────────────────────────────────────────────────────────────
   const updateTranslation = (
@@ -506,6 +727,28 @@ export function EventForm({
       }
     }
 
+    for (let i = 0; i < bodyBlocks.length; i++) {
+      const b = bodyBlocks[i];
+      if (b.type === "TEXT") {
+        if (!b.translations.ko.text.trim()) {
+          toast.error(`본문 ${i + 1}번 블록의 한국어 내용을 입력해주세요.`);
+          setActiveTab("body");
+          return;
+        }
+        if (!b.translations.en.text.trim()) {
+          toast.error(`본문 ${i + 1}번 블록의 영어 내용을 입력해주세요.`);
+          setActiveTab("body");
+          return;
+        }
+      } else if (b.type === "IMAGE") {
+        if (!b.imageUrl) {
+          toast.error(`본문 ${i + 1}번 이미지를 업로드해주세요.`);
+          setActiveTab("body");
+          return;
+        }
+      }
+    }
+
     const perksData: PerkData[] = perks.map((p, i) => ({
       imageUrl: p.imageUrl,
       perkUrl: p.perkUrl,
@@ -519,6 +762,15 @@ export function EventForm({
             detail: p.translations[loc.key].detail,
           },
         ]),
+      ),
+    }));
+
+    const bodyBlocksData: BodyBlockData[] = bodyBlocks.map((b, i) => ({
+      type: b.type,
+      imageUrl: b.imageUrl,
+      sortOrder: i,
+      translations: Object.fromEntries(
+        LOCALES.map((loc) => [loc.key, { text: b.translations[loc.key].text }]),
       ),
     }));
 
@@ -540,6 +792,7 @@ export function EventForm({
       sortOrder,
       translations,
       perks: perksData,
+      bodyBlocks: bodyBlocksData,
     };
 
     startTransition(async () => {
@@ -988,10 +1241,85 @@ export function EventForm({
                     </div>
                   )}
 
-                  {/* 본문 탭 (준비 중) */}
+                  {/* 본문 탭 */}
                   {activeTab === "body" && (
-                    <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
-                      본문 — 다음 단계에서 구현 예정
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-muted-foreground">
+                          {bodyBlocks.length === 0
+                            ? "본문 블록을 추가하세요."
+                            : `블록 ${bodyBlocks.length}개`}
+                        </p>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setBodyBlocks((prev) => [
+                                ...prev,
+                                initBodyBlockItem({ type: "TEXT" }),
+                              ])
+                            }
+                            className="inline-flex h-8 items-center gap-1.5 rounded-md border bg-background px-3 text-xs font-medium transition-colors hover:bg-muted"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                            텍스트 블록
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setBodyBlocks((prev) => [
+                                ...prev,
+                                initBodyBlockItem({ type: "IMAGE" }),
+                              ])
+                            }
+                            className="inline-flex h-8 items-center gap-1.5 rounded-md border bg-background px-3 text-xs font-medium transition-colors hover:bg-muted"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                            이미지 블록
+                          </button>
+                        </div>
+                      </div>
+
+                      {bodyBlocks.length === 0 ? (
+                        <div className="flex h-32 items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">
+                          텍스트 또는 이미지 블록을 추가해보세요.
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {bodyBlocks.map((item, index) => (
+                            <BodyBlockCard
+                              key={item.key}
+                              item={item}
+                              index={index}
+                              total={bodyBlocks.length}
+                              onChange={(updater) =>
+                                setBodyBlocks((prev) =>
+                                  prev.map((b) => (b.key === item.key ? updater(b) : b)),
+                                )
+                              }
+                              onRemove={() =>
+                                setBodyBlocks((prev) =>
+                                  prev.filter((b) => b.key !== item.key),
+                                )
+                              }
+                              onMoveUp={() =>
+                                setBodyBlocks((prev) => {
+                                  const next = [...prev];
+                                  [next[index - 1], next[index]] = [next[index], next[index - 1]];
+                                  return next;
+                                })
+                              }
+                              onMoveDown={() =>
+                                setBodyBlocks((prev) => {
+                                  const next = [...prev];
+                                  [next[index], next[index + 1]] = [next[index + 1], next[index]];
+                                  return next;
+                                })
+                              }
+                            />
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </CardContent>

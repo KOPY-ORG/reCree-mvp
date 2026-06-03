@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import type { EventCategory, EventEntryType, EventStatus } from "@prisma/client";
+import type { EventBlockType, EventCategory, EventEntryType, EventStatus } from "@prisma/client";
 
 export type TranslationField = {
   name: string;
@@ -26,6 +26,17 @@ export type PerkData = {
   translations: Record<string, PerkTranslationData>;
 };
 
+export type BodyBlockTranslationData = {
+  text: string;
+};
+
+export type BodyBlockData = {
+  type: EventBlockType;
+  imageUrl: string | null;
+  sortOrder: number;
+  translations: Record<string, BodyBlockTranslationData>;
+};
+
 export type EventFormData = {
   placeId: string;
   eventCollectionId: string;
@@ -44,6 +55,7 @@ export type EventFormData = {
   sortOrder: number;
   translations: Record<string, TranslationField>;
   perks: PerkData[];
+  bodyBlocks: BodyBlockData[];
 };
 
 function toEventInput(data: EventFormData) {
@@ -83,6 +95,19 @@ function buildTranslationRows(
     }));
 }
 
+function buildBodyBlockTranslationRows(
+  blockId: string,
+  translations: Record<string, BodyBlockTranslationData>,
+) {
+  return Object.entries(translations)
+    .filter(([, t]) => t.text.trim() !== "")
+    .map(([locale, t]) => ({
+      blockId,
+      locale,
+      text: t.text.trim(),
+    }));
+}
+
 function buildPerkTranslationRows(
   perkId: string,
   translations: Record<string, PerkTranslationData>,
@@ -116,6 +141,18 @@ export async function createEvent(
     if (!data.perks[i].translations.en?.title?.trim())
       return { error: `혜택 ${i + 1}번의 영어 제목을 입력해주세요.` };
   }
+  for (let i = 0; i < data.bodyBlocks.length; i++) {
+    const b = data.bodyBlocks[i];
+    if (b.type === "TEXT") {
+      if (!b.translations.ko?.text?.trim())
+        return { error: `본문 ${i + 1}번 블록의 한국어 내용을 입력해주세요.` };
+      if (!b.translations.en?.text?.trim())
+        return { error: `본문 ${i + 1}번 블록의 영어 내용을 입력해주세요.` };
+    } else if (b.type === "IMAGE") {
+      if (!b.imageUrl)
+        return { error: `본문 ${i + 1}번 이미지를 업로드해주세요.` };
+    }
+  }
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -136,6 +173,22 @@ export async function createEvent(
         const prows = buildPerkTranslationRows(perk.id, p.translations);
         if (prows.length) {
           await tx.eventPerkTranslation.createMany({ data: prows });
+        }
+      }
+      for (const b of data.bodyBlocks) {
+        const block = await tx.eventBodyBlock.create({
+          data: {
+            eventId: event.id,
+            type: b.type,
+            imageUrl: b.type === "IMAGE" ? (b.imageUrl || null) : null,
+            sortOrder: b.sortOrder,
+          },
+        });
+        if (b.type === "TEXT") {
+          const brows = buildBodyBlockTranslationRows(block.id, b.translations);
+          if (brows.length) {
+            await tx.eventBodyBlockTranslation.createMany({ data: brows });
+          }
         }
       }
     });
@@ -167,6 +220,18 @@ export async function updateEvent(
     if (!data.perks[i].translations.en?.title?.trim())
       return { error: `혜택 ${i + 1}번의 영어 제목을 입력해주세요.` };
   }
+  for (let i = 0; i < data.bodyBlocks.length; i++) {
+    const b = data.bodyBlocks[i];
+    if (b.type === "TEXT") {
+      if (!b.translations.ko?.text?.trim())
+        return { error: `본문 ${i + 1}번 블록의 한국어 내용을 입력해주세요.` };
+      if (!b.translations.en?.text?.trim())
+        return { error: `본문 ${i + 1}번 블록의 영어 내용을 입력해주세요.` };
+    } else if (b.type === "IMAGE") {
+      if (!b.imageUrl)
+        return { error: `본문 ${i + 1}번 이미지를 업로드해주세요.` };
+    }
+  }
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -175,6 +240,9 @@ export async function updateEvent(
       // 혜택 replace: 자식(translation) 먼저 삭제 후 perk 삭제 (FK 순서)
       await tx.eventPerkTranslation.deleteMany({ where: { perk: { eventId: id } } });
       await tx.eventPerk.deleteMany({ where: { eventId: id } });
+      // 본문 블록 replace: 자식(translation) 먼저 삭제 후 block 삭제
+      await tx.eventBodyBlockTranslation.deleteMany({ where: { block: { eventId: id } } });
+      await tx.eventBodyBlock.deleteMany({ where: { eventId: id } });
       const rows = buildTranslationRows(id, data.translations);
       if (rows.length) {
         await tx.eventTranslation.createMany({ data: rows });
@@ -191,6 +259,22 @@ export async function updateEvent(
         const prows = buildPerkTranslationRows(perk.id, p.translations);
         if (prows.length) {
           await tx.eventPerkTranslation.createMany({ data: prows });
+        }
+      }
+      for (const b of data.bodyBlocks) {
+        const block = await tx.eventBodyBlock.create({
+          data: {
+            eventId: id,
+            type: b.type,
+            imageUrl: b.type === "IMAGE" ? (b.imageUrl || null) : null,
+            sortOrder: b.sortOrder,
+          },
+        });
+        if (b.type === "TEXT") {
+          const brows = buildBodyBlockTranslationRows(block.id, b.translations);
+          if (brows.length) {
+            await tx.eventBodyBlockTranslation.createMany({ data: brows });
+          }
         }
       }
     });
@@ -282,6 +366,18 @@ export async function getEventForEdit(id: string) {
           sortOrder: true,
           translations: {
             select: { locale: true, badge: true, title: true, detail: true },
+          },
+        },
+      },
+      bodyBlocks: {
+        orderBy: { sortOrder: "asc" },
+        select: {
+          id: true,
+          type: true,
+          imageUrl: true,
+          sortOrder: true,
+          translations: {
+            select: { locale: true, text: true },
           },
         },
       },
