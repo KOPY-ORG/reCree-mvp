@@ -5,6 +5,14 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { EventCategory, EventEntryType, EventStatus } from "@prisma/client";
 
+export type TranslationField = {
+  name: string;
+  eventContent: string;
+  contentDetail: string;
+  description: string;
+  hoursNote: string;
+};
+
 export type EventFormData = {
   placeId: string;
   eventCollection: string;
@@ -21,6 +29,7 @@ export type EventFormData = {
   status: EventStatus;
   showOnHome: boolean;
   sortOrder: number;
+  translations: Record<string, TranslationField>;
 };
 
 function toEventInput(data: EventFormData) {
@@ -43,16 +52,36 @@ function toEventInput(data: EventFormData) {
   };
 }
 
-export async function createEvent(data: EventFormData): Promise<{ error?: string; id?: string }> {
+function buildTranslationRows(eventId: string, translations: Record<string, TranslationField>) {
+  return Object.entries(translations)
+    .filter(([, t]) => t.name.trim() !== "")
+    .map(([locale, t]) => ({
+      eventId,
+      locale,
+      name: t.name.trim(),
+      eventContent: t.eventContent.trim() || null,
+      contentDetail: t.contentDetail.trim() || null,
+      description: t.description.trim() || null,
+      hoursNote: t.hoursNote.trim() || null,
+    }));
+}
+
+export async function createEvent(data: EventFormData): Promise<{ error?: string }> {
   if (!data.placeId) return { error: "장소를 선택해주세요." };
   if (!data.eventCollection.trim()) return { error: "이벤트 컬렉션을 입력해주세요." };
   if (!data.startDate || !data.endDate) return { error: "기간을 입력해주세요." };
   if (new Date(data.startDate) > new Date(data.endDate)) return { error: "종료일이 시작일보다 빠를 수 없습니다." };
+  if (!data.translations?.ko?.name?.trim()) return { error: "한국어 이벤트명을 입력해주세요." };
+  if (!data.translations?.en?.name?.trim()) return { error: "영어 이벤트명을 입력해주세요." };
 
-  let newId: string;
   try {
-    const event = await prisma.event.create({ data: toEventInput(data) });
-    newId = event.id;
+    await prisma.$transaction(async (tx) => {
+      const event = await tx.event.create({ data: toEventInput(data) });
+      const rows = buildTranslationRows(event.id, data.translations);
+      if (rows.length) {
+        await tx.eventTranslation.createMany({ data: rows });
+      }
+    });
   } catch (e) {
     console.error("이벤트 생성 오류:", e);
     return { error: "이벤트를 생성하는 중 오류가 발생했습니다." };
@@ -66,9 +95,18 @@ export async function updateEvent(id: string, data: EventFormData): Promise<{ er
   if (!data.eventCollection.trim()) return { error: "이벤트 컬렉션을 입력해주세요." };
   if (!data.startDate || !data.endDate) return { error: "기간을 입력해주세요." };
   if (new Date(data.startDate) > new Date(data.endDate)) return { error: "종료일이 시작일보다 빠를 수 없습니다." };
+  if (!data.translations?.ko?.name?.trim()) return { error: "한국어 이벤트명을 입력해주세요." };
+  if (!data.translations?.en?.name?.trim()) return { error: "영어 이벤트명을 입력해주세요." };
 
   try {
-    await prisma.event.update({ where: { id }, data: toEventInput(data) });
+    await prisma.$transaction(async (tx) => {
+      await tx.event.update({ where: { id }, data: toEventInput(data) });
+      await tx.eventTranslation.deleteMany({ where: { eventId: id } });
+      const rows = buildTranslationRows(id, data.translations);
+      if (rows.length) {
+        await tx.eventTranslation.createMany({ data: rows });
+      }
+    });
   } catch (e) {
     console.error("이벤트 수정 오류:", e);
     return { error: "이벤트를 수정하는 중 오류가 발생했습니다." };
@@ -108,6 +146,16 @@ export async function getEventForEdit(id: string) {
       status: true,
       showOnHome: true,
       sortOrder: true,
+      translations: {
+        select: {
+          locale: true,
+          name: true,
+          eventContent: true,
+          contentDetail: true,
+          description: true,
+          hoursNote: true,
+        },
+      },
       place: {
         select: {
           nameKo: true,

@@ -33,6 +33,19 @@ export default async function EditEventPage({
       }
     : null;
 
+  const translations = Object.fromEntries(
+    event.translations.map((t) => [
+      t.locale,
+      {
+        name: t.name,
+        eventContent: t.eventContent ?? "",
+        contentDetail: t.contentDetail ?? "",
+        description: t.description ?? "",
+        hoursNote: t.hoursNote ?? "",
+      },
+    ]),
+  );
+
   const initialData: EventInitialData = {
     id: event.id,
     placeId: event.placeId,
@@ -51,6 +64,7 @@ export default async function EditEventPage({
     status: event.status,
     showOnHome: event.showOnHome,
     sortOrder: event.sortOrder,
+    translations,
   };
 
   return <EventForm mode="edit" eventId={id} initialData={initialData} />;

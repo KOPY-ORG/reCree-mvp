@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -30,6 +31,7 @@ import {
   createEvent,
   updateEvent,
   type EventFormData,
+  type TranslationField,
 } from "../_actions/event-actions";
 
 // ─── 상수 ──────────────────────────────────────────────────────────────────────
@@ -48,6 +50,17 @@ const TABS = [
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
+
+const LOCALES = [
+  { key: "ko", label: "한국어", required: true },
+  { key: "en", label: "English", required: true },
+  { key: "zh-CN", label: "中文(简)", required: false },
+  { key: "zh-TW", label: "中文(繁)", required: false },
+  { key: "es", label: "Español", required: false },
+  { key: "ja", label: "日本語", required: false },
+] as const;
+
+type EventLocale = (typeof LOCALES)[number]["key"];
 
 // ─── 타입 ──────────────────────────────────────────────────────────────────────
 
@@ -69,12 +82,33 @@ export type EventInitialData = {
   status: EventStatus;
   showOnHome: boolean;
   sortOrder: number;
+  translations?: Partial<Record<string, TranslationField>>;
 };
 
 interface EventFormProps {
   mode: "create" | "edit";
   eventId?: string;
   initialData?: EventInitialData;
+}
+
+// ─── 헬퍼 ──────────────────────────────────────────────────────────────────────
+
+const emptyTranslation = (): TranslationField => ({
+  name: "",
+  eventContent: "",
+  contentDetail: "",
+  description: "",
+  hoursNote: "",
+});
+
+function initTranslations(initial?: Partial<Record<string, TranslationField>>): Record<string, TranslationField> {
+  const t: Record<string, TranslationField> = {};
+  for (const loc of LOCALES) {
+    t[loc.key] = initial?.[loc.key]
+      ? { ...emptyTranslation(), ...initial[loc.key] }
+      : emptyTranslation();
+  }
+  return t;
 }
 
 // ─── 배너 이미지 업로드 ────────────────────────────────────────────────────────
@@ -97,6 +131,7 @@ export function EventForm({ mode, eventId, initialData }: EventFormProps) {
   const isEdit = mode === "edit";
   const [isPending, startTransition] = useTransition();
   const [activeTab, setActiveTab] = useState<TabId>("info");
+  const [activeLang, setActiveLang] = useState<EventLocale>("ko");
   const [placePickerOpen, setPlacePickerOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -125,6 +160,17 @@ export function EventForm({ mode, eventId, initialData }: EventFormProps) {
   const [status, setStatus] = useState<EventStatus>(initialData?.status ?? "DRAFT");
   const [showOnHome, setShowOnHome] = useState(initialData?.showOnHome ?? false);
   const [sortOrder, setSortOrder] = useState(initialData?.sortOrder ?? 0);
+  const [translations, setTranslations] = useState<Record<string, TranslationField>>(
+    () => initTranslations(initialData?.translations),
+  );
+
+  // ── 번역 업데이트 ─────────────────────────────────────────────────────────────
+  const updateTranslation = (locale: string, field: keyof TranslationField, value: string) => {
+    setTranslations((prev) => ({
+      ...prev,
+      [locale]: { ...prev[locale], [field]: value },
+    }));
+  };
 
   // ── 이미지 업로드 핸들러 ─────────────────────────────────────────────────────
   const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -147,6 +193,8 @@ export function EventForm({ mode, eventId, initialData }: EventFormProps) {
     if (!selectedPlace) { toast.error("장소를 선택해주세요."); return; }
     if (!eventCollection.trim()) { toast.error("이벤트 컬렉션을 입력해주세요."); return; }
     if (!startDate || !endDate) { toast.error("기간을 입력해주세요."); return; }
+    if (!translations.ko.name.trim()) { toast.error("한국어 이벤트명을 입력해주세요."); return; }
+    if (!translations.en.name.trim()) { toast.error("영어 이벤트명을 입력해주세요."); return; }
 
     const data: EventFormData = {
       placeId: selectedPlace.id,
@@ -164,6 +212,7 @@ export function EventForm({ mode, eventId, initialData }: EventFormProps) {
       status,
       showOnHome,
       sortOrder,
+      translations,
     };
 
     startTransition(async () => {
@@ -435,8 +484,90 @@ export function EventForm({ mode, eventId, initialData }: EventFormProps) {
                     </div>
                   )}
 
+                  {/* 번역 탭 */}
+                  {activeTab === "translations" && (
+                    <div className="space-y-5">
+                      {/* 언어 탭 */}
+                      <div className="flex flex-wrap gap-1 border-b pb-0">
+                        {LOCALES.map((loc) => (
+                          <button
+                            key={loc.key}
+                            type="button"
+                            onClick={() => setActiveLang(loc.key)}
+                            className={`px-3 py-1.5 text-sm rounded-t-md border-b-2 -mb-px transition-colors ${
+                              activeLang === loc.key
+                                ? "border-foreground text-foreground font-medium"
+                                : "border-transparent text-muted-foreground hover:text-foreground"
+                            }`}
+                          >
+                            {loc.label}
+                            {loc.required && (
+                              <span className="ml-0.5 text-red-500 text-xs">*</span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* 현재 언어 입력 필드 */}
+                      <div className="space-y-4">
+                        <div className="space-y-1.5">
+                          <Label>
+                            이벤트명
+                            {(activeLang === "ko" || activeLang === "en") && (
+                              <span className="text-red-500 ml-1">*</span>
+                            )}
+                          </Label>
+                          <Input
+                            value={translations[activeLang]?.name ?? ""}
+                            onChange={(e) => updateTranslation(activeLang, "name", e.target.value)}
+                            placeholder="이벤트 이름"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <Label>이벤트 내용</Label>
+                          <Textarea
+                            value={translations[activeLang]?.eventContent ?? ""}
+                            onChange={(e) => updateTranslation(activeLang, "eventContent", e.target.value)}
+                            placeholder="이벤트 주요 내용"
+                            rows={3}
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <Label>상세 내용</Label>
+                          <Textarea
+                            value={translations[activeLang]?.contentDetail ?? ""}
+                            onChange={(e) => updateTranslation(activeLang, "contentDetail", e.target.value)}
+                            placeholder="상세 설명"
+                            rows={3}
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <Label>설명</Label>
+                          <Textarea
+                            value={translations[activeLang]?.description ?? ""}
+                            onChange={(e) => updateTranslation(activeLang, "description", e.target.value)}
+                            placeholder="짧은 설명"
+                            rows={2}
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <Label>운영 시간 안내</Label>
+                          <Input
+                            value={translations[activeLang]?.hoursNote ?? ""}
+                            onChange={(e) => updateTranslation(activeLang, "hoursNote", e.target.value)}
+                            placeholder="예: 매일 13:00–21:00"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* 준비 중 탭들 */}
-                  {activeTab !== "info" && (
+                  {(activeTab === "perks" || activeTab === "body") && (
                     <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
                       {TABS.find((t) => t.id === activeTab)?.label} — 다음 단계에서 구현 예정
                     </div>
