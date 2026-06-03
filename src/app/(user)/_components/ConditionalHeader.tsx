@@ -18,6 +18,7 @@ export function ConditionalHeader({
   if (pathname.startsWith("/posts/")) return null;
   if (pathname.startsWith("/topics/")) return null;
   if (pathname.startsWith("/discover/hall/")) return null;
+  if (pathname.startsWith("/events/")) return null;
   if (NO_HEADER_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"))) return null;
   if (SAVED_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"))) return <>{savedHeader}</>;
   return <>{header}</>;

@@ -7,8 +7,6 @@ import type { EventBlockType, EventCategory, EventEntryType, EventStatus } from 
 
 export type TranslationField = {
   name: string;
-  eventContent: string;
-  contentDetail: string;
   description: string;
   hoursNote: string;
 };
@@ -104,8 +102,6 @@ function buildTranslationRows(
       eventId,
       locale,
       name: t.name.trim(),
-      eventContent: t.eventContent.trim() || null,
-      contentDetail: t.contentDetail.trim() || null,
       description: t.description.trim() || null,
       hoursNote: t.hoursNote.trim() || null,
     }));
@@ -366,8 +362,6 @@ export async function getEventForEdit(id: string) {
         select: {
           locale: true,
           name: true,
-          eventContent: true,
-          contentDetail: true,
           description: true,
           hoursNote: true,
         },

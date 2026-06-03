@@ -55,8 +55,6 @@ export default async function EditEventPage({
       t.locale,
       {
         name: t.name,
-        eventContent: t.eventContent ?? "",
-        contentDetail: t.contentDetail ?? "",
         description: t.description ?? "",
         hoursNote: t.hoursNote ?? "",
       },

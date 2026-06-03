@@ -637,14 +637,12 @@ model Event {
 }
 
 model EventTranslation {
-  id            String  @id @default(uuid()) @db.Uuid
-  eventId       String  @db.Uuid
-  locale        String // ko / en / zh-CN / zh-TW / es
-  name          String
-  eventContent  String? // 행사 내용
-  contentDetail String? // 행사 내용 상세
-  description   String? // reCree 큐레이션 본문(요약/리드)
-  hoursNote     String? // "Open daily" / "Sunset–23:00" 등 변칙·요일
+  id          String  @id @default(uuid()) @db.Uuid
+  eventId     String  @db.Uuid
+  locale      String // ko / en / zh-CN / zh-TW / es / ja
+  name        String
+  description String? // 한 줄 요약 — 제목 밑에 표시
+  hoursNote   String? // "Open daily" / "Sunset–23:00" 등 변칙·요일
 
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
 

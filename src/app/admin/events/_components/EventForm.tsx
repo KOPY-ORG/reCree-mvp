@@ -593,8 +593,6 @@ function BodyBlockCard({ item, index, total, onChange, onRemove, onMoveUp, onMov
 
 const emptyTranslation = (): TranslationField => ({
   name: "",
-  eventContent: "",
-  contentDetail: "",
   description: "",
   hoursNote: "",
 });
@@ -1186,39 +1184,12 @@ export function EventForm({
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <Label>이벤트 내용</Label>
-                          <Textarea
-                            value={translations[activeLang]?.eventContent ?? ""}
-                            onChange={(e) =>
-                              updateTranslation(
-                                activeLang,
-                                "eventContent",
-                                e.target.value,
-                              )
-                            }
-                            placeholder="이벤트 주요 내용"
-                            rows={3}
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label>상세 내용</Label>
-                          <Textarea
-                            value={
-                              translations[activeLang]?.contentDetail ?? ""
-                            }
-                            onChange={(e) =>
-                              updateTranslation(
-                                activeLang,
-                                "contentDetail",
-                                e.target.value,
-                              )
-                            }
-                            placeholder="상세 설명"
-                            rows={3}
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label>설명</Label>
+                          <Label>
+                            한 줄 요약
+                            <span className="ml-1 text-xs font-normal text-muted-foreground">
+                              — 제목 밑에 표시됩니다
+                            </span>
+                          </Label>
                           <Textarea
                             value={translations[activeLang]?.description ?? ""}
                             onChange={(e) =>
@@ -1228,7 +1199,7 @@ export function EventForm({
                                 e.target.value,
                               )
                             }
-                            placeholder="짧은 설명"
+                            placeholder="예: Experience the vibrant K-culture festival in Busan."
                             rows={2}
                           />
                         </div>
