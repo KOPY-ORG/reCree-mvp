@@ -236,6 +236,7 @@ export default async function EventDetailPage({ params }: Props) {
             src={event.bannerImageUrl}
             alt={eventName}
             fill
+            sizes="100vw"
             className="object-cover"
             priority
           />
@@ -601,6 +602,7 @@ export default async function EventDetailPage({ params }: Props) {
                           src={perk.imageUrl}
                           alt={perkT?.title ?? ""}
                           fill
+                          sizes="96px"
                           className="object-cover"
                         />
                       </div>
@@ -701,6 +703,7 @@ export default async function EventDetailPage({ params }: Props) {
                           src={block.imageUrl}
                           alt=""
                           fill
+                          sizes="calc(100vw - 34px)"
                           className="object-cover"
                         />
                       </div>
