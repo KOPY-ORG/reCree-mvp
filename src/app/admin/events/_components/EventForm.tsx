@@ -33,6 +33,7 @@ import {
   type EventFormData,
   type TranslationField,
 } from "../_actions/event-actions";
+import type { CollectionOption } from "../_actions/collection-actions";
 
 // ─── 상수 ──────────────────────────────────────────────────────────────────────
 
@@ -68,7 +69,7 @@ export type EventInitialData = {
   id: string;
   placeId: string;
   place: PlaceForForm | null;
-  eventCollection: string;
+  eventCollectionId: string;
   category: EventCategory;
   startDate: string;
   endDate: string;
@@ -89,6 +90,7 @@ interface EventFormProps {
   mode: "create" | "edit";
   eventId?: string;
   initialData?: EventInitialData;
+  collections: CollectionOption[];
 }
 
 // ─── 헬퍼 ──────────────────────────────────────────────────────────────────────
@@ -101,7 +103,9 @@ const emptyTranslation = (): TranslationField => ({
   hoursNote: "",
 });
 
-function initTranslations(initial?: Partial<Record<string, TranslationField>>): Record<string, TranslationField> {
+function initTranslations(
+  initial?: Partial<Record<string, TranslationField>>,
+): Record<string, TranslationField> {
   const t: Record<string, TranslationField> = {};
   for (const loc of LOCALES) {
     t[loc.key] = initial?.[loc.key]
@@ -113,7 +117,9 @@ function initTranslations(initial?: Partial<Record<string, TranslationField>>): 
 
 // ─── 배너 이미지 업로드 ────────────────────────────────────────────────────────
 
-async function uploadBannerImage(file: File): Promise<{ url: string } | { error: string }> {
+async function uploadBannerImage(
+  file: File,
+): Promise<{ url: string } | { error: string }> {
   const result = await getEventImagePresignedUrl(file.name, file.type, "banner");
   if ("error" in result) return result;
   const res = await fetch(result.presignedUrl, {
@@ -127,7 +133,12 @@ async function uploadBannerImage(file: File): Promise<{ url: string } | { error:
 
 // ─── EventForm ────────────────────────────────────────────────────────────────
 
-export function EventForm({ mode, eventId, initialData }: EventFormProps) {
+export function EventForm({
+  mode,
+  eventId,
+  initialData,
+  collections,
+}: EventFormProps) {
   const isEdit = mode === "edit";
   const [isPending, startTransition] = useTransition();
   const [activeTab, setActiveTab] = useState<TabId>("info");
@@ -140,7 +151,9 @@ export function EventForm({ mode, eventId, initialData }: EventFormProps) {
   const [selectedPlace, setSelectedPlace] = useState<PlaceForForm | null>(
     initialData?.place ?? null,
   );
-  const [eventCollection, setEventCollection] = useState(initialData?.eventCollection ?? "");
+  const [eventCollectionId, setEventCollectionId] = useState(
+    initialData?.eventCollectionId ?? "",
+  );
   const [category, setCategory] = useState<EventCategory>(
     initialData?.category ?? "CONCERT",
   );
@@ -151,13 +164,17 @@ export function EventForm({ mode, eventId, initialData }: EventFormProps) {
   const [entryType, setEntryType] = useState<EventEntryType>(
     initialData?.entryType ?? "WALK_IN",
   );
-  const [reservationUrl, setReservationUrl] = useState(initialData?.reservationUrl ?? "");
+  const [reservationUrl, setReservationUrl] = useState(
+    initialData?.reservationUrl ?? "",
+  );
   const [officialUrl, setOfficialUrl] = useState(initialData?.officialUrl ?? "");
   const [snsUrl, setSnsUrl] = useState(initialData?.snsUrl ?? "");
   const [bannerImageUrl, setBannerImageUrl] = useState<string | null>(
     initialData?.bannerImageUrl ?? null,
   );
-  const [status, setStatus] = useState<EventStatus>(initialData?.status ?? "DRAFT");
+  const [status, setStatus] = useState<EventStatus>(
+    initialData?.status ?? "DRAFT",
+  );
   const [showOnHome, setShowOnHome] = useState(initialData?.showOnHome ?? false);
   const [sortOrder, setSortOrder] = useState(initialData?.sortOrder ?? 0);
   const [translations, setTranslations] = useState<Record<string, TranslationField>>(
@@ -165,7 +182,11 @@ export function EventForm({ mode, eventId, initialData }: EventFormProps) {
   );
 
   // ── 번역 업데이트 ─────────────────────────────────────────────────────────────
-  const updateTranslation = (locale: string, field: keyof TranslationField, value: string) => {
+  const updateTranslation = (
+    locale: string,
+    field: keyof TranslationField,
+    value: string,
+  ) => {
     setTranslations((prev) => ({
       ...prev,
       [locale]: { ...prev[locale], [field]: value },
@@ -191,14 +212,14 @@ export function EventForm({ mode, eventId, initialData }: EventFormProps) {
   // ── 제출 ───────────────────────────────────────────────────────────────────
   const handleSubmit = () => {
     if (!selectedPlace) { toast.error("장소를 선택해주세요."); return; }
-    if (!eventCollection.trim()) { toast.error("이벤트 컬렉션을 입력해주세요."); return; }
+    if (!eventCollectionId) { toast.error("컬렉션을 선택해주세요."); return; }
     if (!startDate || !endDate) { toast.error("기간을 입력해주세요."); return; }
     if (!translations.ko.name.trim()) { toast.error("한국어 이벤트명을 입력해주세요."); return; }
     if (!translations.en.name.trim()) { toast.error("영어 이벤트명을 입력해주세요."); return; }
 
     const data: EventFormData = {
       placeId: selectedPlace.id,
-      eventCollection,
+      eventCollectionId,
       category,
       startDate,
       endDate,
@@ -216,9 +237,10 @@ export function EventForm({ mode, eventId, initialData }: EventFormProps) {
     };
 
     startTransition(async () => {
-      const result = isEdit && eventId
-        ? await updateEvent(eventId, data)
-        : await createEvent(data);
+      const result =
+        isEdit && eventId
+          ? await updateEvent(eventId, data)
+          : await createEvent(data);
 
       if (result?.error) {
         toast.error(result.error);
@@ -248,7 +270,9 @@ export function EventForm({ mode, eventId, initialData }: EventFormProps) {
               <Link href="/admin/events">취소</Link>
             </Button>
             <Button size="sm" disabled={isPending} onClick={handleSubmit}>
-              {isPending && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+              {isPending && (
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              )}
               저장
             </Button>
           </div>
@@ -259,7 +283,6 @@ export function EventForm({ mode, eventId, initialData }: EventFormProps) {
       <div className="flex-1 px-6 py-6">
         <div className="mx-auto max-w-[1400px]">
           <div className="grid grid-cols-[1fr_320px] gap-6 items-start">
-
             {/* 왼쪽: 탭 카드 */}
             <div className="min-w-0">
               <Card className="gap-0 pb-0">
@@ -285,19 +308,41 @@ export function EventForm({ mode, eventId, initialData }: EventFormProps) {
                   {/* 기본 정보 탭 */}
                   {activeTab === "info" && (
                     <div className="space-y-5">
-                      {/* 이벤트 컬렉션 */}
+                      {/* 컬렉션 */}
                       <div className="space-y-1.5">
                         <Label>
-                          이벤트 컬렉션 <span className="text-red-500">*</span>
+                          컬렉션 <span className="text-red-500">*</span>
                         </Label>
-                        <Input
-                          value={eventCollection}
-                          onChange={(e) => setEventCollection(e.target.value)}
-                          placeholder="예: ARIRANG_BUSAN"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          같은 행사를 묶는 식별자. 예: ARIRANG_BUSAN, ARIRANG_SEOUL
-                        </p>
+                        {collections.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">
+                            컬렉션이 없습니다.{" "}
+                            <Link
+                              href="/admin/events/collections/new"
+                              className="underline"
+                            >
+                              컬렉션 만들기
+                            </Link>
+                          </p>
+                        ) : (
+                          <Select
+                            value={eventCollectionId}
+                            onValueChange={setEventCollectionId}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="컬렉션 선택" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {collections.map((c) => (
+                                <SelectItem key={c.id} value={c.id}>
+                                  {c.nameKo}{" "}
+                                  <span className="text-muted-foreground text-xs">
+                                    ({c.slug})
+                                  </span>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
                       </div>
 
                       {/* 카테고리 */}
@@ -313,7 +358,11 @@ export function EventForm({ mode, eventId, initialData }: EventFormProps) {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {(Object.keys(EVENT_CATEGORY_LABELS) as EventCategory[]).map((key) => (
+                            {(
+                              Object.keys(
+                                EVENT_CATEGORY_LABELS,
+                              ) as EventCategory[]
+                            ).map((key) => (
                               <SelectItem key={key} value={key}>
                                 {EVENT_CATEGORY_LABELS[key]}
                               </SelectItem>
@@ -354,7 +403,6 @@ export function EventForm({ mode, eventId, initialData }: EventFormProps) {
                             type="time"
                             value={openTime}
                             onChange={(e) => setOpenTime(e.target.value)}
-                            placeholder="13:00"
                           />
                         </div>
                         <div className="space-y-1.5">
@@ -363,7 +411,6 @@ export function EventForm({ mode, eventId, initialData }: EventFormProps) {
                             type="time"
                             value={closeTime}
                             onChange={(e) => setCloseTime(e.target.value)}
-                            placeholder="21:00"
                           />
                         </div>
                       </div>
@@ -373,13 +420,19 @@ export function EventForm({ mode, eventId, initialData }: EventFormProps) {
                         <Label>참여 방법</Label>
                         <Select
                           value={entryType}
-                          onValueChange={(v) => setEntryType(v as EventEntryType)}
+                          onValueChange={(v) =>
+                            setEntryType(v as EventEntryType)
+                          }
                         >
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {(Object.keys(ENTRY_TYPE_LABELS) as EventEntryType[]).map((key) => (
+                            {(
+                              Object.keys(
+                                ENTRY_TYPE_LABELS,
+                              ) as EventEntryType[]
+                            ).map((key) => (
                               <SelectItem key={key} value={key}>
                                 {ENTRY_TYPE_LABELS[key]}
                               </SelectItem>
@@ -439,9 +492,11 @@ export function EventForm({ mode, eventId, initialData }: EventFormProps) {
                                 onClick={() => fileInputRef.current?.click()}
                                 disabled={uploading}
                               >
-                                {uploading
-                                  ? <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                                  : <Upload className="h-3 w-3 mr-1" />}
+                                {uploading ? (
+                                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                ) : (
+                                  <Upload className="h-3 w-3 mr-1" />
+                                )}
                                 변경
                               </Button>
                               <Button
@@ -487,7 +542,6 @@ export function EventForm({ mode, eventId, initialData }: EventFormProps) {
                   {/* 번역 탭 */}
                   {activeTab === "translations" && (
                     <div className="space-y-5">
-                      {/* 언어 탭 */}
                       <div className="flex flex-wrap gap-1 border-b pb-0">
                         {LOCALES.map((loc) => (
                           <button
@@ -502,13 +556,14 @@ export function EventForm({ mode, eventId, initialData }: EventFormProps) {
                           >
                             {loc.label}
                             {loc.required && (
-                              <span className="ml-0.5 text-red-500 text-xs">*</span>
+                              <span className="ml-0.5 text-red-500 text-xs">
+                                *
+                              </span>
                             )}
                           </button>
                         ))}
                       </div>
 
-                      {/* 현재 언어 입력 필드 */}
                       <div className="space-y-4">
                         <div className="space-y-1.5">
                           <Label>
@@ -519,46 +574,70 @@ export function EventForm({ mode, eventId, initialData }: EventFormProps) {
                           </Label>
                           <Input
                             value={translations[activeLang]?.name ?? ""}
-                            onChange={(e) => updateTranslation(activeLang, "name", e.target.value)}
+                            onChange={(e) =>
+                              updateTranslation(activeLang, "name", e.target.value)
+                            }
                             placeholder="이벤트 이름"
                           />
                         </div>
-
                         <div className="space-y-1.5">
                           <Label>이벤트 내용</Label>
                           <Textarea
                             value={translations[activeLang]?.eventContent ?? ""}
-                            onChange={(e) => updateTranslation(activeLang, "eventContent", e.target.value)}
+                            onChange={(e) =>
+                              updateTranslation(
+                                activeLang,
+                                "eventContent",
+                                e.target.value,
+                              )
+                            }
                             placeholder="이벤트 주요 내용"
                             rows={3}
                           />
                         </div>
-
                         <div className="space-y-1.5">
                           <Label>상세 내용</Label>
                           <Textarea
-                            value={translations[activeLang]?.contentDetail ?? ""}
-                            onChange={(e) => updateTranslation(activeLang, "contentDetail", e.target.value)}
+                            value={
+                              translations[activeLang]?.contentDetail ?? ""
+                            }
+                            onChange={(e) =>
+                              updateTranslation(
+                                activeLang,
+                                "contentDetail",
+                                e.target.value,
+                              )
+                            }
                             placeholder="상세 설명"
                             rows={3}
                           />
                         </div>
-
                         <div className="space-y-1.5">
                           <Label>설명</Label>
                           <Textarea
                             value={translations[activeLang]?.description ?? ""}
-                            onChange={(e) => updateTranslation(activeLang, "description", e.target.value)}
+                            onChange={(e) =>
+                              updateTranslation(
+                                activeLang,
+                                "description",
+                                e.target.value,
+                              )
+                            }
                             placeholder="짧은 설명"
                             rows={2}
                           />
                         </div>
-
                         <div className="space-y-1.5">
                           <Label>운영 시간 안내</Label>
                           <Input
                             value={translations[activeLang]?.hoursNote ?? ""}
-                            onChange={(e) => updateTranslation(activeLang, "hoursNote", e.target.value)}
+                            onChange={(e) =>
+                              updateTranslation(
+                                activeLang,
+                                "hoursNote",
+                                e.target.value,
+                              )
+                            }
                             placeholder="예: 매일 13:00–21:00"
                           />
                         </div>
@@ -569,7 +648,8 @@ export function EventForm({ mode, eventId, initialData }: EventFormProps) {
                   {/* 준비 중 탭들 */}
                   {(activeTab === "perks" || activeTab === "body") && (
                     <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
-                      {TABS.find((t) => t.id === activeTab)?.label} — 다음 단계에서 구현 예정
+                      {TABS.find((t) => t.id === activeTab)?.label} — 다음
+                      단계에서 구현 예정
                     </div>
                   )}
                 </CardContent>
@@ -582,7 +662,8 @@ export function EventForm({ mode, eventId, initialData }: EventFormProps) {
               <Card className="gap-2">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">
-                    장소 <span className="text-red-500 text-sm font-normal">*</span>
+                    장소{" "}
+                    <span className="text-red-500 text-sm font-normal">*</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -600,9 +681,13 @@ export function EventForm({ mode, eventId, initialData }: EventFormProps) {
                         </div>
                       )}
                       <div>
-                        <p className="font-medium text-sm">{selectedPlace.nameKo}</p>
+                        <p className="font-medium text-sm">
+                          {selectedPlace.nameKo}
+                        </p>
                         {selectedPlace.nameEn && (
-                          <p className="text-xs text-muted-foreground">{selectedPlace.nameEn}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {selectedPlace.nameEn}
+                          </p>
                         )}
                         {selectedPlace.addressKo && (
                           <p className="flex items-start gap-1 text-xs text-muted-foreground mt-1">
@@ -652,11 +737,13 @@ export function EventForm({ mode, eventId, initialData }: EventFormProps) {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {(Object.keys(EVENT_STATUS_LABELS) as EventStatus[]).map((key) => (
-                          <SelectItem key={key} value={key}>
-                            {EVENT_STATUS_LABELS[key]}
-                          </SelectItem>
-                        ))}
+                        {(Object.keys(EVENT_STATUS_LABELS) as EventStatus[]).map(
+                          (key) => (
+                            <SelectItem key={key} value={key}>
+                              {EVENT_STATUS_LABELS[key]}
+                            </SelectItem>
+                          ),
+                        )}
                       </SelectContent>
                     </Select>
                   </div>

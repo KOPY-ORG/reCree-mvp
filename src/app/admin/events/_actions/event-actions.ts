@@ -15,7 +15,7 @@ export type TranslationField = {
 
 export type EventFormData = {
   placeId: string;
-  eventCollection: string;
+  eventCollectionId: string;
   category: EventCategory;
   startDate: string;   // "YYYY-MM-DD"
   endDate: string;     // "YYYY-MM-DD"
@@ -35,7 +35,7 @@ export type EventFormData = {
 function toEventInput(data: EventFormData) {
   return {
     placeId: data.placeId,
-    eventCollection: data.eventCollection.trim(),
+    eventCollectionId: data.eventCollectionId,
     category: data.category,
     startDate: new Date(data.startDate),
     endDate: new Date(data.endDate),
@@ -52,7 +52,10 @@ function toEventInput(data: EventFormData) {
   };
 }
 
-function buildTranslationRows(eventId: string, translations: Record<string, TranslationField>) {
+function buildTranslationRows(
+  eventId: string,
+  translations: Record<string, TranslationField>,
+) {
   return Object.entries(translations)
     .filter(([, t]) => t.name.trim() !== "")
     .map(([locale, t]) => ({
@@ -66,13 +69,18 @@ function buildTranslationRows(eventId: string, translations: Record<string, Tran
     }));
 }
 
-export async function createEvent(data: EventFormData): Promise<{ error?: string }> {
+export async function createEvent(
+  data: EventFormData,
+): Promise<{ error?: string }> {
   if (!data.placeId) return { error: "장소를 선택해주세요." };
-  if (!data.eventCollection.trim()) return { error: "이벤트 컬렉션을 입력해주세요." };
+  if (!data.eventCollectionId) return { error: "컬렉션을 선택해주세요." };
   if (!data.startDate || !data.endDate) return { error: "기간을 입력해주세요." };
-  if (new Date(data.startDate) > new Date(data.endDate)) return { error: "종료일이 시작일보다 빠를 수 없습니다." };
-  if (!data.translations?.ko?.name?.trim()) return { error: "한국어 이벤트명을 입력해주세요." };
-  if (!data.translations?.en?.name?.trim()) return { error: "영어 이벤트명을 입력해주세요." };
+  if (new Date(data.startDate) > new Date(data.endDate))
+    return { error: "종료일이 시작일보다 빠를 수 없습니다." };
+  if (!data.translations?.ko?.name?.trim())
+    return { error: "한국어 이벤트명을 입력해주세요." };
+  if (!data.translations?.en?.name?.trim())
+    return { error: "영어 이벤트명을 입력해주세요." };
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -90,13 +98,19 @@ export async function createEvent(data: EventFormData): Promise<{ error?: string
   redirect("/admin/events");
 }
 
-export async function updateEvent(id: string, data: EventFormData): Promise<{ error?: string }> {
+export async function updateEvent(
+  id: string,
+  data: EventFormData,
+): Promise<{ error?: string }> {
   if (!data.placeId) return { error: "장소를 선택해주세요." };
-  if (!data.eventCollection.trim()) return { error: "이벤트 컬렉션을 입력해주세요." };
+  if (!data.eventCollectionId) return { error: "컬렉션을 선택해주세요." };
   if (!data.startDate || !data.endDate) return { error: "기간을 입력해주세요." };
-  if (new Date(data.startDate) > new Date(data.endDate)) return { error: "종료일이 시작일보다 빠를 수 없습니다." };
-  if (!data.translations?.ko?.name?.trim()) return { error: "한국어 이벤트명을 입력해주세요." };
-  if (!data.translations?.en?.name?.trim()) return { error: "영어 이벤트명을 입력해주세요." };
+  if (new Date(data.startDate) > new Date(data.endDate))
+    return { error: "종료일이 시작일보다 빠를 수 없습니다." };
+  if (!data.translations?.ko?.name?.trim())
+    return { error: "한국어 이벤트명을 입력해주세요." };
+  if (!data.translations?.en?.name?.trim())
+    return { error: "영어 이벤트명을 입력해주세요." };
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -127,12 +141,12 @@ export async function deleteEvent(id: string): Promise<{ error?: string }> {
 }
 
 export async function getEventForEdit(id: string) {
-  const event = await prisma.event.findUnique({
+  return await prisma.event.findUnique({
     where: { id },
     select: {
       id: true,
       placeId: true,
-      eventCollection: true,
+      eventCollectionId: true,
       category: true,
       startDate: true,
       endDate: true,
@@ -180,5 +194,4 @@ export async function getEventForEdit(id: string) {
       },
     },
   });
-  return event;
 }

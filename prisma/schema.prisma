@@ -578,34 +578,60 @@ model TopicFollow {
   @@index([topicId])
 }
 
+// ─── 이벤트 컬렉션 모델 ───────────────────────────────────────────────────────
+
+model EventCollection {
+  id        String      @id @default(uuid()) @db.Uuid
+  slug      String      @unique // "ARIRANG_BUSAN" — 필터/URL용 식별자
+  status    EventStatus @default(DRAFT)
+  sortOrder Int         @default(0)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  translations EventCollectionTranslation[]
+  events       Event[]
+}
+
+model EventCollectionTranslation {
+  id           String @id @default(uuid()) @db.Uuid
+  collectionId String @db.Uuid
+  locale       String
+  name         String // 표시 이름 (예: "아리랑 부산" / "ARIRANG BUSAN")
+
+  collection EventCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, locale])
+}
+
 // ─── 이벤트 모델 ──────────────────────────────────────────────────────────────
 
 model Event {
-  id              String         @id @default(uuid()) @db.Uuid
-  placeId         String         @db.Uuid
-  eventCollection String // 예: "ARIRANG_BUSAN" (묶음 식별)
-  category        EventCategory
-  startDate       DateTime
-  endDate         DateTime
-  openTime        String? // "13:00" (언어 무관)
-  closeTime       String? // "21:00"
-  entryType       EventEntryType @default(WALK_IN)
-  reservationUrl  String?
-  officialUrl     String?
-  snsUrl          String?
-  bannerImageUrl  String?
-  status          EventStatus    @default(DRAFT)
-  showOnHome      Boolean        @default(false)
-  sortOrder       Int            @default(0)
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  id                String         @id @default(uuid()) @db.Uuid
+  placeId           String         @db.Uuid
+  eventCollectionId String         @db.Uuid
+  category          EventCategory
+  startDate         DateTime
+  endDate           DateTime
+  openTime          String? // "13:00" (언어 무관)
+  closeTime         String? // "21:00"
+  entryType         EventEntryType @default(WALK_IN)
+  reservationUrl    String?
+  officialUrl       String?
+  snsUrl            String?
+  bannerImageUrl    String?
+  status            EventStatus    @default(DRAFT)
+  showOnHome        Boolean        @default(false)
+  sortOrder         Int            @default(0)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 
   place        Place              @relation(fields: [placeId], references: [id])
+  collection   EventCollection    @relation(fields: [eventCollectionId], references: [id])
   translations EventTranslation[]
   perks        EventPerk[]
   bodyBlocks   EventBodyBlock[]
 
-  @@index([eventCollection])
+  @@index([eventCollectionId])
   @@index([placeId])
 }
 

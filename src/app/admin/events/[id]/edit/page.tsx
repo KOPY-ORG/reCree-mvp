@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getEventForEdit } from "../../_actions/event-actions";
+import { getAllCollections } from "../../_actions/collection-actions";
 import { EventForm, type EventInitialData } from "../../_components/EventForm";
 import type { PlaceForForm } from "@/app/admin/posts/_components/PostForm";
 
@@ -9,7 +10,10 @@ export default async function EditEventPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const event = await getEventForEdit(id);
+  const [event, collections] = await Promise.all([
+    getEventForEdit(id),
+    getAllCollections(),
+  ]);
   if (!event) notFound();
 
   const place: PlaceForForm | null = event.place
@@ -50,7 +54,7 @@ export default async function EditEventPage({
     id: event.id,
     placeId: event.placeId,
     place,
-    eventCollection: event.eventCollection,
+    eventCollectionId: event.eventCollectionId,
     category: event.category,
     startDate: event.startDate.toISOString().slice(0, 10),
     endDate: event.endDate.toISOString().slice(0, 10),
@@ -67,5 +71,12 @@ export default async function EditEventPage({
     translations,
   };
 
-  return <EventForm mode="edit" eventId={id} initialData={initialData} />;
+  return (
+    <EventForm
+      mode="edit"
+      eventId={id}
+      initialData={initialData}
+      collections={collections}
+    />
+  );
 }
