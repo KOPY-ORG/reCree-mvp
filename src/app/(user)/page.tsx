@@ -36,7 +36,6 @@ function resolveBannerLabels(
   return selectHomeLabels(topicSlots, otherSlots);
 }
 import { PostCard } from "./_components/PostCard";
-import { SearchBar } from "./_components/SearchBar";
 import { GuideVideoCard } from "./_components/GuideVideoCard";
 import { getCurrentUser } from "@/lib/auth";
 import { ReCreeshotImage } from "@/components/recreeshot-image";
@@ -207,7 +206,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
     return (
       <div className="px-4 py-4 max-w-2xl mx-auto">
-        <div className="mb-5"><SearchBar /></div>
         <TabBar activeTab={activeTab} />
         <div className="grid grid-cols-2 gap-3">
           {fallbackPosts.map((post, index) => (
@@ -242,9 +240,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   return (
     <div className="pt-2 pb-4 max-w-2xl mx-auto">
-      <div className="px-4 mb-3">
-        <SearchBar />
-      </div>
       <TabBar activeTab={activeTab} />
 
       {activeTab === "follow" ? (
