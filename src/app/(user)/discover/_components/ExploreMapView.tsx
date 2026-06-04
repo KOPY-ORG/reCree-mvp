@@ -6,10 +6,12 @@ import { InteractiveMap } from "@/components/maps/InteractiveMap";
 import { PlaceBottomSheet } from "@/components/maps/PlaceBottomSheet";
 import { PlaceListSheet, type PlaceListSheetState } from "@/components/maps/PlaceListSheet";
 import { PlaceListSheetCard } from "@/components/maps/PlaceListSheetCard";
+import { EventListCard } from "@/components/maps/EventListCard";
 import { DiscoverSearchBar } from "./DiscoverSearchBar";
 import { DiscoverFilterSheet } from "./DiscoverFilterSheet";
 import { DiscoverActiveFacets } from "./DiscoverActiveFacets";
 import { DiscoverSheetHeader } from "./DiscoverSheetHeader";
+import { EventSheetHeader } from "./EventSheetHeader";
 import { HotTabStub } from "./HotTabStub";
 import { ListScrollTopButton } from "./ListScrollTopButton";
 import { useRecentSearches } from "../_hooks/useRecentSearches";
@@ -25,10 +27,15 @@ import {
 import type { Level0TopicDeep } from "@/lib/topic-queries";
 import type { TagGroupWithTags } from "@/lib/filter-queries";
 import type { TagGroupColorMap } from "@/lib/post-labels";
-import type { ActiveEventCollection } from "@/lib/event-collection-queries";
+import type {
+  ActiveEventCollection,
+  EventCollectionForMap,
+  EventCollectionMapEvent,
+} from "@/lib/event-collection-queries";
 
 type ChipInfo = { id: string; label: string; bg: string; fg: string };
 const KPOP_NAME = "K-POP";
+const EVENT_RED = "#F01941";
 
 function postMatchesFilters(post: MapPost, topicIds: string[], tagIds: string[]): boolean {
   const topicHit =
@@ -80,14 +87,16 @@ interface Props {
   topicTree: Level0TopicDeep[];
   isLoggedIn: boolean;
   eventCollections?: ActiveEventCollection[];
+  eventMapData?: Record<string, EventCollectionForMap | null>;
 }
 
-export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, isLoggedIn, eventCollections = [] }: Props) {
+export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, isLoggedIn, eventCollections = [], eventMapData = {} }: Props) {
   const searchParams = useSearchParams();
   const router = useRouter();
 
   const isSavedView = searchParams.get("saved") === "1";
   const selectedPlaceId = searchParams.get("place");
+  const collectionSlug = searchParams.get("collection");
 
   const [sheetState, setSheetState] = useState<PlaceListSheetState>(
     selectedPlaceId ? "hidden" : "half"
@@ -150,6 +159,19 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
       params.set("place", id);
     } else {
       params.delete("place");
+    }
+    router.replace(`?${params.toString()}`);
+  }
+
+  function setCollectionSlug(slug: string | null) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (slug) {
+      params.set("collection", slug);
+      params.delete("place"); // 진입 시 기존 place 선택 초기화
+      setFocusedPlaceId(null);
+      setSheetState("half");
+    } else {
+      params.delete("collection");
     }
     router.replace(`?${params.toString()}`);
   }
@@ -240,8 +262,18 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
     [isSavedView, markerPlaces]
   );
 
+  // isResultMode보다 먼저 선언해야 참조 가능
+  const activeEventData = useMemo(
+    () =>
+      collectionSlug !== null && eventMapData
+        ? (eventMapData[collectionSlug] ?? null)
+        : null,
+    [collectionSlug, eventMapData]
+  );
+  const isEventMode = activeEventData !== null;
+
   const hasFilters = appliedTopicIds.length > 0 || appliedTagIds.length > 0;
-  const isResultMode = query.trim() !== "" || hasFilters;
+  const isResultMode = !isEventMode && (query.trim() !== "" || hasFilters);
 
   const searchedPlaces = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -327,6 +359,49 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
     [filteredPlaces, hasFilters, appliedTopicIds, appliedTagIds]
   );
 
+  // ── 이벤트 모드 파생 (계속) ──────────────────────────────────────────────────
+
+  const events: EventCollectionMapEvent[] = useMemo(
+    () => activeEventData?.events ?? [],
+    [activeEventData]
+  );
+
+  const eventsByPlace = useMemo(() => {
+    const map: Record<string, EventCollectionMapEvent[]> = {};
+    for (const event of events) {
+      const pid = event.place.id;
+      if (!map[pid]) map[pid] = [];
+      map[pid].push(event);
+    }
+    return map;
+  }, [events]);
+
+  const eventPlaces = useMemo(() => {
+    const seen = new Set<string>();
+    return events
+      .filter((e) => {
+        if (seen.has(e.place.id)) return false;
+        seen.add(e.place.id);
+        return true;
+      })
+      .map((e) => e.place);
+  }, [events]);
+
+  const eventMarkerPlaces = useMemo(
+    () =>
+      eventPlaces.map((place) => ({
+        id: place.id,
+        latitude: place.latitude,
+        longitude: place.longitude,
+        nameEn: place.nameEn,
+        markerColor: EVENT_RED,
+        markerGradient: undefined,
+        isSaved: false,
+        postCount: eventsByPlace[place.id]?.length ?? 0,
+      })),
+    [eventPlaces, eventsByPlace]
+  );
+
   const handleSearchOpen = () => {
     setSelectedPlaceId(null);
     setIsSearchOpen(true);
@@ -371,7 +446,8 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
   const toggleTag = (id: string) =>
     setStagedTagIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
 
-  const effectiveSheetState = selectedPlaceId
+  // 이벤트 모드에서 ?place stub이 세팅돼도 시트를 숨기지 않음 (청크4b에서 floating 구현)
+  const effectiveSheetState = (selectedPlaceId && !isEventMode)
     ? "hidden"
     : sheetState === "hidden"
       ? "tab-only"
@@ -381,48 +457,71 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
     // bottomnav(h-16=64px) — ExploreHeader 제거됨
     <div className="relative h-[calc(100dvh-64px)] overflow-hidden">
       <InteractiveMap
-        places={filteredPlaces}
+        places={isEventMode ? eventMarkerPlaces : filteredPlaces}
         selectedPlaceId={selectedPlaceId}
         focusedPlaceId={focusedPlaceId}
         onMarkerClick={handleMarkerClick}
         onMapClick={handleMapClick}
         boundsKey={
-          isResultMode
-            ? `q:${query}|t:${[...appliedTopicIds].sort().join(",")}|g:${[...appliedTagIds].sort().join(",")}`
-            : isSavedView ? "saved" : "all"
+          isEventMode
+            ? `collection:${collectionSlug}`
+            : isResultMode
+              ? `q:${query}|t:${[...appliedTopicIds].sort().join(",")}|g:${[...appliedTagIds].sort().join(",")}`
+              : isSavedView ? "saved" : "all"
         }
-        highlightedIds={isResultMode ? new Set(filteredPlaces.map((p) => p.id)) : undefined}
+        highlightedIds={
+          isResultMode ? new Set(filteredPlaces.map((p) => p.id)) : undefined
+        }
         className="absolute inset-0"
       />
-      <DiscoverSearchBar
-        isLoggedIn={isLoggedIn}
-        query={query}
-        isOpen={isSearchOpen}
-        onOpen={handleSearchOpen}
-        onClose={() => setIsSearchOpen(false)}
-        onFilterOpen={openFilter}
-        onQueryChange={setQuery}
-        onClearQuery={handleClearQuery}
-        suggestions={suggestions}
-        recents={recents}
-        onSelectTerm={handleSelectTerm}
-        onSelectPlace={handleSelectPlace}
-        onRemoveRecent={removeRecent}
-        onClearRecents={clearRecents}
-      />
+      {!isEventMode && (
+        <DiscoverSearchBar
+          isLoggedIn={isLoggedIn}
+          query={query}
+          isOpen={isSearchOpen}
+          onOpen={handleSearchOpen}
+          onClose={() => setIsSearchOpen(false)}
+          onFilterOpen={openFilter}
+          onQueryChange={setQuery}
+          onClearQuery={handleClearQuery}
+          suggestions={suggestions}
+          recents={recents}
+          onSelectTerm={handleSelectTerm}
+          onSelectPlace={handleSelectPlace}
+          onRemoveRecent={removeRecent}
+          onClearRecents={clearRecents}
+        />
+      )}
 
-      <DiscoverActiveFacets
-        query={query}
-        appliedTopicIds={appliedTopicIds}
-        appliedTagIds={appliedTagIds}
-        topicChipMap={topicChipMap}
-        tagChipMap={tagChipMap}
-        onClearQuery={handleClearQuery}
-        onRemoveTopic={removeAppliedTopic}
-        onRemoveTag={removeAppliedTag}
-        eventCollections={eventCollections}
-        onEventCollectionClick={(id) => console.log("event collection clicked:", id)}
-      />
+      {isEventMode && (
+        <div className="absolute top-3 right-3 z-[60]">
+          <button
+            type="button"
+            aria-label="Exit event mode"
+            onClick={() => setCollectionSlug(null)}
+            className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-md active:opacity-70 transition-opacity"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M3 3L13 13M13 3L3 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {!isEventMode && effectiveSheetState !== "full" && (
+        <DiscoverActiveFacets
+          query={query}
+          appliedTopicIds={appliedTopicIds}
+          appliedTagIds={appliedTagIds}
+          topicChipMap={topicChipMap}
+          tagChipMap={tagChipMap}
+          onClearQuery={handleClearQuery}
+          onRemoveTopic={removeAppliedTopic}
+          onRemoveTag={removeAppliedTag}
+          eventCollections={eventCollections}
+          onEventCollectionClick={(slug) => setCollectionSlug(slug)}
+        />
+      )}
 
       {/* 기본 리스트 시트 — z-40 */}
       <PlaceListSheet
@@ -432,17 +531,49 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
         hasActiveFacets={isResultMode}
         scrollContainerRef={listScrollRef}
         header={
-          <DiscoverSheetHeader
-            contentTab={contentTab}
-            onContentTabChange={handleContentTabChange}
-            placeCount={filteredPlaces.length}
-            isResultMode={isResultMode}
-            query={query}
-            onExitResultMode={exitResultMode}
-          />
+          isEventMode && activeEventData ? (
+            <EventSheetHeader
+              collectionName={activeEventData.collection.nameEn}
+              eventCount={events.length}
+            />
+          ) : (
+            <DiscoverSheetHeader
+              contentTab={contentTab}
+              onContentTabChange={handleContentTabChange}
+              placeCount={filteredPlaces.length}
+              isResultMode={isResultMode}
+              query={query}
+              onExitResultMode={exitResultMode}
+            />
+          )
         }
       >
-        {(contentTab === "list" || isResultMode) ? (
+        {isEventMode ? (
+          events.length === 0 ? (
+            <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
+              <p className="text-sm font-semibold text-foreground">No events available</p>
+            </div>
+          ) : (
+            <div className="px-4 pt-2 pb-4 space-y-2">
+              {events.map((event) => (
+                <EventListCard
+                  key={event.id}
+                  event={event}
+                  collectionName={activeEventData!.collection.nameEn}
+                  collectionSlug={collectionSlug!}
+                  isSelected={focusedPlaceId === event.place.id}
+                  isSaved={false}
+                  notchBg="#F4F5F7"
+                  onSelect={() => handleCardTap(event.place.id)}
+                  onViewMap={() => {
+                    // TODO(청크4b): EventPeekCard floating 렌더 — ?place 세팅만 stub
+                    setSelectedPlaceId(event.place.id);
+                  }}
+                />
+              ))}
+            </div>
+          )
+        ) : (contentTab === "list" || isResultMode) ? (
           isResultMode && allVisiblePosts.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
               <p className="text-sm font-semibold text-foreground">No places match your filters</p>
@@ -474,13 +605,15 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
       {/* 리스트 맨 위로 버튼 — z-30, 시트 위에 absolute */}
       <ListScrollTopButton scrollRef={listScrollRef} />
 
-      {/* 장소 상세 floating 카드 — z-50 */}
-      <PlaceBottomSheet
-        place={selectedPlace}
-        savedPostIds={savedPostIdsSet}
-        tagGroupMap={tagGroupMap}
-        onClose={handlePlaceClose}
-      />
+      {/* 장소 상세 floating 카드 — z-50 (이벤트 모드에선 청크4b까지 억제) */}
+      {!isEventMode && (
+        <PlaceBottomSheet
+          place={selectedPlace}
+          savedPostIds={savedPostIdsSet}
+          tagGroupMap={tagGroupMap}
+          onClose={handlePlaceClose}
+        />
+      )}
 
       {/* 필터 시트 — z-[65] */}
       <DiscoverFilterSheet

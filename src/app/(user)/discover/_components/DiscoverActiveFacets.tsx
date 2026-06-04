@@ -62,7 +62,7 @@ export function DiscoverActiveFacets({
               <button
                 key={col.id}
                 type="button"
-                onClick={() => onEventCollectionClick?.(col.id)}
+                onClick={() => onEventCollectionClick?.(col.slug)}
                 className="shrink-0 inline-flex items-center gap-1.5 rounded-full font-semibold text-xs leading-none whitespace-nowrap shadow-md active:opacity-70 transition-opacity"
                 style={{
                   background: "#F01941",

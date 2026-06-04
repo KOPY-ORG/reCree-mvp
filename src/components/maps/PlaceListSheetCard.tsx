@@ -115,21 +115,23 @@ export function PlaceListSheetCard({ post, place, isSaved, isFocused, tagGroupMa
         {/* 2. 제목 */}
         <h3 className="text-sm font-semibold line-clamp-2 mb-1.5">{post.titleEn}</h3>
 
-        {/* 3. 메타 줄 */}
-        <div className="flex items-center gap-2">
+        {/* 3. 메타 줄 — [버튼(focused만)] [MapPin] [지역명 flex-1 truncate] */}
+        <div className="flex items-center gap-2 min-w-0">
+          {isFocused && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onViewPlace(place.id); }}
+              className="text-xs px-2.5 py-1 rounded-full bg-white shadow-sm text-muted-foreground shrink-0"
+            >
+              View on map
+            </button>
+          )}
           {areaLabel && (
-            <div className="flex items-center gap-0.5 min-w-0">
+            <div className="flex items-center gap-0.5 flex-1 min-w-0">
               <MapPin className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
               <span className="text-xs text-muted-foreground truncate">{areaLabel}</span>
             </div>
           )}
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); onViewPlace(place.id); }}
-            className="text-xs px-2.5 py-1 rounded-full bg-white shadow-sm text-muted-foreground shrink-0"
-          >
-            View on map
-          </button>
         </div>
       </div>
 
