@@ -14,17 +14,19 @@ export default async function UserLayout({
   const user = await getCurrentUser();
 
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-background">
-      <ActivityTracker />
-      <ConditionalHeader header={<AppHeader />} savedHeader={<SavedHeader />} />
-      <main className="flex-1 w-full overflow-x-hidden">{children}</main>
-      <div className="lg:hidden sticky bottom-0 z-40">
-        <ConditionalBottomNav
-          isLoggedIn={!!user}
-          profileImageUrl={user?.profileImageUrl ?? null}
-        />
+    <div className="min-h-[100dvh] bg-muted">
+      <div className="max-w-md mx-auto bg-background min-h-[100dvh] flex flex-col shadow-[1px_0_0_rgba(0,0,0,0.04),-1px_0_0_rgba(0,0,0,0.04)]">
+        <ActivityTracker />
+        <ConditionalHeader header={<AppHeader />} savedHeader={<SavedHeader />} />
+        <main className="flex-1 w-full overflow-x-hidden">{children}</main>
+        <div className="sticky bottom-0 z-40">
+          <ConditionalBottomNav
+            isLoggedIn={!!user}
+            profileImageUrl={user?.profileImageUrl ?? null}
+          />
+        </div>
+        <ScrollToTopButton />
       </div>
-      <ScrollToTopButton />
     </div>
   );
 }
