@@ -12,6 +12,7 @@ import { DiscoverFilterSheet } from "./DiscoverFilterSheet";
 import { DiscoverActiveFacets } from "./DiscoverActiveFacets";
 import { DiscoverSheetHeader } from "./DiscoverSheetHeader";
 import { EventSheetHeader } from "./EventSheetHeader";
+import { EventPeekCarousel } from "./EventPeekCarousel";
 import { HotTabStub } from "./HotTabStub";
 import { ListScrollTopButton } from "./ListScrollTopButton";
 import { useRecentSearches } from "../_hooks/useRecentSearches";
@@ -172,6 +173,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
       setSheetState("half");
     } else {
       params.delete("collection");
+      params.delete("place");
     }
     router.replace(`?${params.toString()}`);
   }
@@ -446,8 +448,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
   const toggleTag = (id: string) =>
     setStagedTagIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
 
-  // 이벤트 모드에서 ?place stub이 세팅돼도 시트를 숨기지 않음 (청크4b에서 floating 구현)
-  const effectiveSheetState = (selectedPlaceId && !isEventMode)
+  const effectiveSheetState = selectedPlaceId
     ? "hidden"
     : sheetState === "hidden"
       ? "tab-only"
@@ -605,15 +606,22 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
       {/* 리스트 맨 위로 버튼 — z-30, 시트 위에 absolute */}
       <ListScrollTopButton scrollRef={listScrollRef} />
 
-      {/* 장소 상세 floating 카드 — z-50 (이벤트 모드에선 청크4b까지 억제) */}
-      {!isEventMode && (
+      {/* floating 카드 — z-50: 이벤트 모드=캐러셀, 일반 모드=장소 상세 */}
+      {isEventMode && selectedPlaceId && activeEventData ? (
+        <EventPeekCarousel
+          events={eventsByPlace[selectedPlaceId] ?? []}
+          collectionSlug={collectionSlug!}
+          collectionName={activeEventData.collection.nameEn}
+          onClose={handlePlaceClose}
+        />
+      ) : !isEventMode ? (
         <PlaceBottomSheet
           place={selectedPlace}
           savedPostIds={savedPostIdsSet}
           tagGroupMap={tagGroupMap}
           onClose={handlePlaceClose}
         />
-      )}
+      ) : null}
 
       {/* 필터 시트 — z-[65] */}
       <DiscoverFilterSheet
