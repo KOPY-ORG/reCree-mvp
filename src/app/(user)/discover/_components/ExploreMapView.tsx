@@ -81,6 +81,37 @@ type DiscoverSuggestion =
   | { type: "keyword"; text: string }
   | { type: "post"; text: string; placeName: string; placeId: string };
 
+/** topicChipMap과 동일한 chip 레벨 결정 로직으로 slug → id 반환 */
+function findTopicIdBySlug(topicTree: Level0TopicDeep[], slug: string): string | null {
+  for (const root of topicTree) {
+    const l1s = root.children;
+    if (l1s.length === 0) continue;
+    if (root.nameEn === KPOP_NAME) {
+      for (const l1 of l1s)
+        for (const l2 of l1.children)
+          if (l2.slug === slug) return l2.id;
+      continue;
+    }
+    const hasL2 = l1s.some((l1) => l1.children.length > 0);
+    if (!hasL2) {
+      for (const l1 of l1s)
+        if (l1.slug === slug) return l1.id;
+    } else {
+      for (const l1 of l1s)
+        for (const l2 of l1.children)
+          if (l2.slug === slug) return l2.id;
+    }
+  }
+  return null;
+}
+
+function findTagIdBySlug(tagGroups: TagGroupWithTags[], slug: string): string | null {
+  for (const group of tagGroups)
+    for (const tag of group.tags)
+      if (tag.slug === slug) return tag.id;
+  return null;
+}
+
 interface Props {
   allPlaces: (MapPlace & { isSaved?: boolean })[];
   savedPostIds: string[];
@@ -113,6 +144,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
   const [appliedTagIds, setAppliedTagIds] = useState<string[]>([]);
   const listScrollRef = useRef<HTMLDivElement | null>(null);
   const listScrollMemoRef = useRef<number>(0);
+  const urlFilterInitRef = useRef(false);
   const { recents, addRecent, removeRecent, clearRecents } = useRecentSearches();
   const { restored, save, clear } = useDiscoverViewState();
 
@@ -130,6 +162,22 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
       });
     }
   }, [restored, clear]);
+
+  // URL ?topic=<slug> / ?tag=<slug> → 마운트 1회 초기 필터 적용
+  useEffect(() => {
+    if (urlFilterInitRef.current) return;
+    urlFilterInitRef.current = true;
+    const topicSlug = searchParams.get("topic");
+    const tagSlug = searchParams.get("tag");
+    if (topicSlug) {
+      const id = findTopicIdBySlug(topicTree, topicSlug);
+      if (id) setAppliedTopicIds([id]);
+    }
+    if (tagSlug) {
+      const id = findTagIdBySlug(tagGroups, tagSlug);
+      if (id) setAppliedTagIds([id]);
+    }
+  }, [searchParams, topicTree, tagGroups]);
 
   const handlePostNavigate = () => {
     save({ query, contentTab, scrollTop: listScrollRef.current?.scrollTop ?? 0 });
@@ -249,6 +297,12 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
       }
     return map;
   }, [tagGroups]);
+
+  const btsTopicId = useMemo(() => findTopicIdBySlug(topicTree, "bts"), [topicTree]);
+  const btsChipInfo = useMemo(
+    () => (btsTopicId ? (topicChipMap.get(btsTopicId) ?? null) : null),
+    [btsTopicId, topicChipMap]
+  );
 
   const markerPlaces = useMemo(
     () => allPlaces.map((p) => ({
@@ -521,6 +575,10 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
           onRemoveTag={removeAppliedTag}
           eventCollections={eventCollections}
           onEventCollectionClick={(slug) => setCollectionSlug(slug)}
+          quickTopicChip={btsChipInfo}
+          onQuickTopicClick={() => {
+            if (btsTopicId) setAppliedTopicIds([btsTopicId]);
+          }}
         />
       )}
 

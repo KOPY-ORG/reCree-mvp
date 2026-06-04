@@ -16,13 +16,22 @@ export type SectionData =
  * showOnHome: true 를 넘기면 홈 노출 조건 추가.
  * Discover에서는 getCuratedSections({}) 로 호출.
  */
-export async function getCuratedSections(opts: { showOnHome?: boolean }): Promise<CuratedSection[]> {
+export type CuratedSectionWithSlug = CuratedSection & {
+  filterTopic: { slug: string } | null;
+  filterTag: { slug: string } | null;
+};
+
+export async function getCuratedSections(opts: { showOnHome?: boolean }): Promise<CuratedSectionWithSlug[]> {
   return prisma.curatedSection.findMany({
     where: {
       isActive: true,
       ...(opts.showOnHome ? { showOnHome: true } : {}),
     },
     orderBy: { order: "asc" },
+    include: {
+      filterTopic: { select: { slug: true } },
+      filterTag: { select: { slug: true } },
+    },
   });
 }
 
@@ -100,10 +109,9 @@ export async function getSectionData(sections: CuratedSection[]): Promise<Sectio
  * 섹션의 타입·필터 조건을 기반으로 "더보기" href를 반환.
  * MANUAL → /discover, AUTO → /discover?{filter}
  */
-export function getPostMoreHref(section: CuratedSection): string {
+export function getPostMoreHref(section: CuratedSectionWithSlug): string {
   if (section.type === "MANUAL") return "/discover";
-  if (section.filterTopicId) return `/discover?topicId=${section.filterTopicId}`;
-  if (section.filterTagId) return `/discover?tagId=${section.filterTagId}`;
-  if (section.filterTagGroup) return `/discover?tagGroup=${section.filterTagGroup}`;
+  if (section.filterTopicId && section.filterTopic?.slug) return `/discover?topic=${section.filterTopic.slug}`;
+  if (section.filterTagId && section.filterTag?.slug) return `/discover?tag=${section.filterTag.slug}`;
   return "/discover";
 }

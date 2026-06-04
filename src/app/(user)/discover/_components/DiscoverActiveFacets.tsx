@@ -17,6 +17,8 @@ interface Props {
   onRemoveTag: (id: string) => void;
   eventCollections?: ActiveEventCollection[];
   onEventCollectionClick?: (id: string) => void;
+  quickTopicChip?: ChipInfo | null;
+  onQuickTopicClick?: () => void;
 }
 
 function DonutIcon() {
@@ -43,19 +45,22 @@ export function DiscoverActiveFacets({
   onRemoveTag,
   eventCollections = [],
   onEventCollectionClick,
+  quickTopicChip,
+  onQuickTopicClick,
 }: Props) {
   const hasQuery = query.trim() !== "";
   const hasFilters = appliedTopicIds.length > 0 || appliedTagIds.length > 0;
   const hasEventCollections = eventCollections.length > 0;
   const showEventCollections = hasEventCollections && !hasQuery && !hasFilters;
+  const showQuickChips = !hasQuery && !hasFilters && !!quickTopicChip;
 
-  if (!showEventCollections && !hasQuery && !hasFilters) return null;
+  if (!showEventCollections && !showQuickChips && !hasQuery && !hasFilters) return null;
 
   return (
     <div className="absolute top-[60px] inset-x-0 z-[60] px-3 pb-2 space-y-1.5">
-      {showEventCollections && (
+      {(showEventCollections || showQuickChips) && (
         <div className="flex gap-2 overflow-x-auto py-[6px] -my-[6px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {eventCollections.map((col) => {
+          {showEventCollections && eventCollections.map((col) => {
             const nameEn =
               col.translations.find((t) => t.locale === "en")?.name ?? col.slug;
             return (
@@ -78,6 +83,23 @@ export function DiscoverActiveFacets({
               </button>
             );
           })}
+          {showQuickChips && quickTopicChip && (
+            <button
+              type="button"
+              onClick={onQuickTopicClick}
+              className="shrink-0 inline-flex items-center gap-1 rounded-full font-semibold text-xs leading-none whitespace-nowrap shadow-md active:opacity-70 transition-opacity"
+              style={{
+                background: quickTopicChip.bg,
+                color: quickTopicChip.fg,
+                paddingTop: "0.3rem",
+                paddingBottom: "0.3rem",
+                paddingLeft: "0.625rem",
+                paddingRight: "0.625rem",
+              }}
+            >
+              {quickTopicChip.label}
+            </button>
+          )}
         </div>
       )}
 

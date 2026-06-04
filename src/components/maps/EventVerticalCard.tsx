@@ -98,7 +98,7 @@ export function EventVerticalCard({
       >
         {/* 컬렉션명 */}
         <p
-          className="text-[10px] font-semibold uppercase tracking-[.06em] truncate"
+          className="text-[9px] font-semibold uppercase tracking-[.06em] truncate"
           style={{ color: RED }}
         >
           {collectionName}
