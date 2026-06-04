@@ -42,6 +42,12 @@ import { getCurrentUser } from "@/lib/auth";
 import { ReCreeshotImage } from "@/components/recreeshot-image";
 import { fetchLatestFeed, fetchFollowFeed } from "./_actions/feed-actions";
 import { InfiniteFeed } from "./_components/InfiniteFeed";
+import {
+  getActiveEventCollections,
+  getEventCollectionForMap,
+  type EventCollectionForMap,
+} from "@/lib/event-collection-queries";
+import { EventVerticalCarousel } from "@/components/maps/EventVerticalCarousel";
 
 // ─── 탭 바 ───────────────────────────────────────────────────────────────────
 
@@ -154,6 +160,17 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     getSavedPostIds(currentUser?.id ?? null),
     fetchLatestFeed({}),
   ]);
+
+  // 이벤트 캐러셀 데이터 — 기존 Promise.all과 독립
+  const homeEventCollections = await getActiveEventCollections();
+  const homeEventMapData: Record<string, EventCollectionForMap | null> = Object.fromEntries(
+    await Promise.all(
+      homeEventCollections.map(async (c) => [c.slug, await getEventCollectionForMap(c.slug)] as const)
+    )
+  );
+  const homeFirstColData = homeEventCollections[0]
+    ? (homeEventMapData[homeEventCollections[0].slug] ?? null)
+    : null;
 
   const sectionData: SectionData[] = await getSectionData(sections);
 
@@ -279,6 +296,17 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           {hasBanners && (
             <div className="mb-4">
               <HomeBannerCarousel banners={bannerItems} />
+            </div>
+          )}
+
+          {homeFirstColData && (
+            <div className="mb-6">
+              <EventVerticalCarousel
+                title="BTS THE CITY ARIRANG"
+                events={homeFirstColData.events}
+                collectionSlug={homeFirstColData.collection.slug}
+                collectionName={homeFirstColData.collection.nameEn}
+              />
             </div>
           )}
 

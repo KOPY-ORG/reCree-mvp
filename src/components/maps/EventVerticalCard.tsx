@@ -28,7 +28,7 @@ export function EventVerticalCard({
 
   return (
     <div
-      className="relative flex flex-col rounded-[18px] overflow-hidden bg-white"
+      className="relative flex flex-col rounded-[14px] overflow-hidden bg-white"
       style={{
         border: `1.5px solid color-mix(in srgb, ${RED} 20%, #EEEFF2)`,
         boxShadow: `0 4px 16px color-mix(in srgb, ${RED} 9%, rgba(20,18,28,.05))`,
@@ -58,17 +58,17 @@ export function EventVerticalCard({
           }}
         />
 
-        {/* EVENT 칩 (좌상단) — 빨강 solid */}
+        {/* EVENT 칩 (좌상단) */}
         <div
-          className="absolute top-2 left-2 z-[3] px-2 py-0.5 rounded-full text-white text-xs font-bold shadow-md"
+          className="absolute top-1.5 left-1.5 z-[3] px-1.5 py-0.5 rounded-full text-white text-[10px] font-bold shadow-md"
           style={{ background: RED }}
         >
           EVENT
         </div>
 
-        {/* D-day 칩 (우상단) — 검정 반투명 */}
+        {/* D-day 칩 (우상단) */}
         {dday && (
-          <div className="absolute top-2 right-2 z-[3] px-2 py-0.5 rounded-full bg-[rgba(0,0,0,0.55)] text-white text-xs font-bold tabular-nums shadow-md">
+          <div className="absolute top-1.5 right-1.5 z-[3] px-1.5 py-0.5 rounded-full bg-[rgba(0,0,0,0.55)] text-white text-[10px] font-bold tabular-nums shadow-md">
             {dday}
           </div>
         )}
@@ -82,11 +82,11 @@ export function EventVerticalCard({
         }}
       >
         <div
-          className="absolute -top-[9px] -left-[9px] w-[18px] h-[18px] rounded-full"
+          className="absolute -top-[7px] -left-[7px] w-[14px] h-[14px] rounded-full"
           style={{ background: notchBg }}
         />
         <div
-          className="absolute -top-[9px] -right-[9px] w-[18px] h-[18px] rounded-full"
+          className="absolute -top-[7px] -right-[7px] w-[14px] h-[14px] rounded-full"
           style={{ background: notchBg }}
         />
       </div>
@@ -94,11 +94,11 @@ export function EventVerticalCard({
       {/* ── 본문 ── */}
       <Link
         href={`/events/${collectionSlug}/${event.slug}`}
-        className="flex flex-col gap-1 px-3 pt-3 pb-3.5"
+        className="flex flex-col gap-0.5 px-2 pt-2 pb-2.5"
       >
         {/* 컬렉션명 */}
         <p
-          className="text-xs font-semibold uppercase tracking-[.06em] truncate"
+          className="text-[10px] font-semibold uppercase tracking-[.06em] truncate"
           style={{ color: RED }}
         >
           {collectionName}
@@ -106,17 +106,17 @@ export function EventVerticalCard({
 
         {/* 이벤트명 — 1줄이어도 2줄 높이 고정 */}
         <h3
-          className="text-base font-semibold line-clamp-2 min-h-[3rem]"
+          className="text-xs font-semibold line-clamp-2 min-h-[2rem]"
           style={{ color: "#16181C" }}
         >
           {event.nameEn}
         </h3>
 
         {/* 날짜 행 */}
-        <div className="flex items-center gap-1.5 min-w-0">
-          <Calendar className="w-4 h-4 shrink-0" style={{ color: RED }} />
+        <div className="flex items-center gap-1 min-w-0">
+          <Calendar className="w-3 h-3 shrink-0" style={{ color: RED }} />
           <span
-            className="text-base font-bold tabular-nums whitespace-nowrap"
+            className="text-xs font-bold tabular-nums whitespace-nowrap"
             style={{ color: RED }}
           >
             {dateRange}
@@ -125,8 +125,8 @@ export function EventVerticalCard({
 
         {/* 장소 행 */}
         <div className="flex items-center gap-0.5 min-w-0">
-          <MapPin className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-          <span className="text-xs text-muted-foreground truncate">
+          <MapPin className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
+          <span className="text-[9px] text-muted-foreground truncate">
             {event.place.nameEn}
           </span>
         </div>

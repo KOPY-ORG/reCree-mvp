@@ -599,7 +599,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
             </div>
           )
         ) : (
-          <HotTabStub />
+          <HotTabStub eventCollections={eventCollections} eventMapData={eventMapData} />
         )}
       </PlaceListSheet>
 
