@@ -18,6 +18,7 @@ type MarkerPlace = {
   markerGradient?: MarkerGradient;
   isSaved?: boolean;
   posts?: { id: string }[];
+  postCount?: number; // posts.length 대신 명시적 카운트 오버라이드
 };
 
 interface Props {
@@ -50,14 +51,14 @@ function MapContent({
     const sheetPeekH = Math.round(containerH * 0.4);
     if (places.length === 1) {
       map.panTo({ lat: places[0].latitude, lng: places[0].longitude });
-      map.setZoom(14);
-      map.panBy(0, Math.round(containerH * 0.2));
+      map.setZoom(13);
+      map.panBy(0, Math.round(containerH * 0.12));
       return;
     }
     try {
       const bounds = new google.maps.LatLngBounds();
       places.forEach((p) => bounds.extend({ lat: p.latitude, lng: p.longitude }));
-      map.fitBounds(bounds, { top: 80, right: 60, bottom: sheetPeekH + 20, left: 60 });
+      map.fitBounds(bounds, { top: 80, right: 60, bottom: sheetPeekH + 80, left: 60 });
     } catch {
       // google.maps 미로드 시 무시
     }
@@ -74,7 +75,7 @@ function MapContent({
     const isFocusMove = !selectedPlaceId && !!focusedPlaceId;
     if (isFocusMove) map.setZoom(FOCUS_ZOOM);
     map.panTo({ lat: place.latitude, lng: place.longitude });
-    const offsetY = Math.round((window.innerHeight - bottomOffset) * 0.25);
+    const offsetY = Math.round((window.innerHeight - bottomOffset) * 0.12);
     map.panBy(0, offsetY);
   }, [map, selectedPlaceId, focusedPlaceId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -105,7 +106,7 @@ function MapContent({
               isSelected={isSelected}
               isSaved={place.isSaved ?? false}
               nameEn={place.nameEn}
-              postCount={place.posts?.length ?? 0}
+              postCount={place.postCount ?? place.posts?.length ?? 0}
               placeId={place.id}
               gradient={place.markerGradient}
             />

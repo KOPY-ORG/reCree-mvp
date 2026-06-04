@@ -91,7 +91,7 @@ export function DiscoverFilterSheet({
                 Clear all
               </button>
             </div>
-            <div className="flex flex-wrap gap-x-2 gap-y-2 [--pill-py:0.25rem]">
+            <div className="flex flex-wrap gap-x-2 gap-y-2 [--pill-py:0.3rem]">
               {stagedTopicIds.map((id) => {
                 const chip = topicChipMap.get(id);
                 if (!chip) return null;
@@ -132,7 +132,7 @@ export function DiscoverFilterSheet({
 
         {/* 스크롤 본문 */}
         <div className="flex-1 overflow-y-auto min-h-0">
-          <div className="px-4 pt-4 pb-8 space-y-6 [--pill-py:0.25rem]">
+          <div className="px-4 pt-4 pb-8 space-y-6 [--pill-py:0.3rem]">
 
             {/* ── 토픽 섹션 ── */}
             {topicTree.map((root) => {

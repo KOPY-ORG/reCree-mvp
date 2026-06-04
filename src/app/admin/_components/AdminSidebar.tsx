@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   FileText,
   MapPin,
+  CalendarDays,
   Tag,
   Download,
   ClipboardCheck,
@@ -26,6 +27,7 @@ const CONTENT_MENUS = [
   { label: "대시보드", icon: LayoutDashboard, href: "/admin" },
   { label: "포스트 관리", icon: FileText, href: "/admin/posts" },
   { label: "장소 관리", icon: MapPin, href: "/admin/places" },
+  { label: "이벤트 관리", icon: CalendarDays, href: "/admin/events" },
 ] as const;
 
 const TAXONOMY_MENUS = [

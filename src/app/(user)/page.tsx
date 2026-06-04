@@ -36,12 +36,17 @@ function resolveBannerLabels(
   return selectHomeLabels(topicSlots, otherSlots);
 }
 import { PostCard } from "./_components/PostCard";
-import { SearchBar } from "./_components/SearchBar";
 import { GuideVideoCard } from "./_components/GuideVideoCard";
 import { getCurrentUser } from "@/lib/auth";
 import { ReCreeshotImage } from "@/components/recreeshot-image";
 import { fetchLatestFeed, fetchFollowFeed } from "./_actions/feed-actions";
 import { InfiniteFeed } from "./_components/InfiniteFeed";
+import {
+  getActiveEventCollections,
+  getEventCollectionForMap,
+  type EventCollectionForMap,
+} from "@/lib/event-collection-queries";
+import { EventVerticalCarousel } from "@/components/maps/EventVerticalCarousel";
 
 // ─── 탭 바 ───────────────────────────────────────────────────────────────────
 
@@ -155,6 +160,17 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     fetchLatestFeed({}),
   ]);
 
+  // 이벤트 캐러셀 데이터 — 기존 Promise.all과 독립
+  const homeEventCollections = await getActiveEventCollections();
+  const homeEventMapData: Record<string, EventCollectionForMap | null> = Object.fromEntries(
+    await Promise.all(
+      homeEventCollections.map(async (c) => [c.slug, await getEventCollectionForMap(c.slug)] as const)
+    )
+  );
+  const homeFirstColData = homeEventCollections[0]
+    ? (homeEventMapData[homeEventCollections[0].slug] ?? null)
+    : null;
+
   const sectionData: SectionData[] = await getSectionData(sections);
 
   const tagGroupMap: TagGroupColorMap = new Map(tagGroupConfigs.map((c) => [c.group, c]));
@@ -190,7 +206,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
     return (
       <div className="px-4 py-4 max-w-2xl mx-auto">
-        <div className="mb-5"><SearchBar /></div>
         <TabBar activeTab={activeTab} />
         <div className="grid grid-cols-2 gap-3">
           {fallbackPosts.map((post, index) => (
@@ -225,9 +240,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   return (
     <div className="pt-2 pb-4 max-w-2xl mx-auto">
-      <div className="px-4 mb-3">
-        <SearchBar />
-      </div>
       <TabBar activeTab={activeTab} />
 
       {activeTab === "follow" ? (
@@ -279,6 +291,17 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           {hasBanners && (
             <div className="mb-4">
               <HomeBannerCarousel banners={bannerItems} />
+            </div>
+          )}
+
+          {homeFirstColData && (
+            <div className="mb-6">
+              <EventVerticalCarousel
+                title="BTS THE CITY ARIRANG"
+                events={homeFirstColData.events}
+                collectionSlug={homeFirstColData.collection.slug}
+                collectionName={homeFirstColData.collection.nameEn}
+              />
             </div>
           )}
 
