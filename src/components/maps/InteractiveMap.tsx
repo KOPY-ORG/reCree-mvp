@@ -58,7 +58,7 @@ function MapContent({
     try {
       const bounds = new google.maps.LatLngBounds();
       places.forEach((p) => bounds.extend({ lat: p.latitude, lng: p.longitude }));
-      map.fitBounds(bounds, { top: 80, right: 60, bottom: sheetPeekH + 80, left: 60 });
+      map.fitBounds(bounds, { top: 100, right: 60, bottom: sheetPeekH + 80, left: 60 });
     } catch {
       // google.maps 미로드 시 무시
     }
@@ -67,19 +67,40 @@ function MapContent({
 
   useEffect(() => {
     if (!map) return;
-    const focusedId = focusedPlaceIds && focusedPlaceIds.size > 0
-      ? (focusedPlaceIds.values().next().value as string)
-      : null;
-    const activeId = selectedPlaceId ?? focusedId;
-    if (!activeId) return;
-    const place = places.find((p) => p.id === activeId);
-    if (!place) return;
-    const FOCUS_ZOOM = 12; // 카드 탭 시 도시 레벨 고정 (조정 예정)
-    const isFocusMove = !selectedPlaceId && !!focusedId;
-    if (isFocusMove) map.setZoom(FOCUS_ZOOM);
-    map.panTo({ lat: place.latitude, lng: place.longitude });
-    const offsetY = Math.round((window.innerHeight - bottomOffset) * 0.12);
-    map.panBy(0, offsetY);
+
+    // 활성 좌표 목록 결정 — focusedPlaceIds(복수) 우선, 없으면 selectedPlaceId(단일)
+    let coords: { lat: number; lng: number }[];
+    if (focusedPlaceIds && focusedPlaceIds.size > 0) {
+      coords = places
+        .filter((p) => focusedPlaceIds.has(p.id))
+        .map((p) => ({ lat: p.latitude, lng: p.longitude }));
+    } else if (selectedPlaceId) {
+      const p = places.find((place) => place.id === selectedPlaceId);
+      coords = p ? [{ lat: p.latitude, lng: p.longitude }] : [];
+    } else {
+      return;
+    }
+
+    if (coords.length === 0) return;
+
+    const containerH = window.innerHeight - bottomOffset;
+    const sheetPeekH = Math.round(containerH * 0.4);
+    const offsetY = Math.round(containerH * 0.12);
+
+    if (coords.length === 1) {
+      // 단일: panTo만 — fitBounds 쓰면 줌이 최대로 튄다
+      map.panTo(coords[0]);
+      map.panBy(0, offsetY);
+    } else {
+      // 복수: fitBounds — bottom에 시트 peek 높이 padding 포함
+      try {
+        const bounds = new google.maps.LatLngBounds();
+        coords.forEach((c) => bounds.extend(c));
+        map.fitBounds(bounds, { top: 160, right: 100, bottom: sheetPeekH + 80, left: 100 });
+      } catch {
+        // google.maps 미로드 시 무시
+      }
+    }
   }, [map, selectedPlaceId, focusedPlaceIds]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
