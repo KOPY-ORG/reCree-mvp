@@ -3,31 +3,13 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { Calendar, MapPin, Ticket } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import type { EventCategory, EventEntryType } from "@prisma/client";
 import { EventBackButton } from "./_components/EventBackButton";
 import { MapPreview } from "@/components/maps/MapPreview";
+import { getEventDict } from "@/lib/i18n/event-dict";
 
 // ── 상수 ────────────────────────────────────────────────────────────────────────
 
 const ACCENT = "#F01941";
-
-const CATEGORY_LABELS: Record<EventCategory, string> = {
-  CONCERT: "Concert",
-  LANDMARK_LIGHTING: "Light Show",
-  PROMOTION: "Promotion",
-  ACTIVITY: "Activity",
-  SHOPPING: "Shopping",
-  MOBILITY: "Mobility",
-  FNB: "F&B",
-  STAY: "Stay",
-  WELCOME_KIT: "Welcome Kit",
-};
-
-const ENTRY_TYPE_INFO: Record<EventEntryType, { label: string; note: string }> = {
-  WALK_IN: { label: "Walk-in", note: "No booking needed" },
-  RESERVATION: { label: "Reservation", note: "Required before visit" },
-  TICKET: { label: "Ticketed", note: "Purchase ticket to enter" },
-};
 
 // ── 헬퍼 ────────────────────────────────────────────────────────────────────────
 
@@ -55,7 +37,12 @@ function formatDateRangeUTC(start: Date, end: Date): string {
   return `${startMonth} ${startDay} – ${endMonth} ${endDay}`;
 }
 
-function formatTimeRange(open: string | null, close: string | null): string | null {
+function formatTimeRange(
+  open: string | null,
+  close: string | null,
+  fromPrefix = "From ",
+  untilPrefix = "Until ",
+): string | null {
   if (!open && !close) return null;
   const fmt = (t: string) => {
     const [h, m] = t.split(":").map(Number);
@@ -64,8 +51,8 @@ function formatTimeRange(open: string | null, close: string | null): string | nu
     return m ? `${hour}:${String(m).padStart(2, "0")} ${ampm}` : `${hour} ${ampm}`;
   };
   if (open && close) return `${fmt(open)} – ${fmt(close)}`;
-  if (open) return `From ${fmt(open)}`;
-  return `Until ${fmt(close!)}`;
+  if (open) return `${fromPrefix}${fmt(open)}`;
+  return `${untilPrefix}${fmt(close!)}`;
 }
 
 function safeHostname(url: string): string {
@@ -155,10 +142,16 @@ async function getEventDetail(collectionSlug: string, eventSlug: string) {
 
 // ── generateMetadata ──────────────────────────────────────────────────────────
 
-type Props = { params: Promise<{ collectionSlug: string; eventSlug: string }> };
+type Props = {
+  params: Promise<{ collectionSlug: string; eventSlug: string }>;
+  searchParams: Promise<{ lang?: string }>;
+};
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { collectionSlug, eventSlug } = await params;
+  const { lang } = await searchParams;
+  const locale = lang ?? "en";
+
   const event = await prisma.event.findFirst({
     where: {
       slug: eventSlug,
@@ -168,7 +161,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     select: {
       bannerImageUrl: true,
       translations: {
-        where: { locale: { in: ["en", "ko"] } },
         select: { locale: true, name: true, description: true },
       },
     },
@@ -176,7 +168,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!event) return {};
 
-  const t = pickTranslation(event.translations, "en", "ko");
+  const t = pickTranslation(event.translations, locale, "ko");
   const name = t?.name ?? "";
   const description = t?.description?.slice(0, 160) ??
     `Experience ${name} — an exclusive K-culture event. Discover more on reCree.`;
@@ -207,26 +199,30 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 // ── 페이지 ──────────────────────────────────────────────────────────────────────
 
-export default async function EventDetailPage({ params }: Props) {
+export default async function EventDetailPage({ params, searchParams }: Props) {
   const { collectionSlug, eventSlug } = await params;
+  const { lang } = await searchParams;
+  const locale = lang ?? "en";
+  const dict = getEventDict(locale);
+
   const event = await getEventDetail(collectionSlug, eventSlug);
   if (!event) notFound();
 
-  const t = pickTranslation(event.translations, "en", "ko");
-  const collectionT = pickTranslation(event.collection.translations, "en", "ko");
+  const t = pickTranslation(event.translations, locale, "ko");
+  const collectionT = pickTranslation(event.collection.translations, locale, "ko");
 
   const eventName = t?.name ?? "";
   const description = t?.description ?? "";
-  const hoursNote = t?.hoursNote ?? "Open daily";
+  const hoursNote = t?.hoursNote ?? dict.openDaily;
   const collectionName = collectionT?.name ?? event.collection.slug;
   const places = event.places.map((ep) => ep.place);
   const placeCount = places.length;
   const firstPlaceName = placeCount > 0 ? (places[0].nameEn ?? places[0].nameKo) : null;
   const dateRange = formatDateRangeUTC(event.startDate, event.endDate);
   const year = String(event.startDate.getUTCFullYear());
-  const timeRange = formatTimeRange(event.openTime, event.closeTime);
-  const entryInfo = ENTRY_TYPE_INFO[event.entryType];
-  const categoryLabel = CATEGORY_LABELS[event.category];
+  const timeRange = formatTimeRange(event.openTime, event.closeTime, dict.fromPrefix, dict.untilPrefix);
+  const entryInfo = dict.entryType[event.entryType];
+  const categoryLabel = dict.category[event.category];
   const hasLinks = !!(event.officialUrl || event.snsUrl);
   const hasAbout = !!(description || event.bodyBlocks.length > 0);
 
@@ -339,7 +335,7 @@ export default async function EventDetailPage({ params }: Props) {
                 }}
               >
                 <MapPin size={11} color={ACCENT} />
-                {placeCount === 1 ? firstPlaceName : `${placeCount} locations`}
+                {placeCount === 1 ? firstPlaceName : `${placeCount} ${dict.locationsCount}`}
               </span>
             )}
           </div>
@@ -404,7 +400,7 @@ export default async function EventDetailPage({ params }: Props) {
                 className="font-extrabold mb-1"
                 style={{ fontSize: 10.5, letterSpacing: "0.12em", color: "#9AA0A8" }}
               >
-                DATES
+                {dict.dates}
               </div>
               <div
                 className="font-extrabold text-[#16181C]"
@@ -431,7 +427,7 @@ export default async function EventDetailPage({ params }: Props) {
                     className="font-extrabold mb-1"
                     style={{ fontSize: 10.5, letterSpacing: "0.12em", color: "#9AA0A8" }}
                   >
-                    HOURS
+                    {dict.hours}
                   </div>
                   <div
                     className="font-extrabold text-[#16181C]"
@@ -515,7 +511,7 @@ export default async function EventDetailPage({ params }: Props) {
                 className="font-extrabold text-[#16181C] mb-2"
                 style={{ fontSize: 16.5, letterSpacing: "-0.01em" }}
               >
-                Location
+                {dict.location}
               </h2>
               {(p.nameEn || p.nameKo) && (
                 <div
@@ -590,11 +586,11 @@ export default async function EventDetailPage({ params }: Props) {
               className="font-extrabold text-[#16181C] mb-3"
               style={{ fontSize: 16.5, letterSpacing: "-0.01em" }}
             >
-              What you&apos;ll get here
+              {dict.whatYouGet}
             </h2>
             <div className="space-y-3">
               {event.perks.map((perk, i) => {
-                const perkT = pickTranslation(perk.translations, "en", "ko");
+                const perkT = pickTranslation(perk.translations, locale, "ko");
                 const card = (
                   <div
                     className="flex rounded-[14px] overflow-hidden"
@@ -670,7 +666,7 @@ export default async function EventDetailPage({ params }: Props) {
               className="font-extrabold text-[#16181C] mb-3"
               style={{ fontSize: 16.5, letterSpacing: "-0.01em" }}
             >
-              About this spot
+              {dict.aboutSpot}
             </h2>
             {description && (
               <p
@@ -684,7 +680,7 @@ export default async function EventDetailPage({ params }: Props) {
               <div className="space-y-4">
                 {event.bodyBlocks.map((block, i) => {
                   if (block.type === "TEXT") {
-                    const blockT = pickTranslation(block.translations, "en", "ko");
+                    const blockT = pickTranslation(block.translations, locale, "ko");
                     if (!blockT?.text) return null;
                     return (
                       <p
@@ -735,7 +731,7 @@ export default async function EventDetailPage({ params }: Props) {
               className="font-extrabold text-[#16181C] mb-3"
               style={{ fontSize: 16.5, letterSpacing: "-0.01em" }}
             >
-              Links
+              {dict.links}
             </h2>
             <div className="space-y-2">
               {event.officialUrl && (
@@ -751,7 +747,7 @@ export default async function EventDetailPage({ params }: Props) {
                 >
                   <div>
                     <div className="font-extrabold text-[#16181C]" style={{ fontSize: 14 }}>
-                      Official event site
+                      {dict.officialSite}
                     </div>
                     <div className="font-semibold" style={{ fontSize: 12, color: "#9AA0A8" }}>
                       {safeHostname(event.officialUrl)}
