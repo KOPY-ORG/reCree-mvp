@@ -37,7 +37,7 @@ export type BodyBlockData = {
 
 export type EventFormData = {
   slug: string;
-  placeId: string;
+  places: { placeId: string; sortOrder: number }[];
   eventCollectionId: string;
   category: EventCategory;
   startDate: string;   // "YYYY-MM-DD"
@@ -74,7 +74,6 @@ export async function checkEventSlug(
 function toEventInput(data: EventFormData) {
   return {
     slug: data.slug.trim(),
-    placeId: data.placeId,
     eventCollectionId: data.eventCollectionId,
     category: data.category,
     startDate: new Date(data.startDate),
@@ -141,7 +140,7 @@ export async function createEvent(
   if (!data.slug.trim()) return { error: "슬러그를 입력해주세요." };
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(data.slug.trim()))
     return { error: "슬러그는 소문자·숫자·하이픈(-)만 사용할 수 있습니다." };
-  if (!data.placeId) return { error: "장소를 선택해주세요." };
+  if (!data.places || data.places.length === 0) return { error: "장소를 1개 이상 선택해주세요." };
   if (!data.eventCollectionId) return { error: "컬렉션을 선택해주세요." };
   if (!data.startDate || !data.endDate) return { error: "기간을 입력해주세요." };
   if (new Date(data.startDate) > new Date(data.endDate))
@@ -172,6 +171,13 @@ export async function createEvent(
   try {
     await prisma.$transaction(async (tx) => {
       const event = await tx.event.create({ data: toEventInput(data) });
+      await tx.eventPlace.createMany({
+        data: data.places.map((p) => ({
+          eventId: event.id,
+          placeId: p.placeId,
+          sortOrder: p.sortOrder,
+        })),
+      });
       const rows = buildTranslationRows(event.id, data.translations);
       if (rows.length) {
         await tx.eventTranslation.createMany({ data: rows });
@@ -230,7 +236,7 @@ export async function updateEvent(
   if (!data.slug.trim()) return { error: "슬러그를 입력해주세요." };
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(data.slug.trim()))
     return { error: "슬러그는 소문자·숫자·하이픈(-)만 사용할 수 있습니다." };
-  if (!data.placeId) return { error: "장소를 선택해주세요." };
+  if (!data.places || data.places.length === 0) return { error: "장소를 1개 이상 선택해주세요." };
   if (!data.eventCollectionId) return { error: "컬렉션을 선택해주세요." };
   if (!data.startDate || !data.endDate) return { error: "기간을 입력해주세요." };
   if (new Date(data.startDate) > new Date(data.endDate))
@@ -260,7 +266,15 @@ export async function updateEvent(
 
   try {
     await prisma.$transaction(async (tx) => {
+      await tx.eventPlace.deleteMany({ where: { eventId: id } });
       await tx.event.update({ where: { id }, data: toEventInput(data) });
+      await tx.eventPlace.createMany({
+        data: data.places.map((p) => ({
+          eventId: id,
+          placeId: p.placeId,
+          sortOrder: p.sortOrder,
+        })),
+      });
       await tx.eventTranslation.deleteMany({ where: { eventId: id } });
       // 혜택 replace: 자식(translation) 먼저 삭제 후 perk 삭제 (FK 순서)
       await tx.eventPerkTranslation.deleteMany({ where: { perk: { eventId: id } } });
