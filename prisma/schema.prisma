@@ -58,6 +58,7 @@ enum SourceType {
 enum SaveTarget {
   POST
   RECREESHOT
+  EVENT
 }
 
 enum SectionType {
@@ -322,6 +323,7 @@ model Place {
   naverPlaceId   String?
   naverMapsUrl   String?
   kakaoMapsUrl   String?
+  amapUrl        String?
   gettingThere   String? // 교통편 안내 텍스트
   streetViewUrl  String? // Google Street View URL
   placeTypes     String[]    @default([]) // 장소 유형 key 배열 (예: ["cafe", "photo_spot"])
@@ -342,7 +344,7 @@ model Place {
   postPlaces  PostPlace[]
   reCreeshots ReCreeshot[]
   placeImages PlaceImage[]
-  events      Event[]
+  eventPlaces EventPlace[]
 }
 
 model ReCreeshot {
@@ -608,7 +610,6 @@ model EventCollectionTranslation {
 model Event {
   id                String         @id @default(uuid()) @db.Uuid
   slug              String         @unique // "galaxy-experience-zone" — 소문자 케밥, URL용
-  placeId           String         @db.Uuid
   eventCollectionId String         @db.Uuid
   category          EventCategory
   startDate         DateTime
@@ -623,17 +624,17 @@ model Event {
   status            EventStatus    @default(DRAFT)
   showOnHome        Boolean        @default(false)
   sortOrder         Int            @default(0)
+  saveCount         Int            @default(0)
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
 
-  place        Place              @relation(fields: [placeId], references: [id])
   collection   EventCollection    @relation(fields: [eventCollectionId], references: [id])
+  places       EventPlace[]
   translations EventTranslation[]
   perks        EventPerk[]
   bodyBlocks   EventBodyBlock[]
 
   @@index([eventCollectionId])
-  @@index([placeId])
 }
 
 model EventTranslation {
@@ -697,4 +698,19 @@ model EventBodyBlockTranslation {
   block EventBodyBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
 
   @@unique([blockId, locale])
+}
+
+model EventPlace {
+  id        String   @id @default(uuid()) @db.Uuid
+  eventId   String   @db.Uuid
+  placeId   String   @db.Uuid
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  place Place @relation(fields: [placeId], references: [id])
+
+  @@unique([eventId, placeId])
+  @@index([eventId])
+  @@index([placeId])
 }
