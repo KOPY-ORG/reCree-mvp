@@ -31,7 +31,7 @@ import type { TagGroupColorMap } from "@/lib/post-labels";
 import type {
   ActiveEventCollection,
   EventCollectionForMap,
-  EventCollectionMapEvent,
+  EventCollectionMapMarker,
 } from "@/lib/event-collection-queries";
 
 type ChipInfo = { id: string; label: string; bg: string; fg: string };
@@ -417,13 +417,13 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
 
   // ── 이벤트 모드 파생 (계속) ──────────────────────────────────────────────────
 
-  const events: EventCollectionMapEvent[] = useMemo(
-    () => activeEventData?.events ?? [],
+  const events: EventCollectionMapMarker[] = useMemo(
+    () => activeEventData?.markers ?? [],
     [activeEventData]
   );
 
   const eventsByPlace = useMemo(() => {
-    const map: Record<string, EventCollectionMapEvent[]> = {};
+    const map: Record<string, EventCollectionMapMarker[]> = {};
     for (const event of events) {
       const pid = event.place.id;
       if (!map[pid]) map[pid] = [];
@@ -616,7 +616,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
             <div className="px-4 pt-2 pb-4 space-y-2">
               {events.map((event) => (
                 <EventListCard
-                  key={event.id}
+                  key={event.eventPlaceId}
                   event={event}
                   collectionName={activeEventData!.collection.nameEn}
                   collectionSlug={collectionSlug!}

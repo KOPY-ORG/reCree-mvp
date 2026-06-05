@@ -5,12 +5,12 @@ import Link from "next/link";
 import { Calendar, MapPin, Bookmark, ChevronRight } from "lucide-react";
 import { isExternalImage } from "@/lib/image";
 import { getDDay, formatDateRangeUTC } from "@/lib/event-format";
-import type { EventCollectionMapEvent } from "@/lib/event-collection-queries";
+import type { EventCollectionMapMarker } from "@/lib/event-collection-queries";
 
 // ── 컴포넌트 ──────────────────────────────────────────────────────────────────
 
 interface Props {
-  event: EventCollectionMapEvent;
+  event: EventCollectionMapMarker;
   collectionName: string;
   collectionSlug: string;
   isSelected?: boolean;
@@ -161,7 +161,7 @@ export function EventListCard({
 
         {/* 이벤트 상세 chevron */}
         <Link
-          href={`/events/${collectionSlug}/${event.slug}`}
+          href={`/events/${collectionSlug}/${event.eventSlug}`}
           onClick={(e) => e.stopPropagation()}
           className="shrink-0 self-stretch flex items-center pl-1 pr-3"
           aria-label="View event detail"

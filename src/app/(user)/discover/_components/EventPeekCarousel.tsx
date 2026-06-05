@@ -3,10 +3,10 @@
 import { useRef, useState } from "react";
 import { X } from "lucide-react";
 import { EventListCard } from "@/components/maps/EventListCard";
-import type { EventCollectionMapEvent } from "@/lib/event-collection-queries";
+import type { EventCollectionMapMarker } from "@/lib/event-collection-queries";
 
 interface Props {
-  events: EventCollectionMapEvent[];
+  events: EventCollectionMapMarker[];
   collectionSlug: string;
   collectionName: string;
   onClose?: () => void;
@@ -54,7 +54,7 @@ export function EventPeekCarousel({ events, collectionSlug, collectionName, onCl
       >
         {events.map((event) => (
           <div
-            key={event.id}
+            key={event.eventPlaceId}
             className="flex-shrink-0"
             style={isMulti ? { width: "90%", scrollSnapAlign: "center" } : { width: "100%" }}
           >

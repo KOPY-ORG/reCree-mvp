@@ -5,10 +5,10 @@ import Link from "next/link";
 import { Calendar, MapPin } from "lucide-react";
 import { isExternalImage } from "@/lib/image";
 import { getDDay, formatDateRangeUTC } from "@/lib/event-format";
-import type { EventCollectionMapEvent } from "@/lib/event-collection-queries";
+import type { EventCollectionMapMarker } from "@/lib/event-collection-queries";
 
 interface Props {
-  event: EventCollectionMapEvent;
+  event: EventCollectionMapMarker;
   collectionName: string;
   collectionSlug: string;
   /** 티켓 노치 반원 배경색 — 카드가 놓일 컨테이너 배경과 일치시킬 것 */
@@ -93,7 +93,7 @@ export function EventVerticalCard({
 
       {/* ── 본문 ── */}
       <Link
-        href={`/events/${collectionSlug}/${event.slug}`}
+        href={`/events/${collectionSlug}/${event.eventSlug}`}
         className="flex flex-col gap-0.5 px-2 pt-2 pb-2.5"
       >
         {/* 컬렉션명 */}

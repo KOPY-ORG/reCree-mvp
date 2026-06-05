@@ -18,7 +18,7 @@ export function HotTabStub({ eventCollections, eventMapData }: Props) {
       <EventVerticalCarousel
         title="Catch it in Busan Now"
         titleClassName="text-sm font-semibold text-foreground"
-        events={colData?.events ?? []}
+        events={colData?.markers ?? []}
         collectionSlug={colData?.collection.slug ?? firstCol?.slug ?? ""}
         collectionName={colData?.collection.nameEn ?? ""}
       />

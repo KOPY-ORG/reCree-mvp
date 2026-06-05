@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { EventVerticalCard } from "./EventVerticalCard";
-import type { EventCollectionMapEvent } from "@/lib/event-collection-queries";
+import type { EventCollectionMapMarker } from "@/lib/event-collection-queries";
 
 interface Props {
   title: string;
   titleClassName?: string;
-  events: EventCollectionMapEvent[];
+  events: EventCollectionMapMarker[];
   collectionSlug: string;
   collectionName: string;
   notchBg?: string;
@@ -39,7 +39,7 @@ export function EventVerticalCarousel({
       >
         {events.map((event) => (
           <div
-            key={event.id}
+            key={event.eventPlaceId}
             className="flex-shrink-0 w-[42%]"
             style={{ scrollSnapAlign: "start" }}
           >
