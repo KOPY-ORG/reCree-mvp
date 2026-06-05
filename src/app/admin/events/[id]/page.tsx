@@ -36,7 +36,10 @@ export default async function CollectionDetailPage({
           endDate: true,
           createdAt: true,
           bannerImageUrl: true,
-          place: { select: { nameKo: true } },
+          places: {
+            orderBy: { sortOrder: "asc" },
+            select: { place: { select: { nameKo: true, nameEn: true } } },
+          },
           translations: {
             where: { locale: "ko" },
             select: { name: true },

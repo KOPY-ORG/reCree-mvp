@@ -29,26 +29,24 @@ export default async function EditEventPage({
   if (!event || !collection) notFound();
   if (event.eventCollectionId !== id) notFound();
 
-  const place: PlaceForForm | null = event.place
-    ? {
-        id: event.placeId,
-        nameKo: event.place.nameKo,
-        nameEn: event.place.nameEn,
-        addressKo: event.place.addressKo,
-        addressEn: event.place.addressEn ?? null,
-        latitude: event.place.latitude,
-        longitude: event.place.longitude,
-        phone: event.place.phone,
-        imageUrl: event.place.imageUrl,
-        placeImages: event.place.placeImages,
-        rating: event.place.rating,
-        status: event.place.status,
-        operatingHours: event.place.operatingHours,
-        googleMapsUrl: event.place.googleMapsUrl,
-        naverMapsUrl: event.place.naverMapsUrl,
-        gettingThere: event.place.gettingThere,
-      }
-    : null;
+  const places: PlaceForForm[] = event.places.map((ep) => ({
+    id: ep.place.id,
+    nameKo: ep.place.nameKo ?? "",
+    nameEn: ep.place.nameEn,
+    addressKo: ep.place.addressKo,
+    addressEn: ep.place.addressEn ?? null,
+    latitude: ep.place.latitude,
+    longitude: ep.place.longitude,
+    phone: ep.place.phone,
+    imageUrl: ep.place.imageUrl,
+    placeImages: ep.place.placeImages,
+    rating: ep.place.rating,
+    status: ep.place.status,
+    operatingHours: ep.place.operatingHours,
+    googleMapsUrl: ep.place.googleMapsUrl,
+    naverMapsUrl: ep.place.naverMapsUrl,
+    gettingThere: ep.place.gettingThere,
+  }));
 
   const translations = Object.fromEntries(
     event.translations.map((t) => [
@@ -83,8 +81,7 @@ export default async function EditEventPage({
   const initialData: EventInitialData = {
     id: event.id,
     slug: event.slug,
-    placeId: event.placeId,
-    place,
+    places,
     eventCollectionId: event.eventCollectionId,
     category: event.category,
     startDate: event.startDate.toISOString().slice(0, 10),

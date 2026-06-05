@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { EventBlockType, EventCategory, EventEntryType, EventStatus } from "@prisma/client";
@@ -37,7 +38,7 @@ export type BodyBlockData = {
 
 export type EventFormData = {
   slug: string;
-  placeId: string;
+  places: { placeId: string; sortOrder: number }[];
   eventCollectionId: string;
   category: EventCategory;
   startDate: string;   // "YYYY-MM-DD"
@@ -74,7 +75,6 @@ export async function checkEventSlug(
 function toEventInput(data: EventFormData) {
   return {
     slug: data.slug.trim(),
-    placeId: data.placeId,
     eventCollectionId: data.eventCollectionId,
     category: data.category,
     startDate: new Date(data.startDate),
@@ -138,10 +138,12 @@ function buildPerkTranslationRows(
 export async function createEvent(
   data: EventFormData,
 ): Promise<{ error?: string }> {
+  const user = await getCurrentUser();
+  if (!user || user.role === "USER") return { error: "권한이 없습니다." };
   if (!data.slug.trim()) return { error: "슬러그를 입력해주세요." };
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(data.slug.trim()))
     return { error: "슬러그는 소문자·숫자·하이픈(-)만 사용할 수 있습니다." };
-  if (!data.placeId) return { error: "장소를 선택해주세요." };
+  if (!data.places || data.places.length === 0) return { error: "장소를 1개 이상 선택해주세요." };
   if (!data.eventCollectionId) return { error: "컬렉션을 선택해주세요." };
   if (!data.startDate || !data.endDate) return { error: "기간을 입력해주세요." };
   if (new Date(data.startDate) > new Date(data.endDate))
@@ -172,6 +174,13 @@ export async function createEvent(
   try {
     await prisma.$transaction(async (tx) => {
       const event = await tx.event.create({ data: toEventInput(data) });
+      await tx.eventPlace.createMany({
+        data: data.places.map((p) => ({
+          eventId: event.id,
+          placeId: p.placeId,
+          sortOrder: p.sortOrder,
+        })),
+      });
       const rows = buildTranslationRows(event.id, data.translations);
       if (rows.length) {
         await tx.eventTranslation.createMany({ data: rows });
@@ -227,10 +236,12 @@ export async function updateEvent(
   id: string,
   data: EventFormData,
 ): Promise<{ error?: string }> {
+  const user = await getCurrentUser();
+  if (!user || user.role === "USER") return { error: "권한이 없습니다." };
   if (!data.slug.trim()) return { error: "슬러그를 입력해주세요." };
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(data.slug.trim()))
     return { error: "슬러그는 소문자·숫자·하이픈(-)만 사용할 수 있습니다." };
-  if (!data.placeId) return { error: "장소를 선택해주세요." };
+  if (!data.places || data.places.length === 0) return { error: "장소를 1개 이상 선택해주세요." };
   if (!data.eventCollectionId) return { error: "컬렉션을 선택해주세요." };
   if (!data.startDate || !data.endDate) return { error: "기간을 입력해주세요." };
   if (new Date(data.startDate) > new Date(data.endDate))
@@ -260,7 +271,15 @@ export async function updateEvent(
 
   try {
     await prisma.$transaction(async (tx) => {
+      await tx.eventPlace.deleteMany({ where: { eventId: id } });
       await tx.event.update({ where: { id }, data: toEventInput(data) });
+      await tx.eventPlace.createMany({
+        data: data.places.map((p) => ({
+          eventId: id,
+          placeId: p.placeId,
+          sortOrder: p.sortOrder,
+        })),
+      });
       await tx.eventTranslation.deleteMany({ where: { eventId: id } });
       // 혜택 replace: 자식(translation) 먼저 삭제 후 perk 삭제 (FK 순서)
       await tx.eventPerkTranslation.deleteMany({ where: { perk: { eventId: id } } });
@@ -320,6 +339,8 @@ export async function updateEvent(
 }
 
 export async function deleteEvent(id: string): Promise<{ error?: string }> {
+  const user = await getCurrentUser();
+  if (!user || user.role === "USER") return { error: "권한이 없습니다." };
   try {
     const event = await prisma.event.findUnique({
       where: { id },
@@ -343,7 +364,6 @@ export async function getEventForEdit(id: string) {
     select: {
       id: true,
       slug: true,
-      placeId: true,
       eventCollectionId: true,
       category: true,
       startDate: true,
@@ -366,25 +386,32 @@ export async function getEventForEdit(id: string) {
           hoursNote: true,
         },
       },
-      place: {
+      places: {
+        orderBy: { sortOrder: "asc" },
         select: {
-          nameKo: true,
-          nameEn: true,
-          addressKo: true,
-          addressEn: true,
-          latitude: true,
-          longitude: true,
-          phone: true,
-          imageUrl: true,
-          rating: true,
-          status: true,
-          operatingHours: true,
-          googleMapsUrl: true,
-          naverMapsUrl: true,
-          gettingThere: true,
-          placeImages: {
-            orderBy: { sortOrder: "asc" },
-            select: { url: true, isThumbnail: true },
+          id: true,
+          place: {
+            select: {
+              id: true,
+              nameKo: true,
+              nameEn: true,
+              addressKo: true,
+              addressEn: true,
+              latitude: true,
+              longitude: true,
+              phone: true,
+              imageUrl: true,
+              rating: true,
+              status: true,
+              operatingHours: true,
+              googleMapsUrl: true,
+              naverMapsUrl: true,
+              gettingThere: true,
+              placeImages: {
+                orderBy: { sortOrder: "asc" },
+                select: { url: true, isThumbnail: true },
+              },
+            },
           },
         },
       },

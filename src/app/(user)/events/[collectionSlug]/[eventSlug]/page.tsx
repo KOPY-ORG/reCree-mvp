@@ -3,38 +3,21 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { Calendar, MapPin, Ticket } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import type { EventCategory, EventEntryType } from "@prisma/client";
 import { EventBackButton } from "./_components/EventBackButton";
 import { MapPreview } from "@/components/maps/MapPreview";
+import { getEventDict } from "@/lib/i18n/event-dict";
+import { EventLangSwitcher } from "./_components/EventLangSwitcher";
 
 // ── 상수 ────────────────────────────────────────────────────────────────────────
 
 const ACCENT = "#F01941";
-
-const CATEGORY_LABELS: Record<EventCategory, string> = {
-  CONCERT: "Concert",
-  LANDMARK_LIGHTING: "Light Show",
-  PROMOTION: "Promotion",
-  ACTIVITY: "Activity",
-  SHOPPING: "Shopping",
-  MOBILITY: "Mobility",
-  FNB: "F&B",
-  STAY: "Stay",
-  WELCOME_KIT: "Welcome Kit",
-};
-
-const ENTRY_TYPE_INFO: Record<EventEntryType, { label: string; note: string }> = {
-  WALK_IN: { label: "Walk-in", note: "No booking needed" },
-  RESERVATION: { label: "Reservation", note: "Required before visit" },
-  TICKET: { label: "Ticketed", note: "Purchase ticket to enter" },
-};
 
 // ── 헬퍼 ────────────────────────────────────────────────────────────────────────
 
 function pickTranslation<T extends { locale: string }>(
   items: T[],
   locale = "en",
-  fallback = "ko",
+  fallback = "en",
 ): T | undefined {
   return (
     items.find((t) => t.locale === locale) ??
@@ -55,17 +38,20 @@ function formatDateRangeUTC(start: Date, end: Date): string {
   return `${startMonth} ${startDay} – ${endMonth} ${endDay}`;
 }
 
-function formatTimeRange(open: string | null, close: string | null): string | null {
+function formatTimeRange(
+  open: string | null,
+  close: string | null,
+  fromDate: (d: string) => string,
+  untilDate: (d: string) => string,
+): string | null {
   if (!open && !close) return null;
   const fmt = (t: string) => {
     const [h, m] = t.split(":").map(Number);
-    const ampm = h >= 12 ? "PM" : "AM";
-    const hour = h % 12 || 12;
-    return m ? `${hour}:${String(m).padStart(2, "0")} ${ampm}` : `${hour} ${ampm}`;
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
   };
   if (open && close) return `${fmt(open)} – ${fmt(close)}`;
-  if (open) return `From ${fmt(open)}`;
-  return `Until ${fmt(close!)}`;
+  if (open) return fromDate(fmt(open));
+  return untilDate(fmt(close!));
 }
 
 function safeHostname(url: string): string {
@@ -112,16 +98,23 @@ async function getEventDetail(collectionSlug: string, eventSlug: string) {
           translations: { select: { locale: true, name: true } },
         },
       },
-      place: {
+      places: {
+        orderBy: { sortOrder: "asc" },
         select: {
-          nameEn: true,
-          nameKo: true,
-          addressEn: true,
-          addressKo: true,
-          latitude: true,
-          longitude: true,
-          googleMapsUrl: true,
-          naverMapsUrl: true,
+          place: {
+            select: {
+              nameEn: true,
+              nameKo: true,
+              addressEn: true,
+              addressKo: true,
+              latitude: true,
+              longitude: true,
+              googleMapsUrl: true,
+              naverMapsUrl: true,
+              kakaoMapsUrl: true,
+              amapUrl: true,
+            },
+          },
         },
       },
       bodyBlocks: {
@@ -148,10 +141,16 @@ async function getEventDetail(collectionSlug: string, eventSlug: string) {
 
 // ── generateMetadata ──────────────────────────────────────────────────────────
 
-type Props = { params: Promise<{ collectionSlug: string; eventSlug: string }> };
+type Props = {
+  params: Promise<{ collectionSlug: string; eventSlug: string }>;
+  searchParams: Promise<{ lang?: string }>;
+};
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { collectionSlug, eventSlug } = await params;
+  const { lang } = await searchParams;
+  const locale = lang ?? "en";
+
   const event = await prisma.event.findFirst({
     where: {
       slug: eventSlug,
@@ -161,7 +160,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     select: {
       bannerImageUrl: true,
       translations: {
-        where: { locale: { in: ["en", "ko"] } },
         select: { locale: true, name: true, description: true },
       },
     },
@@ -169,7 +167,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!event) return {};
 
-  const t = pickTranslation(event.translations, "en", "ko");
+  const t = pickTranslation(event.translations, locale, "en");
   const name = t?.name ?? "";
   const description = t?.description?.slice(0, 160) ??
     `Experience ${name} — an exclusive K-culture event. Discover more on reCree.`;
@@ -200,31 +198,31 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 // ── 페이지 ──────────────────────────────────────────────────────────────────────
 
-export default async function EventDetailPage({ params }: Props) {
+export default async function EventDetailPage({ params, searchParams }: Props) {
   const { collectionSlug, eventSlug } = await params;
+  const { lang } = await searchParams;
+  const locale = lang ?? "en";
+  const dict = getEventDict(locale);
+
   const event = await getEventDetail(collectionSlug, eventSlug);
   if (!event) notFound();
 
-  const t = pickTranslation(event.translations, "en", "ko");
-  const collectionT = pickTranslation(event.collection.translations, "en", "ko");
+  const t = pickTranslation(event.translations, locale, "en");
+  const collectionT = pickTranslation(event.collection.translations, locale, "en");
 
   const eventName = t?.name ?? "";
   const description = t?.description ?? "";
-  const hoursNote = t?.hoursNote ?? "Open daily";
+  const hoursNote = t?.hoursNote ?? dict.openDaily;
   const collectionName = collectionT?.name ?? event.collection.slug;
-  const placeNameEn = event.place.nameEn ?? event.place.nameKo;
+  const places = event.places.map((ep) => ep.place);
+  const placeCount = places.length;
+  const firstPlaceName = placeCount > 0 ? (places[0].nameEn ?? places[0].nameKo) : null;
   const dateRange = formatDateRangeUTC(event.startDate, event.endDate);
   const year = String(event.startDate.getUTCFullYear());
-  const timeRange = formatTimeRange(event.openTime, event.closeTime);
-  const entryInfo = ENTRY_TYPE_INFO[event.entryType];
-  const categoryLabel = CATEGORY_LABELS[event.category];
+  const timeRange = formatTimeRange(event.openTime, event.closeTime, dict.fromDate, dict.untilDate);
+  const entryInfo = dict.entryType[event.entryType];
+  const categoryLabel = dict.category[event.category];
   const hasLinks = !!(event.officialUrl || event.snsUrl);
-  const hasPlace = !!(
-    event.place.latitude &&
-    event.place.longitude ||
-    event.place.addressEn ||
-    event.place.addressKo
-  );
   const hasAbout = !!(description || event.bodyBlocks.length > 0);
 
   return (
@@ -256,9 +254,10 @@ export default async function EventDetailPage({ params }: Props) {
           }}
         />
 
-        {/* 상단 바 — 뒤로가기 */}
+        {/* 상단 바 — 뒤로가기 + 언어 전환 */}
         <div className="absolute top-0 left-0 right-0 flex items-center px-4 pt-4">
           <EventBackButton />
+          <div className="ml-auto"><EventLangSwitcher /></div>
         </div>
 
         {/* 이벤트 뱃지 */}
@@ -325,7 +324,7 @@ export default async function EventDetailPage({ params }: Props) {
             >
               {categoryLabel}
             </span>
-            {placeNameEn && (
+            {placeCount > 0 && (
               <span
                 className="inline-flex items-center gap-1 px-2.5 py-[5px] rounded-full font-semibold"
                 style={{
@@ -336,7 +335,7 @@ export default async function EventDetailPage({ params }: Props) {
                 }}
               >
                 <MapPin size={11} color={ACCENT} />
-                {placeNameEn}
+                {placeCount === 1 ? firstPlaceName : dict.locationsLabel(placeCount)}
               </span>
             )}
           </div>
@@ -401,7 +400,7 @@ export default async function EventDetailPage({ params }: Props) {
                 className="font-extrabold mb-1"
                 style={{ fontSize: 10.5, letterSpacing: "0.12em", color: "#9AA0A8" }}
               >
-                DATES
+                {dict.dates}
               </div>
               <div
                 className="font-extrabold text-[#16181C]"
@@ -428,7 +427,7 @@ export default async function EventDetailPage({ params }: Props) {
                     className="font-extrabold mb-1"
                     style={{ fontSize: 10.5, letterSpacing: "0.12em", color: "#9AA0A8" }}
                   >
-                    HOURS
+                    {dict.hours}
                   </div>
                   <div
                     className="font-extrabold text-[#16181C]"
@@ -487,8 +486,9 @@ export default async function EventDetailPage({ params }: Props) {
         </div>
 
         {/* ── 장소 블록 ────────────────────────────────────────────────────────── */}
-        {hasPlace && (
+        {placeCount > 0 && places.map((p, idx) => (
           <div
+            key={p.nameEn ?? p.nameKo ?? String(idx)}
             className="mb-[13px] overflow-hidden"
             style={{
               background: "#fff",
@@ -497,10 +497,10 @@ export default async function EventDetailPage({ params }: Props) {
               border: "1px solid #EEEFF2",
             }}
           >
-            {event.place.latitude && event.place.longitude && (
+            {p.latitude && p.longitude && (
               <MapPreview
-                lat={event.place.latitude}
-                lng={event.place.longitude}
+                lat={p.latitude}
+                lng={p.longitude}
                 zoom={15}
                 height={180}
                 className="rounded-none border-0 border-b border-[#EEEFF2]"
@@ -511,29 +511,29 @@ export default async function EventDetailPage({ params }: Props) {
                 className="font-extrabold text-[#16181C] mb-2"
                 style={{ fontSize: 16.5, letterSpacing: "-0.01em" }}
               >
-                Location
+                {dict.location}
               </h2>
-              {(event.place.nameEn || event.place.nameKo) && (
+              {(p.nameEn || p.nameKo) && (
                 <div
                   className="font-semibold text-[#16181C] mb-0.5"
                   style={{ fontSize: 14 }}
                 >
-                  {event.place.nameEn ?? event.place.nameKo}
+                  {p.nameEn ?? p.nameKo}
                 </div>
               )}
-              {(event.place.addressEn || event.place.addressKo) && (
+              {(p.addressEn || p.addressKo) && (
                 <div
                   className="font-medium"
                   style={{ fontSize: 13, color: "#8A8F98", lineHeight: 1.5 }}
                 >
-                  {event.place.addressEn ?? event.place.addressKo}
+                  {p.addressEn ?? p.addressKo}
                 </div>
               )}
-              {(event.place.googleMapsUrl || event.place.naverMapsUrl) && (
+              {(p.googleMapsUrl || p.naverMapsUrl) && (
                 <div className="flex gap-2 mt-3">
-                  {event.place.googleMapsUrl && (
+                  {p.googleMapsUrl && (
                     <a
-                      href={event.place.googleMapsUrl}
+                      href={p.googleMapsUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[10px] font-bold"
@@ -548,9 +548,9 @@ export default async function EventDetailPage({ params }: Props) {
                       Google Maps
                     </a>
                   )}
-                  {event.place.naverMapsUrl && (
+                  {p.naverMapsUrl && (
                     <a
-                      href={event.place.naverMapsUrl}
+                      href={p.naverMapsUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[10px] font-bold"
@@ -569,7 +569,7 @@ export default async function EventDetailPage({ params }: Props) {
               )}
             </div>
           </div>
-        )}
+        ))}
 
         {/* ── 혜택 블록 — "What you'll get here" ──────────────────────────────── */}
         {event.perks.length > 0 && (
@@ -586,11 +586,11 @@ export default async function EventDetailPage({ params }: Props) {
               className="font-extrabold text-[#16181C] mb-3"
               style={{ fontSize: 16.5, letterSpacing: "-0.01em" }}
             >
-              What you&apos;ll get here
+              {dict.whatYouGet}
             </h2>
             <div className="space-y-3">
               {event.perks.map((perk, i) => {
-                const perkT = pickTranslation(perk.translations, "en", "ko");
+                const perkT = pickTranslation(perk.translations, locale, "en");
                 const card = (
                   <div
                     className="flex rounded-[14px] overflow-hidden"
@@ -666,7 +666,7 @@ export default async function EventDetailPage({ params }: Props) {
               className="font-extrabold text-[#16181C] mb-3"
               style={{ fontSize: 16.5, letterSpacing: "-0.01em" }}
             >
-              About this spot
+              {dict.aboutSpot}
             </h2>
             {description && (
               <p
@@ -680,7 +680,7 @@ export default async function EventDetailPage({ params }: Props) {
               <div className="space-y-4">
                 {event.bodyBlocks.map((block, i) => {
                   if (block.type === "TEXT") {
-                    const blockT = pickTranslation(block.translations, "en", "ko");
+                    const blockT = pickTranslation(block.translations, locale, "en");
                     if (!blockT?.text) return null;
                     return (
                       <p
@@ -731,7 +731,7 @@ export default async function EventDetailPage({ params }: Props) {
               className="font-extrabold text-[#16181C] mb-3"
               style={{ fontSize: 16.5, letterSpacing: "-0.01em" }}
             >
-              Links
+              {dict.links}
             </h2>
             <div className="space-y-2">
               {event.officialUrl && (
@@ -747,7 +747,7 @@ export default async function EventDetailPage({ params }: Props) {
                 >
                   <div>
                     <div className="font-extrabold text-[#16181C]" style={{ fontSize: 14 }}>
-                      Official event site
+                      {dict.officialSite}
                     </div>
                     <div className="font-semibold" style={{ fontSize: 12, color: "#9AA0A8" }}>
                       {safeHostname(event.officialUrl)}

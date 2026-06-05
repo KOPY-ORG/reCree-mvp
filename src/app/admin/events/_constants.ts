@@ -21,5 +21,5 @@ export const EVENT_CATEGORY_LABELS: Record<EventCategory, string> = {
   MOBILITY: "모빌리티",
   FNB: "F&B",
   STAY: "숙박",
-  WELCOME_KIT: "웰컴킷",
+  WELCOME_KIT: "웰컴키트",
 };

@@ -35,7 +35,7 @@ export type EventRow = {
   endDate: Date;
   createdAt: Date;
   bannerImageUrl: string | null;
-  place: { nameKo: string } | null;
+  places: { place: { nameKo: string | null; nameEn: string | null } }[];
   translations: { name: string }[];
 };
 
@@ -123,7 +123,13 @@ export function EventsGallery({ events, isFiltered, collectionId }: Props) {
                     </p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       {EVENT_CATEGORY_LABELS[event.category]}
-                      {event.place && <> · {event.place.nameKo}</>}
+                      {event.places.length > 0 && (
+                        <>
+                          {" · "}
+                          {event.places[0].place.nameKo ?? event.places[0].place.nameEn}
+                          {event.places.length > 1 && ` +${event.places.length - 1}`}
+                        </>
+                      )}
                     </p>
                   </div>
                   {/* 액션 */}

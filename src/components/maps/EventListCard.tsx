@@ -5,14 +5,15 @@ import Link from "next/link";
 import { Calendar, MapPin, Bookmark, ChevronRight } from "lucide-react";
 import { isExternalImage } from "@/lib/image";
 import { getDDay, formatDateRangeUTC } from "@/lib/event-format";
-import type { EventCollectionMapEvent } from "@/lib/event-collection-queries";
+import type { EventCollectionMapMarker } from "@/lib/event-collection-queries";
 
 // ── 컴포넌트 ──────────────────────────────────────────────────────────────────
 
 interface Props {
-  event: EventCollectionMapEvent;
+  event: EventCollectionMapMarker;
   collectionName: string;
   collectionSlug: string;
+  placeCount: number;
   isSelected?: boolean;
   isSaved?: boolean;
   onSelect?: () => void;
@@ -28,6 +29,7 @@ export function EventListCard({
   event,
   collectionName,
   collectionSlug,
+  placeCount,
   isSelected = false,
   isSaved = false,
   onSelect,
@@ -136,7 +138,7 @@ export function EventListCard({
             >
               {dateRange}
             </span>
-            {isSelected && (
+            {isSelected && placeCount === 1 && (
               <button
                 type="button"
                 onClick={(e) => {
@@ -154,14 +156,14 @@ export function EventListCard({
           <div className="flex items-center gap-0.5 min-w-0">
             <MapPin className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
             <span className="text-xs text-muted-foreground truncate">
-              {event.place.nameEn}
+              {placeCount >= 2 ? `${placeCount} locations` : event.place.nameEn}
             </span>
           </div>
         </div>
 
         {/* 이벤트 상세 chevron */}
         <Link
-          href={`/events/${collectionSlug}/${event.slug}`}
+          href={`/events/${collectionSlug}/${event.eventSlug}`}
           onClick={(e) => e.stopPropagation()}
           className="shrink-0 self-stretch flex items-center pl-1 pr-3"
           aria-label="View event detail"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { dedupeEventMarkers } from "@/lib/event-utils";
 import { useSearchParams, useRouter } from "next/navigation";
 import { InteractiveMap } from "@/components/maps/InteractiveMap";
 import { PlaceBottomSheet } from "@/components/maps/PlaceBottomSheet";
@@ -31,7 +32,7 @@ import type { TagGroupColorMap } from "@/lib/post-labels";
 import type {
   ActiveEventCollection,
   EventCollectionForMap,
-  EventCollectionMapEvent,
+  EventCollectionMapMarker,
 } from "@/lib/event-collection-queries";
 
 type ChipInfo = { id: string; label: string; bg: string; fg: string };
@@ -133,7 +134,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
   const [sheetState, setSheetState] = useState<PlaceListSheetState>(
     selectedPlaceId ? "hidden" : "half"
   );
-  const [focusedPlaceId, setFocusedPlaceId] = useState<string | null>(null);
+  const [focusedPlaceIds, setFocusedPlaceIds] = useState<Set<string>>(new Set());
   const [contentTab, setContentTab] = useState<"hot" | "list">("list");
   const [query, setQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -217,7 +218,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
     if (slug) {
       params.set("collection", slug);
       params.delete("place"); // 진입 시 기존 place 선택 초기화
-      setFocusedPlaceId(null);
+      setFocusedPlaceIds(new Set());
       setSheetState("half");
     } else {
       params.delete("collection");
@@ -227,7 +228,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
   }
 
   const handleMarkerClick = (placeId: string) => {
-    setFocusedPlaceId(null);
+    setFocusedPlaceIds(new Set());
     setSelectedPlaceId(placeId);
   };
 
@@ -235,19 +236,22 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
     setSelectedPlaceId(null);
   };
 
-  const handleCardTap = (placeId: string) => {
-    if (focusedPlaceId === placeId) {
-      setFocusedPlaceId(null);
+  const handleCardTap = (placeIds: string[]) => {
+    const same =
+      focusedPlaceIds.size === placeIds.length &&
+      placeIds.every((id) => focusedPlaceIds.has(id));
+    if (same) {
+      setFocusedPlaceIds(new Set());
       return;
     }
     setSelectedPlaceId(null);
-    setFocusedPlaceId(placeId);
+    setFocusedPlaceIds(new Set(placeIds));
     setSheetState((prev) => (prev === "full" ? "half" : prev));
   };
 
   const handleMapClick = () => {
     setSelectedPlaceId(null);
-    setFocusedPlaceId(null);
+    setFocusedPlaceIds(new Set());
   };
 
   const selectedPlace = allPlaces.find((p) => p.id === selectedPlaceId) ?? null;
@@ -417,13 +421,16 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
 
   // ── 이벤트 모드 파생 (계속) ──────────────────────────────────────────────────
 
-  const events: EventCollectionMapEvent[] = useMemo(
-    () => activeEventData?.events ?? [],
+  const events: EventCollectionMapMarker[] = useMemo(
+    () => activeEventData?.markers ?? [],
     [activeEventData]
   );
 
+  // eventId 기준 dedupe — 카드 1개/이벤트, 복수 장소 placeIds 보유
+  const dedupedEvents = useMemo(() => dedupeEventMarkers(events), [events]);
+
   const eventsByPlace = useMemo(() => {
-    const map: Record<string, EventCollectionMapEvent[]> = {};
+    const map: Record<string, EventCollectionMapMarker[]> = {};
     for (const event of events) {
       const pid = event.place.id;
       if (!map[pid]) map[pid] = [];
@@ -514,7 +521,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
       <InteractiveMap
         places={isEventMode ? eventMarkerPlaces : filteredPlaces}
         selectedPlaceId={selectedPlaceId}
-        focusedPlaceId={focusedPlaceId}
+        focusedPlaceIds={focusedPlaceIds}
         onMarkerClick={handleMarkerClick}
         onMapClick={handleMapClick}
         boundsKey={
@@ -593,7 +600,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
           isEventMode && activeEventData ? (
             <EventSheetHeader
               collectionName={activeEventData.collection.nameEn}
-              eventCount={events.length}
+              eventCount={dedupedEvents.length}
             />
           ) : (
             <DiscoverSheetHeader
@@ -608,25 +615,26 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
         }
       >
         {isEventMode ? (
-          events.length === 0 ? (
+          dedupedEvents.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
               <p className="text-sm font-semibold text-foreground">No events available</p>
             </div>
           ) : (
             <div className="px-4 pt-2 pb-4 space-y-2">
-              {events.map((event) => (
+              {dedupedEvents.map((ec) => (
                 <EventListCard
-                  key={event.id}
-                  event={event}
+                  key={ec.marker.eventId}
+                  event={ec.marker}
                   collectionName={activeEventData!.collection.nameEn}
                   collectionSlug={collectionSlug!}
-                  isSelected={focusedPlaceId === event.place.id}
+                  placeCount={ec.placeIds.length}
+                  isSelected={ec.placeIds.some((id) => focusedPlaceIds.has(id))}
                   isSaved={false}
                   notchBg="#F4F5F7"
-                  onSelect={() => handleCardTap(event.place.id)}
+                  onSelect={() => handleCardTap(ec.placeIds)}
                   onViewMap={() => {
                     // TODO(청크4b): EventPeekCard floating 렌더 — ?place 세팅만 stub
-                    setSelectedPlaceId(event.place.id);
+                    setSelectedPlaceId(ec.placeIds[0]);
                   }}
                 />
               ))}
@@ -646,10 +654,10 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
                   post={post}
                   place={place}
                   isSaved={savedPostIdsSet.has(post.id)}
-                  isFocused={focusedPlaceId === place.id}
+                  isFocused={focusedPlaceIds.has(place.id)}
                   tagGroupMap={tagGroupMap}
                   matchedTopicIds={appliedTopicIds}
-                  onCardTap={handleCardTap}
+                  onCardTap={(placeId) => handleCardTap([placeId])}
                   onViewPlace={handleSelectPlace}
                   onPostNavigate={handlePostNavigate}
                 />

@@ -1,11 +1,15 @@
+"use client";
+
+import { useMemo } from "react";
 import Link from "next/link";
 import { EventVerticalCard } from "./EventVerticalCard";
-import type { EventCollectionMapEvent } from "@/lib/event-collection-queries";
+import type { EventCollectionMapMarker } from "@/lib/event-collection-queries";
+import { dedupeEventMarkers } from "@/lib/event-utils";
 
 interface Props {
   title: string;
   titleClassName?: string;
-  events: EventCollectionMapEvent[];
+  events: EventCollectionMapMarker[];
   collectionSlug: string;
   collectionName: string;
   notchBg?: string;
@@ -19,7 +23,9 @@ export function EventVerticalCarousel({
   collectionName,
   notchBg,
 }: Props) {
-  if (events.length === 0) return null;
+  const deduped = useMemo(() => dedupeEventMarkers(events), [events]);
+
+  if (deduped.length === 0) return null;
 
   return (
     <section>
@@ -37,14 +43,15 @@ export function EventVerticalCarousel({
         className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide px-4"
         style={{ scrollSnapType: "x mandatory", scrollPaddingLeft: "1rem" }}
       >
-        {events.map((event) => (
+        {deduped.map(({ marker, placeIds }) => (
           <div
-            key={event.id}
+            key={marker.eventId}
             className="flex-shrink-0 w-[42%]"
             style={{ scrollSnapAlign: "start" }}
           >
             <EventVerticalCard
-              event={event}
+              event={marker}
+              placeCount={placeIds.length}
               collectionName={collectionName}
               collectionSlug={collectionSlug}
               notchBg={notchBg}

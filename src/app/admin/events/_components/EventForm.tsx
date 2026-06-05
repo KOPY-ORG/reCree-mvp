@@ -72,8 +72,7 @@ type EventLocale = (typeof LOCALES)[number]["key"];
 export type EventInitialData = {
   id: string;
   slug: string;
-  placeId: string;
-  place: PlaceForForm | null;
+  places: PlaceForForm[];
   eventCollectionId: string;
   category: EventCategory;
   startDate: string;
@@ -645,8 +644,8 @@ export function EventForm({
   const [slug, setSlug] = useState(initialData?.slug ?? "");
   const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "ok" | "error" | "invalid">("idle");
   const slugCheckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [selectedPlace, setSelectedPlace] = useState<PlaceForForm | null>(
-    initialData?.place ?? null,
+  const [selectedPlaces, setSelectedPlaces] = useState<PlaceForForm[]>(
+    initialData?.places ?? [],
   );
   const [eventCollectionId] = useState(collection.id);
   const [category, setCategory] = useState<EventCategory>(
@@ -681,6 +680,30 @@ export function EventForm({
   const [bodyBlocks, setBodyBlocks] = useState<BodyBlockFormItem[]>(() =>
     initialData?.bodyBlocks ? initialData.bodyBlocks.map((b) => initBodyBlockItem(b)) : [],
   );
+
+  // ── 장소 핸들러 ─────────────────────────────────────────────────────────────
+  const addPlace = (place: PlaceForForm) => {
+    setSelectedPlaces((prev) =>
+      prev.some((p) => p.id === place.id) ? prev : [...prev, place],
+    );
+    setPlacePickerOpen(false);
+  };
+
+  const removePlace = (idx: number) => {
+    setSelectedPlaces((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const movePlace = (idx: number, direction: "up" | "down") => {
+    setSelectedPlaces((prev) => {
+      const next = [...prev];
+      if (direction === "up" && idx > 0) {
+        [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+      } else if (direction === "down" && idx < next.length - 1) {
+        [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+      }
+      return next;
+    });
+  };
 
   // ── Slug 중복 체크 ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -737,7 +760,7 @@ export function EventForm({
     if (slugStatus === "invalid") { toast.error("슬러그는 소문자·숫자·하이픈(-)만 사용할 수 있습니다."); setActiveTab("info"); return; }
     if (slugStatus === "checking") { toast.error("슬러그 확인 중입니다. 잠시 후 다시 시도해주세요."); return; }
     if (slugStatus === "error") { toast.error("슬러그가 이미 사용 중입니다."); setActiveTab("info"); return; }
-    if (!selectedPlace) { toast.error("장소를 선택해주세요."); return; }
+    if (selectedPlaces.length === 0) { toast.error("장소를 1개 이상 선택해주세요."); return; }
     if (!eventCollectionId) { toast.error("컬렉션을 선택해주세요."); return; }
     if (!startDate || !endDate) { toast.error("기간을 입력해주세요."); return; }
     if (!translations.ko.name.trim()) { toast.error("한국어 이벤트명을 입력해주세요."); return; }
@@ -804,7 +827,7 @@ export function EventForm({
 
     const data: EventFormData = {
       slug,
-      placeId: selectedPlace.id,
+      places: selectedPlaces.map((p, idx) => ({ placeId: p.id, sortOrder: idx })),
       eventCollectionId,
       category,
       startDate,
@@ -1376,58 +1399,62 @@ export function EventForm({
                     <span className="text-red-500 text-sm font-normal">*</span>
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  {selectedPlace ? (
-                    <div className="space-y-2">
-                      {selectedPlace.imageUrl && (
-                        <div className="relative h-28 w-full overflow-hidden rounded-md border">
-                          <Image
-                            src={selectedPlace.imageUrl}
-                            alt={selectedPlace.nameKo}
-                            fill
-                            unoptimized={isExternalImage(selectedPlace.imageUrl)}
-                            className="object-cover"
-                          />
-                        </div>
-                      )}
-                      <div>
-                        <p className="font-medium text-sm">
-                          {selectedPlace.nameKo}
+                <CardContent className="space-y-2">
+                  {selectedPlaces.map((p, idx) => (
+                    <div key={p.id} className="flex items-start gap-2 rounded-md border p-2.5">
+                      <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0 text-muted-foreground" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium leading-snug truncate">
+                          {p.nameEn ?? p.nameKo}
                         </p>
-                        {selectedPlace.nameEn && (
-                          <p className="text-xs text-muted-foreground">
-                            {selectedPlace.nameEn}
-                          </p>
-                        )}
-                        {selectedPlace.addressKo && (
-                          <p className="flex items-start gap-1 text-xs text-muted-foreground mt-1">
-                            <MapPin className="h-3 w-3 mt-0.5 shrink-0" />
-                            {selectedPlace.addressKo}
+                        {(p.addressEn || p.addressKo) && (
+                          <p className="text-xs text-muted-foreground truncate mt-0.5">
+                            {p.addressEn ?? p.addressKo}
                           </p>
                         )}
                       </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="w-full h-8 text-xs"
-                        onClick={() => setPlacePickerOpen(true)}
-                      >
-                        <X className="h-3 w-3 mr-1" />
-                        변경
-                      </Button>
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          disabled={idx === 0}
+                          onClick={() => movePlace(idx, "up")}
+                        >
+                          <ChevronUp className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          disabled={idx === selectedPlaces.length - 1}
+                          onClick={() => movePlace(idx, "down")}
+                        >
+                          <ChevronDown className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                          onClick={() => removePlace(idx)}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </div>
-                  ) : (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => setPlacePickerOpen(true)}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      장소 연결
-                    </Button>
-                  )}
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-8 text-xs"
+                    onClick={() => setPlacePickerOpen(true)}
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1.5" />
+                    장소 추가
+                  </Button>
                 </CardContent>
               </Card>
 
@@ -1489,10 +1516,7 @@ export function EventForm({
       <PlacePickerSheet
         open={placePickerOpen}
         onOpenChange={setPlacePickerOpen}
-        onSelect={(place) => {
-          setSelectedPlace(place);
-          setPlacePickerOpen(false);
-        }}
+        onSelect={addPlace}
       />
     </div>
   );

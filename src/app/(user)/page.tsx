@@ -298,7 +298,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             <div className="mb-6">
               <EventVerticalCarousel
                 title="BTS THE CITY ARIRANG"
-                events={homeFirstColData.events}
+                events={homeFirstColData.markers}
                 collectionSlug={homeFirstColData.collection.slug}
                 collectionName={homeFirstColData.collection.nameEn}
               />

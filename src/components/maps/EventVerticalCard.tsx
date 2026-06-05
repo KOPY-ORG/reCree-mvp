@@ -5,10 +5,11 @@ import Link from "next/link";
 import { Calendar, MapPin } from "lucide-react";
 import { isExternalImage } from "@/lib/image";
 import { getDDay, formatDateRangeUTC } from "@/lib/event-format";
-import type { EventCollectionMapEvent } from "@/lib/event-collection-queries";
+import type { EventCollectionMapMarker } from "@/lib/event-collection-queries";
 
 interface Props {
-  event: EventCollectionMapEvent;
+  event: EventCollectionMapMarker;
+  placeCount: number;
   collectionName: string;
   collectionSlug: string;
   /** 티켓 노치 반원 배경색 — 카드가 놓일 컨테이너 배경과 일치시킬 것 */
@@ -19,6 +20,7 @@ const RED = "#F01941";
 
 export function EventVerticalCard({
   event,
+  placeCount,
   collectionName,
   collectionSlug,
   notchBg = "#fff",
@@ -93,7 +95,7 @@ export function EventVerticalCard({
 
       {/* ── 본문 ── */}
       <Link
-        href={`/events/${collectionSlug}/${event.slug}`}
+        href={`/events/${collectionSlug}/${event.eventSlug}`}
         className="flex flex-col gap-0.5 px-2 pt-2 pb-2.5"
       >
         {/* 컬렉션명 */}
@@ -127,7 +129,7 @@ export function EventVerticalCard({
         <div className="flex items-center gap-0.5 min-w-0">
           <MapPin className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
           <span className="text-[9px] text-muted-foreground truncate">
-            {event.place.nameEn}
+            {placeCount >= 2 ? `${placeCount} locations` : event.place.nameEn}
           </span>
         </div>
       </Link>
