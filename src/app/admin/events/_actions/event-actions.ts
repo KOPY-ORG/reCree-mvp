@@ -59,6 +59,8 @@ export type EventFormData = {
   bodyBlocks: BodyBlockData[];
 };
 
+const INSTAGRAM_URL_RE = /^https?:\/\/(www\.)?instagram\.com\/(p|reel)\/[\w-]+/;
+
 export async function checkEventSlug(
   slug: string,
   excludeId?: string,
@@ -172,6 +174,8 @@ export async function createEvent(
     } else if (b.type === "INSTAGRAM") {
       if (!b.embedUrl)
         return { error: `본문 ${i + 1}번 인스타그램 URL을 입력해주세요.` };
+      if (!INSTAGRAM_URL_RE.test(b.embedUrl.trim()))
+        return { error: `본문 ${i + 1}번: 올바른 인스타그램 포스트/릴 URL을 입력해주세요.` };
     }
   }
 
@@ -220,7 +224,7 @@ export async function createEvent(
           }
         }
       }
-    });
+    }, { timeout: 15000 });
   } catch (e: unknown) {
     if (
       typeof e === "object" &&
@@ -274,6 +278,8 @@ export async function updateEvent(
     } else if (b.type === "INSTAGRAM") {
       if (!b.embedUrl)
         return { error: `본문 ${i + 1}번 인스타그램 URL을 입력해주세요.` };
+      if (!INSTAGRAM_URL_RE.test(b.embedUrl.trim()))
+        return { error: `본문 ${i + 1}번: 올바른 인스타그램 포스트/릴 URL을 입력해주세요.` };
     }
   }
 
@@ -330,7 +336,7 @@ export async function updateEvent(
           }
         }
       }
-    });
+    }, { timeout: 15000 });
   } catch (e: unknown) {
     if (
       typeof e === "object" &&
