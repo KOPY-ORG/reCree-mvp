@@ -62,6 +62,7 @@ export default async function EditEventPage({
   const bodyBlocks = event.bodyBlocks.map((b) => ({
     type: b.type,
     imageUrl: b.imageUrl ?? null,
+    embedUrl: b.embedUrl ?? null,
     translations: Object.fromEntries(
       b.translations.map((t) => [t.locale, { text: t.text }]),
     ) as Partial<Record<string, { text: string }>>,

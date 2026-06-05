@@ -96,6 +96,7 @@ export type EventInitialData = {
   bodyBlocks?: Array<{
     type: EventBlockType;
     imageUrl: string | null;
+    embedUrl: string | null;
     translations: Partial<Record<string, { text: string }>>;
   }>;
 };
@@ -382,6 +383,7 @@ type BodyBlockFormItem = {
   key: string;
   type: EventBlockType;
   imageUrl: string | null;
+  embedUrl: string | null;
   uploading: boolean;
   activeLang: EventLocale;
   translations: Record<EventLocale, { text: string }>;
@@ -390,16 +392,19 @@ type BodyBlockFormItem = {
 function initBodyBlockItem(initial?: {
   type?: EventBlockType;
   imageUrl?: string | null;
+  embedUrl?: string | null;
   translations?: Partial<Record<string, { text: string }>>;
 }): BodyBlockFormItem {
   const translations = {} as Record<EventLocale, { text: string }>;
   for (const loc of LOCALES) {
+    // INSTAGRAM 블록은 translations가 비어있으므로 누락 locale을 {text:""}로 보장
     translations[loc.key] = { text: initial?.translations?.[loc.key]?.text ?? "" };
   }
   return {
     key: crypto.randomUUID(),
     type: initial?.type ?? "TEXT",
     imageUrl: initial?.imageUrl ?? null,
+    embedUrl: initial?.embedUrl ?? null,
     uploading: false,
     activeLang: "ko",
     translations,
@@ -453,7 +458,7 @@ function BodyBlockCard({ item, index, total, onChange, onRemove, onMoveUp, onMov
         <span className="text-sm font-medium text-muted-foreground">
           블록 {index + 1}
           <span className="ml-2 inline-flex items-center rounded-full bg-muted px-1.5 py-0.5 text-xs font-normal">
-            {item.type === "TEXT" ? "텍스트" : "이미지"}
+            {item.type === "TEXT" ? "텍스트" : item.type === "IMAGE" ? "이미지" : "인스타그램"}
           </span>
         </span>
         <div className="flex items-center gap-1">
@@ -520,7 +525,7 @@ function BodyBlockCard({ item, index, total, onChange, onRemove, onMoveUp, onMov
               className="flex min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-y"
             />
           </div>
-        ) : (
+        ) : item.type === "IMAGE" ? (
           <div>
             <input
               ref={fileInputRef}
@@ -581,6 +586,20 @@ function BodyBlockCard({ item, index, total, onChange, onRemove, onMoveUp, onMov
                 )}
               </button>
             )}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <label className="text-xs font-medium leading-none">
+              인스타그램 포스트 URL <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="url"
+              value={item.embedUrl ?? ""}
+              onChange={(e) => onChange((prev) => ({ ...prev, embedUrl: e.target.value }))}
+              placeholder="https://www.instagram.com/p/XXXX/"
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            />
+            <p className="text-xs text-muted-foreground">예: https://www.instagram.com/p/DY3aL9FJsVX</p>
           </div>
         )}
       </div>
@@ -778,6 +797,7 @@ export function EventForm({
       }
     }
 
+    const INSTAGRAM_URL_RE = /^https?:\/\/(www\.)?instagram\.com\/(p|reel)\/[\w-]+/;
     for (let i = 0; i < bodyBlocks.length; i++) {
       const b = bodyBlocks[i];
       if (b.type === "TEXT") {
@@ -794,6 +814,17 @@ export function EventForm({
       } else if (b.type === "IMAGE") {
         if (!b.imageUrl) {
           toast.error(`본문 ${i + 1}번 이미지를 업로드해주세요.`);
+          setActiveTab("body");
+          return;
+        }
+      } else if (b.type === "INSTAGRAM") {
+        if (!b.embedUrl?.trim()) {
+          toast.error(`본문 ${i + 1}번 인스타그램 URL을 입력해주세요.`);
+          setActiveTab("body");
+          return;
+        }
+        if (!INSTAGRAM_URL_RE.test(b.embedUrl.trim())) {
+          toast.error(`본문 ${i + 1}번: 올바른 인스타그램 포스트/릴 URL을 입력해주세요.`);
           setActiveTab("body");
           return;
         }
@@ -819,10 +850,11 @@ export function EventForm({
     const bodyBlocksData: BodyBlockData[] = bodyBlocks.map((b, i) => ({
       type: b.type,
       imageUrl: b.imageUrl,
+      embedUrl: b.embedUrl ?? null,
       sortOrder: i,
-      translations: Object.fromEntries(
-        LOCALES.map((loc) => [loc.key, { text: b.translations[loc.key].text }]),
-      ),
+      translations: b.type === "TEXT"
+        ? Object.fromEntries(LOCALES.map((loc) => [loc.key, { text: b.translations[loc.key].text }]))
+        : {},
     }));
 
     const data: EventFormData = {
@@ -1339,6 +1371,19 @@ export function EventForm({
                           >
                             <Plus className="h-3.5 w-3.5" />
                             이미지 블록
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setBodyBlocks((prev) => [
+                                ...prev,
+                                initBodyBlockItem({ type: "INSTAGRAM" }),
+                              ])
+                            }
+                            className="inline-flex h-8 items-center gap-1.5 rounded-md border bg-background px-3 text-xs font-medium transition-colors hover:bg-muted"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                            인스타그램 블록
                           </button>
                         </div>
                       </div>

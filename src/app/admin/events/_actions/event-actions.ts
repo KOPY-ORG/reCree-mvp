@@ -32,6 +32,7 @@ export type BodyBlockTranslationData = {
 export type BodyBlockData = {
   type: EventBlockType;
   imageUrl: string | null;
+  embedUrl: string | null;
   sortOrder: number;
   translations: Record<string, BodyBlockTranslationData>;
 };
@@ -168,6 +169,9 @@ export async function createEvent(
     } else if (b.type === "IMAGE") {
       if (!b.imageUrl)
         return { error: `본문 ${i + 1}번 이미지를 업로드해주세요.` };
+    } else if (b.type === "INSTAGRAM") {
+      if (!b.embedUrl)
+        return { error: `본문 ${i + 1}번 인스타그램 URL을 입력해주세요.` };
     }
   }
 
@@ -205,6 +209,7 @@ export async function createEvent(
             eventId: event.id,
             type: b.type,
             imageUrl: b.type === "IMAGE" ? (b.imageUrl || null) : null,
+            embedUrl: b.type === "INSTAGRAM" ? (b.embedUrl || null) : null,
             sortOrder: b.sortOrder,
           },
         });
@@ -266,6 +271,9 @@ export async function updateEvent(
     } else if (b.type === "IMAGE") {
       if (!b.imageUrl)
         return { error: `본문 ${i + 1}번 이미지를 업로드해주세요.` };
+    } else if (b.type === "INSTAGRAM") {
+      if (!b.embedUrl)
+        return { error: `본문 ${i + 1}번 인스타그램 URL을 입력해주세요.` };
     }
   }
 
@@ -311,6 +319,7 @@ export async function updateEvent(
             eventId: id,
             type: b.type,
             imageUrl: b.type === "IMAGE" ? (b.imageUrl || null) : null,
+            embedUrl: b.type === "INSTAGRAM" ? (b.embedUrl || null) : null,
             sortOrder: b.sortOrder,
           },
         });
@@ -433,6 +442,7 @@ export async function getEventForEdit(id: string) {
           id: true,
           type: true,
           imageUrl: true,
+          embedUrl: true,
           sortOrder: true,
           translations: {
             select: { locale: true, text: true },
