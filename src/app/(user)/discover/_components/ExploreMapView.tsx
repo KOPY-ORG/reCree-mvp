@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { dedupeEventMarkers } from "@/lib/event-utils";
 import { useSearchParams, useRouter } from "next/navigation";
 import { InteractiveMap } from "@/components/maps/InteractiveMap";
 import { PlaceBottomSheet } from "@/components/maps/PlaceBottomSheet";
@@ -426,18 +427,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
   );
 
   // eventId 기준 dedupe — 카드 1개/이벤트, 복수 장소 placeIds 보유
-  const dedupedEvents = useMemo(() => {
-    const map = new Map<string, { marker: EventCollectionMapMarker; placeIds: string[] }>();
-    for (const m of events) {
-      const entry = map.get(m.eventId);
-      if (entry) {
-        entry.placeIds.push(m.place.id);
-      } else {
-        map.set(m.eventId, { marker: m, placeIds: [m.place.id] });
-      }
-    }
-    return Array.from(map.values());
-  }, [events]);
+  const dedupedEvents = useMemo(() => dedupeEventMarkers(events), [events]);
 
   const eventsByPlace = useMemo(() => {
     const map: Record<string, EventCollectionMapMarker[]> = {};
