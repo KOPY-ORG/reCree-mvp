@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { EventStatus } from "@prisma/client";
@@ -34,6 +35,8 @@ function buildTranslationRows(
 export async function createCollection(
   data: CollectionFormData,
 ): Promise<{ error?: string }> {
+  const user = await getCurrentUser();
+  if (!user || user.role === "USER") return { error: "권한이 없습니다." };
   if (!data.slug.trim()) return { error: "슬러그를 입력해주세요." };
   if (!data.translations?.ko?.name?.trim())
     return { error: "한국어 컬렉션명을 입력해주세요." };
@@ -73,6 +76,8 @@ export async function updateCollection(
   id: string,
   data: CollectionFormData,
 ): Promise<{ error?: string }> {
+  const user = await getCurrentUser();
+  if (!user || user.role === "USER") return { error: "권한이 없습니다." };
   if (!data.slug.trim()) return { error: "슬러그를 입력해주세요." };
   if (!data.translations?.ko?.name?.trim())
     return { error: "한국어 컬렉션명을 입력해주세요." };
@@ -115,6 +120,8 @@ export async function updateCollection(
 export async function deleteCollection(
   id: string,
 ): Promise<{ error?: string }> {
+  const user = await getCurrentUser();
+  if (!user || user.role === "USER") return { error: "권한이 없습니다." };
   const count = await prisma.event.count({ where: { eventCollectionId: id } });
   if (count > 0) {
     return {

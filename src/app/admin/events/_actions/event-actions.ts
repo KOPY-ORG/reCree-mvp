@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { EventBlockType, EventCategory, EventEntryType, EventStatus } from "@prisma/client";
@@ -137,6 +138,8 @@ function buildPerkTranslationRows(
 export async function createEvent(
   data: EventFormData,
 ): Promise<{ error?: string }> {
+  const user = await getCurrentUser();
+  if (!user || user.role === "USER") return { error: "권한이 없습니다." };
   if (!data.slug.trim()) return { error: "슬러그를 입력해주세요." };
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(data.slug.trim()))
     return { error: "슬러그는 소문자·숫자·하이픈(-)만 사용할 수 있습니다." };
@@ -233,6 +236,8 @@ export async function updateEvent(
   id: string,
   data: EventFormData,
 ): Promise<{ error?: string }> {
+  const user = await getCurrentUser();
+  if (!user || user.role === "USER") return { error: "권한이 없습니다." };
   if (!data.slug.trim()) return { error: "슬러그를 입력해주세요." };
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(data.slug.trim()))
     return { error: "슬러그는 소문자·숫자·하이픈(-)만 사용할 수 있습니다." };
@@ -334,6 +339,8 @@ export async function updateEvent(
 }
 
 export async function deleteEvent(id: string): Promise<{ error?: string }> {
+  const user = await getCurrentUser();
+  if (!user || user.role === "USER") return { error: "권한이 없습니다." };
   try {
     const event = await prisma.event.findUnique({
       where: { id },
