@@ -57,7 +57,7 @@ export type EventCollectionForMap = {
 function pickTranslation<T extends { locale: string }>(
   items: T[],
   locale = "en",
-  fallback = "ko",
+  fallback = "en",
 ): T | undefined {
   return (
     items.find((t) => t.locale === locale) ??
@@ -119,10 +119,10 @@ export async function getEventCollectionForMap(
 
   if (!collection) return null;
 
-  const collectionT = pickTranslation(collection.translations, "en", "ko");
+  const collectionT = pickTranslation(collection.translations, "en");
 
   const markers: EventCollectionMapMarker[] = collection.events.flatMap((e) => {
-    const t = pickTranslation(e.translations, "en", "ko");
+    const t = pickTranslation(e.translations, "en");
     const eventName = t?.name ?? e.slug;
 
     return e.places

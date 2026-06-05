@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { EventBackButton } from "./_components/EventBackButton";
 import { MapPreview } from "@/components/maps/MapPreview";
 import { getEventDict } from "@/lib/i18n/event-dict";
+import { EventLangSwitcher } from "./_components/EventLangSwitcher";
 
 // ── 상수 ────────────────────────────────────────────────────────────────────────
 
@@ -16,7 +17,7 @@ const ACCENT = "#F01941";
 function pickTranslation<T extends { locale: string }>(
   items: T[],
   locale = "en",
-  fallback = "ko",
+  fallback = "en",
 ): T | undefined {
   return (
     items.find((t) => t.locale === locale) ??
@@ -40,19 +41,17 @@ function formatDateRangeUTC(start: Date, end: Date): string {
 function formatTimeRange(
   open: string | null,
   close: string | null,
-  fromPrefix = "From ",
-  untilPrefix = "Until ",
+  fromDate: (d: string) => string,
+  untilDate: (d: string) => string,
 ): string | null {
   if (!open && !close) return null;
   const fmt = (t: string) => {
     const [h, m] = t.split(":").map(Number);
-    const ampm = h >= 12 ? "PM" : "AM";
-    const hour = h % 12 || 12;
-    return m ? `${hour}:${String(m).padStart(2, "0")} ${ampm}` : `${hour} ${ampm}`;
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
   };
   if (open && close) return `${fmt(open)} – ${fmt(close)}`;
-  if (open) return `${fromPrefix}${fmt(open)}`;
-  return `${untilPrefix}${fmt(close!)}`;
+  if (open) return fromDate(fmt(open));
+  return untilDate(fmt(close!));
 }
 
 function safeHostname(url: string): string {
@@ -168,7 +167,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 
   if (!event) return {};
 
-  const t = pickTranslation(event.translations, locale, "ko");
+  const t = pickTranslation(event.translations, locale, "en");
   const name = t?.name ?? "";
   const description = t?.description?.slice(0, 160) ??
     `Experience ${name} — an exclusive K-culture event. Discover more on reCree.`;
@@ -208,8 +207,8 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
   const event = await getEventDetail(collectionSlug, eventSlug);
   if (!event) notFound();
 
-  const t = pickTranslation(event.translations, locale, "ko");
-  const collectionT = pickTranslation(event.collection.translations, locale, "ko");
+  const t = pickTranslation(event.translations, locale, "en");
+  const collectionT = pickTranslation(event.collection.translations, locale, "en");
 
   const eventName = t?.name ?? "";
   const description = t?.description ?? "";
@@ -220,7 +219,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
   const firstPlaceName = placeCount > 0 ? (places[0].nameEn ?? places[0].nameKo) : null;
   const dateRange = formatDateRangeUTC(event.startDate, event.endDate);
   const year = String(event.startDate.getUTCFullYear());
-  const timeRange = formatTimeRange(event.openTime, event.closeTime, dict.fromPrefix, dict.untilPrefix);
+  const timeRange = formatTimeRange(event.openTime, event.closeTime, dict.fromDate, dict.untilDate);
   const entryInfo = dict.entryType[event.entryType];
   const categoryLabel = dict.category[event.category];
   const hasLinks = !!(event.officialUrl || event.snsUrl);
@@ -255,9 +254,10 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
           }}
         />
 
-        {/* 상단 바 — 뒤로가기 */}
+        {/* 상단 바 — 뒤로가기 + 언어 전환 */}
         <div className="absolute top-0 left-0 right-0 flex items-center px-4 pt-4">
           <EventBackButton />
+          <div className="ml-auto"><EventLangSwitcher /></div>
         </div>
 
         {/* 이벤트 뱃지 */}
@@ -335,7 +335,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
                 }}
               >
                 <MapPin size={11} color={ACCENT} />
-                {placeCount === 1 ? firstPlaceName : `${placeCount} ${dict.locationsCount}`}
+                {placeCount === 1 ? firstPlaceName : dict.locationsLabel(placeCount)}
               </span>
             )}
           </div>
@@ -590,7 +590,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
             </h2>
             <div className="space-y-3">
               {event.perks.map((perk, i) => {
-                const perkT = pickTranslation(perk.translations, locale, "ko");
+                const perkT = pickTranslation(perk.translations, locale, "en");
                 const card = (
                   <div
                     className="flex rounded-[14px] overflow-hidden"
@@ -680,7 +680,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
               <div className="space-y-4">
                 {event.bodyBlocks.map((block, i) => {
                   if (block.type === "TEXT") {
-                    const blockT = pickTranslation(block.translations, locale, "ko");
+                    const blockT = pickTranslation(block.translations, locale, "en");
                     if (!blockT?.text) return null;
                     return (
                       <p
