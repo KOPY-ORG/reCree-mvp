@@ -637,6 +637,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
                   event={ec.marker}
                   collectionName={activeEventData!.collection.nameEn}
                   collectionSlug={collectionSlug!}
+                  placeCount={ec.placeIds.length}
                   isSelected={ec.placeIds.some((id) => focusedPlaceIds.has(id))}
                   isSaved={false}
                   notchBg="#F4F5F7"

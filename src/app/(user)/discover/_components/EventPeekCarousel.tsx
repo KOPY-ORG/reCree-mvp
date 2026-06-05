@@ -62,6 +62,7 @@ export function EventPeekCarousel({ events, collectionSlug, collectionName, onCl
               event={event}
               collectionName={collectionName}
               collectionSlug={collectionSlug}
+              placeCount={1}
               isSelected={false}
               isSaved={false}
               notchBg="#fff"
