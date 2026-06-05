@@ -7,6 +7,7 @@ import { EventBackButton } from "./_components/EventBackButton";
 import { MapPreview } from "@/components/maps/MapPreview";
 import { getEventDict } from "@/lib/i18n/event-dict";
 import { EventLangSwitcher } from "./_components/EventLangSwitcher";
+import { InstagramEmbed } from "./_components/InstagramEmbed";
 
 // ── 상수 ────────────────────────────────────────────────────────────────────────
 
@@ -60,6 +61,26 @@ function safeHostname(url: string): string {
   } catch {
     return url;
   }
+}
+
+function linkify(text: string) {
+  const parts = text.split(/(https?:\/\/[^\s]+)/g);
+  return parts.map((part, i) =>
+    /^https?:\/\//.test(part) ? (
+      <a
+        key={i}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline break-all"
+        style={{ color: "#0a66c2" }}
+      >
+        {part}
+      </a>
+    ) : (
+      part
+    ),
+  );
 }
 
 // ── 데이터 조회 ────────────────────────────────────────────────────────────────
@@ -122,6 +143,7 @@ async function getEventDetail(collectionSlug: string, eventSlug: string) {
         select: {
           type: true,
           imageUrl: true,
+          embedUrl: true,
           sortOrder: true,
           translations: { select: { locale: true, text: true } },
         },
@@ -688,7 +710,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
                         className="text-[#3E424A]"
                         style={{ fontSize: 14, lineHeight: 1.64, fontWeight: 400 }}
                       >
-                        {blockT.text}
+                        {linkify(blockT.text)}
                       </p>
                     );
                   }
@@ -708,6 +730,9 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
                         />
                       </div>
                     );
+                  }
+                  if (block.type === "INSTAGRAM" && block.embedUrl) {
+                    return <InstagramEmbed key={i} url={block.embedUrl} />;
                   }
                   return null;
                 })}
