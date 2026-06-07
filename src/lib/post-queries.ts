@@ -7,12 +7,14 @@ export async function getPostsWithLabels(
   options?: {
     take?: number;
     orderBy?: Prisma.PostOrderByWithRelationInput | Prisma.PostOrderByWithRelationInput[];
+    cursor?: string;
   }
 ) {
   return prisma.post.findMany({
     where,
     take: options?.take,
     orderBy: options?.orderBy,
+    ...(options?.cursor ? { cursor: { id: options.cursor }, skip: 1 } : {}),
     select: {
       id: true,
       slug: true,
@@ -31,6 +33,7 @@ export async function getPostsWithLabels(
           topic: {
             select: {
               nameEn: true,
+              slug: true,
               colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true,
               parent: {
                 select: {
@@ -71,6 +74,15 @@ export async function getSavedPostIds(userId: string | null): Promise<Set<string
   if (!userId) return new Set();
   const rows = await prisma.save.findMany({
     where: { userId, targetType: "POST" },
+    select: { targetId: true },
+  });
+  return new Set(rows.map((r) => r.targetId));
+}
+
+export async function getSavedEventIds(userId: string | null): Promise<Set<string>> {
+  if (!userId) return new Set();
+  const rows = await prisma.save.findMany({
+    where: { userId, targetType: "EVENT" },
     select: { targetId: true },
   });
   return new Set(rows.map((r) => r.targetId));

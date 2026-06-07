@@ -26,6 +26,7 @@ function resolvePostLabels(
     name: topic.nameEn,
     displayLabel: null,
     colors: resolveTopicColors(topic),
+    slug: topic.slug,
   }));
 
   const kmediaSlots: LabelSlot[] = post.postTags
@@ -51,16 +52,21 @@ export function PostBadges({
   post,
   tagGroupMap,
   variant = "home",
+  pillFontSize = "0.625rem",
 }: {
   post: PostItem;
   tagGroupMap: TagGroupColorMap;
   variant?: "home" | "list";
+  pillFontSize?: string;
 }) {
   const labels = resolvePostLabels(post, tagGroupMap, variant);
   if (labels.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap gap-1 [--pill-fs:0.625rem]">
+    <div
+      className="flex flex-wrap gap-1"
+      style={{ "--pill-fs": pillFontSize } as React.CSSProperties}
+    >
       {labels.map((label, i) => (
         <LabelBadge
           key={i}
@@ -78,11 +84,13 @@ export function PostCard({
   tagGroupMap,
   isSaved,
   variant = "carousel",
+  priority = false,
 }: {
   post: PostItem;
   tagGroupMap: TagGroupColorMap;
   isSaved?: boolean;
   variant?: "carousel" | "grid";
+  priority?: boolean;
 }) {
   const wrapperClass =
     variant === "carousel" ? "snap-start shrink-0 w-[160px] md:w-[200px]" : "";
@@ -101,6 +109,7 @@ export function PostCard({
             className="object-cover"
             style={focalStyle(post.postImages[0].focalX, post.postImages[0].focalY, post.postImages[0].zoom)}
             sizes={imageSizes}
+            priority={priority}
           />
         ) : (
           <div className="w-full h-full bg-muted" />
@@ -114,7 +123,7 @@ export function PostCard({
             {post.postPlaces[0]?.place.nameEn ?? post.postPlaces[0]?.place.nameKo ?? post.titleEn}
           </p>
           <div className="shrink-0 z-10">
-            <ScrapButton postId={post.id} initialSaved={isSaved ?? false} size="sm" />
+            <ScrapButton postId={post.id} initialSaved={isSaved ?? false} size="sm" unsavedClassName="text-white/80 hover:text-white" />
           </div>
         </div>
       </div>

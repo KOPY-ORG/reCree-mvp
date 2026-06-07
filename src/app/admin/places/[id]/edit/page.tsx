@@ -29,6 +29,7 @@ export default async function EditPlacePage({ params, searchParams }: Props) {
         googleMapsUrl: true,
         naverMapsUrl: true,
         kakaoMapsUrl: true,
+        amapUrl: true,
         streetViewUrl: true,
         phone: true,
         operatingHours: true,

@@ -45,3 +45,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 node_modules
+recree_prod_backup_*.sql
+*.sql.backup

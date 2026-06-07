@@ -41,7 +41,7 @@ export function PostReCreeshotSection({ postId, shots, originalImageUrl, isLogge
     }
     const params = new URLSearchParams({ postId });
     if (originalImageUrl) params.set("referenceUrl", originalImageUrl);
-    router.push(`/explore/hall/new?${params.toString()}`);
+    router.push(`/discover/hall/new?${params.toString()}`);
   }
 
   return (
@@ -71,7 +71,7 @@ export function PostReCreeshotSection({ postId, shots, originalImageUrl, isLogge
           <button
             key={shot.id}
             type="button"
-            onClick={() => router.push(`/explore/hall/${shot.id}`)}
+            onClick={() => router.push(`/discover/hall/${shot.id}`)}
             className="shrink-0 w-[90px]"
           >
             <ReCreeshotImage

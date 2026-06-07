@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "NODE_OPTIONS='--experimental-require-module' prisma generate && next build",
     "build:vercel": "prisma migrate deploy && prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
@@ -28,9 +28,10 @@
     "@vis.gl/react-google-maps": "^1.7.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "geist": "^1.7.1",
     "hangul-romanize": "^0.3.2",
     "lucide-react": "^0.575.0",
-    "next": "16.2.5",
+    "next": "16.2.6",
     "next-themes": "^0.4.6",
     "papaparse": "^5.5.3",
     "pg": "^8.18.0",
@@ -41,7 +42,8 @@
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
     "sonner": "^2.0.7",
-    "tailwind-merge": "^3.5.0"
+    "tailwind-merge": "^3.5.0",
+    "zod": "^4.4.3"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"

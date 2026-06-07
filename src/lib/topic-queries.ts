@@ -83,6 +83,59 @@ export async function getLevel0TopicsDeep() {
 
 export type Level0TopicDeep = Awaited<ReturnType<typeof getLevel0TopicsDeep>>[number];
 
+export async function getTopicBySlug(slug: string) {
+  return prisma.topic.findUnique({
+    where: { slug, isActive: true, level: 2 },
+    select: {
+      id: true,
+      nameEn: true,
+      nameKo: true,
+      slug: true,
+      level: true,
+      colorHex: true,
+      colorHex2: true,
+      gradientDir: true,
+      gradientStop: true,
+      textColorHex: true,
+      parent: {
+        select: {
+          nameEn: true,
+          nameKo: true,
+          colorHex: true,
+          colorHex2: true,
+          gradientDir: true,
+          gradientStop: true,
+          textColorHex: true,
+          parent: {
+            select: {
+              nameEn: true,
+              nameKo: true,
+              colorHex: true,
+              colorHex2: true,
+              gradientDir: true,
+              gradientStop: true,
+              textColorHex: true,
+              parent: {
+                select: {
+                  nameEn: true,
+                  nameKo: true,
+                  colorHex: true,
+                  colorHex2: true,
+                  gradientDir: true,
+                  gradientStop: true,
+                  textColorHex: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
+export type TopicDetail = NonNullable<Awaited<ReturnType<typeof getTopicBySlug>>>;
+
 /** 주어진 topicId의 자신 + 모든 하위 토픽 ID 반환 (재귀) */
 export async function getDescendantTopicIds(topicId: string): Promise<string[]> {
   const allTopics = await prisma.topic.findMany({

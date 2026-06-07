@@ -81,6 +81,25 @@ export async function getProfileImagePresignedUrl(
   }
 }
 
+/** 이벤트 이미지 브라우저 직접 업로드용 Presigned URL 발급 */
+export async function getEventImagePresignedUrl(
+  filename: string,
+  contentType: string,
+  folderPath: string,
+): Promise<{ presignedUrl: string; cdnUrl: string } | { error: string }> {
+  if (!ALLOWED_IMAGE_TYPES.includes(contentType)) {
+    return { error: `Only jpg, png, and webp formats are supported.` };
+  }
+  const ext = filename.split(".").pop() ?? "jpg";
+  const path = `${folderPath}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  try {
+    return await getPresignedPutUrl("event-images", path, contentType);
+  } catch (e) {
+    console.error("이벤트 이미지 Presigned URL 생성 오류:", e);
+    return { error: "Failed to prepare upload. Please try again." };
+  }
+}
+
 /** 리크리샷 고아 파일 삭제 (이탈 시 정리용) */
 export async function deleteReCreeshotImages(paths: string[]): Promise<void> {
   await deleteStorageFiles("recreeshot-images", paths);

@@ -47,6 +47,7 @@ export default async function HomeCurationPage({
           maxCount: true,
           order: true,
           isActive: true,
+          showOnHome: true,
         },
       }),
       prisma.post.findMany({

@@ -25,7 +25,7 @@ export async function saveGuideVideo(data: {
 
   revalidatePath("/admin/guide-video");
   revalidatePath("/");
-  revalidatePath("/explore");
+  revalidatePath("/discover");
 }
 
 export async function toggleGuideVideo(id: string, isActive: boolean) {
@@ -39,12 +39,12 @@ export async function toggleGuideVideo(id: string, isActive: boolean) {
 
   revalidatePath("/admin/guide-video");
   revalidatePath("/");
-  revalidatePath("/explore");
+  revalidatePath("/discover");
 }
 
 export async function deleteGuideVideo(id: string) {
   await prisma.guideVideo.delete({ where: { id } });
   revalidatePath("/admin/guide-video");
   revalidatePath("/");
-  revalidatePath("/explore");
+  revalidatePath("/discover");
 }

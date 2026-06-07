@@ -1,5 +1,7 @@
 // 지도 페이지용 장소 + 포스트 쿼리 — 서버 전용
 import { prisma } from "@/lib/prisma";
+import { unstable_cache } from "next/cache";
+import { getFilteredPosts } from "@/lib/filter-queries";
 
 type TopicColorFields = {
   colorHex: string | null;
@@ -307,9 +309,39 @@ export async function getMapPlacesByIdsWithFallback(ids: string[]): Promise<MapP
   return [...placesWithPosts, ...placesWithoutPosts];
 }
 
-/** PUBLISHED 포스트가 연결된 모든 장소 (lat/lng 있는 것만) */
-export async function getAllMapPlaces(): Promise<MapPlace[]> {
+/** PUBLISHED 포스트가 연결된 모든 장소 (lat/lng 있는 것만) — 60초 캐시 */
+export const getAllMapPlaces = unstable_cache(
+  async (): Promise<MapPlace[]> => {
+    const rows = await fetchPostPlaceRows({
+      post: { status: "PUBLISHED" },
+      place: {
+        latitude: { not: null },
+        longitude: { not: null },
+      },
+    });
+    return groupByPlace(rows);
+  },
+  ["all-map-places"],
+  { revalidate: 60, tags: ["map-places"] }
+);
+
+/**
+ * 필터된 Post가 연결된 장소만 반환 (캐시 없음).
+ * getFilteredPosts → postIds → fetchPostPlaceRows + groupByPlace 파이프라인.
+ * q/topicIds/tagIds/tagGroupName 시그니처는 getFilteredPosts와 동일.
+ */
+export async function getFilteredMapPlaces(params: {
+  q?: string;
+  topicIds?: string[];
+  tagIds?: string[];
+  tagGroupName?: string;
+}): Promise<MapPlace[]> {
+  const posts = await getFilteredPosts(params);
+  if (posts.length === 0) return [];
+
+  const postIds = posts.map((p) => p.id);
   const rows = await fetchPostPlaceRows({
+    postId: { in: postIds },
     post: { status: "PUBLISHED" },
     place: {
       latitude: { not: null },

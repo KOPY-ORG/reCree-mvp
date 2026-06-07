@@ -1,6 +1,7 @@
 "use client";
 
-import { Upload } from "lucide-react";
+import Link from "next/link";
+import { Share2, ChevronRight } from "lucide-react";
 import { labelBackground, type ResolvedLabel } from "@/lib/post-labels";
 import { LabelBadge } from "@/components/LabelBadge";
 import { ScrapButton } from "@/app/(user)/_components/ScrapButton";
@@ -43,21 +44,34 @@ export function PostMetaBar({ labels, isSaved, postId, titleEn }: Props) {
     <div className="relative flex justify-between items-start px-4 pt-3 pb-2">
       {/* 배지 영역 */}
       <div className="flex flex-wrap gap-1.5 flex-1 min-w-0 mr-3">
-        {labels.map((label, i) => (
-          <LabelBadge
-            key={i}
-            text={label.text}
-            background={labelBackground(label)}
-            color={label.textColorHex}
-            className="whitespace-nowrap shrink-0"
-          />
-        ))}
+        {labels.map((label, i) =>
+          label.slug ? (
+            <Link key={i} href={`/topics/${label.slug}`} className="inline-flex">
+              <LabelBadge
+                text={label.text}
+                background={labelBackground(label)}
+                color={label.textColorHex}
+                className="whitespace-nowrap shrink-0"
+              >
+                <ChevronRight className="h-3 w-3 opacity-60" />
+              </LabelBadge>
+            </Link>
+          ) : (
+            <LabelBadge
+              key={i}
+              text={label.text}
+              background={labelBackground(label)}
+              color={label.textColorHex}
+              className="whitespace-nowrap shrink-0"
+            />
+          )
+        )}
       </div>
 
       {/* 액션 버튼 */}
       <div className="flex items-center gap-3 shrink-0">
         <button type="button" onClick={handleShare} className="text-muted-foreground hover:text-foreground transition-colors">
-          <Upload className="h-5 w-5" strokeWidth={1.5} />
+          <Share2 className="h-5 w-5" strokeWidth={1.5} />
         </button>
         <ScrapButton postId={postId} initialSaved={isSaved} size="md" />
       </div>

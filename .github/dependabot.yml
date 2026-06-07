@@ -1,0 +1,31 @@
+version: 2
+
+updates:
+  - package-ecosystem: "npm" # pnpm도 npm 생태계로 처리 — pnpm-lock.yaml 감지 시 자동으로 pnpm 명령 사용
+    directory: "/"            # pnpm-lock.yaml 위치 (루트)
+    schedule:
+      interval: "weekly"      # 매주 PR 생성 (daily는 노이즈 과다)
+      day: "monday"           # 월요일 시작에 한꺼번에 확인
+      time: "09:00"
+      timezone: "Asia/Seoul"
+    target-branch: "dev"      # main 대신 dev 브랜치로 PR 생성 (프로젝트 기본 브랜치)
+    open-pull-requests-limit: 5   # 동시에 열리는 PR 최대 수 제한
+
+    commit-message:
+      prefix: "chore(deps)"        # 프로덕션 의존성 커밋 prefix
+      prefix-development: "chore(deps-dev)"  # 개발 의존성 커밋 prefix
+      include: "scope"             # 패키지 이름을 scope에 포함
+
+    groups:
+      # minor·patch 업데이트는 그룹 PR로 묶어 리뷰 부담 감소
+      # major는 update-types에 없으므로 그룹에서 제외 → 개별 PR로 분리되어 breaking change 개별 검토 가능
+      production-dependencies:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
+      development-dependencies:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"

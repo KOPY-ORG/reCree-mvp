@@ -226,7 +226,7 @@ export async function createReCreeshot(
       },
     });
 
-    revalidatePath("/explore");
+    revalidatePath("/discover");
     return { id: shot.id };
   } catch (e) {
     console.error(e);
@@ -260,7 +260,7 @@ export async function scoreReCreeshot(
     });
 
     revalidatePath(`/explore/hall/${id}`);
-    revalidatePath("/explore");
+    revalidatePath("/discover");
     return { matchScore };
   } catch (e) {
     console.error(e);
@@ -387,7 +387,7 @@ export async function deleteReCreeshot(id: string): Promise<{ error?: string }> 
     .filter((p): p is string => p !== null);
   await deleteStorageFiles("recreeshot-images", storagePaths);
 
-  revalidatePath("/explore");
+  revalidatePath("/discover");
   return {};
 }
 
@@ -435,7 +435,7 @@ export async function updateReCreeshotImageUrl(
   });
 
   revalidatePath(`/explore/hall/${id}`);
-  revalidatePath("/explore");
+  revalidatePath("/discover");
   revalidatePath("/");
   return {};
 }

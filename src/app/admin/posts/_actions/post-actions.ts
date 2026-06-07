@@ -285,7 +285,7 @@ export async function createPost(
 
     newId = post.id;
     revalidatePath("/");
-    revalidatePath("/explore");
+    revalidatePath("/discover");
   } catch (e) {
     console.error(e);
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
@@ -370,7 +370,7 @@ export async function updatePost(
     }
 
     revalidatePath("/");
-    revalidatePath("/explore");
+    revalidatePath("/discover");
   } catch (e) {
     console.error(e);
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
@@ -407,7 +407,7 @@ export async function deletePost(id: string): Promise<{ error?: string }> {
     await prisma.post.delete({ where: { id } });
     revalidatePath("/admin/posts");
     revalidatePath("/");
-    revalidatePath("/explore");
+    revalidatePath("/discover");
     return {};
   } catch (e) {
     console.error(e);
@@ -450,7 +450,7 @@ export async function publishPost(
     });
     revalidatePath("/admin/posts");
     revalidatePath("/");
-    revalidatePath("/explore");
+    revalidatePath("/discover");
     return {};
   } catch (e) {
     console.error(e);
@@ -466,7 +466,7 @@ export async function unpublishPost(id: string): Promise<{ error?: string }> {
     });
     revalidatePath("/admin/posts");
     revalidatePath("/");
-    revalidatePath("/explore");
+    revalidatePath("/discover");
     return {};
   } catch (e) {
     console.error(e);
