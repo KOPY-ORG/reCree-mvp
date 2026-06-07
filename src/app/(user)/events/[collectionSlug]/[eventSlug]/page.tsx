@@ -63,6 +63,11 @@ function safeHostname(url: string): string {
   }
 }
 
+function safeUrl(u: string | null | undefined): string | null {
+  if (!u) return null;
+  return /^https?:\/\//i.test(u.trim()) ? u.trim() : null;
+}
+
 function linkify(text: string) {
   const parts = text.split(/(https?:\/\/[^\s]+)/g);
   return parts.map((part, i) =>
@@ -244,6 +249,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
   const timeRange = formatTimeRange(event.openTime, event.closeTime, dict.fromDate, dict.untilDate);
   const entryInfo = dict.entryType[event.entryType];
   const categoryLabel = dict.category[event.category];
+  const reservationLink = safeUrl(event.reservationUrl);
   const hasLinks = !!(event.officialUrl || event.snsUrl);
   const hasAbout = !!(description || event.bodyBlocks.length > 0);
 
@@ -496,14 +502,28 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
               </div>
             </div>
 
-            {event.entryType === "WALK_IN" && (
-              <span
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-extrabold"
-                style={{ background: "#C8FF09", color: "#16210A", fontSize: 12.5 }}
-              >
-                ✓ No booking
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {event.entryType === "WALK_IN" && (
+                <span
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-extrabold"
+                  style={{ background: "#C8FF09", color: "#16210A", fontSize: 12.5 }}
+                >
+                  ✓ No booking
+                </span>
+              )}
+              {reservationLink && (
+                <a
+                  href={reservationLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-extrabold text-white"
+                  style={{ background: ACCENT, fontSize: 12.5 }}
+                >
+                  {/* TODO: i18n */}
+                  Book now
+                </a>
+              )}
+            </div>
           </div>
         </div>
 
@@ -551,44 +571,67 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
                   {p.addressEn ?? p.addressKo}
                 </div>
               )}
-              {(p.googleMapsUrl || p.naverMapsUrl) && (
-                <div className="flex gap-2 mt-3">
-                  {p.googleMapsUrl && (
-                    <a
-                      href={p.googleMapsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[10px] font-bold"
-                      style={{
-                        background: "rgba(240,25,65,.08)",
-                        border: "1px solid rgba(240,25,65,.2)",
-                        color: ACCENT,
-                        fontSize: 12.5,
-                      }}
-                    >
-                      <MapPin size={13} />
-                      Google Maps
-                    </a>
-                  )}
-                  {p.naverMapsUrl && (
-                    <a
-                      href={p.naverMapsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[10px] font-bold"
-                      style={{
-                        background: "#F0FAE8",
-                        border: "1px solid #C8FF09",
-                        color: "#2A4A00",
-                        fontSize: 12.5,
-                      }}
-                    >
-                      <MapPin size={13} />
-                      Naver Map
-                    </a>
-                  )}
-                </div>
-              )}
+              {(() => {
+                const gmap = safeUrl(p.googleMapsUrl);
+                const nmap = safeUrl(p.naverMapsUrl);
+                const amap = safeUrl(p.amapUrl);
+                if (!gmap && !nmap && !amap) return null;
+                return (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {gmap && (
+                      <a
+                        href={gmap}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[10px] font-bold"
+                        style={{
+                          background: "rgba(240,25,65,.08)",
+                          border: "1px solid rgba(240,25,65,.2)",
+                          color: ACCENT,
+                          fontSize: 12.5,
+                        }}
+                      >
+                        <MapPin size={13} />
+                        Google Maps
+                      </a>
+                    )}
+                    {nmap && (
+                      <a
+                        href={nmap}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[10px] font-bold"
+                        style={{
+                          background: "#F0FAE8",
+                          border: "1px solid #C8FF09",
+                          color: "#2A4A00",
+                          fontSize: 12.5,
+                        }}
+                      >
+                        <MapPin size={13} />
+                        Naver Map
+                      </a>
+                    )}
+                    {amap && (
+                      <a
+                        href={amap}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[10px] font-bold"
+                        style={{
+                          background: "#FFF3E0",
+                          border: "1px solid #FFB74D",
+                          color: "#E65100",
+                          fontSize: 12.5,
+                        }}
+                      >
+                        <MapPin size={13} />
+                        Amap
+                      </a>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         ))}
@@ -759,9 +802,9 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
               {dict.links}
             </h2>
             <div className="space-y-2">
-              {event.officialUrl && (
+              {event.officialUrl && safeUrl(event.officialUrl) && (
                 <a
-                  href={event.officialUrl}
+                  href={safeUrl(event.officialUrl)!}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-between rounded-[12px] px-4 py-3"
@@ -783,9 +826,9 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
                   </span>
                 </a>
               )}
-              {event.snsUrl && (
+              {event.snsUrl && safeUrl(event.snsUrl) && (
                 <a
-                  href={event.snsUrl}
+                  href={safeUrl(event.snsUrl)!}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-between rounded-[12px] px-4 py-3"
