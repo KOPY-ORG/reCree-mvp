@@ -1,10 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { Calendar, MapPin } from "lucide-react";
-import { isExternalImage } from "@/lib/image";
 import { getDDay, formatDateRangeUTC } from "@/lib/event-format";
+import { EventImage } from "@/components/events/EventImage";
 import type { EventCollectionMapMarker } from "@/lib/event-collection-queries";
 
 interface Props {
@@ -37,19 +36,14 @@ export function EventVerticalCard({
       }}
     >
       {/* ── 이미지 패널 ── */}
-      <div className="relative w-full aspect-[4/3] bg-[#1C0A13] overflow-hidden">
-        {event.bannerImageUrl ? (
-          <Image
-            src={event.bannerImageUrl}
-            alt={event.nameEn}
-            fill
-            className="object-cover"
-            sizes="(max-width: 768px) 72vw, 220px"
-            unoptimized={isExternalImage(event.bannerImageUrl)}
-          />
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-[#3A0014] to-[#1C0A13]" />
-        )}
+      <div className="relative w-full">
+        <EventImage
+          src={event.bannerImageUrl}
+          alt={event.nameEn}
+          ratio="4/3"
+          sizes="(max-width: 768px) 72vw, 220px"
+          autoFit
+        />
 
         {/* 그라디언트 쉐이드 오버레이 */}
         <div

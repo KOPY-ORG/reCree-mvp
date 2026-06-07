@@ -72,7 +72,7 @@ export function EventListCard({
             unoptimized={isExternalImage(event.bannerImageUrl)}
           />
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-[#3A0014] to-[#1C0A13]" />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #F01941 0%, #2A0410 100%)" }} />
         )}
 
         {/* 그라디언트 쉐이드 오버레이 */}

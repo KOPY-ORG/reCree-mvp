@@ -748,7 +748,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
                         key={i}
                         src={block.imageUrl}
                         alt=""
-                        ratio="16/9"
+                        ratio="1/1"
                         sizes="calc(100vw - 34px)"
                         className="rounded-[14px]"
                       />
