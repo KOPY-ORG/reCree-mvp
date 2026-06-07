@@ -9,7 +9,7 @@ import { getEventDict } from "@/lib/i18n/event-dict";
 import { EventLangSwitcher } from "./_components/EventLangSwitcher";
 import { InstagramEmbed } from "./_components/InstagramEmbed";
 import { EventImage } from "@/components/events/EventImage";
-import { EVENT_RED as ACCENT } from "@/lib/event-format";
+import { EVENT_RED as ACCENT, getDDay } from "@/lib/event-format";
 
 // ── 헬퍼 ────────────────────────────────────────────────────────────────────────
 
@@ -246,6 +246,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
   const timeRange = formatTimeRange(event.openTime, event.closeTime, dict.fromDate, dict.untilDate);
   const entryInfo = dict.entryType[event.entryType];
   const categoryLabel = dict.category[event.category];
+  const dday = getDDay(event.startDate, event.endDate);
   const reservationLink = safeUrl(event.reservationUrl);
   const hasLinks = !!(event.officialUrl || event.snsUrl);
   const hasAbout = event.bodyBlocks.length > 0;
@@ -283,36 +284,53 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
       >
         {/* ── 타이틀 블록 ──────────────────────────────────────────────────────── */}
         <div
-          className="mb-[13px] p-[17px]"
+          className="-mx-4 -mt-2 mb-[13px] p-[17px]"
           style={{
             background: "#fff",
-            borderRadius: 20,
-            boxShadow: "0 2px 14px rgba(20,18,28,.05)",
-            border: "1px solid #EEEFF2",
+            borderRadius: "26px 26px 0 0",
           }}
         >
-          {/* 칩 행: 시리즈 + 카테고리 */}
+          {/* 칩 행: 시리즈 → 카테고리 → D-day */}
           <div className="flex flex-wrap gap-[7px] mb-3">
             <span
-              className="inline-flex items-center px-2.5 py-[5px] rounded-full text-white font-bold"
+              className="inline-flex items-center rounded-full text-white"
               style={{
-                background: `linear-gradient(120deg, ${ACCENT}, #FF3B5C)`,
+                background: ACCENT,
+                height: 27,
+                paddingInline: 11,
                 fontSize: 12,
-                letterSpacing: "0.04em",
+                fontWeight: 600,
               }}
             >
               {collectionName}
             </span>
             <span
-              className="inline-flex items-center px-2.5 py-[5px] rounded-full font-bold"
+              className="inline-flex items-center rounded-full text-white"
               style={{
-                color: "#5A4A12",
-                background: "linear-gradient(120deg, #FFE14D, #FFC83D)",
+                background: "#16171A",
+                height: 27,
+                paddingInline: 11,
                 fontSize: 12,
+                fontWeight: 600,
               }}
             >
               {categoryLabel}
             </span>
+            {dday && (
+              <span
+                className="inline-flex items-center rounded-full"
+                style={{
+                  background: "#C8FF09",
+                  color: "#16171A",
+                  height: 27,
+                  paddingInline: 11,
+                  fontSize: 12,
+                  fontWeight: 700,
+                }}
+              >
+                {dday}
+              </span>
+            )}
           </div>
 
           {/* 이벤트명 */}
