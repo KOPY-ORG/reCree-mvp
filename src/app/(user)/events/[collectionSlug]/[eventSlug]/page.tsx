@@ -4,7 +4,7 @@ import Image from "next/image";
 import { Calendar, MapPin, Ticket } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { EventBackButton } from "./_components/EventBackButton";
-import { MapPreview } from "@/components/maps/MapPreview";
+import { EventLocationMap } from "@/components/maps/EventLocationMap";
 import { getEventDict } from "@/lib/i18n/event-dict";
 import { EventLangSwitcher } from "./_components/EventLangSwitcher";
 import { InstagramEmbed } from "./_components/InstagramEmbed";
@@ -127,6 +127,7 @@ async function getEventDetail(collectionSlug: string, eventSlug: string) {
         select: {
           place: {
             select: {
+              id: true,
               nameEn: true,
               nameKo: true,
               addressEn: true,
@@ -485,10 +486,9 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
         </div>
 
         {/* ── 장소 블록 ────────────────────────────────────────────────────────── */}
-        {placeCount > 0 && places.map((p, idx) => (
+        {placeCount > 0 && (
           <div
-            key={p.nameEn ?? p.nameKo ?? String(idx)}
-            className="mb-[13px] overflow-hidden"
+            className="mb-[13px]"
             style={{
               background: "#fff",
               borderRadius: 20,
@@ -496,102 +496,130 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
               border: "1px solid #EEEFF2",
             }}
           >
-            {p.latitude && p.longitude && (
-              <MapPreview
-                lat={p.latitude}
-                lng={p.longitude}
-                zoom={15}
-                height={180}
-                className="rounded-none border-0 border-b border-[#EEEFF2]"
-              />
-            )}
-            <div className="px-[17px] py-4">
-              <h2
-                className="font-extrabold text-[#16181C] mb-2"
-                style={{ fontSize: 16.5, letterSpacing: "-0.01em" }}
-              >
-                {dict.location}
-              </h2>
-              {(p.nameEn || p.nameKo) && (
-                <div
-                  className="font-semibold text-[#16181C] mb-0.5"
-                  style={{ fontSize: 14 }}
+            {/* ① 헤딩 */}
+            <div className="flex items-center justify-between px-[17px] pt-[17px] pb-3">
+              <div className="flex items-center gap-2">
+                <MapPin size={16} strokeWidth={2.5} style={{ color: "#E9283D", flexShrink: 0 }} />
+                <h2
+                  className="font-extrabold text-[#16181C]"
+                  style={{ fontSize: 16.5, letterSpacing: "-0.01em" }}
                 >
-                  {p.nameEn ?? p.nameKo}
-                </div>
-              )}
-              {(p.addressEn || p.addressKo) && (
-                <div
-                  className="font-medium"
-                  style={{ fontSize: 13, color: "#8A8F98", lineHeight: 1.5 }}
+                  {placeCount === 1 ? dict.location : "Locations"}
+                </h2>
+              </div>
+              {placeCount >= 2 && (
+                <span
+                  className="text-xs font-semibold rounded-full px-2.5 py-1 shrink-0 ml-2"
+                  style={{ background: "#F4F5F7", color: "#8A8F98" }}
                 >
-                  {p.addressEn ?? p.addressKo}
-                </div>
+                  {dict.locationsLabel(placeCount)}
+                </span>
               )}
-              {(() => {
-                const gmap = safeUrl(p.googleMapsUrl);
-                const nmap = safeUrl(p.naverMapsUrl);
-                const amap = safeUrl(p.amapUrl);
-                if (!gmap && !nmap && !amap) return null;
-                return (
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {gmap && (
-                      <a
-                        href={gmap}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[10px] font-bold"
-                        style={{
-                          background: "rgba(233,40,61,.08)",
-                          border: "1px solid rgba(233,40,61,.2)",
-                          color: ACCENT,
-                          fontSize: 12.5,
-                        }}
-                      >
-                        <MapPin size={13} />
-                        Google Maps
-                      </a>
-                    )}
-                    {nmap && (
-                      <a
-                        href={nmap}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[10px] font-bold"
-                        style={{
-                          background: "#F0FAE8",
-                          border: "1px solid #C8FF09",
-                          color: "#2A4A00",
-                          fontSize: 12.5,
-                        }}
-                      >
-                        <MapPin size={13} />
-                        Naver Map
-                      </a>
-                    )}
-                    {amap && (
-                      <a
-                        href={amap}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[10px] font-bold"
-                        style={{
-                          background: "#FFF3E0",
-                          border: "1px solid #FFB74D",
-                          color: "#E65100",
-                          fontSize: 12.5,
-                        }}
-                      >
-                        <MapPin size={13} />
-                        Amap
-                      </a>
-                    )}
-                  </div>
-                );
-              })()}
             </div>
+            {/* ② 지도 (패딩 안 둥근 모서리) */}
+            <div className="px-[17px] pb-3">
+              <div style={{ borderRadius: 14, overflow: "hidden" }}>
+                <EventLocationMap places={places} height={200} />
+              </div>
+            </div>
+            {/* ③ 번호 리스트 */}
+            {places.map((p, idx) => {
+              const gmap = safeUrl(p.googleMapsUrl);
+              const nmap = safeUrl(p.naverMapsUrl);
+              const amap = safeUrl(p.amapUrl);
+              const hasLinks = !!(gmap || nmap || amap);
+              return (
+                <div
+                  key={p.id ?? String(idx)}
+                  className="px-[17px] py-3"
+                  style={{ borderTop: "1px solid #EEEFF2" }}
+                >
+                  <div className="flex items-start gap-3">
+                    <div
+                      className="shrink-0 w-[22px] h-[22px] rounded-full flex items-center justify-center text-white font-bold"
+                      style={{ background: "#E9283D", fontSize: 11 }}
+                    >
+                      {idx + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      {(p.nameEn || p.nameKo) && (
+                        <div
+                          className="font-semibold text-[#16181C] mb-0.5"
+                          style={{ fontSize: 14 }}
+                        >
+                          {p.nameEn ?? p.nameKo}
+                        </div>
+                      )}
+                      {(p.addressEn || p.addressKo) && (
+                        <div
+                          className="font-medium"
+                          style={{ fontSize: 13, color: "#8A8F98", lineHeight: 1.5 }}
+                        >
+                          {p.addressEn ?? p.addressKo}
+                        </div>
+                      )}
+                      {hasLinks && (
+                        <div className="flex gap-2 mt-2">
+                          {gmap && (
+                            <a
+                              href={gmap}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex flex-1 items-center justify-center gap-1.5 px-3 py-2 rounded-[10px] font-bold"
+                              style={{
+                                background: "rgba(233,40,61,.08)",
+                                border: "1px solid rgba(233,40,61,.2)",
+                                color: ACCENT,
+                                fontSize: 12.5,
+                              }}
+                            >
+                              <MapPin size={13} />
+                              Google
+                            </a>
+                          )}
+                          {nmap && (
+                            <a
+                              href={nmap}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex flex-1 items-center justify-center gap-1.5 px-3 py-2 rounded-[10px] font-bold"
+                              style={{
+                                background: "#F0FAE8",
+                                border: "1px solid #C8FF09",
+                                color: "#2A4A00",
+                                fontSize: 12.5,
+                              }}
+                            >
+                              <MapPin size={13} />
+                              Naver
+                            </a>
+                          )}
+                          {amap && (
+                            <a
+                              href={amap}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex flex-1 items-center justify-center gap-1.5 px-3 py-2 rounded-[10px] font-bold"
+                              style={{
+                                background: "#FFF3E0",
+                                border: "1px solid #FFB74D",
+                                color: "#E65100",
+                                fontSize: 12.5,
+                              }}
+                            >
+                              <MapPin size={13} />
+                              Amap
+                            </a>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        ))}
+        )}
 
         {/* ── 혜택 블록 — "What you'll get here" ──────────────────────────────── */}
         {event.perks.length > 0 && (
