@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Upload, ChevronRight } from "lucide-react";
+import { Share2, ChevronRight } from "lucide-react";
 import { labelBackground, type ResolvedLabel } from "@/lib/post-labels";
 import { LabelBadge } from "@/components/LabelBadge";
 import { ScrapButton } from "@/app/(user)/_components/ScrapButton";
@@ -71,7 +71,7 @@ export function PostMetaBar({ labels, isSaved, postId, titleEn }: Props) {
       {/* 액션 버튼 */}
       <div className="flex items-center gap-3 shrink-0">
         <button type="button" onClick={handleShare} className="text-muted-foreground hover:text-foreground transition-colors">
-          <Upload className="h-5 w-5" strokeWidth={1.5} />
+          <Share2 className="h-5 w-5" strokeWidth={1.5} />
         </button>
         <ScrapButton postId={postId} initialSaved={isSaved} size="md" />
       </div>

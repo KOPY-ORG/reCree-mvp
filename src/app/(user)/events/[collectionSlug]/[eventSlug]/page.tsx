@@ -7,6 +7,7 @@ import { EventBackButton } from "./_components/EventBackButton";
 import { EventLocationMap } from "@/components/maps/EventLocationMap";
 import { getEventDict } from "@/lib/i18n/event-dict";
 import { EventLangSwitcher } from "./_components/EventLangSwitcher";
+import { EventShareButton } from "./_components/EventShareButton";
 import { InstagramEmbed } from "./_components/InstagramEmbed";
 import { EventImage } from "@/components/events/EventImage";
 import { PerkCard } from "@/components/events/PerkCard";
@@ -53,6 +54,12 @@ function formatTimeRange(
   if (open && close) return `${fmt(open)} – ${fmt(close)}`;
   if (open) return fromDate(fmt(open));
   return untilDate(fmt(close!));
+}
+
+function splitHoursNote(note: string): string[] {
+  const byNewline = note.split(/\n/).map((l) => l.trim()).filter(Boolean);
+  if (byNewline.length > 1) return byNewline;
+  return note.split(/\s+(?=\w[\w ]*period:)/i).map((l) => l.trim()).filter(Boolean);
 }
 
 function safeHostname(url: string): string {
@@ -286,7 +293,10 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
         {/* 상단 바 — 뒤로가기 + 언어 전환 */}
         <div className="absolute top-0 left-0 right-0 flex items-center px-4 pt-4">
           <EventBackButton />
-          <div className="ml-auto"><EventLangSwitcher /></div>
+          <div className="ml-auto flex items-center gap-2">
+            <EventLangSwitcher />
+            <EventShareButton title={eventName} />
+          </div>
         </div>
 
       </div>
@@ -399,7 +409,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
           </div>
 
           {/* 날짜·시간 */}
-          <div className="flex items-stretch px-4 py-4">
+          <div className={`flex items-stretch px-4 pt-4 ${hoursNote ? "pb-2" : "pb-4"}`}>
             <div className="flex-1">
               <div
                 className="font-extrabold mb-1"
@@ -440,15 +450,20 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
                   >
                     {timeRange}
                   </div>
-                  {hoursNote && (
-                    <div className="font-medium mt-0.5" style={{ fontSize: 12, color: "#8A8F98" }}>
-                      {hoursNote}
-                    </div>
-                  )}
                 </div>
               </>
             )}
           </div>
+
+          {hoursNote && (
+            <div className="px-4 pb-4">
+              {splitHoursNote(hoursNote).map((line, i) => (
+                <div key={i} className="font-medium" style={{ fontSize: 12, color: "#8A8F98" }}>
+                  {line}
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* 천공선 */}
           <div
