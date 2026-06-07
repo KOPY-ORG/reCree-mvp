@@ -240,7 +240,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
 
   const eventName = t?.name ?? "";
   const description = t?.description ?? "";
-  const hoursNote = t?.hoursNote ?? dict.openDaily;
+  const hoursNote = t?.hoursNote ?? null;
   const collectionName = collectionT?.name ?? event.collection.slug;
   const places = event.places.map((ep) => ep.place);
   const placeCount = places.length;
@@ -448,9 +448,11 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
                   >
                     {timeRange}
                   </div>
-                  <div className="font-medium mt-0.5" style={{ fontSize: 12, color: "#8A8F98" }}>
-                    {hoursNote}
-                  </div>
+                  {hoursNote && (
+                    <div className="font-medium mt-0.5" style={{ fontSize: 12, color: "#8A8F98" }}>
+                      {hoursNote}
+                    </div>
+                  )}
                 </div>
               </>
             )}
