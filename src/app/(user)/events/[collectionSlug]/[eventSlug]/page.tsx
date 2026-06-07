@@ -8,6 +8,7 @@ import { MapPreview } from "@/components/maps/MapPreview";
 import { getEventDict } from "@/lib/i18n/event-dict";
 import { EventLangSwitcher } from "./_components/EventLangSwitcher";
 import { InstagramEmbed } from "./_components/InstagramEmbed";
+import { EventImage } from "@/components/events/EventImage";
 
 // ── 상수 ────────────────────────────────────────────────────────────────────────
 
@@ -256,30 +257,14 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
   return (
     <div style={{ background: "#F4F5F7", minHeight: "100dvh" }}>
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
-      <div className="relative w-full" style={{ height: 318 }}>
-        {event.bannerImageUrl ? (
-          <Image
-            src={event.bannerImageUrl}
-            alt={eventName}
-            fill
-            sizes="100vw"
-            className="object-cover"
-            priority
-          />
-        ) : (
-          <div
-            className="absolute inset-0"
-            style={{ background: "linear-gradient(135deg, #2A2D33 0%, #1A1C20 100%)" }}
-          />
-        )}
-
-        {/* 그라데이션 오버레이 */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(180deg, rgba(10,6,9,.42) 0%, transparent 22%, transparent 52%, rgba(10,6,9,.34) 100%)",
-          }}
+      <div className="relative w-full">
+        <EventImage
+          src={event.bannerImageUrl}
+          alt={eventName}
+          ratio="1/1"
+          sizes="100vw"
+          priority
+          overlay
         />
 
         {/* 상단 바 — 뒤로가기 + 언어 전환 */}
@@ -759,19 +744,14 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
                   }
                   if (block.type === "IMAGE" && block.imageUrl) {
                     return (
-                      <div
+                      <EventImage
                         key={i}
-                        className="relative w-full overflow-hidden rounded-[14px]"
-                        style={{ aspectRatio: "16 / 9" }}
-                      >
-                        <Image
-                          src={block.imageUrl}
-                          alt=""
-                          fill
-                          sizes="calc(100vw - 34px)"
-                          className="object-cover"
-                        />
-                      </div>
+                        src={block.imageUrl}
+                        alt=""
+                        ratio="16/9"
+                        sizes="calc(100vw - 34px)"
+                        className="rounded-[14px]"
+                      />
                     );
                   }
                   if (block.type === "INSTAGRAM" && block.embedUrl) {
