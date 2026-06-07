@@ -681,7 +681,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
                   <PerkCard
                     key={i}
                     imageUrl={perk.imageUrl}
-                    perkUrl={perk.perkUrl}
+                    perkUrl={perk.perkUrl ? safeUrl(perk.perkUrl) : null}
                     badge={perkT?.badge ?? null}
                     title={perkT?.title ?? null}
                     detail={perkT?.detail ?? null}
