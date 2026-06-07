@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { Calendar, MapPin, Ticket } from "lucide-react";
+import { Calendar, Globe, Instagram, MapPin, Ticket } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { EventBackButton } from "./_components/EventBackButton";
 import { EventLocationMap } from "@/components/maps/EventLocationMap";
@@ -740,12 +740,15 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
                     border: "1px solid rgba(233,40,61,.22)",
                   }}
                 >
-                  <div>
-                    <div className="font-extrabold text-[#16181C]" style={{ fontSize: 14 }}>
-                      {dict.officialSite}
-                    </div>
-                    <div className="font-semibold" style={{ fontSize: 12, color: "#9AA0A8" }}>
-                      {safeHostname(event.officialUrl)}
+                  <div className="flex items-center gap-3">
+                    <Globe size={18} color={ACCENT} />
+                    <div>
+                      <div className="font-extrabold text-[#16181C]" style={{ fontSize: 14 }}>
+                        {dict.officialSite}
+                      </div>
+                      <div className="font-semibold" style={{ fontSize: 12, color: "#9AA0A8" }}>
+                        {safeHostname(event.officialUrl)}
+                      </div>
                     </div>
                   </div>
                   <span className="font-bold" style={{ color: ACCENT, fontSize: 16 }}>
@@ -761,12 +764,15 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
                   className="flex items-center justify-between rounded-[12px] px-4 py-3"
                   style={{ background: "#F7F6F8", border: "1px solid #ECEAEE" }}
                 >
-                  <div>
-                    <div className="font-extrabold text-[#16181C]" style={{ fontSize: 14 }}>
-                      Follow on Instagram
-                    </div>
-                    <div className="font-semibold" style={{ fontSize: 12, color: "#9AA0A8" }}>
-                      {safeHostname(event.snsUrl)}
+                  <div className="flex items-center gap-3">
+                    <Instagram size={18} color="#E1306C" />
+                    <div>
+                      <div className="font-extrabold text-[#16181C]" style={{ fontSize: 14 }}>
+                        {dict.followOnInstagram}
+                      </div>
+                      <div className="font-semibold" style={{ fontSize: 12, color: "#9AA0A8" }}>
+                        {safeHostname(event.snsUrl)}
+                      </div>
                     </div>
                   </div>
                   <span className="font-bold" style={{ color: "#9AA0A8", fontSize: 16 }}>

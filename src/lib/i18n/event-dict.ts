@@ -12,6 +12,7 @@ type EventDictEntry = {
   aboutSpot: string;
   links: string;
   officialSite: string;
+  followOnInstagram: string;
   openDaily: string;
   category: Record<EventCategory, string>;
   entryType: Record<EventEntryType, { label: string; note: string }>;
@@ -28,7 +29,8 @@ export const eventDict: Record<EventLocale, EventDictEntry> = {
     whatYouGet: "What you'll get here",
     aboutSpot: "About this spot",
     links: "Links",
-    officialSite: "Official event site",
+    officialSite: "Official Website",
+    followOnInstagram: "Follow on Instagram",
     openDaily: "Open daily",
     category: {
       CONCERT: "LIVE EVENTS",
@@ -59,6 +61,7 @@ export const eventDict: Record<EventLocale, EventDictEntry> = {
     aboutSpot: "장소 소개",
     links: "링크",
     officialSite: "공식 이벤트 사이트",
+    followOnInstagram: "인스타그램 팔로우",
     openDaily: "매일 운영",
     category: {
       CONCERT: "공연",
@@ -89,6 +92,7 @@ export const eventDict: Record<EventLocale, EventDictEntry> = {
     aboutSpot: "この場所について",
     links: "リンク",
     officialSite: "公式イベントサイト",
+    followOnInstagram: "Instagramをフォロー",
     openDaily: "毎日営業",
     category: {
       CONCERT: "ライブイベント",
@@ -119,6 +123,7 @@ export const eventDict: Record<EventLocale, EventDictEntry> = {
     aboutSpot: "关于此地点",
     links: "链接",
     officialSite: "官方活动网站",
+    followOnInstagram: "关注Instagram",
     openDaily: "每日开放",
     category: {
       CONCERT: "现场演出",
@@ -149,6 +154,7 @@ export const eventDict: Record<EventLocale, EventDictEntry> = {
     aboutSpot: "關於此地點",
     links: "連結",
     officialSite: "官方活動網站",
+    followOnInstagram: "追蹤 Instagram",
     openDaily: "每日開放",
     category: {
       CONCERT: "演出活動",
@@ -179,6 +185,7 @@ export const eventDict: Record<EventLocale, EventDictEntry> = {
     aboutSpot: "Sobre este lugar",
     links: "Enlaces",
     officialSite: "Sitio oficial del evento",
+    followOnInstagram: "Seguir en Instagram",
     openDaily: "Abierto todos los días",
     category: {
       CONCERT: "Eventos en vivo",

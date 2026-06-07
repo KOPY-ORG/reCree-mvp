@@ -33,7 +33,7 @@ export function InstagramEmbed({ url }: { url: string }) {
   if (!url) return null;
 
   return (
-    <div style={{ maxWidth: 540, margin: "0 auto", width: "100%" }}>
+    <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
       <blockquote
         className="instagram-media"
         data-instgrm-permalink={url}
