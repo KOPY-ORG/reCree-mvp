@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import Image from "next/image";
 import { Calendar, MapPin, Ticket } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { EventBackButton } from "./_components/EventBackButton";
@@ -9,6 +8,7 @@ import { getEventDict } from "@/lib/i18n/event-dict";
 import { EventLangSwitcher } from "./_components/EventLangSwitcher";
 import { InstagramEmbed } from "./_components/InstagramEmbed";
 import { EventImage } from "@/components/events/EventImage";
+import { PerkCard } from "@/components/events/PerkCard";
 import { EVENT_RED as ACCENT, getDDay } from "@/lib/event-format";
 
 // ── 헬퍼 ────────────────────────────────────────────────────────────────────────
@@ -641,60 +641,15 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
             <div className="space-y-3">
               {event.perks.map((perk, i) => {
                 const perkT = pickTranslation(perk.translations, locale, "en");
-                const card = (
-                  <div
-                    className="flex rounded-[14px] overflow-hidden"
-                    style={{ background: "#F7F6F8", border: "1px solid #ECEAEE" }}
-                  >
-                    {perk.imageUrl && (
-                      <div className="relative flex-shrink-0" style={{ width: 96, height: 96 }}>
-                        <Image
-                          src={perk.imageUrl}
-                          alt={perkT?.title ?? ""}
-                          fill
-                          sizes="96px"
-                          className="object-cover"
-                        />
-                      </div>
-                    )}
-                    <div className="flex flex-col justify-center px-3 py-3 min-w-0">
-                      {perkT?.badge && (
-                        <span
-                          className="inline-flex self-start items-center px-2 py-[3px] rounded-full text-white font-bold mb-1.5"
-                          style={{ background: ACCENT, fontSize: 10.5, letterSpacing: "0.04em" }}
-                        >
-                          {perkT.badge}
-                        </span>
-                      )}
-                      <div
-                        className="font-bold text-[#16181C] leading-snug"
-                        style={{ fontSize: 14 }}
-                      >
-                        {perkT?.title}
-                      </div>
-                      {perkT?.detail && (
-                        <div
-                          className="font-medium mt-1 leading-snug"
-                          style={{ fontSize: 12, color: "#8A8F98" }}
-                        >
-                          {perkT.detail}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-                return perk.perkUrl ? (
-                  <a
+                return (
+                  <PerkCard
                     key={i}
-                    href={perk.perkUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block"
-                  >
-                    {card}
-                  </a>
-                ) : (
-                  <div key={i}>{card}</div>
+                    imageUrl={perk.imageUrl}
+                    perkUrl={perk.perkUrl}
+                    badge={perkT?.badge ?? null}
+                    title={perkT?.title ?? null}
+                    detail={perkT?.detail ?? null}
+                  />
                 );
               })}
             </div>
