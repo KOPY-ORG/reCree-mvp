@@ -81,7 +81,7 @@ export function EventPeekCarousel({ events, collectionSlug, collectionName, onCl
               style={{
                 width: i === activeIndex ? 16 : 6,
                 height: 6,
-                background: i === activeIndex ? "#F01941" : "rgba(0,0,0,0.2)",
+                background: i === activeIndex ? "#E9283D" : "rgba(0,0,0,0.2)",
               }}
             />
           ))}

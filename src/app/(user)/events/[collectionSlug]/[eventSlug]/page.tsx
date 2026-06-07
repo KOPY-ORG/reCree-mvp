@@ -9,10 +9,7 @@ import { getEventDict } from "@/lib/i18n/event-dict";
 import { EventLangSwitcher } from "./_components/EventLangSwitcher";
 import { InstagramEmbed } from "./_components/InstagramEmbed";
 import { EventImage } from "@/components/events/EventImage";
-
-// ── 상수 ────────────────────────────────────────────────────────────────────────
-
-const ACCENT = "#F01941";
+import { EVENT_RED as ACCENT } from "@/lib/event-format";
 
 // ── 헬퍼 ────────────────────────────────────────────────────────────────────────
 
@@ -244,7 +241,6 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
   const collectionName = collectionT?.name ?? event.collection.slug;
   const places = event.places.map((ep) => ep.place);
   const placeCount = places.length;
-  const firstPlaceName = placeCount > 0 ? (places[0].nameEn ?? places[0].nameKo) : null;
   const dateRange = formatDateRangeUTC(event.startDate, event.endDate);
   const year = String(event.startDate.getUTCFullYear());
   const timeRange = formatTimeRange(event.openTime, event.closeTime, dict.fromDate, dict.untilDate);
@@ -252,7 +248,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
   const categoryLabel = dict.category[event.category];
   const reservationLink = safeUrl(event.reservationUrl);
   const hasLinks = !!(event.officialUrl || event.snsUrl);
-  const hasAbout = !!(description || event.bodyBlocks.length > 0);
+  const hasAbout = event.bodyBlocks.length > 0;
 
   return (
     <div style={{ background: "#F4F5F7", minHeight: "100dvh" }}>
@@ -273,26 +269,6 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
           <div className="ml-auto"><EventLangSwitcher /></div>
         </div>
 
-        {/* 이벤트 뱃지 */}
-        <div className="absolute flex gap-2" style={{ top: 64, left: 16 }}>
-          <span
-            className="inline-flex items-center px-3 py-1 rounded-full text-white font-extrabold"
-            style={{ background: ACCENT, fontSize: 12.5, letterSpacing: "0.12em" }}
-          >
-            EVENT
-          </span>
-          <span
-            className="inline-flex items-center px-3 py-1 rounded-full text-white font-bold"
-            style={{
-              background: "rgba(12,8,10,.42)",
-              backdropFilter: "blur(8px)",
-              fontSize: 11,
-              letterSpacing: "0.04em",
-            }}
-          >
-            {collectionName.toUpperCase()}
-          </span>
-        </div>
       </div>
 
       {/* ── Sheet ────────────────────────────────────────────────────────────── */}
@@ -315,7 +291,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
             border: "1px solid #EEEFF2",
           }}
         >
-          {/* 필 행 */}
+          {/* 칩 행: 시리즈 + 카테고리 */}
           <div className="flex flex-wrap gap-[7px] mb-3">
             <span
               className="inline-flex items-center px-2.5 py-[5px] rounded-full text-white font-bold"
@@ -337,44 +313,25 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
             >
               {categoryLabel}
             </span>
-            {placeCount > 0 && (
-              <span
-                className="inline-flex items-center gap-1 px-2.5 py-[5px] rounded-full font-semibold"
-                style={{
-                  color: "#3A3D44",
-                  background: "#F2F0F2",
-                  border: "1px solid #ECEAEE",
-                  fontSize: 12,
-                }}
-              >
-                <MapPin size={11} color={ACCENT} />
-                {placeCount === 1 ? firstPlaceName : dict.locationsLabel(placeCount)}
-              </span>
-            )}
           </div>
 
           {/* 이벤트명 */}
           <h1
-            className="font-extrabold text-[#16181C]"
-            style={{ fontSize: 23, lineHeight: 1.18, letterSpacing: "-0.02em" }}
+            className="text-[#16181C]"
+            style={{ fontSize: 25, lineHeight: 1.16, fontWeight: 700, letterSpacing: "-0.02em" }}
           >
             {eventName}
           </h1>
 
-          {/* 날짜 칩 */}
-          <div className="mt-3">
-            <span
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-white font-extrabold"
-              style={{
-                background: `linear-gradient(100deg, ${ACCENT}, #FF3B5C)`,
-                fontSize: 13.5,
-                letterSpacing: "0.01em",
-                boxShadow: "0 6px 16px rgba(240,25,65,.38)",
-              }}
+          {/* 서브타이틀 — description */}
+          {description && (
+            <p
+              className="mt-2"
+              style={{ fontSize: 14.5, lineHeight: 1.5, color: "#4A4D54", fontWeight: 400 }}
             >
-              {dateRange}
-            </span>
-          </div>
+              {description}
+            </p>
+          )}
         </div>
 
         {/* ── 티켓 블록 ────────────────────────────────────────────────────────── */}
@@ -383,8 +340,8 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
           style={{
             background: "#fff",
             borderRadius: 20,
-            boxShadow: "0 10px 30px rgba(240,25,65,.14)",
-            border: "1px solid rgba(240,25,65,.16)",
+            boxShadow: "0 10px 30px rgba(233,40,61,.14)",
+            border: "1px solid rgba(233,40,61,.16)",
           }}
         >
           {/* 티켓 헤더 */}
@@ -396,13 +353,8 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
               className="text-white font-extrabold"
               style={{ fontSize: 12.5, letterSpacing: "0.1em" }}
             >
-              {event.entryType === "WALK_IN" ? "ADMIT ONE · FREE" : "ADMIT ONE"}
-            </span>
-            <span
-              className="text-white font-bold"
-              style={{ fontSize: 11, letterSpacing: "0.08em" }}
-            >
-              {collectionName.toUpperCase()}
+              {/* intentionally English-fixed label (not i18n) */}
+              INFORMATION
             </span>
           </div>
 
@@ -461,7 +413,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
           {/* 천공선 */}
           <div
             className="mx-4"
-            style={{ borderTop: "2px dashed rgba(240,25,65,.28)" }}
+            style={{ borderTop: "2px dashed rgba(233,40,61,.28)" }}
           />
 
           {/* 참여방법 */}
@@ -469,7 +421,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
             <div className="flex items-center gap-3">
               <div
                 className="flex items-center justify-center rounded-[11px]"
-                style={{ width: 38, height: 38, background: "rgba(240,25,65,.11)" }}
+                style={{ width: 38, height: 38, background: "rgba(233,40,61,.11)" }}
               >
                 {event.entryType === "TICKET" ? (
                   <Ticket size={18} color={ACCENT} />
@@ -572,8 +524,8 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[10px] font-bold"
                         style={{
-                          background: "rgba(240,25,65,.08)",
-                          border: "1px solid rgba(240,25,65,.2)",
+                          background: "rgba(233,40,61,.08)",
+                          border: "1px solid rgba(233,40,61,.2)",
                           color: ACCENT,
                           fontSize: 12.5,
                         }}
@@ -720,14 +672,6 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
             >
               {dict.aboutSpot}
             </h2>
-            {description && (
-              <p
-                className="text-[#3E424A] mb-4"
-                style={{ fontSize: 14, lineHeight: 1.64, fontWeight: 400 }}
-              >
-                {description}
-              </p>
-            )}
             {event.bodyBlocks.length > 0 && (
               <div className="space-y-4">
                 {event.bodyBlocks.map((block, i) => {
@@ -791,8 +735,8 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
                   rel="noopener noreferrer"
                   className="flex items-center justify-between rounded-[12px] px-4 py-3"
                   style={{
-                    background: "rgba(240,25,65,.07)",
-                    border: "1px solid rgba(240,25,65,.22)",
+                    background: "rgba(233,40,61,.07)",
+                    border: "1px solid rgba(233,40,61,.22)",
                   }}
                 >
                   <div>

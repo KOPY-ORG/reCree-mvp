@@ -8,7 +8,7 @@ const OVERLAY =
   "linear-gradient(180deg, rgba(10,6,9,.42) 0%, transparent 22%, transparent 52%, rgba(10,6,9,.34) 100%)";
 
 const FALLBACK =
-  "linear-gradient(135deg, #F01941 0%, #2A0410 100%)";
+  "linear-gradient(135deg, #E9283D 0%, #2A0410 100%)";
 
 interface EventImageProps {
   src: string | null | undefined;

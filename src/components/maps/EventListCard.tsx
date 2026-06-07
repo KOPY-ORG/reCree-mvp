@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Calendar, MapPin, Bookmark, ChevronRight } from "lucide-react";
 import { isExternalImage } from "@/lib/image";
-import { getDDay, formatDateRangeUTC } from "@/lib/event-format";
+import { getDDay, formatDateRangeUTC, EVENT_RED as RED } from "@/lib/event-format";
 import type { EventCollectionMapMarker } from "@/lib/event-collection-queries";
 
 // ── 컴포넌트 ──────────────────────────────────────────────────────────────────
@@ -23,7 +23,6 @@ interface Props {
   notchBg?: string;
 }
 
-const RED = "#F01941";
 
 export function EventListCard({
   event,
@@ -52,11 +51,11 @@ export function EventListCard({
           ? {
               border: `2px solid ${RED}`,
               background: "#fff",
-              boxShadow: "0 10px 26px color-mix(in srgb, #F01941 26%, transparent)",
+              boxShadow: "0 10px 26px color-mix(in srgb, #E9283D 26%, transparent)",
             }
           : {
-              border: `1.5px solid color-mix(in srgb, #F01941 20%, #EEEFF2)`,
-              boxShadow: "0 4px 16px color-mix(in srgb, #F01941 9%, rgba(20,18,28,.05))",
+              border: `1.5px solid color-mix(in srgb, #E9283D 20%, #EEEFF2)`,
+              boxShadow: "0 4px 16px color-mix(in srgb, #E9283D 9%, rgba(20,18,28,.05))",
             }
       }
     >
@@ -72,7 +71,7 @@ export function EventListCard({
             unoptimized={isExternalImage(event.bannerImageUrl)}
           />
         ) : (
-          <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #F01941 0%, #2A0410 100%)" }} />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #E9283D 0%, #2A0410 100%)" }} />
         )}
 
         {/* 그라디언트 쉐이드 오버레이 */}
@@ -86,7 +85,7 @@ export function EventListCard({
 
         {/* D-DAY 배지 */}
         {dday && (
-          <div className="absolute left-2 bottom-2 z-[3] inline-flex items-center px-2 py-[3px] rounded-full bg-[#F01941] text-white text-[10px] font-black tabular-nums">
+          <div className="absolute left-2 bottom-2 z-[3] inline-flex items-center px-2 py-[3px] rounded-full bg-[#E9283D] text-white text-[10px] font-black tabular-nums">
             {dday}
           </div>
         )}

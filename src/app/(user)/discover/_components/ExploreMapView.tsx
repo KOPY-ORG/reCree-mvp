@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { dedupeEventMarkers } from "@/lib/event-utils";
+import { EVENT_RED } from "@/lib/event-format";
 import { useSearchParams, useRouter } from "next/navigation";
 import { InteractiveMap } from "@/components/maps/InteractiveMap";
 import { PlaceBottomSheet } from "@/components/maps/PlaceBottomSheet";
@@ -37,7 +38,6 @@ import type {
 
 type ChipInfo = { id: string; label: string; bg: string; fg: string };
 const KPOP_NAME = "K-POP";
-const EVENT_RED = "#F01941";
 
 function postMatchesFilters(post: MapPost, topicIds: string[], tagIds: string[]): boolean {
   const topicHit =

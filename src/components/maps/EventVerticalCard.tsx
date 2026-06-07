@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Calendar, MapPin } from "lucide-react";
-import { getDDay, formatDateRangeUTC } from "@/lib/event-format";
+import { getDDay, formatDateRangeUTC, EVENT_RED as RED } from "@/lib/event-format";
 import { EventImage } from "@/components/events/EventImage";
 import type { EventCollectionMapMarker } from "@/lib/event-collection-queries";
 
@@ -15,7 +15,6 @@ interface Props {
   notchBg?: string;
 }
 
-const RED = "#F01941";
 
 export function EventVerticalCard({
   event,
