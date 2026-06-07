@@ -23,6 +23,7 @@ export type PlaceFormData = {
   googleMapsUrl: string | null;
   naverMapsUrl: string | null;
   kakaoMapsUrl: string | null;
+  amapUrl: string | null;
   streetViewUrl: string | null;
   phone: string;
   operatingHours: string[] | null;
@@ -80,6 +81,7 @@ export async function createPlace(
         googleMapsUrl: data.googleMapsUrl || null,
         naverMapsUrl: data.naverMapsUrl || null,
         kakaoMapsUrl: data.kakaoMapsUrl || null,
+        amapUrl: data.amapUrl || null,
         streetViewUrl,
         phone: data.phone || null,
         operatingHours: data.operatingHours?.length ? data.operatingHours : Prisma.DbNull,
@@ -121,6 +123,7 @@ export async function updatePlace(
         googleMapsUrl: data.googleMapsUrl || null,
         naverMapsUrl: data.naverMapsUrl || null,
         kakaoMapsUrl: data.kakaoMapsUrl || null,
+        amapUrl: data.amapUrl || null,
         streetViewUrl,
         phone: data.phone || null,
         operatingHours: data.operatingHours?.length ? data.operatingHours : Prisma.DbNull,

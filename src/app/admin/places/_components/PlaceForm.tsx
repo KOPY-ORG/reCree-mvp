@@ -107,6 +107,7 @@ export type PlaceInitialData = {
   googleMapsUrl: string | null;
   naverMapsUrl: string | null;
   kakaoMapsUrl: string | null;
+  amapUrl: string | null;
   streetViewUrl: string | null;
   phone: string | null;
   operatingHours: string[] | null;
@@ -353,6 +354,9 @@ export function PlaceForm({
   const [kakaoMapsUrl, setKakaoMapsUrl] = useState(
     initialData?.kakaoMapsUrl ?? "",
   );
+  const [amapUrl, setAmapUrl] = useState(
+    initialData?.amapUrl ?? "",
+  );
   const [streetViewUrl, setStreetViewUrl] = useState(
     initialData?.streetViewUrl ?? "",
   );
@@ -452,6 +456,7 @@ export function PlaceForm({
       googleMapsUrl: googleMapsUrl.trim() || null,
       naverMapsUrl: naverMapsUrl.trim() || null,
       kakaoMapsUrl: kakaoMapsUrl.trim() || null,
+      amapUrl: amapUrl.trim() || null,
       streetViewUrl: streetViewUrl.trim() || null,
       phone: phone.trim(),
       operatingHours: operatingHours.filter((l) => l.trim()).length
@@ -1355,6 +1360,21 @@ export function PlaceForm({
                       />
                       {kakaoMapsUrl && (
                         <a href={kakaoMapsUrl} target="_blank" rel="noopener noreferrer">
+                          <Button type="button" variant="ghost" size="icon" className="h-10 w-10 shrink-0">
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </a>
+                      )}
+                    </div>
+                    <div className="flex gap-1.5">
+                      <Input
+                        value={amapUrl}
+                        onChange={(e) => setAmapUrl(e.target.value)}
+                        placeholder="高德/Amap URL"
+                        className="text-xs"
+                      />
+                      {amapUrl && (
+                        <a href={amapUrl} target="_blank" rel="noopener noreferrer">
                           <Button type="button" variant="ghost" size="icon" className="h-10 w-10 shrink-0">
                             <ExternalLink className="h-4 w-4" />
                           </Button>
