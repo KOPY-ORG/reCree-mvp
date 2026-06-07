@@ -7,8 +7,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ReCreeshotImage } from "@/components/recreeshot-image";
 import { ScrapButton } from "../../_components/ScrapButton";
 import { PostBadges } from "../../_components/PostCard";
+import { EventListCard } from "@/components/maps/EventListCard";
 import { type TagGroupColorMap } from "@/lib/post-labels";
 import type { PostItem } from "@/lib/post-queries";
+import type { EventCollectionMapMarker } from "@/lib/event-collection-queries";
 
 type TagGroupConfig = {
   group: string;
@@ -29,10 +31,18 @@ type ReCreeshot = {
   status: string;
 };
 
+type SavedEventCardData = {
+  marker: EventCollectionMapMarker;
+  collectionName: string;
+  collectionSlug: string;
+  placeCount: number;
+};
+
 interface Props {
   posts: PostItem[];
   recreeshots: ReCreeshot[];
   tagGroupConfigs: TagGroupConfig[];
+  savedEvents: SavedEventCardData[];
 }
 
 function SavedPostCard({ post, tagGroupMap }: { post: PostItem; tagGroupMap: TagGroupColorMap }) {
@@ -76,21 +86,30 @@ function SavedPostCard({ post, tagGroupMap }: { post: PostItem; tagGroupMap: Tag
   );
 }
 
-export function SavedClient({ posts, recreeshots, tagGroupConfigs }: Props) {
+const TABS = ["events", "posts", "recreeshots"] as const;
+type SavedTab = (typeof TABS)[number];
+
+function tabHref(t: SavedTab): string {
+  if (t === "events") return "/saved";
+  return `/saved?tab=${t}`;
+}
+
+export function SavedClient({ posts, recreeshots, tagGroupConfigs, savedEvents }: Props) {
   const tagGroupMap: TagGroupColorMap = new Map(tagGroupConfigs.map((c) => [c.group, c]));
   const searchParams = useSearchParams();
-  const tab = searchParams.get("tab") === "recreeshots" ? "recreeshots" : "posts";
+  const rawTab = searchParams.get("tab");
+  const tab: SavedTab = rawTab === "posts" ? "posts" : rawTab === "recreeshots" ? "recreeshots" : "events";
   const router = useRouter();
 
   return (
     <div>
       {/* 탭 바 */}
       <div className="flex border-b border-secondary sticky top-0 bg-background z-10 max-w-2xl mx-auto">
-        {(["posts", "recreeshots"] as const).map((t) => (
+        {TABS.map((t) => (
           <button
             key={t}
             type="button"
-            onClick={() => router.push(t === "posts" ? "/saved" : "/saved?tab=recreeshots")}
+            onClick={() => router.push(tabHref(t))}
             className={`flex-1 py-3 text-sm font-medium transition-colors relative ${
               tab === t ? "text-foreground" : "text-muted-foreground"
             }`}
@@ -102,6 +121,38 @@ export function SavedClient({ posts, recreeshots, tagGroupConfigs }: Props) {
           </button>
         ))}
       </div>
+
+      {/* 이벤트 탭 */}
+      {tab === "events" && (
+        <div className="px-4 max-w-2xl mx-auto pt-3 pb-4 space-y-2">
+          {savedEvents.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-[50vh] gap-3 text-center">
+              <p className="text-base font-semibold">No saved events yet</p>
+              <p className="text-sm text-muted-foreground">
+                Tap the bookmark icon on any event to save it here.
+              </p>
+              <Link
+                href="/discover"
+                className="mt-2 px-5 py-2.5 rounded-full bg-brand text-black text-sm font-semibold"
+              >
+                Explore events
+              </Link>
+            </div>
+          ) : (
+            savedEvents.map((item) => (
+              <EventListCard
+                key={item.marker.eventId}
+                event={item.marker}
+                collectionName={item.collectionName}
+                collectionSlug={item.collectionSlug}
+                placeCount={item.placeCount}
+                isSaved={true}
+                onSelect={() => router.push(`/events/${item.collectionSlug}/${item.marker.eventSlug}`)}
+              />
+            ))
+          )}
+        </div>
+      )}
 
       {/* 포스트 탭 */}
       {tab === "posts" && (

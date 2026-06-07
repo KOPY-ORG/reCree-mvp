@@ -1,10 +1,13 @@
 "use client";
 
+import { useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Calendar, MapPin, Bookmark, ChevronRight } from "lucide-react";
 import { isExternalImage } from "@/lib/image";
 import { getDDay, formatDateRangeUTC, EVENT_RED as RED } from "@/lib/event-format";
+import { toggleEventScrap } from "@/app/(user)/_actions/scrap-actions";
+import { useToast } from "@/app/(user)/_hooks/useToast";
 import type { EventCollectionMapMarker } from "@/lib/event-collection-queries";
 
 // ── 컴포넌트 ──────────────────────────────────────────────────────────────────
@@ -36,6 +39,32 @@ export function EventListCard({
   onViewMap,
   notchBg = "#fff",
 }: Props) {
+  const [saved, setSaved] = useState(isSaved);
+  const [isPending, startTransition] = useTransition();
+  const { toast, showToast } = useToast();
+
+  function handleSaveClick(e: React.MouseEvent) {
+    e.stopPropagation();
+    const next = !saved;
+    setSaved(next);
+    startTransition(async () => {
+      const result = await toggleEventScrap(event.eventId);
+      if (result.error === "unauthenticated") {
+        setSaved(saved);
+        showToast("Sign in to save");
+        return;
+      }
+      if (result.error) {
+        setSaved(saved);
+        showToast("Something went wrong");
+        return;
+      }
+      setSaved(result.saved);
+      onToggleSave?.(result.saved);
+      showToast(result.saved ? "Saved!" : "Removed");
+    });
+  }
+
   const dday = getDDay(event.startDate, event.endDate);
   const dateRange = formatDateRangeUTC(event.startDate, event.endDate);
 
@@ -174,25 +203,29 @@ export function EventListCard({
       {/* ── 북마크 버튼 ── */}
       <button
         type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggleSave?.(!isSaved);
-        }}
-        className="absolute top-2.5 right-2.5 z-[4] w-7 h-7 rounded-full flex items-center justify-center transition-opacity active:opacity-60"
-        style={isSaved ? { background: "#C8FF09" } : { background: "rgba(0,0,0,0.32)" }}
-        aria-label={isSaved ? "Remove bookmark" : "Bookmark event"}
+        onClick={handleSaveClick}
+        disabled={isPending}
+        className="absolute top-2.5 right-2.5 z-[4] w-7 h-7 rounded-full flex items-center justify-center transition-opacity active:opacity-60 disabled:opacity-60"
+        style={saved ? { background: RED } : { background: "rgba(0,0,0,0.32)" }}
+        aria-label={saved ? "Remove bookmark" : "Bookmark event"}
       >
         <Bookmark
           className="w-4 h-4"
           strokeWidth={1.5}
           strokeLinejoin="miter"
           style={
-            isSaved
-              ? { fill: "#000", stroke: "#000" }
+            saved
+              ? { fill: "#fff", stroke: "#fff" }
               : { fill: "none", stroke: "rgba(255,255,255,0.9)" }
           }
         />
       </button>
+
+      {toast && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-black/50 text-white text-sm whitespace-nowrap shadow-lg pointer-events-none">
+          {toast.message}
+        </div>
+      )}
     </div>
   );
 }

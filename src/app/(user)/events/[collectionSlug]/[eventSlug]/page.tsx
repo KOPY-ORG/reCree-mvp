@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { Calendar, Globe, Instagram, MapPin, Ticket } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
 import { EventBackButton } from "./_components/EventBackButton";
 import { EventLocationMap } from "@/components/maps/EventLocationMap";
 import { getEventDict } from "@/lib/i18n/event-dict";
@@ -9,6 +10,7 @@ import { EventLangSwitcher } from "./_components/EventLangSwitcher";
 import { InstagramEmbed } from "./_components/InstagramEmbed";
 import { EventImage } from "@/components/events/EventImage";
 import { PerkCard } from "@/components/events/PerkCard";
+import { EventScrapButton } from "@/app/(user)/_components/EventScrapButton";
 import { EVENT_RED as ACCENT, getDDay } from "@/lib/event-format";
 
 // ── 헬퍼 ────────────────────────────────────────────────────────────────────────
@@ -234,6 +236,21 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
   const event = await getEventDetail(collectionSlug, eventSlug);
   if (!event) notFound();
 
+  const supabase = await createClient();
+  const { data: { user: authUser } } = await supabase.auth.getUser();
+  const initialSaved = authUser
+    ? !!(await prisma.save.findUnique({
+        where: {
+          userId_targetType_targetId: {
+            userId: authUser.id,
+            targetType: "EVENT",
+            targetId: event.id,
+          },
+        },
+        select: { id: true },
+      }))
+    : false;
+
   const t = pickTranslation(event.translations, locale, "en");
   const collectionT = pickTranslation(event.collection.translations, locale, "en");
 
@@ -292,47 +309,50 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
             borderRadius: "26px 26px 0 0",
           }}
         >
-          {/* 칩 행: 시리즈 → 카테고리 → D-day */}
-          <div className="flex flex-wrap gap-[7px] mb-3">
-            <span
-              className="inline-flex items-center rounded-full text-white"
-              style={{
-                background: ACCENT,
-                height: 27,
-                paddingInline: 11,
-                fontSize: 12,
-                fontWeight: 600,
-              }}
-            >
-              {collectionName}
-            </span>
-            <span
-              className="inline-flex items-center rounded-full text-white"
-              style={{
-                background: "#16171A",
-                height: 27,
-                paddingInline: 11,
-                fontSize: 12,
-                fontWeight: 600,
-              }}
-            >
-              {categoryLabel}
-            </span>
-            {dday && (
+          {/* 칩 행: 시리즈 → 카테고리 → D-day + 저장 버튼 */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex flex-wrap gap-[7px]">
               <span
-                className="inline-flex items-center rounded-full"
+                className="inline-flex items-center rounded-full text-white"
                 style={{
-                  background: "#C8FF09",
-                  color: "#16171A",
+                  background: ACCENT,
                   height: 27,
                   paddingInline: 11,
                   fontSize: 12,
-                  fontWeight: 700,
+                  fontWeight: 600,
                 }}
               >
-                {dday}
+                {collectionName}
               </span>
-            )}
+              <span
+                className="inline-flex items-center rounded-full text-white"
+                style={{
+                  background: "#16171A",
+                  height: 27,
+                  paddingInline: 11,
+                  fontSize: 12,
+                  fontWeight: 600,
+                }}
+              >
+                {categoryLabel}
+              </span>
+              {dday && (
+                <span
+                  className="inline-flex items-center rounded-full"
+                  style={{
+                    background: "#C8FF09",
+                    color: "#16171A",
+                    height: 27,
+                    paddingInline: 11,
+                    fontSize: 12,
+                    fontWeight: 700,
+                  }}
+                >
+                  {dday}
+                </span>
+              )}
+            </div>
+            <EventScrapButton eventId={event.id} initialSaved={initialSaved} />
           </div>
 
           {/* 이벤트명 */}
