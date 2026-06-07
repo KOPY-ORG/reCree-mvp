@@ -1,17 +1,18 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import Image from "next/image";
-import { Calendar, MapPin, Ticket } from "lucide-react";
+import { Calendar, Globe, Instagram, MapPin, Ticket } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
 import { EventBackButton } from "./_components/EventBackButton";
-import { MapPreview } from "@/components/maps/MapPreview";
+import { EventLocationMap } from "@/components/maps/EventLocationMap";
 import { getEventDict } from "@/lib/i18n/event-dict";
 import { EventLangSwitcher } from "./_components/EventLangSwitcher";
+import { EventShareButton } from "./_components/EventShareButton";
 import { InstagramEmbed } from "./_components/InstagramEmbed";
-
-// ── 상수 ────────────────────────────────────────────────────────────────────────
-
-const ACCENT = "#F01941";
+import { EventImage } from "@/components/events/EventImage";
+import { PerkCard } from "@/components/events/PerkCard";
+import { EventScrapButton } from "@/app/(user)/_components/EventScrapButton";
+import { EVENT_RED as ACCENT, getDDay } from "@/lib/event-format";
 
 // ── 헬퍼 ────────────────────────────────────────────────────────────────────────
 
@@ -55,12 +56,23 @@ function formatTimeRange(
   return untilDate(fmt(close!));
 }
 
+function splitHoursNote(note: string): string[] {
+  const byNewline = note.split(/\n/).map((l) => l.trim()).filter(Boolean);
+  if (byNewline.length > 1) return byNewline;
+  return note.split(/\s+(?=\w[\w ]*period:)/i).map((l) => l.trim()).filter(Boolean);
+}
+
 function safeHostname(url: string): string {
   try {
     return new URL(url).hostname.replace(/^www\./, "");
   } catch {
     return url;
   }
+}
+
+function safeUrl(u: string | null | undefined): string | null {
+  if (!u) return null;
+  return /^https?:\/\//i.test(u.trim()) ? u.trim() : null;
 }
 
 function linkify(text: string) {
@@ -124,6 +136,7 @@ async function getEventDetail(collectionSlug: string, eventSlug: string) {
         select: {
           place: {
             select: {
+              id: true,
               nameEn: true,
               nameKo: true,
               addressEn: true,
@@ -143,6 +156,7 @@ async function getEventDetail(collectionSlug: string, eventSlug: string) {
         select: {
           type: true,
           imageUrl: true,
+          caption: true,
           embedUrl: true,
           sortOrder: true,
           translations: { select: { locale: true, text: true } },
@@ -229,79 +243,62 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
   const event = await getEventDetail(collectionSlug, eventSlug);
   if (!event) notFound();
 
+  const supabase = await createClient();
+  const { data: { user: authUser } } = await supabase.auth.getUser();
+  const initialSaved = authUser
+    ? !!(await prisma.save.findUnique({
+        where: {
+          userId_targetType_targetId: {
+            userId: authUser.id,
+            targetType: "EVENT",
+            targetId: event.id,
+          },
+        },
+        select: { id: true },
+      }))
+    : false;
+
   const t = pickTranslation(event.translations, locale, "en");
   const collectionT = pickTranslation(event.collection.translations, locale, "en");
 
   const eventName = t?.name ?? "";
   const description = t?.description ?? "";
-  const hoursNote = t?.hoursNote ?? dict.openDaily;
+  const hoursNote = t?.hoursNote ?? null;
   const collectionName = collectionT?.name ?? event.collection.slug;
   const places = event.places.map((ep) => ep.place);
   const placeCount = places.length;
-  const firstPlaceName = placeCount > 0 ? (places[0].nameEn ?? places[0].nameKo) : null;
   const dateRange = formatDateRangeUTC(event.startDate, event.endDate);
   const year = String(event.startDate.getUTCFullYear());
   const timeRange = formatTimeRange(event.openTime, event.closeTime, dict.fromDate, dict.untilDate);
   const entryInfo = dict.entryType[event.entryType];
   const categoryLabel = dict.category[event.category];
+  const dday = getDDay(event.startDate, event.endDate);
+  const reservationLink = safeUrl(event.reservationUrl);
   const hasLinks = !!(event.officialUrl || event.snsUrl);
-  const hasAbout = !!(description || event.bodyBlocks.length > 0);
+  const hasAbout = event.bodyBlocks.length > 0;
 
   return (
     <div style={{ background: "#F4F5F7", minHeight: "100dvh" }}>
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
-      <div className="relative w-full" style={{ height: 318 }}>
-        {event.bannerImageUrl ? (
-          <Image
-            src={event.bannerImageUrl}
-            alt={eventName}
-            fill
-            sizes="100vw"
-            className="object-cover"
-            priority
-          />
-        ) : (
-          <div
-            className="absolute inset-0"
-            style={{ background: "linear-gradient(135deg, #2A2D33 0%, #1A1C20 100%)" }}
-          />
-        )}
-
-        {/* 그라데이션 오버레이 */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(180deg, rgba(10,6,9,.42) 0%, transparent 22%, transparent 52%, rgba(10,6,9,.34) 100%)",
-          }}
+      <div className="relative w-full">
+        <EventImage
+          src={event.bannerImageUrl}
+          alt={eventName}
+          ratio="1/1"
+          sizes="100vw"
+          priority
+          overlay
         />
 
         {/* 상단 바 — 뒤로가기 + 언어 전환 */}
         <div className="absolute top-0 left-0 right-0 flex items-center px-4 pt-4">
           <EventBackButton />
-          <div className="ml-auto"><EventLangSwitcher /></div>
+          <div className="ml-auto flex items-center gap-2">
+            <EventLangSwitcher />
+            <EventShareButton title={eventName} />
+          </div>
         </div>
 
-        {/* 이벤트 뱃지 */}
-        <div className="absolute flex gap-2" style={{ top: 64, left: 16 }}>
-          <span
-            className="inline-flex items-center px-3 py-1 rounded-full text-white font-extrabold"
-            style={{ background: ACCENT, fontSize: 12.5, letterSpacing: "0.12em" }}
-          >
-            EVENT
-          </span>
-          <span
-            className="inline-flex items-center px-3 py-1 rounded-full text-white font-bold"
-            style={{
-              background: "rgba(12,8,10,.42)",
-              backdropFilter: "blur(8px)",
-              fontSize: 11,
-              letterSpacing: "0.04em",
-            }}
-          >
-            {collectionName.toUpperCase()}
-          </span>
-        </div>
       </div>
 
       {/* ── Sheet ────────────────────────────────────────────────────────────── */}
@@ -316,74 +313,75 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
       >
         {/* ── 타이틀 블록 ──────────────────────────────────────────────────────── */}
         <div
-          className="mb-[13px] p-[17px]"
+          className="-mx-4 -mt-2 mb-[13px] p-[17px]"
           style={{
             background: "#fff",
-            borderRadius: 20,
-            boxShadow: "0 2px 14px rgba(20,18,28,.05)",
-            border: "1px solid #EEEFF2",
+            borderRadius: "26px 26px 0 0",
           }}
         >
-          {/* 필 행 */}
-          <div className="flex flex-wrap gap-[7px] mb-3">
-            <span
-              className="inline-flex items-center px-2.5 py-[5px] rounded-full text-white font-bold"
-              style={{
-                background: `linear-gradient(120deg, ${ACCENT}, #FF3B5C)`,
-                fontSize: 12,
-                letterSpacing: "0.04em",
-              }}
-            >
-              {collectionName}
-            </span>
-            <span
-              className="inline-flex items-center px-2.5 py-[5px] rounded-full font-bold"
-              style={{
-                color: "#5A4A12",
-                background: "linear-gradient(120deg, #FFE14D, #FFC83D)",
-                fontSize: 12,
-              }}
-            >
-              {categoryLabel}
-            </span>
-            {placeCount > 0 && (
+          {/* 칩 행: 시리즈 → 카테고리 → D-day + 저장 버튼 */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex flex-wrap gap-[7px]">
               <span
-                className="inline-flex items-center gap-1 px-2.5 py-[5px] rounded-full font-semibold"
+                className="inline-flex items-center rounded-full text-white"
                 style={{
-                  color: "#3A3D44",
-                  background: "#F2F0F2",
-                  border: "1px solid #ECEAEE",
+                  background: ACCENT,
+                  height: 27,
+                  paddingInline: 11,
                   fontSize: 12,
+                  fontWeight: 600,
                 }}
               >
-                <MapPin size={11} color={ACCENT} />
-                {placeCount === 1 ? firstPlaceName : dict.locationsLabel(placeCount)}
+                {collectionName}
               </span>
-            )}
+              <span
+                className="inline-flex items-center rounded-full text-white"
+                style={{
+                  background: "#16171A",
+                  height: 27,
+                  paddingInline: 11,
+                  fontSize: 12,
+                  fontWeight: 600,
+                }}
+              >
+                {categoryLabel}
+              </span>
+              {dday && (
+                <span
+                  className="inline-flex items-center rounded-full"
+                  style={{
+                    background: "#C8FF09",
+                    color: "#16171A",
+                    height: 27,
+                    paddingInline: 11,
+                    fontSize: 12,
+                    fontWeight: 700,
+                  }}
+                >
+                  {dday}
+                </span>
+              )}
+            </div>
+            <EventScrapButton eventId={event.id} initialSaved={initialSaved} />
           </div>
 
           {/* 이벤트명 */}
           <h1
-            className="font-extrabold text-[#16181C]"
-            style={{ fontSize: 23, lineHeight: 1.18, letterSpacing: "-0.02em" }}
+            className="text-[#16181C]"
+            style={{ fontSize: 25, lineHeight: 1.16, fontWeight: 700, letterSpacing: "-0.02em" }}
           >
             {eventName}
           </h1>
 
-          {/* 날짜 칩 */}
-          <div className="mt-3">
-            <span
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-white font-extrabold"
-              style={{
-                background: `linear-gradient(100deg, ${ACCENT}, #FF3B5C)`,
-                fontSize: 13.5,
-                letterSpacing: "0.01em",
-                boxShadow: "0 6px 16px rgba(240,25,65,.38)",
-              }}
+          {/* 서브타이틀 — description */}
+          {description && (
+            <p
+              className="mt-2"
+              style={{ fontSize: 14.5, lineHeight: 1.5, color: "#4A4D54", fontWeight: 400 }}
             >
-              {dateRange}
-            </span>
-          </div>
+              {description}
+            </p>
+          )}
         </div>
 
         {/* ── 티켓 블록 ────────────────────────────────────────────────────────── */}
@@ -392,8 +390,8 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
           style={{
             background: "#fff",
             borderRadius: 20,
-            boxShadow: "0 10px 30px rgba(240,25,65,.14)",
-            border: "1px solid rgba(240,25,65,.16)",
+            boxShadow: "0 10px 30px rgba(233,40,61,.14)",
+            border: "1px solid rgba(233,40,61,.16)",
           }}
         >
           {/* 티켓 헤더 */}
@@ -405,18 +403,13 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
               className="text-white font-extrabold"
               style={{ fontSize: 12.5, letterSpacing: "0.1em" }}
             >
-              {event.entryType === "WALK_IN" ? "ADMIT ONE · FREE" : "ADMIT ONE"}
-            </span>
-            <span
-              className="text-white font-bold"
-              style={{ fontSize: 11, letterSpacing: "0.08em" }}
-            >
-              {collectionName.toUpperCase()}
+              {/* intentionally English-fixed label (not i18n) */}
+              INFORMATION
             </span>
           </div>
 
           {/* 날짜·시간 */}
-          <div className="flex items-stretch px-4 py-4">
+          <div className={`flex items-stretch px-4 pt-4 ${hoursNote ? "pb-2" : "pb-4"}`}>
             <div className="flex-1">
               <div
                 className="font-extrabold mb-1"
@@ -457,18 +450,25 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
                   >
                     {timeRange}
                   </div>
-                  <div className="font-medium mt-0.5" style={{ fontSize: 12, color: "#8A8F98" }}>
-                    {hoursNote}
-                  </div>
                 </div>
               </>
             )}
           </div>
 
+          {hoursNote && (
+            <div className="px-4 pb-4">
+              {splitHoursNote(hoursNote).map((line, i) => (
+                <div key={i} className="font-medium" style={{ fontSize: 12, color: "#8A8F98" }}>
+                  {line}
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* 천공선 */}
           <div
             className="mx-4"
-            style={{ borderTop: "2px dashed rgba(240,25,65,.28)" }}
+            style={{ borderTop: "2px dashed rgba(233,40,61,.28)" }}
           />
 
           {/* 참여방법 */}
@@ -476,7 +476,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
             <div className="flex items-center gap-3">
               <div
                 className="flex items-center justify-center rounded-[11px]"
-                style={{ width: 38, height: 38, background: "rgba(240,25,65,.11)" }}
+                style={{ width: 38, height: 38, background: "rgba(233,40,61,.11)" }}
               >
                 {event.entryType === "TICKET" ? (
                   <Ticket size={18} color={ACCENT} />
@@ -496,22 +496,35 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
               </div>
             </div>
 
-            {event.entryType === "WALK_IN" && (
-              <span
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-extrabold"
-                style={{ background: "#C8FF09", color: "#16210A", fontSize: 12.5 }}
-              >
-                ✓ No booking
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {event.entryType === "WALK_IN" && (
+                <span
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-extrabold"
+                  style={{ background: "#C8FF09", color: "#16210A", fontSize: 12.5 }}
+                >
+                  ✓ No booking
+                </span>
+              )}
+              {reservationLink && (
+                <a
+                  href={reservationLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-extrabold text-white"
+                  style={{ background: ACCENT, fontSize: 12.5 }}
+                >
+                  {/* TODO: i18n */}
+                  Book now
+                </a>
+              )}
+            </div>
           </div>
         </div>
 
         {/* ── 장소 블록 ────────────────────────────────────────────────────────── */}
-        {placeCount > 0 && places.map((p, idx) => (
+        {placeCount > 0 && (
           <div
-            key={p.nameEn ?? p.nameKo ?? String(idx)}
-            className="mb-[13px] overflow-hidden"
+            className="mb-[13px]"
             style={{
               background: "#fff",
               borderRadius: 20,
@@ -519,79 +532,130 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
               border: "1px solid #EEEFF2",
             }}
           >
-            {p.latitude && p.longitude && (
-              <MapPreview
-                lat={p.latitude}
-                lng={p.longitude}
-                zoom={15}
-                height={180}
-                className="rounded-none border-0 border-b border-[#EEEFF2]"
-              />
-            )}
-            <div className="px-[17px] py-4">
-              <h2
-                className="font-extrabold text-[#16181C] mb-2"
-                style={{ fontSize: 16.5, letterSpacing: "-0.01em" }}
-              >
-                {dict.location}
-              </h2>
-              {(p.nameEn || p.nameKo) && (
-                <div
-                  className="font-semibold text-[#16181C] mb-0.5"
-                  style={{ fontSize: 14 }}
+            {/* ① 헤딩 */}
+            <div className="flex items-center justify-between px-[17px] pt-[17px] pb-3">
+              <div className="flex items-center gap-2">
+                <MapPin size={16} strokeWidth={2.5} style={{ color: "#E9283D", flexShrink: 0 }} />
+                <h2
+                  className="font-extrabold text-[#16181C]"
+                  style={{ fontSize: 16.5, letterSpacing: "-0.01em" }}
                 >
-                  {p.nameEn ?? p.nameKo}
-                </div>
-              )}
-              {(p.addressEn || p.addressKo) && (
-                <div
-                  className="font-medium"
-                  style={{ fontSize: 13, color: "#8A8F98", lineHeight: 1.5 }}
+                  {placeCount === 1 ? dict.location : "Locations"}
+                </h2>
+              </div>
+              {placeCount >= 2 && (
+                <span
+                  className="text-xs font-semibold rounded-full px-2.5 py-1 shrink-0 ml-2"
+                  style={{ background: "#F4F5F7", color: "#8A8F98" }}
                 >
-                  {p.addressEn ?? p.addressKo}
-                </div>
-              )}
-              {(p.googleMapsUrl || p.naverMapsUrl) && (
-                <div className="flex gap-2 mt-3">
-                  {p.googleMapsUrl && (
-                    <a
-                      href={p.googleMapsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[10px] font-bold"
-                      style={{
-                        background: "rgba(240,25,65,.08)",
-                        border: "1px solid rgba(240,25,65,.2)",
-                        color: ACCENT,
-                        fontSize: 12.5,
-                      }}
-                    >
-                      <MapPin size={13} />
-                      Google Maps
-                    </a>
-                  )}
-                  {p.naverMapsUrl && (
-                    <a
-                      href={p.naverMapsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[10px] font-bold"
-                      style={{
-                        background: "#F0FAE8",
-                        border: "1px solid #C8FF09",
-                        color: "#2A4A00",
-                        fontSize: 12.5,
-                      }}
-                    >
-                      <MapPin size={13} />
-                      Naver Map
-                    </a>
-                  )}
-                </div>
+                  {dict.locationsLabel(placeCount)}
+                </span>
               )}
             </div>
+            {/* ② 지도 (패딩 안 둥근 모서리) */}
+            <div className="px-[17px] pb-3">
+              <div style={{ borderRadius: 14, overflow: "hidden" }}>
+                <EventLocationMap places={places} height={200} />
+              </div>
+            </div>
+            {/* ③ 번호 리스트 */}
+            {places.map((p, idx) => {
+              const gmap = safeUrl(p.googleMapsUrl);
+              const nmap = safeUrl(p.naverMapsUrl);
+              const amap = safeUrl(p.amapUrl);
+              const hasLinks = !!(gmap || nmap || amap);
+              return (
+                <div
+                  key={p.id ?? String(idx)}
+                  className="px-[17px] py-3"
+                  style={{ borderTop: "1px solid #EEEFF2" }}
+                >
+                  <div className="flex items-start gap-3">
+                    <div
+                      className="shrink-0 w-[22px] h-[22px] rounded-full flex items-center justify-center text-white font-bold"
+                      style={{ background: "#E9283D", fontSize: 11 }}
+                    >
+                      {idx + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      {(p.nameEn || p.nameKo) && (
+                        <div
+                          className="font-semibold text-[#16181C] mb-0.5"
+                          style={{ fontSize: 14 }}
+                        >
+                          {p.nameEn ?? p.nameKo}
+                        </div>
+                      )}
+                      {(p.addressEn || p.addressKo) && (
+                        <div
+                          className="font-medium"
+                          style={{ fontSize: 13, color: "#8A8F98", lineHeight: 1.5 }}
+                        >
+                          {p.addressEn ?? p.addressKo}
+                        </div>
+                      )}
+                      {hasLinks && (
+                        <div className="flex gap-2 mt-2">
+                          {gmap && (
+                            <a
+                              href={gmap}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex flex-1 items-center justify-center gap-1.5 px-3 py-2 rounded-[10px] font-bold"
+                              style={{
+                                background: "rgba(233,40,61,.08)",
+                                border: "1px solid rgba(233,40,61,.2)",
+                                color: ACCENT,
+                                fontSize: 12.5,
+                              }}
+                            >
+                              <MapPin size={13} />
+                              Google
+                            </a>
+                          )}
+                          {nmap && (
+                            <a
+                              href={nmap}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex flex-1 items-center justify-center gap-1.5 px-3 py-2 rounded-[10px] font-bold"
+                              style={{
+                                background: "#F0FAE8",
+                                border: "1px solid #C8FF09",
+                                color: "#2A4A00",
+                                fontSize: 12.5,
+                              }}
+                            >
+                              <MapPin size={13} />
+                              Naver
+                            </a>
+                          )}
+                          {amap && (
+                            <a
+                              href={amap}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex flex-1 items-center justify-center gap-1.5 px-3 py-2 rounded-[10px] font-bold"
+                              style={{
+                                background: "#FFF3E0",
+                                border: "1px solid #FFB74D",
+                                color: "#E65100",
+                                fontSize: 12.5,
+                              }}
+                            >
+                              <MapPin size={13} />
+                              Amap
+                            </a>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        ))}
+        )}
 
         {/* ── 혜택 블록 — "What you'll get here" ──────────────────────────────── */}
         {event.perks.length > 0 && (
@@ -613,60 +677,15 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
             <div className="space-y-3">
               {event.perks.map((perk, i) => {
                 const perkT = pickTranslation(perk.translations, locale, "en");
-                const card = (
-                  <div
-                    className="flex rounded-[14px] overflow-hidden"
-                    style={{ background: "#F7F6F8", border: "1px solid #ECEAEE" }}
-                  >
-                    {perk.imageUrl && (
-                      <div className="relative flex-shrink-0" style={{ width: 96, height: 96 }}>
-                        <Image
-                          src={perk.imageUrl}
-                          alt={perkT?.title ?? ""}
-                          fill
-                          sizes="96px"
-                          className="object-cover"
-                        />
-                      </div>
-                    )}
-                    <div className="flex flex-col justify-center px-3 py-3 min-w-0">
-                      {perkT?.badge && (
-                        <span
-                          className="inline-flex self-start items-center px-2 py-[3px] rounded-full text-white font-bold mb-1.5"
-                          style={{ background: ACCENT, fontSize: 10.5, letterSpacing: "0.04em" }}
-                        >
-                          {perkT.badge}
-                        </span>
-                      )}
-                      <div
-                        className="font-bold text-[#16181C] leading-snug"
-                        style={{ fontSize: 14 }}
-                      >
-                        {perkT?.title}
-                      </div>
-                      {perkT?.detail && (
-                        <div
-                          className="font-medium mt-1 leading-snug"
-                          style={{ fontSize: 12, color: "#8A8F98" }}
-                        >
-                          {perkT.detail}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-                return perk.perkUrl ? (
-                  <a
+                return (
+                  <PerkCard
                     key={i}
-                    href={perk.perkUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block"
-                  >
-                    {card}
-                  </a>
-                ) : (
-                  <div key={i}>{card}</div>
+                    imageUrl={perk.imageUrl}
+                    perkUrl={perk.perkUrl ? safeUrl(perk.perkUrl) : null}
+                    badge={perkT?.badge ?? null}
+                    title={perkT?.title ?? null}
+                    detail={perkT?.detail ?? null}
+                  />
                 );
               })}
             </div>
@@ -690,14 +709,6 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
             >
               {dict.aboutSpot}
             </h2>
-            {description && (
-              <p
-                className="text-[#3E424A] mb-4"
-                style={{ fontSize: 14, lineHeight: 1.64, fontWeight: 400 }}
-              >
-                {description}
-              </p>
-            )}
             {event.bodyBlocks.length > 0 && (
               <div className="space-y-4">
                 {event.bodyBlocks.map((block, i) => {
@@ -716,18 +727,22 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
                   }
                   if (block.type === "IMAGE" && block.imageUrl) {
                     return (
-                      <div
-                        key={i}
-                        className="relative w-full overflow-hidden rounded-[14px]"
-                        style={{ aspectRatio: "16 / 9" }}
-                      >
-                        <Image
+                      <div key={i}>
+                        <EventImage
                           src={block.imageUrl}
                           alt=""
-                          fill
+                          ratio="1/1"
                           sizes="calc(100vw - 34px)"
-                          className="object-cover"
+                          className="rounded-[14px]"
                         />
+                        {block.caption && (
+                          <p
+                            className="text-center"
+                            style={{ fontSize: 11.5, color: "#8A8E97", marginTop: 8 }}
+                          >
+                            {block.caption}
+                          </p>
+                        )}
                       </div>
                     );
                   }
@@ -759,23 +774,26 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
               {dict.links}
             </h2>
             <div className="space-y-2">
-              {event.officialUrl && (
+              {event.officialUrl && safeUrl(event.officialUrl) && (
                 <a
-                  href={event.officialUrl}
+                  href={safeUrl(event.officialUrl)!}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-between rounded-[12px] px-4 py-3"
                   style={{
-                    background: "rgba(240,25,65,.07)",
-                    border: "1px solid rgba(240,25,65,.22)",
+                    background: "rgba(233,40,61,.07)",
+                    border: "1px solid rgba(233,40,61,.22)",
                   }}
                 >
-                  <div>
-                    <div className="font-extrabold text-[#16181C]" style={{ fontSize: 14 }}>
-                      {dict.officialSite}
-                    </div>
-                    <div className="font-semibold" style={{ fontSize: 12, color: "#9AA0A8" }}>
-                      {safeHostname(event.officialUrl)}
+                  <div className="flex items-center gap-3">
+                    <Globe size={18} color={ACCENT} />
+                    <div>
+                      <div className="font-extrabold text-[#16181C]" style={{ fontSize: 14 }}>
+                        {dict.officialSite}
+                      </div>
+                      <div className="font-semibold" style={{ fontSize: 12, color: "#9AA0A8" }}>
+                        {safeHostname(event.officialUrl)}
+                      </div>
                     </div>
                   </div>
                   <span className="font-bold" style={{ color: ACCENT, fontSize: 16 }}>
@@ -783,20 +801,23 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
                   </span>
                 </a>
               )}
-              {event.snsUrl && (
+              {event.snsUrl && safeUrl(event.snsUrl) && (
                 <a
-                  href={event.snsUrl}
+                  href={safeUrl(event.snsUrl)!}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-between rounded-[12px] px-4 py-3"
                   style={{ background: "#F7F6F8", border: "1px solid #ECEAEE" }}
                 >
-                  <div>
-                    <div className="font-extrabold text-[#16181C]" style={{ fontSize: 14 }}>
-                      Follow on Instagram
-                    </div>
-                    <div className="font-semibold" style={{ fontSize: 12, color: "#9AA0A8" }}>
-                      {safeHostname(event.snsUrl)}
+                  <div className="flex items-center gap-3">
+                    <Instagram size={18} color="#E1306C" />
+                    <div>
+                      <div className="font-extrabold text-[#16181C]" style={{ fontSize: 14 }}>
+                        {dict.followOnInstagram}
+                      </div>
+                      <div className="font-semibold" style={{ fontSize: 12, color: "#9AA0A8" }}>
+                        {safeHostname(event.snsUrl)}
+                      </div>
                     </div>
                   </div>
                   <span className="font-bold" style={{ color: "#9AA0A8", fontSize: 16 }}>

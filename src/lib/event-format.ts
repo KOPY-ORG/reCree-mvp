@@ -1,3 +1,6 @@
+// single source of truth for event red. rgba tints not yet unified (debt).
+export const EVENT_RED = "#E9283D";
+
 export function formatDateRangeUTC(start: Date, end: Date): string {
   const opts = { timeZone: "UTC" } as const;
   const startMonth = start.toLocaleDateString("en-US", { ...opts, month: "short" });

@@ -9,10 +9,12 @@ interface Props {
   events: EventCollectionMapMarker[];
   collectionSlug: string;
   collectionName: string;
+  savedEventIds?: string[];
   onClose?: () => void;
 }
 
-export function EventPeekCarousel({ events, collectionSlug, collectionName, onClose }: Props) {
+export function EventPeekCarousel({ events, collectionSlug, collectionName, savedEventIds = [], onClose }: Props) {
+  const savedEventIdsSet = new Set(savedEventIds);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -64,7 +66,7 @@ export function EventPeekCarousel({ events, collectionSlug, collectionName, onCl
               collectionSlug={collectionSlug}
               placeCount={1}
               isSelected={false}
-              isSaved={false}
+              isSaved={savedEventIdsSet.has(event.eventId)}
               notchBg="#fff"
             />
           </div>
@@ -81,7 +83,7 @@ export function EventPeekCarousel({ events, collectionSlug, collectionName, onCl
               style={{
                 width: i === activeIndex ? 16 : 6,
                 height: 6,
-                background: i === activeIndex ? "#F01941" : "rgba(0,0,0,0.2)",
+                background: i === activeIndex ? "#E9283D" : "rgba(0,0,0,0.2)",
               }}
             />
           ))}

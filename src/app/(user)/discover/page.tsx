@@ -1,4 +1,4 @@
-import { getSavedPostIds } from "@/lib/post-queries";
+import { getSavedPostIds, getSavedEventIds } from "@/lib/post-queries";
 import { getAllMapPlaces } from "@/lib/map-queries";
 import { getCurrentUser } from "@/lib/auth";
 import { getTagGroupsWithTags } from "@/lib/filter-queries";
@@ -16,10 +16,11 @@ export default async function ExplorePage() {
   // 칩용 컬렉션 목록을 먼저 받아야 맵데이터 병렬 preload 가능
   const eventCollections = await getActiveEventCollections();
 
-  const [tagGroups, savedPostIds, allPlaces, topicTree, eventMapDataEntries] =
+  const [tagGroups, savedPostIds, savedEventIds, allPlaces, topicTree, eventMapDataEntries] =
     await Promise.all([
       getTagGroupsWithTags(),
       getSavedPostIds(currentUser?.id ?? null),
+      getSavedEventIds(currentUser?.id ?? null),
       getAllMapPlaces(),
       getLevel0TopicsDeep(),
       Promise.all(
@@ -42,6 +43,7 @@ export default async function ExplorePage() {
     <ExploreMapView
       allPlaces={placesWithSaved}
       savedPostIds={[...savedPostIds]}
+      savedEventIds={[...savedEventIds]}
       tagGroups={tagGroups}
       topicTree={topicTree}
       isLoggedIn={!!currentUser}

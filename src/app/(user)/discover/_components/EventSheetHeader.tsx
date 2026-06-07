@@ -1,6 +1,6 @@
 "use client";
 
-const EVENT_RED = "#F01941";
+import { EVENT_RED } from "@/lib/event-format";
 
 interface Props {
   collectionName: string;

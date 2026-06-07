@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { dedupeEventMarkers } from "@/lib/event-utils";
+import { EVENT_RED } from "@/lib/event-format";
 import { useSearchParams, useRouter } from "next/navigation";
 import { InteractiveMap } from "@/components/maps/InteractiveMap";
 import { PlaceBottomSheet } from "@/components/maps/PlaceBottomSheet";
@@ -37,7 +38,6 @@ import type {
 
 type ChipInfo = { id: string; label: string; bg: string; fg: string };
 const KPOP_NAME = "K-POP";
-const EVENT_RED = "#F01941";
 
 function postMatchesFilters(post: MapPost, topicIds: string[], tagIds: string[]): boolean {
   const topicHit =
@@ -116,6 +116,7 @@ function findTagIdBySlug(tagGroups: TagGroupWithTags[], slug: string): string | 
 interface Props {
   allPlaces: (MapPlace & { isSaved?: boolean })[];
   savedPostIds: string[];
+  savedEventIds?: string[];
   tagGroups: TagGroupWithTags[];
   topicTree: Level0TopicDeep[];
   isLoggedIn: boolean;
@@ -123,7 +124,7 @@ interface Props {
   eventMapData?: Record<string, EventCollectionForMap | null>;
 }
 
-export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, isLoggedIn, eventCollections = [], eventMapData = {} }: Props) {
+export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], tagGroups, topicTree, isLoggedIn, eventCollections = [], eventMapData = {} }: Props) {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -257,6 +258,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
   const selectedPlace = allPlaces.find((p) => p.id === selectedPlaceId) ?? null;
 
   const savedPostIdsSet = useMemo(() => new Set(savedPostIds), [savedPostIds]);
+  const savedEventIdsSet = useMemo(() => new Set(savedEventIds), [savedEventIds]);
   const tagGroupMap = useMemo(
     () => new Map(tagGroups.map((c) => [c.group, c])) as TagGroupColorMap,
     [tagGroups]
@@ -459,10 +461,10 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
         nameEn: place.nameEn,
         markerColor: EVENT_RED,
         markerGradient: undefined,
-        isSaved: false,
+        isSaved: eventsByPlace[place.id]?.some((e) => savedEventIdsSet.has(e.eventId)) ?? false,
         postCount: eventsByPlace[place.id]?.length ?? 0,
       })),
-    [eventPlaces, eventsByPlace]
+    [eventPlaces, eventsByPlace, savedEventIdsSet]
   );
 
   const handleSearchOpen = () => {
@@ -629,7 +631,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
                   collectionSlug={collectionSlug!}
                   placeCount={ec.placeIds.length}
                   isSelected={ec.placeIds.some((id) => focusedPlaceIds.has(id))}
-                  isSaved={false}
+                  isSaved={savedEventIdsSet.has(ec.marker.eventId)}
                   notchBg="#F4F5F7"
                   onSelect={() => handleCardTap(ec.placeIds)}
                   onViewMap={() => {
@@ -678,6 +680,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, tagGroups, topicTree, 
           events={eventsByPlace[selectedPlaceId] ?? []}
           collectionSlug={collectionSlug!}
           collectionName={activeEventData.collection.nameEn}
+          savedEventIds={savedEventIds}
           onClose={handlePlaceClose}
         />
       ) : !isEventMode ? (

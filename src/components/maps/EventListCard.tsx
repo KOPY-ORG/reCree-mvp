@@ -1,10 +1,13 @@
 "use client";
 
+import { useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Calendar, MapPin, Bookmark, ChevronRight } from "lucide-react";
 import { isExternalImage } from "@/lib/image";
-import { getDDay, formatDateRangeUTC } from "@/lib/event-format";
+import { getDDay, formatDateRangeUTC, EVENT_RED as RED } from "@/lib/event-format";
+import { toggleEventScrap } from "@/app/(user)/_actions/scrap-actions";
+import { useToast } from "@/app/(user)/_hooks/useToast";
 import type { EventCollectionMapMarker } from "@/lib/event-collection-queries";
 
 // ── 컴포넌트 ──────────────────────────────────────────────────────────────────
@@ -23,7 +26,6 @@ interface Props {
   notchBg?: string;
 }
 
-const RED = "#F01941";
 
 export function EventListCard({
   event,
@@ -37,6 +39,32 @@ export function EventListCard({
   onViewMap,
   notchBg = "#fff",
 }: Props) {
+  const [saved, setSaved] = useState(isSaved);
+  const [isPending, startTransition] = useTransition();
+  const { toast, showToast } = useToast();
+
+  function handleSaveClick(e: React.MouseEvent) {
+    e.stopPropagation();
+    const next = !saved;
+    setSaved(next);
+    startTransition(async () => {
+      const result = await toggleEventScrap(event.eventId);
+      if (result.error === "unauthenticated") {
+        setSaved(saved);
+        showToast("Sign in to save");
+        return;
+      }
+      if (result.error) {
+        setSaved(saved);
+        showToast("Something went wrong");
+        return;
+      }
+      setSaved(result.saved);
+      onToggleSave?.(result.saved);
+      showToast(result.saved ? "Saved!" : "Removed");
+    });
+  }
+
   const dday = getDDay(event.startDate, event.endDate);
   const dateRange = formatDateRangeUTC(event.startDate, event.endDate);
 
@@ -52,11 +80,11 @@ export function EventListCard({
           ? {
               border: `2px solid ${RED}`,
               background: "#fff",
-              boxShadow: "0 10px 26px color-mix(in srgb, #F01941 26%, transparent)",
+              boxShadow: "0 10px 26px color-mix(in srgb, #E9283D 26%, transparent)",
             }
           : {
-              border: `1.5px solid color-mix(in srgb, #F01941 20%, #EEEFF2)`,
-              boxShadow: "0 4px 16px color-mix(in srgb, #F01941 9%, rgba(20,18,28,.05))",
+              border: `1.5px solid color-mix(in srgb, #E9283D 20%, #EEEFF2)`,
+              boxShadow: "0 4px 16px color-mix(in srgb, #E9283D 9%, rgba(20,18,28,.05))",
             }
       }
     >
@@ -72,7 +100,7 @@ export function EventListCard({
             unoptimized={isExternalImage(event.bannerImageUrl)}
           />
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-[#3A0014] to-[#1C0A13]" />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #E9283D 0%, #2A0410 100%)" }} />
         )}
 
         {/* 그라디언트 쉐이드 오버레이 */}
@@ -86,7 +114,7 @@ export function EventListCard({
 
         {/* D-DAY 배지 */}
         {dday && (
-          <div className="absolute left-2 bottom-2 z-[3] inline-flex items-center px-2 py-[3px] rounded-full bg-[#F01941] text-white text-[10px] font-black tabular-nums">
+          <div className="absolute left-2 bottom-2 z-[3] inline-flex items-center px-2 py-[3px] rounded-full bg-[#E9283D] text-white text-[10px] font-black tabular-nums">
             {dday}
           </div>
         )}
@@ -175,25 +203,29 @@ export function EventListCard({
       {/* ── 북마크 버튼 ── */}
       <button
         type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggleSave?.(!isSaved);
-        }}
-        className="absolute top-2.5 right-2.5 z-[4] w-7 h-7 rounded-full flex items-center justify-center transition-opacity active:opacity-60"
-        style={isSaved ? { background: "#C8FF09" } : { background: "rgba(0,0,0,0.32)" }}
-        aria-label={isSaved ? "Remove bookmark" : "Bookmark event"}
+        onClick={handleSaveClick}
+        disabled={isPending}
+        className="absolute top-2.5 right-2.5 z-[4] w-7 h-7 rounded-full flex items-center justify-center transition-opacity active:opacity-60 disabled:opacity-60"
+        style={saved ? { background: RED } : { background: "rgba(0,0,0,0.32)" }}
+        aria-label={saved ? "Remove bookmark" : "Bookmark event"}
       >
         <Bookmark
           className="w-4 h-4"
           strokeWidth={1.5}
           strokeLinejoin="miter"
           style={
-            isSaved
-              ? { fill: "#000", stroke: "#000" }
+            saved
+              ? { fill: "#fff", stroke: "#fff" }
               : { fill: "none", stroke: "rgba(255,255,255,0.9)" }
           }
         />
       </button>
+
+      {toast && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-black/50 text-white text-sm whitespace-nowrap shadow-lg pointer-events-none">
+          {toast.message}
+        </div>
+      )}
     </div>
   );
 }

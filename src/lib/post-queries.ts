@@ -78,3 +78,12 @@ export async function getSavedPostIds(userId: string | null): Promise<Set<string
   });
   return new Set(rows.map((r) => r.targetId));
 }
+
+export async function getSavedEventIds(userId: string | null): Promise<Set<string>> {
+  if (!userId) return new Set();
+  const rows = await prisma.save.findMany({
+    where: { userId, targetType: "EVENT" },
+    select: { targetId: true },
+  });
+  return new Set(rows.map((r) => r.targetId));
+}

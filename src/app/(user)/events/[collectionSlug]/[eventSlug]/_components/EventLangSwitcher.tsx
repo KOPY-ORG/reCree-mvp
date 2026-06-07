@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { ChevronDown } from "lucide-react";
+import { Globe, ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -53,14 +53,29 @@ export function EventLangSwitcher() {
             fontWeight: 600,
           }}
         >
+          <Globe size={16} />
           {LOCALE_LABELS[currentLocale]}
           <ChevronDown size={13} color="#fff" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent
+        align="end"
+        style={{
+          background: "rgba(20,16,18,.72)",
+          backdropFilter: "blur(12px)",
+          border: "1px solid rgba(255,255,255,.12)",
+          borderRadius: 14,
+          minWidth: 148,
+          padding: "4px",
+        }}
+      >
         <DropdownMenuRadioGroup value={currentLocale} onValueChange={handleSelect}>
           {SUPPORTED_LOCALES.map((locale) => (
-            <DropdownMenuRadioItem key={locale} value={locale}>
+            <DropdownMenuRadioItem
+              key={locale}
+              value={locale}
+              className="text-white focus:bg-white/10 focus:text-white"
+            >
               {LOCALE_LABELS[locale]}
             </DropdownMenuRadioItem>
           ))}
