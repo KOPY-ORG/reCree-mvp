@@ -96,6 +96,7 @@ export type EventInitialData = {
   bodyBlocks?: Array<{
     type: EventBlockType;
     imageUrl: string | null;
+    caption: string | null;
     embedUrl: string | null;
     translations: Partial<Record<string, { text: string }>>;
   }>;
@@ -383,6 +384,7 @@ type BodyBlockFormItem = {
   key: string;
   type: EventBlockType;
   imageUrl: string | null;
+  caption: string;
   embedUrl: string | null;
   uploading: boolean;
   activeLang: EventLocale;
@@ -392,6 +394,7 @@ type BodyBlockFormItem = {
 function initBodyBlockItem(initial?: {
   type?: EventBlockType;
   imageUrl?: string | null;
+  caption?: string | null;
   embedUrl?: string | null;
   translations?: Partial<Record<string, { text: string }>>;
 }): BodyBlockFormItem {
@@ -404,6 +407,7 @@ function initBodyBlockItem(initial?: {
     key: crypto.randomUUID(),
     type: initial?.type ?? "TEXT",
     imageUrl: initial?.imageUrl ?? null,
+    caption: initial?.caption ?? "",
     embedUrl: initial?.embedUrl ?? null,
     uploading: false,
     activeLang: "ko",
@@ -586,6 +590,18 @@ function BodyBlockCard({ item, index, total, onChange, onRemove, onMoveUp, onMov
                 )}
               </button>
             )}
+            <div className="mt-2 space-y-1">
+              <label className="text-xs font-medium leading-none text-muted-foreground">
+                캡션 (선택)
+              </label>
+              <input
+                type="text"
+                value={item.caption}
+                onChange={(e) => onChange((prev) => ({ ...prev, caption: e.target.value }))}
+                placeholder="이미지 설명 (표시 여부는 퍼블리시 설정에서)"
+                className="flex h-8 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
+            </div>
           </div>
         ) : (
           <div className="space-y-2">
@@ -850,6 +866,7 @@ export function EventForm({
     const bodyBlocksData: BodyBlockData[] = bodyBlocks.map((b, i) => ({
       type: b.type,
       imageUrl: b.imageUrl,
+      caption: b.type === "IMAGE" ? (b.caption.trim() || null) : null,
       embedUrl: b.embedUrl ?? null,
       sortOrder: i,
       translations: b.type === "TEXT"

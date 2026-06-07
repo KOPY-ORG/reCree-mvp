@@ -147,6 +147,7 @@ async function getEventDetail(collectionSlug: string, eventSlug: string) {
         select: {
           type: true,
           imageUrl: true,
+          caption: true,
           embedUrl: true,
           sortOrder: true,
           translations: { select: { locale: true, text: true } },
@@ -691,14 +692,23 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
                   }
                   if (block.type === "IMAGE" && block.imageUrl) {
                     return (
-                      <EventImage
-                        key={i}
-                        src={block.imageUrl}
-                        alt=""
-                        ratio="1/1"
-                        sizes="calc(100vw - 34px)"
-                        className="rounded-[14px]"
-                      />
+                      <div key={i}>
+                        <EventImage
+                          src={block.imageUrl}
+                          alt=""
+                          ratio="1/1"
+                          sizes="calc(100vw - 34px)"
+                          className="rounded-[14px]"
+                        />
+                        {block.caption && (
+                          <p
+                            className="text-center"
+                            style={{ fontSize: 11.5, color: "#8A8E97", marginTop: 8 }}
+                          >
+                            {block.caption}
+                          </p>
+                        )}
+                      </div>
                     );
                   }
                   if (block.type === "INSTAGRAM" && block.embedUrl) {

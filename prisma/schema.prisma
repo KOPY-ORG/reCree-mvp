@@ -682,6 +682,7 @@ model EventBodyBlock {
   eventId   String         @db.Uuid
   type      EventBlockType
   imageUrl  String? // type=IMAGE일 때
+  caption   String? // IMAGE 블록 캡션 (단일 언어, 번역 안 함). dev에 db execute로 적용, 마이그레이션 파일은 1차 배포 직전 일괄 정리에 포함.
   embedUrl  String? // type=INSTAGRAM일 때 — 포스트 URL (예: https://www.instagram.com/p/XXXX/)
   sortOrder Int            @default(0)
 

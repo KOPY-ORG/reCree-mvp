@@ -32,6 +32,7 @@ export type BodyBlockTranslationData = {
 export type BodyBlockData = {
   type: EventBlockType;
   imageUrl: string | null;
+  caption: string | null;
   embedUrl: string | null;
   sortOrder: number;
   translations: Record<string, BodyBlockTranslationData>;
@@ -213,6 +214,7 @@ export async function createEvent(
             eventId: event.id,
             type: b.type,
             imageUrl: b.type === "IMAGE" ? (b.imageUrl || null) : null,
+            caption: b.type === "IMAGE" ? (b.caption || null) : null,
             embedUrl: b.type === "INSTAGRAM" ? (b.embedUrl || null) : null,
             sortOrder: b.sortOrder,
           },
@@ -325,6 +327,7 @@ export async function updateEvent(
             eventId: id,
             type: b.type,
             imageUrl: b.type === "IMAGE" ? (b.imageUrl || null) : null,
+            caption: b.type === "IMAGE" ? (b.caption || null) : null,
             embedUrl: b.type === "INSTAGRAM" ? (b.embedUrl || null) : null,
             sortOrder: b.sortOrder,
           },
@@ -448,6 +451,7 @@ export async function getEventForEdit(id: string) {
           id: true,
           type: true,
           imageUrl: true,
+          caption: true,
           embedUrl: true,
           sortOrder: true,
           translations: {
