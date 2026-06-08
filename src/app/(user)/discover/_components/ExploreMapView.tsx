@@ -147,6 +147,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   const [appliedTopicIds, setAppliedTopicIds] = useState<string[]>([]);
   const [appliedTagIds, setAppliedTagIds] = useState<string[]>([]);
   const [locating, setLocating] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const { toast, showToast } = useToast();
   const mapRef = useRef<FocusCameraHandle>(null);
   const listScrollRef = useRef<HTMLDivElement | null>(null);
@@ -242,7 +243,9 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setLocating(false);
-        mapRef.current?.focusCamera({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setUserLocation(coords);
+        mapRef.current?.focusCamera(coords);
       },
       (err) => {
         setLocating(false);
@@ -578,6 +581,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
         highlightedIds={
           isResultMode ? new Set(filteredPlaces.map((p) => p.id)) : undefined
         }
+        userLocation={userLocation}
         className="absolute inset-0"
       />
       {!isEventMode && (

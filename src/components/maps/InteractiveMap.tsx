@@ -39,6 +39,7 @@ interface Props {
   onMapClick?: () => void;
   className?: string;
   bottomOffset?: number;
+  userLocation?: { lat: number; lng: number } | null;
 }
 
 function MapContent({
@@ -50,6 +51,7 @@ function MapContent({
   onMarkerClick,
   onMapClick,
   bottomOffset = 64,
+  userLocation,
   cameraRef,
 }: Omit<Props, "className"> & { cameraRef: React.Ref<FocusCameraHandle> }) {
   const map = useMap();
@@ -134,6 +136,21 @@ function MapContent({
       className="w-full h-full"
       onClick={() => onMapClick?.()}
     >
+      {userLocation && (
+        <AdvancedMarker
+          position={userLocation}
+          zIndex={20}
+          anchorLeft="-50%"
+          anchorTop="-50%"
+        >
+          <div className="relative flex items-center justify-center">
+            {/* 헤일로 */}
+            <div className="absolute -inset-2 rounded-full bg-blue-500/20" />
+            {/* 코어 dot */}
+            <div className="relative w-3.5 h-3.5 rounded-full bg-blue-500 border-2 border-white shadow-md" />
+          </div>
+        </AdvancedMarker>
+      )}
       {places.map((place) => {
         const isSelected = selectedPlaceId === place.id || (focusedPlaceIds?.has(place.id) ?? false);
         const isHighlighted = highlightedIds?.has(place.id) ?? false;
@@ -165,7 +182,7 @@ function MapContent({
 }
 
 export const InteractiveMap = forwardRef<FocusCameraHandle, Props>(function InteractiveMap(
-  { places, selectedPlaceId, focusedPlaceIds, highlightedIds, boundsKey, onMarkerClick, onMapClick, className, bottomOffset = 64 },
+  { places, selectedPlaceId, focusedPlaceIds, highlightedIds, boundsKey, onMarkerClick, onMapClick, className, bottomOffset = 64, userLocation },
   ref
 ) {
   if (!API_KEY) {
@@ -188,6 +205,7 @@ export const InteractiveMap = forwardRef<FocusCameraHandle, Props>(function Inte
           onMarkerClick={onMarkerClick}
           onMapClick={onMapClick}
           bottomOffset={bottomOffset}
+          userLocation={userLocation}
           cameraRef={ref}
         />
       </APIProvider>
