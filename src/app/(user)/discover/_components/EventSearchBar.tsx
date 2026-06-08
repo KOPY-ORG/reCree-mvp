@@ -1,6 +1,7 @@
 "use client";
 
 import { Search, X, Bookmark } from "lucide-react";
+import { EVENT_RED } from "@/lib/event-format";
 import { eventDict } from "@/lib/i18n/event-dict";
 
 const CATEGORY_LABELS = eventDict.en.category as Record<string, string>;
@@ -83,7 +84,7 @@ export function EventSearchBar({
                     ? "text-white"
                     : "bg-white shadow-sm border"
                 }`}
-                style={isSelected ? { backgroundColor: "#E9283D" } : { borderColor: "#E9283D", color: "#E9283D" }}
+                style={isSelected ? { backgroundColor: EVENT_RED } : { borderColor: EVENT_RED, color: EVENT_RED }}
               >
                 {CATEGORY_LABELS[cat] ?? cat}
               </button>

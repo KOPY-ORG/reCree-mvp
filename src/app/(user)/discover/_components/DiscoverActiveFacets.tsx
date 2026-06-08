@@ -2,6 +2,7 @@
 
 import { X, Search, CalendarDays } from "lucide-react";
 import { LabelBadge } from "@/components/LabelBadge";
+import { EVENT_RED } from "@/lib/event-format";
 import type { ActiveEventCollection } from "@/lib/event-collection-queries";
 
 type ChipInfo = { id: string; label: string; bg: string; fg: string };
@@ -19,19 +20,6 @@ interface Props {
   onEventCollectionClick?: (id: string) => void;
   quickTopicChip?: ChipInfo | null;
   onQuickTopicClick?: () => void;
-}
-
-function DonutIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
-      <path
-        fillRule="evenodd"
-        clipRule="evenodd"
-        d="M12 6A6 6 0 1 1 0 6a6 6 0 0 1 12 0ZM8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z"
-        fill="white"
-      />
-    </svg>
-  );
 }
 
 export function DiscoverActiveFacets({
@@ -69,7 +57,7 @@ export function DiscoverActiveFacets({
                 type="button"
                 onClick={() => onEventCollectionClick?.(col.slug)}
                 className="shrink-0 inline-flex items-center gap-1.5 px-3 h-7 rounded-full text-xs font-medium whitespace-nowrap shadow-sm active:opacity-70 transition-opacity"
-                style={{ background: "#E9283D", color: "#fff" }}
+                style={{ background: EVENT_RED, color: "#fff" }}
               >
                 <CalendarDays className="w-3 h-3 shrink-0" />
                 {nameEn}

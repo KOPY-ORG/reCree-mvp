@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, LocateFixed, Maximize } from "lucide-react";
 import { useToast } from "../../_hooks/useToast";
 import { dedupeEventMarkers } from "@/lib/event-utils";
@@ -45,6 +45,19 @@ const CATEGORY_ORDER: string[] = [
   "CONCERT", "LANDMARK_LIGHTING", "PROMOTION", "ACTIVITY",
   "SHOPPING", "MOBILITY", "FNB", "STAY", "WELCOME_KIT",
 ];
+
+function calcEventPassesFilter(
+  e: { marker: EventCollectionMapMarker; placeIds: string[] },
+  opts: { query: string; category: string | null; savedOnly: boolean; savedSet: Set<string> }
+): boolean {
+  const matchesSearch =
+    !opts.query.trim() ||
+    matchesQuery(e.marker.nameEn, opts.query) ||
+    matchesQuery(e.marker.place?.nameEn, opts.query);
+  const matchesCategory = !opts.category || e.marker.category === opts.category;
+  const matchesSaved = !opts.savedOnly || opts.savedSet.has(e.marker.eventId);
+  return matchesSearch && matchesCategory && matchesSaved;
+}
 
 function postMatchesFilters(post: MapPost, topicIds: string[], tagIds: string[]): boolean {
   const topicHit =
@@ -490,23 +503,12 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     return CATEGORY_ORDER.filter((cat) => set.has(cat));
   }, [dedupedEvents]);
 
-  const eventPassesFilter = useCallback(
-    (e: { marker: EventCollectionMapMarker; placeIds: string[] }) => {
-      const matchesSearch =
-        !eventQuery.trim() ||
-        matchesQuery(e.marker.nameEn, eventQuery) ||
-        matchesQuery(e.marker.place?.nameEn, eventQuery);
-      const matchesCategory = !selectedCategory || e.marker.category === selectedCategory;
-      const matchesSaved = !savedOnly || savedEventIdsSet.has(e.marker.eventId);
-      return matchesSearch && matchesCategory && matchesSaved;
-    },
-    [eventQuery, selectedCategory, savedOnly, savedEventIdsSet]
-  );
-
   const filteredEvents = useMemo(() => {
     if (!eventQuery.trim() && !selectedCategory && !savedOnly) return dedupedEvents;
-    return dedupedEvents.filter(eventPassesFilter);
-  }, [dedupedEvents, eventQuery, selectedCategory, savedOnly, eventPassesFilter]);
+    return dedupedEvents.filter((e) =>
+      calcEventPassesFilter(e, { query: eventQuery, category: selectedCategory, savedOnly, savedSet: savedEventIdsSet })
+    );
+  }, [dedupedEvents, eventQuery, selectedCategory, savedOnly, savedEventIdsSet]);
 
   const eventsByPlace = useMemo(() => {
     const map: Record<string, EventCollectionMapMarker[]> = {};
@@ -549,10 +551,12 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   const visibleEventMarkers = useMemo(() => {
     if (!eventQuery.trim() && !selectedCategory && !savedOnly) return eventMarkerPlaces;
     const matchedPlaceIds = new Set(
-      dedupedEvents.filter(eventPassesFilter).flatMap((e) => e.placeIds)
+      dedupedEvents
+        .filter((e) => calcEventPassesFilter(e, { query: eventQuery, category: selectedCategory, savedOnly, savedSet: savedEventIdsSet }))
+        .flatMap((e) => e.placeIds)
     );
     return eventMarkerPlaces.filter((m) => matchedPlaceIds.has(m.id));
-  }, [eventMarkerPlaces, dedupedEvents, eventQuery, selectedCategory, savedOnly, eventPassesFilter]);
+  }, [eventMarkerPlaces, dedupedEvents, eventQuery, selectedCategory, savedOnly, savedEventIdsSet]);
 
   const handleSearchOpen = () => {
     setSelectedPlaceId(null);
@@ -571,25 +575,22 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   };
   const handleClearQuery = () => setQuery("");
 
-  // 칩 탭 → state 갱신 + 카메라 즉시 이동 (next 직접 계산, effect 경유 없음)
-  function handleCategorySelect(next: string | null) {
-    setSelectedCategory(next);
+  function fitEventMarkers(opts: { query: string; category: string | null; savedOnly: boolean; savedSet: Set<string> }) {
     const matchedPlaceIds = new Set(
       dedupedEvents
-        .filter((e) => {
-          const matchesSearch =
-            !eventQuery.trim() ||
-            matchesQuery(e.marker.nameEn, eventQuery) ||
-            matchesQuery(e.marker.place?.nameEn, eventQuery);
-          const matchesCat = !next || e.marker.category === next;
-          return matchesSearch && matchesCat;
-        })
+        .filter((e) => calcEventPassesFilter(e, opts))
         .flatMap((e) => e.placeIds)
     );
     const coords = eventMarkerPlaces
       .filter((m) => matchedPlaceIds.has(m.id))
       .map((m) => ({ lat: m.latitude, lng: m.longitude }));
     mapRef.current?.fitMarkers(coords);
+  }
+
+  // 칩 탭 → state 갱신 + 카메라 즉시 이동 (next 직접 계산, effect 경유 없음)
+  function handleCategorySelect(next: string | null) {
+    setSelectedCategory(next);
+    fitEventMarkers({ query: eventQuery, category: next, savedOnly, savedSet: savedEventIdsSet });
   }
 
   function handleSavedToggle() {
@@ -599,23 +600,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     }
     const next = !savedOnly;
     setSavedOnly(next);
-    const matchedPlaceIds = new Set(
-      dedupedEvents
-        .filter((e) => {
-          const matchesSearch =
-            !eventQuery.trim() ||
-            matchesQuery(e.marker.nameEn, eventQuery) ||
-            matchesQuery(e.marker.place?.nameEn, eventQuery);
-          const matchesCat = !selectedCategory || e.marker.category === selectedCategory;
-          const matchesSaved = !next || savedEventIdsSet.has(e.marker.eventId);
-          return matchesSearch && matchesCat && matchesSaved;
-        })
-        .flatMap((e) => e.placeIds)
-    );
-    const coords = eventMarkerPlaces
-      .filter((m) => matchedPlaceIds.has(m.id))
-      .map((m) => ({ lat: m.latitude, lng: m.longitude }));
-    mapRef.current?.fitMarkers(coords);
+    fitEventMarkers({ query: eventQuery, category: selectedCategory, savedOnly: next, savedSet: savedEventIdsSet });
   }
 
   const exitResultMode = () => {
@@ -774,7 +759,6 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
                   notchBg="#F4F5F7"
                   onSelect={() => handleCardTap(ec.placeIds)}
                   onViewMap={() => {
-                    // TODO(청크4b): EventPeekCard floating 렌더 — ?place 세팅만 stub
                     setSelectedPlaceId(ec.placeIds[0]);
                   }}
                 />
