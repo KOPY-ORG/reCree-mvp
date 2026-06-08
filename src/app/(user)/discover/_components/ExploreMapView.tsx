@@ -41,6 +41,10 @@ import type {
 
 type ChipInfo = { id: string; label: string; bg: string; fg: string };
 const KPOP_NAME = "K-POP";
+const CATEGORY_ORDER: string[] = [
+  "CONCERT", "LANDMARK_LIGHTING", "PROMOTION", "ACTIVITY",
+  "SHOPPING", "MOBILITY", "FNB", "STAY", "WELCOME_KIT",
+];
 
 function postMatchesFilters(post: MapPost, topicIds: string[], tagIds: string[]): boolean {
   const topicHit =
@@ -142,6 +146,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   const [contentTab, setContentTab] = useState<"hot" | "list">("list");
   const [query, setQuery] = useState("");
   const [eventQuery, setEventQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [stagedTopicIds, setStagedTopicIds] = useState<string[]>([]);
@@ -188,6 +193,12 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
       if (id) setAppliedTagIds([id]);
     }
   }, [searchParams, topicTree, tagGroups]);
+
+  // 컬렉션 진입/변경/종료 시 이벤트 검색·카테고리 초기화
+  useEffect(() => {
+    setEventQuery("");
+    setSelectedCategory(null);
+  }, [collectionSlug]);
 
   const handlePostNavigate = () => {
     save({ query, contentTab, scrollTop: listScrollRef.current?.scrollTop ?? 0 });
@@ -472,17 +483,27 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   // eventId 기준 dedupe — 카드 1개/이벤트, 복수 장소 placeIds 보유
   const dedupedEvents = useMemo(() => sortEventMarkers(dedupeEventMarkers(events)), [events]);
 
-  const eventMatchesQuery = useCallback(
-    (e: { marker: EventCollectionMapMarker; placeIds: string[] }) =>
-      matchesQuery(e.marker.nameEn, eventQuery) ||
-      matchesQuery(e.marker.place?.nameEn, eventQuery),
-    [eventQuery]
+  const availableCategories = useMemo(() => {
+    const set = new Set<string>(dedupedEvents.map((e) => e.marker.category));
+    return CATEGORY_ORDER.filter((cat) => set.has(cat));
+  }, [dedupedEvents]);
+
+  const eventPassesFilter = useCallback(
+    (e: { marker: EventCollectionMapMarker; placeIds: string[] }) => {
+      const matchesSearch =
+        !eventQuery.trim() ||
+        matchesQuery(e.marker.nameEn, eventQuery) ||
+        matchesQuery(e.marker.place?.nameEn, eventQuery);
+      const matchesCategory = !selectedCategory || e.marker.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    },
+    [eventQuery, selectedCategory]
   );
 
   const filteredEvents = useMemo(() => {
-    if (!eventQuery.trim()) return dedupedEvents;
-    return dedupedEvents.filter(eventMatchesQuery);
-  }, [dedupedEvents, eventQuery, eventMatchesQuery]);
+    if (!eventQuery.trim() && !selectedCategory) return dedupedEvents;
+    return dedupedEvents.filter(eventPassesFilter);
+  }, [dedupedEvents, eventQuery, selectedCategory, eventPassesFilter]);
 
   const eventsByPlace = useMemo(() => {
     const map: Record<string, EventCollectionMapMarker[]> = {};
@@ -523,12 +544,12 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   );
 
   const visibleEventMarkers = useMemo(() => {
-    if (!eventQuery.trim()) return eventMarkerPlaces;
+    if (!eventQuery.trim() && !selectedCategory) return eventMarkerPlaces;
     const matchedPlaceIds = new Set(
-      dedupedEvents.filter(eventMatchesQuery).flatMap((e) => e.placeIds)
+      dedupedEvents.filter(eventPassesFilter).flatMap((e) => e.placeIds)
     );
     return eventMarkerPlaces.filter((m) => matchedPlaceIds.has(m.id));
-  }, [eventMarkerPlaces, dedupedEvents, eventQuery, eventMatchesQuery]);
+  }, [eventMarkerPlaces, dedupedEvents, eventQuery, selectedCategory, eventPassesFilter]);
 
   const handleSearchOpen = () => {
     setSelectedPlaceId(null);
@@ -546,6 +567,28 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     handleMarkerClick(placeId);
   };
   const handleClearQuery = () => setQuery("");
+
+  // 칩 탭 → state 갱신 + 카메라 즉시 이동 (next 직접 계산, effect 경유 없음)
+  function handleCategorySelect(next: string | null) {
+    setSelectedCategory(next);
+    const matchedPlaceIds = new Set(
+      dedupedEvents
+        .filter((e) => {
+          const matchesSearch =
+            !eventQuery.trim() ||
+            matchesQuery(e.marker.nameEn, eventQuery) ||
+            matchesQuery(e.marker.place?.nameEn, eventQuery);
+          const matchesCat = !next || e.marker.category === next;
+          return matchesSearch && matchesCat;
+        })
+        .flatMap((e) => e.placeIds)
+    );
+    const coords = eventMarkerPlaces
+      .filter((m) => matchedPlaceIds.has(m.id))
+      .map((m) => ({ lat: m.latitude, lng: m.longitude }));
+    mapRef.current?.fitMarkers(coords);
+  }
+
   const exitResultMode = () => {
     setQuery("");
     setAppliedTopicIds([]);
@@ -631,6 +674,9 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
           onQueryChange={setEventQuery}
           onClear={() => setEventQuery("")}
           onExit={() => setCollectionSlug(null)}
+          availableCategories={availableCategories}
+          selectedCategory={selectedCategory}
+          onCategorySelect={handleCategorySelect}
         />
       )}
 

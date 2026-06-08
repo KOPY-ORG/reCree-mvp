@@ -27,6 +27,7 @@ type MarkerPlace = {
 export type FocusCameraHandle = {
   focusCamera: (coords: { lat: number; lng: number }) => void;
   fitAllMarkers: () => void;
+  fitMarkers: (coords: { lat: number; lng: number }[]) => void;
 };
 
 interface Props {
@@ -75,6 +76,25 @@ function MapContent({
     }
   }, [map, places, bottomOffset]);
 
+  const fitMarkers = useCallback((coords: { lat: number; lng: number }[]) => {
+    if (!map || coords.length === 0) return;
+    const containerH = window.innerHeight - bottomOffset;
+    const sheetPeekH = Math.round(containerH * 0.4);
+    const offsetY = Math.round(containerH * 0.12);
+    if (coords.length === 1) {
+      map.moveCamera({ center: coords[0], zoom: TARGET_ZOOM });
+      map.panBy(0, offsetY);
+      return;
+    }
+    try {
+      const bounds = new google.maps.LatLngBounds();
+      coords.forEach((c) => bounds.extend(c));
+      map.fitBounds(bounds, { top: 100, right: 60, bottom: sheetPeekH + 80, left: 60 });
+    } catch {
+      // google.maps 미로드 시 무시
+    }
+  }, [map, bottomOffset]);
+
   useImperativeHandle(cameraRef, () => ({
     focusCamera({ lat, lng }) {
       if (!map) return;
@@ -86,7 +106,8 @@ function MapContent({
       map.panBy(0, offsetY);
     },
     fitAllMarkers,
-  }), [map, bottomOffset, fitAllMarkers]);
+    fitMarkers,
+  }), [map, bottomOffset, fitAllMarkers, fitMarkers]);
 
   // 초기 bounds — boundsKey 변경 시 전체 마커가 보이도록 맞춤
   useEffect(() => {

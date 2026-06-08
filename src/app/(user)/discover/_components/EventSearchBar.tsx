@@ -1,15 +1,29 @@
 "use client";
 
 import { Search, X } from "lucide-react";
+import { eventDict } from "@/lib/i18n/event-dict";
+
+const CATEGORY_LABELS = eventDict.en.category as Record<string, string>;
 
 interface Props {
   query: string;
   onQueryChange: (q: string) => void;
   onClear: () => void;
   onExit: () => void;
+  availableCategories: string[];
+  selectedCategory: string | null;
+  onCategorySelect: (category: string | null) => void;
 }
 
-export function EventSearchBar({ query, onQueryChange, onClear, onExit }: Props) {
+export function EventSearchBar({
+  query,
+  onQueryChange,
+  onClear,
+  onExit,
+  availableCategories,
+  selectedCategory,
+  onCategorySelect,
+}: Props) {
   return (
     <div className="absolute top-0 inset-x-0 z-[60] px-3 pt-3 pb-2">
       <div className="flex items-center gap-2">
@@ -40,6 +54,29 @@ export function EventSearchBar({ query, onQueryChange, onClear, onExit }: Props)
           <X className="w-4 h-4" />
         </button>
       </div>
+
+      {availableCategories.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pt-2 [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
+          {availableCategories.map((cat) => {
+            const isSelected = selectedCategory === cat;
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => onCategorySelect(isSelected ? null : cat)}
+                className={`shrink-0 px-3 h-7 rounded-full text-xs font-medium transition-colors ${
+                  isSelected
+                    ? "text-white"
+                    : "bg-white shadow-sm border"
+                }`}
+                style={isSelected ? { backgroundColor: "#E9283D" } : { borderColor: "#E9283D", color: "#E9283D" }}
+              >
+                {CATEGORY_LABELS[cat] ?? cat}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
