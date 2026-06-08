@@ -86,7 +86,7 @@ export function PlaceListSheet({ state, onStateChange, topOffset = 24, hasActive
           ref={handleRef}
           {...dragHandlers}
           className="shrink-0 flex justify-center items-center bg-white"
-          style={{ height: 28, touchAction: "none" }}
+          style={{ height: 44, touchAction: "none" }}
         >
           <div className="w-14 h-1 rounded-full bg-muted-foreground/30" />
         </div>
