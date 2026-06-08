@@ -56,7 +56,7 @@ export function DiscoverActiveFacets({
                 key={col.id}
                 type="button"
                 onClick={() => onEventCollectionClick?.(col.slug)}
-                className="shrink-0 inline-flex items-center gap-1.5 px-3 h-7 rounded-full text-xs font-medium whitespace-nowrap shadow-sm active:opacity-70 transition-opacity"
+                className="shrink-0 inline-flex items-center gap-1.5 px-3 h-7 rounded-full text-xs font-semibold whitespace-nowrap shadow-sm active:opacity-70 transition-opacity"
                 style={{ background: EVENT_RED, color: "#fff" }}
               >
                 <CalendarDays className="w-3 h-3 shrink-0" />
@@ -68,7 +68,7 @@ export function DiscoverActiveFacets({
             <button
               type="button"
               onClick={onQuickTopicClick}
-              className="shrink-0 inline-flex items-center gap-1 px-3 h-7 rounded-full text-xs font-medium whitespace-nowrap shadow-sm active:opacity-70 transition-opacity"
+              className="shrink-0 inline-flex items-center gap-1 px-3 h-7 rounded-full text-xs font-semibold whitespace-nowrap shadow-sm active:opacity-70 transition-opacity"
               style={{ background: quickTopicChip.bg, color: quickTopicChip.fg }}
             >
               {quickTopicChip.label}
@@ -83,7 +83,7 @@ export function DiscoverActiveFacets({
             <button
               type="button"
               onClick={onClearQuery}
-              className="shrink-0 inline-flex items-center gap-1 px-3 h-7 rounded-full bg-white shadow-sm font-medium text-xs whitespace-nowrap active:opacity-70 transition-opacity"
+              className="shrink-0 inline-flex items-center gap-1 px-3 h-7 rounded-full bg-white shadow-sm font-semibold text-xs whitespace-nowrap active:opacity-70 transition-opacity"
             >
               <Search className="size-3 shrink-0" />
               <span className="max-w-[120px] truncate">{query.trim()}</span>
@@ -100,7 +100,7 @@ export function DiscoverActiveFacets({
                 text={chip.label}
                 background={chip.bg}
                 color={chip.fg}
-                className="shrink-0 !px-3 h-7 !font-medium shadow-sm active:opacity-70"
+                className="shrink-0 !px-3 h-7 !font-semibold shadow-sm active:opacity-70"
                 onClick={() => onRemoveTopic(id)}
               >
                 <X className="size-3" />
@@ -117,7 +117,7 @@ export function DiscoverActiveFacets({
                 text={chip.label}
                 background={chip.bg}
                 color={chip.fg}
-                className="shrink-0 !px-3 h-7 !font-medium shadow-sm active:opacity-70"
+                className="shrink-0 !px-3 h-7 !font-semibold shadow-sm active:opacity-70"
                 onClick={() => onRemoveTag(id)}
               >
                 <X className="size-3" />
