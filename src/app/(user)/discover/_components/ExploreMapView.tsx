@@ -147,6 +147,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   const [query, setQuery] = useState("");
   const [eventQuery, setEventQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [savedOnly, setSavedOnly] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [stagedTopicIds, setStagedTopicIds] = useState<string[]>([]);
@@ -194,10 +195,11 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     }
   }, [searchParams, topicTree, tagGroups]);
 
-  // 컬렉션 진입/변경/종료 시 이벤트 검색·카테고리 초기화
+  // 컬렉션 진입/변경/종료 시 이벤트 검색·카테고리·북마크 초기화
   useEffect(() => {
     setEventQuery("");
     setSelectedCategory(null);
+    setSavedOnly(false);
   }, [collectionSlug]);
 
   const handlePostNavigate = () => {
@@ -495,15 +497,16 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
         matchesQuery(e.marker.nameEn, eventQuery) ||
         matchesQuery(e.marker.place?.nameEn, eventQuery);
       const matchesCategory = !selectedCategory || e.marker.category === selectedCategory;
-      return matchesSearch && matchesCategory;
+      const matchesSaved = !savedOnly || savedEventIdsSet.has(e.marker.eventId);
+      return matchesSearch && matchesCategory && matchesSaved;
     },
-    [eventQuery, selectedCategory]
+    [eventQuery, selectedCategory, savedOnly, savedEventIdsSet]
   );
 
   const filteredEvents = useMemo(() => {
-    if (!eventQuery.trim() && !selectedCategory) return dedupedEvents;
+    if (!eventQuery.trim() && !selectedCategory && !savedOnly) return dedupedEvents;
     return dedupedEvents.filter(eventPassesFilter);
-  }, [dedupedEvents, eventQuery, selectedCategory, eventPassesFilter]);
+  }, [dedupedEvents, eventQuery, selectedCategory, savedOnly, eventPassesFilter]);
 
   const eventsByPlace = useMemo(() => {
     const map: Record<string, EventCollectionMapMarker[]> = {};
@@ -544,12 +547,12 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   );
 
   const visibleEventMarkers = useMemo(() => {
-    if (!eventQuery.trim() && !selectedCategory) return eventMarkerPlaces;
+    if (!eventQuery.trim() && !selectedCategory && !savedOnly) return eventMarkerPlaces;
     const matchedPlaceIds = new Set(
       dedupedEvents.filter(eventPassesFilter).flatMap((e) => e.placeIds)
     );
     return eventMarkerPlaces.filter((m) => matchedPlaceIds.has(m.id));
-  }, [eventMarkerPlaces, dedupedEvents, eventQuery, selectedCategory, eventPassesFilter]);
+  }, [eventMarkerPlaces, dedupedEvents, eventQuery, selectedCategory, savedOnly, eventPassesFilter]);
 
   const handleSearchOpen = () => {
     setSelectedPlaceId(null);
@@ -580,6 +583,32 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
             matchesQuery(e.marker.place?.nameEn, eventQuery);
           const matchesCat = !next || e.marker.category === next;
           return matchesSearch && matchesCat;
+        })
+        .flatMap((e) => e.placeIds)
+    );
+    const coords = eventMarkerPlaces
+      .filter((m) => matchedPlaceIds.has(m.id))
+      .map((m) => ({ lat: m.latitude, lng: m.longitude }));
+    mapRef.current?.fitMarkers(coords);
+  }
+
+  function handleSavedToggle() {
+    if (!isLoggedIn) {
+      showToast("Sign in to view saved events");
+      return;
+    }
+    const next = !savedOnly;
+    setSavedOnly(next);
+    const matchedPlaceIds = new Set(
+      dedupedEvents
+        .filter((e) => {
+          const matchesSearch =
+            !eventQuery.trim() ||
+            matchesQuery(e.marker.nameEn, eventQuery) ||
+            matchesQuery(e.marker.place?.nameEn, eventQuery);
+          const matchesCat = !selectedCategory || e.marker.category === selectedCategory;
+          const matchesSaved = !next || savedEventIdsSet.has(e.marker.eventId);
+          return matchesSearch && matchesCat && matchesSaved;
         })
         .flatMap((e) => e.placeIds)
     );
@@ -677,6 +706,8 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
           availableCategories={availableCategories}
           selectedCategory={selectedCategory}
           onCategorySelect={handleCategorySelect}
+          savedOnly={savedOnly}
+          onSavedToggle={handleSavedToggle}
         />
       )}
 

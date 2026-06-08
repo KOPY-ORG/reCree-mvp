@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, X } from "lucide-react";
+import { Search, X, Bookmark } from "lucide-react";
 import { eventDict } from "@/lib/i18n/event-dict";
 
 const CATEGORY_LABELS = eventDict.en.category as Record<string, string>;
@@ -13,6 +13,8 @@ interface Props {
   availableCategories: string[];
   selectedCategory: string | null;
   onCategorySelect: (category: string | null) => void;
+  savedOnly: boolean;
+  onSavedToggle: () => void;
 }
 
 export function EventSearchBar({
@@ -23,6 +25,8 @@ export function EventSearchBar({
   availableCategories,
   selectedCategory,
   onCategorySelect,
+  savedOnly,
+  onSavedToggle,
 }: Props) {
   return (
     <div className="absolute top-0 inset-x-0 z-[60] px-3 pt-3 pb-2">
@@ -52,6 +56,16 @@ export function EventSearchBar({
           className="shrink-0 w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-md active:opacity-70 transition-opacity"
         >
           <X className="w-4 h-4" />
+        </button>
+        <button
+          type="button"
+          aria-label={savedOnly ? "Show all events" : "Show saved events"}
+          onClick={onSavedToggle}
+          className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center shadow-md active:opacity-70 transition-colors ${
+            savedOnly ? "bg-brand text-black" : "bg-white text-foreground"
+          }`}
+        >
+          <Bookmark className="size-5" strokeWidth={1.5} fill={savedOnly ? "currentColor" : "none"} />
         </button>
       </div>
 
