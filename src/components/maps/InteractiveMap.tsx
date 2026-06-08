@@ -90,9 +90,12 @@ function MapContent({
     const offsetY = Math.round(containerH * 0.12);
 
     if (coords.length === 1) {
-      // 단일: panTo만 — fitBounds 쓰면 줌이 최대로 튄다
+      // 단일: panTo + 조건부 setZoom — fitBounds 쓰면 줌이 최대로 튄다
       map.panTo(coords[0]);
       map.panBy(0, offsetY);
+      const TARGET_ZOOM = 15;
+      const current = map.getZoom();
+      if (current == null || current < TARGET_ZOOM) map.setZoom(TARGET_ZOOM);
     } else {
       // 복수: fitBounds — bottom에 시트 peek 높이 padding 포함
       try {
