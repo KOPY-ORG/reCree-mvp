@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, LocateFixed, Maximize } from "lucide-react";
 import { useToast } from "../../_hooks/useToast";
 import { dedupeEventMarkers } from "@/lib/event-utils";
@@ -472,10 +472,17 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   // eventId 기준 dedupe — 카드 1개/이벤트, 복수 장소 placeIds 보유
   const dedupedEvents = useMemo(() => sortEventMarkers(dedupeEventMarkers(events)), [events]);
 
+  const eventMatchesQuery = useCallback(
+    (e: { marker: EventCollectionMapMarker; placeIds: string[] }) =>
+      matchesQuery(e.marker.nameEn, eventQuery) ||
+      matchesQuery(e.marker.place?.nameEn, eventQuery),
+    [eventQuery]
+  );
+
   const filteredEvents = useMemo(() => {
     if (!eventQuery.trim()) return dedupedEvents;
-    return dedupedEvents.filter((e) => matchesQuery(e.marker.nameEn, eventQuery));
-  }, [dedupedEvents, eventQuery]);
+    return dedupedEvents.filter(eventMatchesQuery);
+  }, [dedupedEvents, eventQuery, eventMatchesQuery]);
 
   const eventsByPlace = useMemo(() => {
     const map: Record<string, EventCollectionMapMarker[]> = {};
@@ -517,9 +524,11 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
 
   const visibleEventMarkers = useMemo(() => {
     if (!eventQuery.trim()) return eventMarkerPlaces;
-    const matchedPlaceIds = new Set(filteredEvents.flatMap((e) => e.placeIds));
+    const matchedPlaceIds = new Set(
+      dedupedEvents.filter(eventMatchesQuery).flatMap((e) => e.placeIds)
+    );
     return eventMarkerPlaces.filter((m) => matchedPlaceIds.has(m.id));
-  }, [eventMarkerPlaces, filteredEvents, eventQuery]);
+  }, [eventMarkerPlaces, dedupedEvents, eventQuery, eventMatchesQuery]);
 
   const handleSearchOpen = () => {
     setSelectedPlaceId(null);
