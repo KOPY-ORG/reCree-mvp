@@ -67,6 +67,11 @@ export function topicMatchesFilter(topic: TopicIdNode, topicId: string): boolean
   );
 }
 
+export function matchesQuery(text: string | null | undefined, query: string): boolean {
+  if (!text) return false;
+  return text.toLowerCase().includes(query.trim().toLowerCase());
+}
+
 export function gradientDirToSvgCoords(dir: string): { x1: number; y1: number; x2: number; y2: number } {
   switch (dir.trim()) {
     case "to bottom":       return { x1: 0, y1: 0, x2: 0, y2: 1 };

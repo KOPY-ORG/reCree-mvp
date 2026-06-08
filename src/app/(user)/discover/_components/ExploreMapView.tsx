@@ -12,6 +12,7 @@ import { PlaceListSheet, getSheetHeight, type PlaceListSheetState } from "@/comp
 import { PlaceListSheetCard } from "@/components/maps/PlaceListSheetCard";
 import { EventListCard } from "@/components/maps/EventListCard";
 import { DiscoverSearchBar } from "./DiscoverSearchBar";
+import { EventSearchBar } from "./EventSearchBar";
 import { DiscoverFilterSheet } from "./DiscoverFilterSheet";
 import { DiscoverActiveFacets } from "./DiscoverActiveFacets";
 import { DiscoverSheetHeader } from "./DiscoverSheetHeader";
@@ -22,7 +23,7 @@ import { ListScrollTopButton } from "./ListScrollTopButton";
 import { useRecentSearches } from "../_hooks/useRecentSearches";
 import { useDiscoverViewState } from "../_hooks/useDiscoverViewState";
 import type { MapPlace, MapPost } from "@/lib/map-queries";
-import { getTopicMarkerColor, getTopicMarkerGradient, topicMatchesFilter } from "@/lib/map-utils";
+import { getTopicMarkerColor, getTopicMarkerGradient, topicMatchesFilter, matchesQuery } from "@/lib/map-utils";
 import {
   resolveTopicColors,
   resolveTagColors,
@@ -140,6 +141,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   const [focusedPlaceIds, setFocusedPlaceIds] = useState<Set<string>>(new Set());
   const [contentTab, setContentTab] = useState<"hot" | "list">("list");
   const [query, setQuery] = useState("");
+  const [eventQuery, setEventQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [stagedTopicIds, setStagedTopicIds] = useState<string[]>([]);
@@ -265,7 +267,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   const handleMarkerClick = (placeId: string) => {
     // 좌표를 직접 조회해 즉시 카메라 이동 — URL/state 갱신 타이밍 경유 금지
     const place =
-      (isEventMode ? eventMarkerPlaces : filteredPlaces).find((p) => p.id === placeId) ??
+      (isEventMode ? visibleEventMarkers : filteredPlaces).find((p) => p.id === placeId) ??
       eventMarkerPlaces.find((p) => p.id === placeId);
     if (place) mapRef.current?.focusCamera({ lat: place.latitude, lng: place.longitude });
     setFocusedPlaceIds(new Set());
@@ -470,6 +472,11 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   // eventId 기준 dedupe — 카드 1개/이벤트, 복수 장소 placeIds 보유
   const dedupedEvents = useMemo(() => sortEventMarkers(dedupeEventMarkers(events)), [events]);
 
+  const filteredEvents = useMemo(() => {
+    if (!eventQuery.trim()) return dedupedEvents;
+    return dedupedEvents.filter((e) => matchesQuery(e.marker.nameEn, eventQuery));
+  }, [dedupedEvents, eventQuery]);
+
   const eventsByPlace = useMemo(() => {
     const map: Record<string, EventCollectionMapMarker[]> = {};
     for (const event of events) {
@@ -507,6 +514,12 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
       })),
     [eventPlaces, eventsByPlace, savedEventIdsSet]
   );
+
+  const visibleEventMarkers = useMemo(() => {
+    if (!eventQuery.trim()) return eventMarkerPlaces;
+    const matchedPlaceIds = new Set(filteredEvents.flatMap((e) => e.placeIds));
+    return eventMarkerPlaces.filter((m) => matchedPlaceIds.has(m.id));
+  }, [eventMarkerPlaces, filteredEvents, eventQuery]);
 
   const handleSearchOpen = () => {
     setSelectedPlaceId(null);
@@ -566,7 +579,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     <div className="relative h-[calc(100dvh-64px)] overflow-hidden">
       <InteractiveMap
         ref={mapRef}
-        places={isEventMode ? eventMarkerPlaces : filteredPlaces}
+        places={isEventMode ? visibleEventMarkers : filteredPlaces}
         selectedPlaceId={selectedPlaceId}
         focusedPlaceIds={focusedPlaceIds}
         onMarkerClick={handleMarkerClick}
@@ -604,18 +617,12 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
       )}
 
       {isEventMode && (
-        <div className="absolute top-3 right-3 z-[60]">
-          <button
-            type="button"
-            aria-label="Exit event mode"
-            onClick={() => setCollectionSlug(null)}
-            className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-md active:opacity-70 transition-opacity"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path d="M3 3L13 13M13 3L3 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-          </button>
-        </div>
+        <EventSearchBar
+          query={eventQuery}
+          onQueryChange={setEventQuery}
+          onClear={() => setEventQuery("")}
+          onExit={() => setCollectionSlug(null)}
+        />
       )}
 
       {!isEventMode && effectiveSheetState !== "full" && (
@@ -648,7 +655,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
           isEventMode && activeEventData ? (
             <EventSheetHeader
               collectionName={activeEventData.collection.nameEn}
-              eventCount={dedupedEvents.length}
+              eventCount={filteredEvents.length}
             />
           ) : (
             <DiscoverSheetHeader
@@ -663,13 +670,13 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
         }
       >
         {isEventMode ? (
-          dedupedEvents.length === 0 ? (
+          filteredEvents.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
               <p className="text-sm font-semibold text-foreground">No events available</p>
             </div>
           ) : (
             <div className="px-4 pt-2 pb-4 space-y-2">
-              {dedupedEvents.map((ec) => (
+              {filteredEvents.map((ec) => (
                 <EventListCard
                   key={ec.marker.eventId}
                   event={ec.marker}
