@@ -81,7 +81,7 @@ export async function getEventCollectionForMap(
       translations: { select: { locale: true, name: true } },
       events: {
         where: { status: "PUBLISHED" },
-        orderBy: { sortOrder: "asc" },
+        orderBy: { startDate: "asc" },
         select: {
           id: true,
           slug: true,

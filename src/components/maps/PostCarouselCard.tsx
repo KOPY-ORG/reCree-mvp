@@ -46,10 +46,7 @@ export function PostCarouselCard({ post, isSaved, tagGroupMap }: Props) {
       href={`/posts/${post.slug}`}
       className="block w-full rounded-xl overflow-hidden bg-muted"
     >
-      {/* 이전 카드 전체 높이(썸네일 2/1 + 제목 52px)와 동일한 높이를 유지 */}
-      <div className="relative w-full">
-        <div style={{ aspectRatio: "2/1" }} />
-        <div className="h-[52px]" />
+      <div className="relative w-full" style={{ aspectRatio: "16/9" }}>
         {cardImageUrl ? (
           <Image
             src={cardImageUrl}

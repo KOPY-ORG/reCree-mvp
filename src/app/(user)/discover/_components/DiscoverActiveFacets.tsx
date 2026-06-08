@@ -1,7 +1,8 @@
 "use client";
 
-import { X, Search } from "lucide-react";
+import { X, Search, CalendarDays } from "lucide-react";
 import { LabelBadge } from "@/components/LabelBadge";
+import { EVENT_RED } from "@/lib/event-format";
 import type { ActiveEventCollection } from "@/lib/event-collection-queries";
 
 type ChipInfo = { id: string; label: string; bg: string; fg: string };
@@ -19,19 +20,6 @@ interface Props {
   onEventCollectionClick?: (id: string) => void;
   quickTopicChip?: ChipInfo | null;
   onQuickTopicClick?: () => void;
-}
-
-function DonutIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
-      <path
-        fillRule="evenodd"
-        clipRule="evenodd"
-        d="M12 6A6 6 0 1 1 0 6a6 6 0 0 1 12 0ZM8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z"
-        fill="white"
-      />
-    </svg>
-  );
 }
 
 export function DiscoverActiveFacets({
@@ -68,17 +56,10 @@ export function DiscoverActiveFacets({
                 key={col.id}
                 type="button"
                 onClick={() => onEventCollectionClick?.(col.slug)}
-                className="shrink-0 inline-flex items-center gap-1.5 rounded-full font-semibold text-xs leading-none whitespace-nowrap shadow-md active:opacity-70 transition-opacity"
-                style={{
-                  background: "#E9283D",
-                  color: "#fff",
-                  paddingTop: "0.3rem",
-                  paddingBottom: "0.3rem",
-                  paddingLeft: "0.5rem",
-                  paddingRight: "0.75rem",
-                }}
+                className="shrink-0 inline-flex items-center gap-1.5 px-3 h-7 rounded-full text-xs font-semibold whitespace-nowrap shadow-sm active:opacity-70 transition-opacity"
+                style={{ background: EVENT_RED, color: "#fff" }}
               >
-                <DonutIcon />
+                <CalendarDays className="w-3 h-3 shrink-0" />
                 {nameEn}
               </button>
             );
@@ -87,15 +68,8 @@ export function DiscoverActiveFacets({
             <button
               type="button"
               onClick={onQuickTopicClick}
-              className="shrink-0 inline-flex items-center gap-1 rounded-full font-semibold text-xs leading-none whitespace-nowrap shadow-md active:opacity-70 transition-opacity"
-              style={{
-                background: quickTopicChip.bg,
-                color: quickTopicChip.fg,
-                paddingTop: "0.3rem",
-                paddingBottom: "0.3rem",
-                paddingLeft: "0.625rem",
-                paddingRight: "0.625rem",
-              }}
+              className="shrink-0 inline-flex items-center gap-1 px-3 h-7 rounded-full text-xs font-semibold whitespace-nowrap shadow-sm active:opacity-70 transition-opacity"
+              style={{ background: quickTopicChip.bg, color: quickTopicChip.fg }}
             >
               {quickTopicChip.label}
             </button>
@@ -109,8 +83,7 @@ export function DiscoverActiveFacets({
             <button
               type="button"
               onClick={onClearQuery}
-              className="shrink-0 inline-flex items-center gap-1 px-2 rounded-full bg-white shadow-md font-semibold text-xs whitespace-nowrap active:opacity-70 transition-opacity"
-              style={{ paddingTop: "0.3rem", paddingBottom: "0.3rem" }}
+              className="shrink-0 inline-flex items-center gap-1 px-3 h-7 rounded-full bg-white shadow-sm font-semibold text-xs whitespace-nowrap active:opacity-70 transition-opacity"
             >
               <Search className="size-3 shrink-0" />
               <span className="max-w-[120px] truncate">{query.trim()}</span>
@@ -127,7 +100,7 @@ export function DiscoverActiveFacets({
                 text={chip.label}
                 background={chip.bg}
                 color={chip.fg}
-                className="shrink-0 shadow-md active:opacity-70"
+                className="shrink-0 !px-3 h-7 !font-semibold shadow-sm active:opacity-70"
                 onClick={() => onRemoveTopic(id)}
               >
                 <X className="size-3" />
@@ -144,7 +117,7 @@ export function DiscoverActiveFacets({
                 text={chip.label}
                 background={chip.bg}
                 color={chip.fg}
-                className="shrink-0 shadow-md active:opacity-70"
+                className="shrink-0 !px-3 h-7 !font-semibold shadow-sm active:opacity-70"
                 onClick={() => onRemoveTag(id)}
               >
                 <X className="size-3" />

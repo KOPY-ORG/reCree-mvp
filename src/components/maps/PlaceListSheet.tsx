@@ -12,6 +12,13 @@ const BOTTOM_NAV_H = 64;
 // searchbar(60px) + facet 칩(~27px) + pb-2(8px) + 1px buffer
 const FULL_TOP_WITH_FACETS = 96;
 
+export function getSheetHeight(state: PlaceListSheetState, tabOnlyH: number, fullTop: number): string {
+  if (state === "hidden") return "0px";
+  if (state === "tab-only") return `${tabOnlyH}px`;
+  if (state === "half") return `calc((100dvh - ${BOTTOM_NAV_H}px) * 0.5)`;
+  return `calc(100dvh - ${BOTTOM_NAV_H}px - ${fullTop}px)`;
+}
+
 interface Props {
   state: PlaceListSheetState;
   onStateChange: (state: PlaceListSheetState) => void;
@@ -62,18 +69,10 @@ export function PlaceListSheet({ state, onStateChange, topOffset = 24, hasActive
     onStateChange,
   });
 
-  const sheetStyle: React.CSSProperties =
-    state === "hidden"
-      ? { height: 0, transition: "height 300ms ease" }
-      : {
-          height:
-            state === "tab-only"
-              ? `${tabOnlyH}px`
-              : state === "half"
-              ? `calc((100dvh - ${BOTTOM_NAV_H}px) * 0.5)`
-              : `calc(100dvh - ${BOTTOM_NAV_H}px - ${fullTop}px)`,
-          transition: isDragging ? "none" : "height 300ms ease",
-        };
+  const sheetStyle: React.CSSProperties = {
+    height: getSheetHeight(state, tabOnlyH, fullTop),
+    transition: isDragging ? "none" : "height 300ms ease",
+  };
 
   return (
     <div
@@ -87,7 +86,7 @@ export function PlaceListSheet({ state, onStateChange, topOffset = 24, hasActive
           ref={handleRef}
           {...dragHandlers}
           className="shrink-0 flex justify-center items-center bg-white"
-          style={{ height: 28, touchAction: "none" }}
+          style={{ height: 44, touchAction: "none" }}
         >
           <div className="w-14 h-1 rounded-full bg-muted-foreground/30" />
         </div>

@@ -705,7 +705,6 @@ export function EventForm({
     initialData?.status ?? "DRAFT",
   );
   const [showOnHome, setShowOnHome] = useState(initialData?.showOnHome ?? false);
-  const [sortOrder, setSortOrder] = useState(initialData?.sortOrder ?? 0);
   const [translations, setTranslations] = useState<Record<string, TranslationField>>(
     () => initTranslations(initialData?.translations),
   );
@@ -890,7 +889,7 @@ export function EventForm({
       bannerImageUrl,
       status,
       showOnHome,
-      sortOrder,
+      sortOrder: 0,
       translations,
       perks: perksData,
       bodyBlocks: bodyBlocksData,
@@ -1558,15 +1557,7 @@ export function EventForm({
                     />
                   </div>
 
-                  <div className="space-y-1.5">
-                    <Label>정렬 순서</Label>
-                    <Input
-                      type="number"
-                      value={sortOrder}
-                      onChange={(e) => setSortOrder(Number(e.target.value))}
-                      min={0}
-                    />
-                  </div>
+
                 </CardContent>
               </Card>
             </div>
