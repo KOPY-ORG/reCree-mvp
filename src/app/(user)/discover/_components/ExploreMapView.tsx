@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, LocateFixed, Maximize } from "lucide-react";
 import { useToast } from "../../_hooks/useToast";
 import { dedupeEventMarkers } from "@/lib/event-utils";
-import { EVENT_RED } from "@/lib/event-format";
+import { EVENT_RED, getDDay, sortEventMarkers } from "@/lib/event-format";
 import { useSearchParams, useRouter } from "next/navigation";
 import { InteractiveMap, type FocusCameraHandle } from "@/components/maps/InteractiveMap";
 import { PlaceBottomSheet } from "@/components/maps/PlaceBottomSheet";
@@ -468,7 +468,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   );
 
   // eventId 기준 dedupe — 카드 1개/이벤트, 복수 장소 placeIds 보유
-  const dedupedEvents = useMemo(() => dedupeEventMarkers(events), [events]);
+  const dedupedEvents = useMemo(() => sortEventMarkers(dedupeEventMarkers(events)), [events]);
 
   const eventsByPlace = useMemo(() => {
     const map: Record<string, EventCollectionMapMarker[]> = {};

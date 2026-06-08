@@ -13,6 +13,17 @@ export function formatDateRangeUTC(start: Date, end: Date): string {
   return `${startMonth} ${startDay} – ${endMonth} ${endDay}`;
 }
 
+export function sortEventMarkers<T extends { marker: { startDate: Date; endDate: Date } }>(items: T[]): T[] {
+  return [...items].sort((a, b) => {
+    const aNow = getDDay(a.marker.startDate, a.marker.endDate) === "NOW";
+    const bNow = getDDay(b.marker.startDate, b.marker.endDate) === "NOW";
+    if (aNow !== bNow) return aNow ? -1 : 1;
+    const startDiff = a.marker.startDate.getTime() - b.marker.startDate.getTime();
+    if (startDiff !== 0) return startDiff;
+    return a.marker.endDate.getTime() - b.marker.endDate.getTime();
+  });
+}
+
 export function getDDay(startDate: Date, endDate: Date): string | null {
   const now = new Date();
   const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
