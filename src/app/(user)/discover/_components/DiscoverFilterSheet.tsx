@@ -102,7 +102,7 @@ export function DiscoverFilterSheet({
                     text={chip.label}
                     background={chip.bg}
                     color={chip.fg}
-                    className="shrink-0 active:opacity-70"
+                    className="shrink-0 active:opacity-70 !px-3 h-7 !font-semibold shadow-sm"
                     onClick={() => onToggleTopic(id)}
                   >
                     <X className="size-3" />
@@ -119,7 +119,7 @@ export function DiscoverFilterSheet({
                     text={chip.label}
                     background={chip.bg}
                     color={chip.fg}
-                    className="shrink-0 active:opacity-70"
+                    className="shrink-0 active:opacity-70 !px-3 h-7 !font-semibold shadow-sm"
                     onClick={() => onToggleTag(id)}
                   >
                     <X className="size-3" />
@@ -163,7 +163,7 @@ export function DiscoverFilterSheet({
                             text={l2.nameEn}
                             background={labelBackground({ text: "", ...resolved })}
                             color={resolved.textColorHex}
-                            className="shrink-0 transition-all active:opacity-70"
+                            className="shrink-0 transition-all active:opacity-70 !px-3 h-7 !font-semibold shadow-sm"
                             style={badgeRingStyle(resolved.colorHex, isSelected)}
                             onClick={() => onToggleTopic(l2.id)}
                           />
@@ -192,7 +192,7 @@ export function DiscoverFilterSheet({
                             text={l1.nameEn}
                             background={labelBackground({ text: "", ...resolved })}
                             color={resolved.textColorHex}
-                            className="shrink-0 transition-all active:opacity-70"
+                            className="shrink-0 transition-all active:opacity-70 !px-3 h-7 !font-semibold shadow-sm"
                             style={badgeRingStyle(resolved.colorHex, isSelected)}
                             onClick={() => onToggleTopic(l1.id)}
                           />
@@ -229,7 +229,7 @@ export function DiscoverFilterSheet({
                                   text={l2.nameEn}
                                   background={labelBackground({ text: "", ...resolved })}
                                   color={resolved.textColorHex}
-                                  className="shrink-0 transition-all active:opacity-70"
+                                  className="shrink-0 transition-all active:opacity-70 !px-3 h-7 !font-semibold shadow-sm"
                                   style={badgeRingStyle(resolved.colorHex, isSelected)}
                                   onClick={() => onToggleTopic(l2.id)}
                                 />
@@ -263,7 +263,7 @@ export function DiscoverFilterSheet({
                           text={tag.name}
                           background={labelBackground({ text: "", ...resolved })}
                           color={tag.textColorHex ?? group.textColorHex ?? DEFAULT_TEXT}
-                          className="shrink-0 transition-all active:opacity-70"
+                          className="shrink-0 transition-all active:opacity-70 !px-3 h-7 !font-semibold shadow-sm"
                           style={badgeRingStyle(
                             tag.colorHex ?? group.colorHex ?? null,
                             isSelected

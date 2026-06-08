@@ -75,9 +75,8 @@ export function PostCardCarousel({ posts, savedPostIds, tagGroupMap, placeImages
           >
             <div
               className="relative w-full rounded-xl overflow-hidden bg-muted"
+              style={{ aspectRatio: "16/9" }}
             >
-              <div style={{ aspectRatio: "2/1" }} />
-              <div className="h-[52px]" />
               <Image
                 src={img.url}
                 alt=""

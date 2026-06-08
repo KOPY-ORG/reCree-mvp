@@ -32,7 +32,7 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
           {toast.message}
         </div>
       )}
-      <div className="absolute inset-x-4 bottom-4 z-50 bg-white rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.15)] overflow-hidden max-h-[40%]">
+      <div className="absolute inset-x-4 bottom-4 z-50 bg-white rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.15)] overflow-hidden max-h-[50%]">
 
         {/* 헤더 */}
         <div className="px-5 pt-4 pb-2">

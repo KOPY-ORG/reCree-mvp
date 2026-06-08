@@ -27,7 +27,8 @@ export function EventVerticalCard({
   const dateRange = formatDateRangeUTC(event.startDate, event.endDate);
 
   return (
-    <div
+    <Link
+      href={`/events/${collectionSlug}/${event.eventSlug}`}
       className="relative flex flex-col rounded-[14px] overflow-hidden bg-white"
       style={{
         border: `1.5px solid color-mix(in srgb, ${RED} 20%, #EEEFF2)`,
@@ -87,10 +88,7 @@ export function EventVerticalCard({
       </div>
 
       {/* ── 본문 ── */}
-      <Link
-        href={`/events/${collectionSlug}/${event.eventSlug}`}
-        className="flex flex-col gap-0.5 px-2 pt-2 pb-2.5"
-      >
+      <div className="flex flex-col gap-0.5 px-2 pt-2 pb-2.5">
         {/* 컬렉션명 */}
         <p
           className="text-[9px] font-semibold uppercase tracking-[.06em] truncate"
@@ -125,7 +123,7 @@ export function EventVerticalCard({
             {placeCount >= 2 ? `${placeCount} locations` : event.place.nameEn}
           </span>
         </div>
-      </Link>
-    </div>
+      </div>
+    </Link>
   );
 }

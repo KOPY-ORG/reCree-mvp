@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Heart, Check } from "lucide-react";
+import { Heart } from "lucide-react";
 import { showError } from "@/lib/toast";
 import { followTopic, unfollowTopic } from "@/app/(user)/_actions/follow-actions";
 
@@ -65,15 +65,23 @@ export function FollowButton({
       className={[
         "inline-flex items-center gap-1.5 font-semibold rounded-full transition-all disabled:opacity-60",
         isCompact ? "px-3 py-1.5 text-sm" : "px-4 py-2 text-sm",
-        following
-          ? "bg-muted text-foreground"
-          : "bg-brand text-black",
+        "bg-white text-black shadow-sm",
       ].join(" ")}
     >
       {following ? (
-        <Check className={isCompact ? "h-3.5 w-3.5" : "h-4 w-4"} strokeWidth={2.5} />
+        <Heart
+          className={isCompact ? "h-3.5 w-3.5" : "h-4 w-4"}
+          fill="#FF5366"
+          stroke="#FF5366"
+          strokeWidth={2}
+        />
       ) : (
-        <Heart className={isCompact ? "h-3.5 w-3.5" : "h-4 w-4"} strokeWidth={2} />
+        <Heart
+          className={isCompact ? "h-3.5 w-3.5" : "h-4 w-4"}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+        />
       )}
       {following ? "Following" : "Follow"}
     </button>

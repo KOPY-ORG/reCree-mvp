@@ -1,15 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Loader2, LocateFixed, Maximize } from "lucide-react";
+import { useToast } from "../../_hooks/useToast";
 import { dedupeEventMarkers } from "@/lib/event-utils";
-import { EVENT_RED } from "@/lib/event-format";
+import { EVENT_RED, getDDay, sortEventMarkers } from "@/lib/event-format";
 import { useSearchParams, useRouter } from "next/navigation";
-import { InteractiveMap } from "@/components/maps/InteractiveMap";
+import { InteractiveMap, type FocusCameraHandle } from "@/components/maps/InteractiveMap";
 import { PlaceBottomSheet } from "@/components/maps/PlaceBottomSheet";
-import { PlaceListSheet, type PlaceListSheetState } from "@/components/maps/PlaceListSheet";
+import { PlaceListSheet, getSheetHeight, type PlaceListSheetState } from "@/components/maps/PlaceListSheet";
 import { PlaceListSheetCard } from "@/components/maps/PlaceListSheetCard";
 import { EventListCard } from "@/components/maps/EventListCard";
 import { DiscoverSearchBar } from "./DiscoverSearchBar";
+import { EventSearchBar } from "./EventSearchBar";
 import { DiscoverFilterSheet } from "./DiscoverFilterSheet";
 import { DiscoverActiveFacets } from "./DiscoverActiveFacets";
 import { DiscoverSheetHeader } from "./DiscoverSheetHeader";
@@ -20,7 +23,7 @@ import { ListScrollTopButton } from "./ListScrollTopButton";
 import { useRecentSearches } from "../_hooks/useRecentSearches";
 import { useDiscoverViewState } from "../_hooks/useDiscoverViewState";
 import type { MapPlace, MapPost } from "@/lib/map-queries";
-import { getTopicMarkerColor, getTopicMarkerGradient, topicMatchesFilter } from "@/lib/map-utils";
+import { getTopicMarkerColor, getTopicMarkerGradient, topicMatchesFilter, matchesQuery } from "@/lib/map-utils";
 import {
   resolveTopicColors,
   resolveTagColors,
@@ -38,6 +41,23 @@ import type {
 
 type ChipInfo = { id: string; label: string; bg: string; fg: string };
 const KPOP_NAME = "K-POP";
+const CATEGORY_ORDER: string[] = [
+  "CONCERT", "LANDMARK_LIGHTING", "PROMOTION", "ACTIVITY",
+  "SHOPPING", "MOBILITY", "FNB", "STAY", "WELCOME_KIT",
+];
+
+function calcEventPassesFilter(
+  e: { marker: EventCollectionMapMarker; placeIds: string[] },
+  opts: { query: string; category: string | null; savedOnly: boolean; savedSet: Set<string> }
+): boolean {
+  const matchesSearch =
+    !opts.query.trim() ||
+    matchesQuery(e.marker.nameEn, opts.query) ||
+    matchesQuery(e.marker.place?.nameEn, opts.query);
+  const matchesCategory = !opts.category || e.marker.category === opts.category;
+  const matchesSaved = !opts.savedOnly || opts.savedSet.has(e.marker.eventId);
+  return matchesSearch && matchesCategory && matchesSaved;
+}
 
 function postMatchesFilters(post: MapPost, topicIds: string[], tagIds: string[]): boolean {
   const topicHit =
@@ -138,12 +158,19 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   const [focusedPlaceIds, setFocusedPlaceIds] = useState<Set<string>>(new Set());
   const [contentTab, setContentTab] = useState<"hot" | "list">("list");
   const [query, setQuery] = useState("");
+  const [eventQuery, setEventQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [savedOnly, setSavedOnly] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [stagedTopicIds, setStagedTopicIds] = useState<string[]>([]);
   const [stagedTagIds, setStagedTagIds] = useState<string[]>([]);
   const [appliedTopicIds, setAppliedTopicIds] = useState<string[]>([]);
   const [appliedTagIds, setAppliedTagIds] = useState<string[]>([]);
+  const [locating, setLocating] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const { toast, showToast } = useToast();
+  const mapRef = useRef<FocusCameraHandle>(null);
   const listScrollRef = useRef<HTMLDivElement | null>(null);
   const listScrollMemoRef = useRef<number>(0);
   const urlFilterInitRef = useRef(false);
@@ -180,6 +207,13 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
       if (id) setAppliedTagIds([id]);
     }
   }, [searchParams, topicTree, tagGroups]);
+
+  // 컬렉션 진입/변경/종료 시 이벤트 검색·카테고리·북마크 초기화
+  useEffect(() => {
+    setEventQuery("");
+    setSelectedCategory(null);
+    setSavedOnly(false);
+  }, [collectionSlug]);
 
   const handlePostNavigate = () => {
     save({ query, contentTab, scrollTop: listScrollRef.current?.scrollTop ?? 0 });
@@ -228,7 +262,40 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     router.replace(`?${params.toString()}`);
   }
 
+  const handleLocateMe = () => {
+    if (!navigator.geolocation) {
+      showToast("Location is not supported on this device");
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocating(false);
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setUserLocation(coords);
+        mapRef.current?.focusCamera(coords);
+      },
+      (err) => {
+        setLocating(false);
+        if (err.code === err.PERMISSION_DENIED)
+          showToast("Location permission denied. Enable it in your browser settings.");
+        else if (err.code === err.POSITION_UNAVAILABLE)
+          showToast("Couldn't determine your location");
+        else if (err.code === err.TIMEOUT)
+          showToast("Location request timed out. Try again.");
+        else
+          showToast("Something went wrong getting your location");
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  };
+
   const handleMarkerClick = (placeId: string) => {
+    // 좌표를 직접 조회해 즉시 카메라 이동 — URL/state 갱신 타이밍 경유 금지
+    const place =
+      (isEventMode ? visibleEventMarkers : filteredPlaces).find((p) => p.id === placeId) ??
+      eventMarkerPlaces.find((p) => p.id === placeId);
+    if (place) mapRef.current?.focusCamera({ lat: place.latitude, lng: place.longitude });
     setFocusedPlaceIds(new Set());
     setSelectedPlaceId(placeId);
   };
@@ -429,7 +496,19 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   );
 
   // eventId 기준 dedupe — 카드 1개/이벤트, 복수 장소 placeIds 보유
-  const dedupedEvents = useMemo(() => dedupeEventMarkers(events), [events]);
+  const dedupedEvents = useMemo(() => sortEventMarkers(dedupeEventMarkers(events)), [events]);
+
+  const availableCategories = useMemo(() => {
+    const set = new Set<string>(dedupedEvents.map((e) => e.marker.category));
+    return CATEGORY_ORDER.filter((cat) => set.has(cat));
+  }, [dedupedEvents]);
+
+  const filteredEvents = useMemo(() => {
+    if (!eventQuery.trim() && !selectedCategory && !savedOnly) return dedupedEvents;
+    return dedupedEvents.filter((e) =>
+      calcEventPassesFilter(e, { query: eventQuery, category: selectedCategory, savedOnly, savedSet: savedEventIdsSet })
+    );
+  }, [dedupedEvents, eventQuery, selectedCategory, savedOnly, savedEventIdsSet]);
 
   const eventsByPlace = useMemo(() => {
     const map: Record<string, EventCollectionMapMarker[]> = {};
@@ -463,9 +542,21 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
         markerGradient: undefined,
         isSaved: eventsByPlace[place.id]?.some((e) => savedEventIdsSet.has(e.eventId)) ?? false,
         postCount: eventsByPlace[place.id]?.length ?? 0,
+        showLabel: false,
+        invertOnSelect: true,
       })),
     [eventPlaces, eventsByPlace, savedEventIdsSet]
   );
+
+  const visibleEventMarkers = useMemo(() => {
+    if (!eventQuery.trim() && !selectedCategory && !savedOnly) return eventMarkerPlaces;
+    const matchedPlaceIds = new Set(
+      dedupedEvents
+        .filter((e) => calcEventPassesFilter(e, { query: eventQuery, category: selectedCategory, savedOnly, savedSet: savedEventIdsSet }))
+        .flatMap((e) => e.placeIds)
+    );
+    return eventMarkerPlaces.filter((m) => matchedPlaceIds.has(m.id));
+  }, [eventMarkerPlaces, dedupedEvents, eventQuery, selectedCategory, savedOnly, savedEventIdsSet]);
 
   const handleSearchOpen = () => {
     setSelectedPlaceId(null);
@@ -483,6 +574,35 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     handleMarkerClick(placeId);
   };
   const handleClearQuery = () => setQuery("");
+
+  function fitEventMarkers(opts: { query: string; category: string | null; savedOnly: boolean; savedSet: Set<string> }) {
+    const matchedPlaceIds = new Set(
+      dedupedEvents
+        .filter((e) => calcEventPassesFilter(e, opts))
+        .flatMap((e) => e.placeIds)
+    );
+    const coords = eventMarkerPlaces
+      .filter((m) => matchedPlaceIds.has(m.id))
+      .map((m) => ({ lat: m.latitude, lng: m.longitude }));
+    mapRef.current?.fitMarkers(coords);
+  }
+
+  // 칩 탭 → state 갱신 + 카메라 즉시 이동 (next 직접 계산, effect 경유 없음)
+  function handleCategorySelect(next: string | null) {
+    setSelectedCategory(next);
+    fitEventMarkers({ query: eventQuery, category: next, savedOnly, savedSet: savedEventIdsSet });
+  }
+
+  function handleSavedToggle() {
+    if (!isLoggedIn) {
+      showToast("Sign in to view saved events");
+      return;
+    }
+    const next = !savedOnly;
+    setSavedOnly(next);
+    fitEventMarkers({ query: eventQuery, category: selectedCategory, savedOnly: next, savedSet: savedEventIdsSet });
+  }
+
   const exitResultMode = () => {
     setQuery("");
     setAppliedTopicIds([]);
@@ -517,11 +637,15 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
       ? "tab-only"
       : sheetState;
 
+  // FAB bottom 계산용 — tabOnlyH는 측정값 근사(80), fullTop은 PlaceListSheet와 동일 공식
+  const fabSheetH = getSheetHeight(effectiveSheetState, 80, isResultMode ? 96 : 64);
+
   return (
     // bottomnav(h-16=64px) — ExploreHeader 제거됨
     <div className="relative h-[calc(100dvh-64px)] overflow-hidden">
       <InteractiveMap
-        places={isEventMode ? eventMarkerPlaces : filteredPlaces}
+        ref={mapRef}
+        places={isEventMode ? visibleEventMarkers : filteredPlaces}
         selectedPlaceId={selectedPlaceId}
         focusedPlaceIds={focusedPlaceIds}
         onMarkerClick={handleMarkerClick}
@@ -536,6 +660,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
         highlightedIds={
           isResultMode ? new Set(filteredPlaces.map((p) => p.id)) : undefined
         }
+        userLocation={userLocation}
         className="absolute inset-0"
       />
       {!isEventMode && (
@@ -558,18 +683,17 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
       )}
 
       {isEventMode && (
-        <div className="absolute top-3 right-3 z-[60]">
-          <button
-            type="button"
-            aria-label="Exit event mode"
-            onClick={() => setCollectionSlug(null)}
-            className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-md active:opacity-70 transition-opacity"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path d="M3 3L13 13M13 3L3 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-          </button>
-        </div>
+        <EventSearchBar
+          query={eventQuery}
+          onQueryChange={setEventQuery}
+          onClear={() => setEventQuery("")}
+          onExit={() => setCollectionSlug(null)}
+          availableCategories={availableCategories}
+          selectedCategory={selectedCategory}
+          onCategorySelect={handleCategorySelect}
+          savedOnly={savedOnly}
+          onSavedToggle={handleSavedToggle}
+        />
       )}
 
       {!isEventMode && effectiveSheetState !== "full" && (
@@ -602,7 +726,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
           isEventMode && activeEventData ? (
             <EventSheetHeader
               collectionName={activeEventData.collection.nameEn}
-              eventCount={dedupedEvents.length}
+              eventCount={filteredEvents.length}
             />
           ) : (
             <DiscoverSheetHeader
@@ -617,13 +741,13 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
         }
       >
         {isEventMode ? (
-          dedupedEvents.length === 0 ? (
+          filteredEvents.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
               <p className="text-sm font-semibold text-foreground">No events available</p>
             </div>
           ) : (
             <div className="px-4 pt-2 pb-4 space-y-2">
-              {dedupedEvents.map((ec) => (
+              {filteredEvents.map((ec) => (
                 <EventListCard
                   key={ec.marker.eventId}
                   event={ec.marker}
@@ -635,7 +759,6 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
                   notchBg="#F4F5F7"
                   onSelect={() => handleCardTap(ec.placeIds)}
                   onViewMap={() => {
-                    // TODO(청크4b): EventPeekCard floating 렌더 — ?place 세팅만 stub
                     setSelectedPlaceId(ec.placeIds[0]);
                   }}
                 />
@@ -674,6 +797,40 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
       {/* 리스트 맨 위로 버튼 — z-30, 시트 위에 absolute */}
       <ListScrollTopButton scrollRef={listScrollRef} />
 
+      {/* FAB 그룹 — 시트 상단 위 12px에 붙어서 이동, 선택 중이거나 full이면 둘 다 숨김 */}
+      {!selectedPlaceId && (
+        <div
+          className={`absolute right-3 z-[45] flex flex-col gap-3 ${
+            effectiveSheetState === "full" ? "opacity-0 pointer-events-none" : "opacity-100"
+          }`}
+          style={{ bottom: `calc(${fabSheetH} + 12px)`, transition: "bottom 300ms ease, opacity 300ms ease" }}
+        >
+          {/* 현위치 버튼 */}
+          <button
+            type="button"
+            aria-label="My location"
+            onClick={handleLocateMe}
+            disabled={locating}
+            className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-md active:opacity-70 transition-opacity disabled:opacity-50"
+          >
+            {locating ? (
+              <Loader2 size={16} strokeWidth={2} className="animate-spin" />
+            ) : (
+              <LocateFixed size={16} strokeWidth={2} />
+            )}
+          </button>
+          {/* 전체 보기 버튼 */}
+          <button
+            type="button"
+            aria-label="Fit all markers"
+            onClick={() => mapRef.current?.fitAllMarkers()}
+            className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-md active:opacity-70 transition-opacity"
+          >
+            <Maximize size={16} strokeWidth={2} />
+          </button>
+        </div>
+      )}
+
       {/* floating 카드 — z-50: 이벤트 모드=캐러셀, 일반 모드=장소 상세 */}
       {isEventMode && selectedPlaceId && activeEventData ? (
         <EventPeekCarousel
@@ -691,6 +848,13 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
           onClose={handlePlaceClose}
         />
       ) : null}
+
+      {/* 토스트 */}
+      {toast && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 rounded-full bg-black/50 text-white text-sm whitespace-nowrap shadow-lg pointer-events-none">
+          {toast.message}
+        </div>
+      )}
 
       {/* 필터 시트 — z-[65] */}
       <DiscoverFilterSheet

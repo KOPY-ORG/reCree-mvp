@@ -5,6 +5,7 @@ import Link from "next/link";
 import { EventVerticalCard } from "./EventVerticalCard";
 import type { EventCollectionMapMarker } from "@/lib/event-collection-queries";
 import { dedupeEventMarkers } from "@/lib/event-utils";
+import { sortEventMarkers } from "@/lib/event-format";
 
 interface Props {
   title: string;
@@ -23,7 +24,7 @@ export function EventVerticalCarousel({
   collectionName,
   notchBg,
 }: Props) {
-  const deduped = useMemo(() => dedupeEventMarkers(events), [events]);
+  const deduped = useMemo(() => sortEventMarkers(dedupeEventMarkers(events)), [events]);
 
   if (deduped.length === 0) return null;
 
