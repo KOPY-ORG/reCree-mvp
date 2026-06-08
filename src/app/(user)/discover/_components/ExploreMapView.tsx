@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Maximize } from "lucide-react";
 import { dedupeEventMarkers } from "@/lib/event-utils";
 import { EVENT_RED } from "@/lib/event-format";
 import { useSearchParams, useRouter } from "next/navigation";
 import { InteractiveMap, type FocusCameraHandle } from "@/components/maps/InteractiveMap";
 import { PlaceBottomSheet } from "@/components/maps/PlaceBottomSheet";
-import { PlaceListSheet, type PlaceListSheetState } from "@/components/maps/PlaceListSheet";
+import { PlaceListSheet, getSheetHeight, type PlaceListSheetState } from "@/components/maps/PlaceListSheet";
 import { PlaceListSheetCard } from "@/components/maps/PlaceListSheetCard";
 import { EventListCard } from "@/components/maps/EventListCard";
 import { DiscoverSearchBar } from "./DiscoverSearchBar";
@@ -525,6 +526,9 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
       ? "tab-only"
       : sheetState;
 
+  // FAB bottom 계산용 — tabOnlyH는 측정값 근사(80), fullTop은 PlaceListSheet와 동일 공식
+  const fabSheetH = getSheetHeight(effectiveSheetState, 80, isResultMode ? 96 : 64);
+
   return (
     // bottomnav(h-16=64px) — ExploreHeader 제거됨
     <div className="relative h-[calc(100dvh-64px)] overflow-hidden">
@@ -682,6 +686,23 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
 
       {/* 리스트 맨 위로 버튼 — z-30, 시트 위에 absolute */}
       <ListScrollTopButton scrollRef={listScrollRef} />
+
+      {/* 전체 보기 FAB — 시트 상단 위 12px에 붙어서 이동, 선택 중이거나 full이면 숨김 */}
+      {!selectedPlaceId && (
+        <button
+          type="button"
+          aria-label="Fit all markers"
+          onClick={() => mapRef.current?.fitAllMarkers()}
+          className={`absolute right-3 z-[45] w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-md transition-[opacity] duration-300 ${
+            effectiveSheetState === "full"
+              ? "opacity-0 pointer-events-none"
+              : "opacity-100 active:opacity-70"
+          }`}
+          style={{ bottom: `calc(${fabSheetH} + 12px)`, transition: "bottom 300ms ease, opacity 300ms ease" }}
+        >
+          <Maximize size={16} strokeWidth={2} />
+        </button>
+      )}
 
       {/* floating 카드 — z-50: 이벤트 모드=캐러셀, 일반 모드=장소 상세 */}
       {isEventMode && selectedPlaceId && activeEventData ? (

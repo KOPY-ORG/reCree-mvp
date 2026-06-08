@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useImperativeHandle, forwardRef } from "react";
+import { useCallback, useEffect, useImperativeHandle, forwardRef } from "react";
 import { APIProvider, Map, AdvancedMarker, useMap } from "@vis.gl/react-google-maps";
 import { PlaceMarker } from "./PlaceMarker";
 import type { MarkerGradient } from "@/lib/map-utils";
@@ -26,6 +26,7 @@ type MarkerPlace = {
 
 export type FocusCameraHandle = {
   focusCamera: (coords: { lat: number; lng: number }) => void;
+  fitAllMarkers: () => void;
 };
 
 interface Props {
@@ -53,21 +54,8 @@ function MapContent({
 }: Omit<Props, "className"> & { cameraRef: React.Ref<FocusCameraHandle> }) {
   const map = useMap();
 
-  useImperativeHandle(cameraRef, () => ({
-    focusCamera({ lat, lng }) {
-      if (!map) return;
-      const containerH = window.innerHeight - bottomOffset;
-      const offsetY = Math.round(containerH * 0.12);
-      const current = map.getZoom();
-      const zoom = current == null || current < TARGET_ZOOM ? TARGET_ZOOM : current;
-      map.moveCamera({ center: { lat, lng }, zoom });
-      map.panBy(0, offsetY);
-    },
-  }), [map, bottomOffset]);
-
-  // 초기 bounds — boundsKey 변경 시 전체 마커가 보이도록 맞춤
-  useEffect(() => {
-    if (!boundsKey || !map || places.length === 0) return;
+  const fitAllMarkers = useCallback(() => {
+    if (!map || places.length === 0) return;
     const containerH = window.innerHeight - bottomOffset;
     const sheetPeekH = Math.round(containerH * 0.4);
     if (places.length === 1) {
@@ -83,6 +71,25 @@ function MapContent({
     } catch {
       // google.maps 미로드 시 무시
     }
+  }, [map, places, bottomOffset]);
+
+  useImperativeHandle(cameraRef, () => ({
+    focusCamera({ lat, lng }) {
+      if (!map) return;
+      const containerH = window.innerHeight - bottomOffset;
+      const offsetY = Math.round(containerH * 0.12);
+      const current = map.getZoom();
+      const zoom = current == null || current < TARGET_ZOOM ? TARGET_ZOOM : current;
+      map.moveCamera({ center: { lat, lng }, zoom });
+      map.panBy(0, offsetY);
+    },
+    fitAllMarkers,
+  }), [map, bottomOffset, fitAllMarkers]);
+
+  // 초기 bounds — boundsKey 변경 시 전체 마커가 보이도록 맞춤
+  useEffect(() => {
+    if (!boundsKey) return;
+    fitAllMarkers();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, boundsKey]);
 
