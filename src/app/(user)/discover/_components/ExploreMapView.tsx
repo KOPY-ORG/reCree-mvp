@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Maximize } from "lucide-react";
+import { Loader2, LocateFixed, Maximize } from "lucide-react";
+import { useToast } from "../../_hooks/useToast";
 import { dedupeEventMarkers } from "@/lib/event-utils";
 import { EVENT_RED } from "@/lib/event-format";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -145,6 +146,8 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   const [stagedTagIds, setStagedTagIds] = useState<string[]>([]);
   const [appliedTopicIds, setAppliedTopicIds] = useState<string[]>([]);
   const [appliedTagIds, setAppliedTagIds] = useState<string[]>([]);
+  const [locating, setLocating] = useState(false);
+  const { toast, showToast } = useToast();
   const mapRef = useRef<FocusCameraHandle>(null);
   const listScrollRef = useRef<HTMLDivElement | null>(null);
   const listScrollMemoRef = useRef<number>(0);
@@ -229,6 +232,32 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     }
     router.replace(`?${params.toString()}`);
   }
+
+  const handleLocateMe = () => {
+    if (!navigator.geolocation) {
+      showToast("Location is not supported on this device");
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocating(false);
+        mapRef.current?.focusCamera({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      },
+      (err) => {
+        setLocating(false);
+        if (err.code === err.PERMISSION_DENIED)
+          showToast("Location permission denied. Enable it in your browser settings.");
+        else if (err.code === err.POSITION_UNAVAILABLE)
+          showToast("Couldn't determine your location");
+        else if (err.code === err.TIMEOUT)
+          showToast("Location request timed out. Try again.");
+        else
+          showToast("Something went wrong getting your location");
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  };
 
   const handleMarkerClick = (placeId: string) => {
     // 좌표를 직접 조회해 즉시 카메라 이동 — URL/state 갱신 타이밍 경유 금지
@@ -687,21 +716,38 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
       {/* 리스트 맨 위로 버튼 — z-30, 시트 위에 absolute */}
       <ListScrollTopButton scrollRef={listScrollRef} />
 
-      {/* 전체 보기 FAB — 시트 상단 위 12px에 붙어서 이동, 선택 중이거나 full이면 숨김 */}
+      {/* FAB 그룹 — 시트 상단 위 12px에 붙어서 이동, 선택 중이거나 full이면 둘 다 숨김 */}
       {!selectedPlaceId && (
-        <button
-          type="button"
-          aria-label="Fit all markers"
-          onClick={() => mapRef.current?.fitAllMarkers()}
-          className={`absolute right-3 z-[45] w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-md transition-[opacity] duration-300 ${
-            effectiveSheetState === "full"
-              ? "opacity-0 pointer-events-none"
-              : "opacity-100 active:opacity-70"
+        <div
+          className={`absolute right-3 z-[45] flex flex-col gap-3 ${
+            effectiveSheetState === "full" ? "opacity-0 pointer-events-none" : "opacity-100"
           }`}
           style={{ bottom: `calc(${fabSheetH} + 12px)`, transition: "bottom 300ms ease, opacity 300ms ease" }}
         >
-          <Maximize size={16} strokeWidth={2} />
-        </button>
+          {/* 현위치 버튼 */}
+          <button
+            type="button"
+            aria-label="My location"
+            onClick={handleLocateMe}
+            disabled={locating}
+            className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-md active:opacity-70 transition-opacity disabled:opacity-50"
+          >
+            {locating ? (
+              <Loader2 size={16} strokeWidth={2} className="animate-spin" />
+            ) : (
+              <LocateFixed size={16} strokeWidth={2} />
+            )}
+          </button>
+          {/* 전체 보기 버튼 */}
+          <button
+            type="button"
+            aria-label="Fit all markers"
+            onClick={() => mapRef.current?.fitAllMarkers()}
+            className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-md active:opacity-70 transition-opacity"
+          >
+            <Maximize size={16} strokeWidth={2} />
+          </button>
+        </div>
       )}
 
       {/* floating 카드 — z-50: 이벤트 모드=캐러셀, 일반 모드=장소 상세 */}
@@ -721,6 +767,13 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
           onClose={handlePlaceClose}
         />
       ) : null}
+
+      {/* 토스트 */}
+      {toast && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 rounded-full bg-black/50 text-white text-sm whitespace-nowrap shadow-lg pointer-events-none">
+          {toast.message}
+        </div>
+      )}
 
       {/* 필터 시트 — z-[65] */}
       <DiscoverFilterSheet
