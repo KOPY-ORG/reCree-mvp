@@ -27,7 +27,7 @@ export default async function CollectionDetailPage({
         select: { name: true },
       },
       events: {
-        orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+        orderBy: [{ startDate: "asc" }, { createdAt: "desc" }],
         select: {
           id: true,
           status: true,
