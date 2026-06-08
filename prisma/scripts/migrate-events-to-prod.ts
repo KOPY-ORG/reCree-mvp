@@ -26,7 +26,9 @@ const EXPECTED_PROD_REF = "vwfojaivbltsdjttjhxw";
 function parseRef(url: string): { host: string; ref: string } {
   try {
     const u = new URL(url);
-    return { host: u.host, ref: u.username };
+    // pooler URL username = "postgres.{project_ref}" → 접두사 제거
+    const ref = u.username.replace(/^postgres\./, "");
+    return { host: u.host, ref };
   } catch {
     return { host: "(parse error)", ref: "(parse error)" };
   }
@@ -208,70 +210,57 @@ async function migrateEvents(
   }
 
   // ── EXEC: FK 그룹별 $transaction — 멱등 upsert, prod 부분적용 방지 ────────
-  // 전략: 테이블 단위 트랜잭션. 단일 대형 트랜잭션은 Supabase 기본 timeout 초과 위험.
-  // upsert 특성상 재실행 안전 → 그룹 단위 롤백만 보장해도 충분.
-  const TX_OPTS = { timeout: 30_000 }; // 30s — BlockTranslation 288건 대비
+  // 배열 형식 $transaction은 timeout/maxWait 미지원(isolationLevel만 지원).
+  // interactive(콜백) 형식으로 전환해야 timeout 옵션 실제 적용됨.
+  const TX_OPTS = { timeout: 60_000, maxWait: 10_000 }; // 60s — BlockTranslation 288건 대비
 
   // 1. Event (39) — eventCollectionId FK는 청크2에서 이미 삽입됨
-  await dst.$transaction(
-    events.map(({ id, ...rest }) =>
-      dst.event.upsert({ where: { id }, create: { id, ...rest }, update: rest }),
-    ),
-    TX_OPTS,
-  );
+  await dst.$transaction(async (tx) => {
+    for (const { id, ...rest } of events) {
+      await tx.event.upsert({ where: { id }, create: { id, ...rest }, update: rest });
+    }
+  }, TX_OPTS);
   logStep("Event", events.length, dryRun);
 
   // 2. EventTranslation (234) — @@unique(eventId, locale), upsert where:id
-  await dst.$transaction(
-    translations.map(({ id, ...rest }) =>
-      dst.eventTranslation.upsert({ where: { id }, create: { id, ...rest }, update: rest }),
-    ),
-    TX_OPTS,
-  );
+  await dst.$transaction(async (tx) => {
+    for (const { id, ...rest } of translations) {
+      await tx.eventTranslation.upsert({ where: { id }, create: { id, ...rest }, update: rest });
+    }
+  }, TX_OPTS);
   logStep("EventTranslation", translations.length, dryRun);
 
   // 3. EventPerk (41) + EventPerkTranslation (246) — 같은 tx로 묶어 Perk→Translation 원자성
-  await dst.$transaction(
-    [
-      ...perks.map(({ id, ...rest }) =>
-        dst.eventPerk.upsert({ where: { id }, create: { id, ...rest }, update: rest }),
-      ),
-      ...perkTrs.map(({ id, ...rest }) =>
-        dst.eventPerkTranslation.upsert({ where: { id }, create: { id, ...rest }, update: rest }),
-      ),
-    ],
-    TX_OPTS,
-  );
+  await dst.$transaction(async (tx) => {
+    for (const { id, ...rest } of perks) {
+      await tx.eventPerk.upsert({ where: { id }, create: { id, ...rest }, update: rest });
+    }
+    for (const { id, ...rest } of perkTrs) {
+      await tx.eventPerkTranslation.upsert({ where: { id }, create: { id, ...rest }, update: rest });
+    }
+  }, TX_OPTS);
   logStep("EventPerk", perks.length, dryRun);
   logStep("EventPerkTranslation", perkTrs.length, dryRun);
 
   // 4. EventBodyBlock (82) + EventBodyBlockTranslation (288) — 같은 tx, Block 먼저
-  await dst.$transaction(
-    [
-      ...blocks.map(({ id, ...rest }) =>
-        dst.eventBodyBlock.upsert({ where: { id }, create: { id, ...rest }, update: rest }),
-      ),
-      ...blockTrs.map(({ id, ...rest }) =>
-        dst.eventBodyBlockTranslation.upsert({
-          where:  { id },
-          create: { id, ...rest },
-          update: rest,
-        }),
-      ),
-    ],
-    TX_OPTS,
-  );
+  await dst.$transaction(async (tx) => {
+    for (const { id, ...rest } of blocks) {
+      await tx.eventBodyBlock.upsert({ where: { id }, create: { id, ...rest }, update: rest });
+    }
+    for (const { id, ...rest } of blockTrs) {
+      await tx.eventBodyBlockTranslation.upsert({ where: { id }, create: { id, ...rest }, update: rest });
+    }
+  }, TX_OPTS);
   logStep("EventBodyBlock", blocks.length, dryRun);
   logStep("EventBodyBlockTranslation", blockTrs.length, dryRun);
 
   // 5. EventPlace (19) — 마지막(Event + Place 모두 존재 후)
   // @@unique([eventId, placeId]) 있으나 id 기준 upsert로 충분
-  await dst.$transaction(
-    eventPlaces.map(({ id, ...rest }) =>
-      dst.eventPlace.upsert({ where: { id }, create: { id, ...rest }, update: rest }),
-    ),
-    TX_OPTS,
-  );
+  await dst.$transaction(async (tx) => {
+    for (const { id, ...rest } of eventPlaces) {
+      await tx.eventPlace.upsert({ where: { id }, create: { id, ...rest }, update: rest });
+    }
+  }, TX_OPTS);
   logStep("EventPlace", eventPlaces.length, dryRun);
 }
 
