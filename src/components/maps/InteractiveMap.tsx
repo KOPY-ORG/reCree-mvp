@@ -143,7 +143,7 @@ function MapContent({
           anchorLeft="-50%"
           anchorTop="-50%"
         >
-          <div className="relative flex items-center justify-center">
+          <div className="relative">
             {/* 헤일로 */}
             <div className="absolute -inset-2 rounded-full bg-blue-500/20" />
             {/* 코어 dot */}
