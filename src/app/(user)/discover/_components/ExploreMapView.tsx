@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { dedupeEventMarkers } from "@/lib/event-utils";
 import { EVENT_RED } from "@/lib/event-format";
 import { useSearchParams, useRouter } from "next/navigation";
-import { InteractiveMap } from "@/components/maps/InteractiveMap";
+import { InteractiveMap, type FocusCameraHandle } from "@/components/maps/InteractiveMap";
 import { PlaceBottomSheet } from "@/components/maps/PlaceBottomSheet";
 import { PlaceListSheet, type PlaceListSheetState } from "@/components/maps/PlaceListSheet";
 import { PlaceListSheetCard } from "@/components/maps/PlaceListSheetCard";
@@ -144,6 +144,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   const [stagedTagIds, setStagedTagIds] = useState<string[]>([]);
   const [appliedTopicIds, setAppliedTopicIds] = useState<string[]>([]);
   const [appliedTagIds, setAppliedTagIds] = useState<string[]>([]);
+  const mapRef = useRef<FocusCameraHandle>(null);
   const listScrollRef = useRef<HTMLDivElement | null>(null);
   const listScrollMemoRef = useRef<number>(0);
   const urlFilterInitRef = useRef(false);
@@ -229,6 +230,11 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   }
 
   const handleMarkerClick = (placeId: string) => {
+    // 좌표를 직접 조회해 즉시 카메라 이동 — URL/state 갱신 타이밍 경유 금지
+    const place =
+      (isEventMode ? eventMarkerPlaces : filteredPlaces).find((p) => p.id === placeId) ??
+      eventMarkerPlaces.find((p) => p.id === placeId);
+    if (place) mapRef.current?.focusCamera({ lat: place.latitude, lng: place.longitude });
     setFocusedPlaceIds(new Set());
     setSelectedPlaceId(placeId);
   };
@@ -523,6 +529,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     // bottomnav(h-16=64px) — ExploreHeader 제거됨
     <div className="relative h-[calc(100dvh-64px)] overflow-hidden">
       <InteractiveMap
+        ref={mapRef}
         places={isEventMode ? eventMarkerPlaces : filteredPlaces}
         selectedPlaceId={selectedPlaceId}
         focusedPlaceIds={focusedPlaceIds}

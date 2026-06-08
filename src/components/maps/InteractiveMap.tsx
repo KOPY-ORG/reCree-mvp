@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useImperativeHandle, forwardRef } from "react";
 import { APIProvider, Map, AdvancedMarker, useMap } from "@vis.gl/react-google-maps";
 import { PlaceMarker } from "./PlaceMarker";
 import type { MarkerGradient } from "@/lib/map-utils";
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 const MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID ?? "DEMO_MAP_ID";
+const TARGET_ZOOM = 15;
 
 type MarkerPlace = {
   id: string;
@@ -21,6 +22,10 @@ type MarkerPlace = {
   postCount?: number; // posts.length 대신 명시적 카운트 오버라이드
   showLabel?: boolean;
   invertOnSelect?: boolean;
+};
+
+export type FocusCameraHandle = {
+  focusCamera: (coords: { lat: number; lng: number }) => void;
 };
 
 interface Props {
@@ -44,9 +49,23 @@ function MapContent({
   onMarkerClick,
   onMapClick,
   bottomOffset = 64,
-}: Omit<Props, "className">) {
+  cameraRef,
+}: Omit<Props, "className"> & { cameraRef: React.Ref<FocusCameraHandle> }) {
   const map = useMap();
 
+  useImperativeHandle(cameraRef, () => ({
+    focusCamera({ lat, lng }) {
+      if (!map) return;
+      const containerH = window.innerHeight - bottomOffset;
+      const offsetY = Math.round(containerH * 0.12);
+      const current = map.getZoom();
+      const zoom = current == null || current < TARGET_ZOOM ? TARGET_ZOOM : current;
+      map.moveCamera({ center: { lat, lng }, zoom });
+      map.panBy(0, offsetY);
+    },
+  }), [map, bottomOffset]);
+
+  // 초기 bounds — boundsKey 변경 시 전체 마커가 보이도록 맞춤
   useEffect(() => {
     if (!boundsKey || !map || places.length === 0) return;
     const containerH = window.innerHeight - bottomOffset;
@@ -67,21 +86,14 @@ function MapContent({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, boundsKey]);
 
+  // 카드 탭(focusedPlaceIds) 시 해당 장소들로 카메라 이동
+  // 마커 탭 카메라는 handleMarkerClick에서 focusCamera()로 직접 처리 (effect 경유 없음)
   useEffect(() => {
-    if (!map) return;
+    if (!map || !focusedPlaceIds || focusedPlaceIds.size === 0) return;
 
-    // 활성 좌표 목록 결정 — focusedPlaceIds(복수) 우선, 없으면 selectedPlaceId(단일)
-    let coords: { lat: number; lng: number }[];
-    if (focusedPlaceIds && focusedPlaceIds.size > 0) {
-      coords = places
-        .filter((p) => focusedPlaceIds.has(p.id))
-        .map((p) => ({ lat: p.latitude, lng: p.longitude }));
-    } else if (selectedPlaceId) {
-      const p = places.find((place) => place.id === selectedPlaceId);
-      coords = p ? [{ lat: p.latitude, lng: p.longitude }] : [];
-    } else {
-      return;
-    }
+    const coords = places
+      .filter((p) => focusedPlaceIds.has(p.id))
+      .map((p) => ({ lat: p.latitude, lng: p.longitude }));
 
     if (coords.length === 0) return;
 
@@ -90,14 +102,11 @@ function MapContent({
     const offsetY = Math.round(containerH * 0.12);
 
     if (coords.length === 1) {
-      // 단일: panTo + 조건부 setZoom — fitBounds 쓰면 줌이 최대로 튄다
-      map.panTo(coords[0]);
-      map.panBy(0, offsetY);
-      const TARGET_ZOOM = 15;
       const current = map.getZoom();
-      if (current == null || current < TARGET_ZOOM) map.setZoom(TARGET_ZOOM);
+      const zoom = current == null || current < TARGET_ZOOM ? TARGET_ZOOM : current;
+      map.moveCamera({ center: coords[0], zoom });
+      map.panBy(0, offsetY);
     } else {
-      // 복수: fitBounds — bottom에 시트 peek 높이 padding 포함
       try {
         const bounds = new google.maps.LatLngBounds();
         coords.forEach((c) => bounds.extend(c));
@@ -106,7 +115,7 @@ function MapContent({
         // google.maps 미로드 시 무시
       }
     }
-  }, [map, selectedPlaceId, focusedPlaceIds]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [map, focusedPlaceIds]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <Map
@@ -148,7 +157,10 @@ function MapContent({
   );
 }
 
-export function InteractiveMap({ places, selectedPlaceId, focusedPlaceIds, highlightedIds, boundsKey, onMarkerClick, onMapClick, className, bottomOffset = 64 }: Props) {
+export const InteractiveMap = forwardRef<FocusCameraHandle, Props>(function InteractiveMap(
+  { places, selectedPlaceId, focusedPlaceIds, highlightedIds, boundsKey, onMarkerClick, onMapClick, className, bottomOffset = 64 },
+  ref
+) {
   if (!API_KEY) {
     return (
       <div className={`flex items-center justify-center bg-muted/50 text-sm text-muted-foreground ${className ?? ""}`}>
@@ -169,8 +181,9 @@ export function InteractiveMap({ places, selectedPlaceId, focusedPlaceIds, highl
           onMarkerClick={onMarkerClick}
           onMapClick={onMapClick}
           bottomOffset={bottomOffset}
+          cameraRef={ref}
         />
       </APIProvider>
     </div>
   );
-}
+});
