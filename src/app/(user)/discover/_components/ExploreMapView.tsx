@@ -463,6 +463,8 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
         markerGradient: undefined,
         isSaved: eventsByPlace[place.id]?.some((e) => savedEventIdsSet.has(e.eventId)) ?? false,
         postCount: eventsByPlace[place.id]?.length ?? 0,
+        showLabel: false,
+        invertOnSelect: true,
       })),
     [eventPlaces, eventsByPlace, savedEventIdsSet]
   );

@@ -19,6 +19,8 @@ type MarkerPlace = {
   isSaved?: boolean;
   posts?: { id: string }[];
   postCount?: number; // posts.length 대신 명시적 카운트 오버라이드
+  showLabel?: boolean;
+  invertOnSelect?: boolean;
 };
 
 interface Props {
@@ -133,6 +135,8 @@ function MapContent({
               postCount={place.postCount ?? place.posts?.length ?? 0}
               placeId={place.id}
               gradient={place.markerGradient}
+              showLabel={place.showLabel}
+              invertOnSelect={place.invertOnSelect}
             />
           </AdvancedMarker>
         );
