@@ -43,6 +43,8 @@ export type MapPost = {
   }[];
   /** isVisible 여부 무관, 마커 색상 결정용 전체 태그 그룹 목록 */
   allTagGroups: string[];
+  publishedAt: string | null;
+  createdAt: string;
 };
 
 export type MapPlace = {
@@ -107,6 +109,8 @@ async function fetchPostPlaceRows(where: object) {
           id: true,
           slug: true,
           titleEn: true,
+          publishedAt: true,
+          createdAt: true,
           postImages: {
             where: { slotIndex: null },
             orderBy: { sortOrder: "asc" },
@@ -203,6 +207,8 @@ function groupByPlace(rows: RawPostPlaceRow[]): MapPlace[] {
       topics: post.postTopics.map((pt) => pt.topic),
       tags: post.postTags.filter((pt) => pt.isVisible).map((pt) => pt.tag),
       allTagGroups: post.postTags.map((pt) => pt.tag.group),
+      publishedAt: post.publishedAt,
+      createdAt: post.createdAt,
     };
 
     const existing = map.get(place.id);

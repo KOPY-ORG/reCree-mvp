@@ -477,19 +477,29 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     return [...keywordSuggestions, ...postSuggestions];
   }, [query, visiblePlaces]);
 
-  const allVisiblePosts = useMemo(
-    () => filteredPlaces.flatMap((place) => {
-      const posts = hasFilters
-        ? [...place.posts].sort((a, b) => {
-            const aM = postMatchesFilters(a, appliedTopicIds, appliedTagIds) ? 0 : 1;
-            const bM = postMatchesFilters(b, appliedTopicIds, appliedTagIds) ? 0 : 1;
-            return aM - bM;
-          })
-        : place.posts;
-      return posts.map((post) => ({ post, place }));
-    }),
-    [filteredPlaces, hasFilters, appliedTopicIds, appliedTagIds]
-  );
+  const allVisiblePosts = useMemo(() => {
+    const flat = filteredPlaces.flatMap((place) =>
+      place.posts.map((post) => ({ post, place }))
+    );
+    const seen = new Set<string>();
+    const deduped = flat.filter(({ post }) => {
+      if (seen.has(post.id)) return false;
+      seen.add(post.id);
+      return true;
+    });
+    return deduped.sort((a, b) => {
+      // 1차: 필터 매칭 우선 (필터 없으면 둘 다 0이라 무영향)
+      if (hasFilters) {
+        const am = postMatchesFilters(a.post, appliedTopicIds, appliedTagIds) ? 0 : 1;
+        const bm = postMatchesFilters(b.post, appliedTopicIds, appliedTagIds) ? 0 : 1;
+        if (am !== bm) return am - bm;
+      }
+      // 2차: 최신순
+      const ta = new Date(a.post.publishedAt ?? a.post.createdAt).getTime();
+      const tb = new Date(b.post.publishedAt ?? b.post.createdAt).getTime();
+      return tb - ta;
+    });
+  }, [filteredPlaces, hasFilters, appliedTopicIds, appliedTagIds]);
 
   // ── 이벤트 모드 파생 (계속) ──────────────────────────────────────────────────
 
