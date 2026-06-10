@@ -156,7 +156,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     selectedPlaceId ? "hidden" : "half"
   );
   const [focusedPlaceIds, setFocusedPlaceIds] = useState<Set<string>>(new Set());
-  const [contentTab, setContentTab] = useState<"hot" | "list">("list");
+  const [contentTab, setContentTab] = useState<"hot" | "list">("hot");
   const [query, setQuery] = useState("");
   const [eventQuery, setEventQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -403,6 +403,9 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
 
   const hasFilters = appliedTopicIds.length > 0 || appliedTagIds.length > 0;
   const isResultMode = !isEventMode && (query.trim() !== "" || hasFilters);
+  // 이벤트 모드는 EventSearchBar(검색+칩)가 항상 떠 있어 동일한 top reserve가 필요.
+  // 비이벤트는 facet 칩이 떠 있을 때(isResultMode)만 필요. 두 조건의 OR는 새 변수에서만.
+  const needsTopReserve = isEventMode || isResultMode;
 
   const searchedPlaces = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -474,19 +477,30 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     return [...keywordSuggestions, ...postSuggestions];
   }, [query, visiblePlaces]);
 
-  const allVisiblePosts = useMemo(
-    () => filteredPlaces.flatMap((place) => {
-      const posts = hasFilters
-        ? [...place.posts].sort((a, b) => {
-            const aM = postMatchesFilters(a, appliedTopicIds, appliedTagIds) ? 0 : 1;
-            const bM = postMatchesFilters(b, appliedTopicIds, appliedTagIds) ? 0 : 1;
-            return aM - bM;
-          })
-        : place.posts;
-      return posts.map((post) => ({ post, place }));
-    }),
-    [filteredPlaces, hasFilters, appliedTopicIds, appliedTagIds]
-  );
+  const allVisiblePosts = useMemo(() => {
+    const ts = (p: MapPost) =>
+      new Date(p.publishedAt ?? p.createdAt).getTime();
+
+    // 그룹 내 최신 post 시각 기준 place desc 정렬
+    const sortedPlaces = [...filteredPlaces].sort((pa, pb) => {
+      const maxA = Math.max(...pa.posts.map(ts));
+      const maxB = Math.max(...pb.posts.map(ts));
+      return maxB - maxA;
+    });
+
+    // 그룹 순서 유지, 그룹 내부 최신순 + post.id 전역 dedupe
+    const seen = new Set<string>();
+    return sortedPlaces.flatMap((place) =>
+      [...place.posts]
+        .sort((a, b) => ts(b) - ts(a))
+        .filter((post) => {
+          if (seen.has(post.id)) return false;
+          seen.add(post.id);
+          return true;
+        })
+        .map((post) => ({ post, place }))
+    );
+  }, [filteredPlaces]);
 
   // ── 이벤트 모드 파생 (계속) ──────────────────────────────────────────────────
 
@@ -638,7 +652,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
       : sheetState;
 
   // FAB bottom 계산용 — tabOnlyH는 측정값 근사(80), fullTop은 PlaceListSheet와 동일 공식
-  const fabSheetH = getSheetHeight(effectiveSheetState, 80, isResultMode ? 96 : 64);
+  const fabSheetH = getSheetHeight(effectiveSheetState, 80, needsTopReserve ? 96 : 64);
 
   return (
     // bottomnav(h-16=64px) — ExploreHeader 제거됨
@@ -720,7 +734,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
         state={effectiveSheetState}
         onStateChange={setSheetState}
         topOffset={64}
-        hasActiveFacets={isResultMode}
+        hasActiveFacets={needsTopReserve}
         scrollContainerRef={listScrollRef}
         header={
           isEventMode && activeEventData ? (
