@@ -9,13 +9,6 @@ import type { TemplateId } from "./editor-types";
 
 // ── 헬퍼 ──────────────────────────────────────────────────────────────────────
 
-const FRAME_NUM: Record<TemplateId, string> = {
-  "vertical-full":    "01",
-  "vertical-frame":   "02",
-  "horizontal-full":  "03",
-  "horizontal-frame": "04",
-};
-
 function getSlotCropRatio(templateId: TemplateId, slotIndex: number): number {
   const config = getTemplateConfig(templateId);
   const slot = config.slots[slotIndex];
@@ -58,7 +51,6 @@ function FrameCanvasPreview({
       {slots.map((slot, i) => {
         const d = slotData[i];
         if (!d) return null;
-        // full-bleed: 슬롯이 캔버스 끝까지 닿으므로 outline 생략 (캔버스 실선과 겹침 방지)
         const showOutline = !!frame && !d.previewUrl;
         return (
           <div
@@ -138,7 +130,26 @@ function FrameCanvasPreview({
         );
       })}
 
-
+      {/* frame 모드: 사진 아래 레이블 영역 */}
+      {frame && slots.map((slot, i) => (
+        <div
+          key={`label-${i}`}
+          style={{
+            position: "absolute",
+            left:   pct(slot.x,                   canvasWidth),
+            top:    pct(slot.y + slot.height,      canvasHeight),
+            width:  pct(slot.width,                canvasWidth),
+            height: pct(frame.labelHeight,         canvasHeight),
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <span style={{ fontFamily: FONT_TECH, fontSize: 11, fontWeight: 700, color: "#000", letterSpacing: 1, textTransform: "uppercase" }}>
+            {frame.defaultLabels[i] ?? ""}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -153,6 +164,7 @@ interface Props {
   onShotChange: (file: File) => void;
   onReferenceRemove: () => void;
   onShotRemove: () => void;
+  onTemplateChange?: (id: TemplateId) => void;
   onNext: () => void;
   isUploading?: boolean;
 }
@@ -165,6 +177,7 @@ export function PhotoPlacer({
   onShotChange,
   onReferenceRemove,
   onShotRemove,
+  onTemplateChange,
   onNext,
   isUploading,
 }: Props) {
@@ -234,24 +247,33 @@ export function PhotoPlacer({
           </p>
         </div>
 
-        {/* FRAME 뱃지 */}
-        <span
-          style={{
-            fontFamily: FONT_TECH,
-            fontSize: 9,
-            fontWeight: 700,
-            letterSpacing: 1.2,
-            background: "#0b0b0b",
-            color: "#fff",
-            padding: "4px 8px 3px",
-            display: "inline-flex",
-            alignItems: "center",
-            lineHeight: 1,
-            marginBottom: 6,
-          }}
-        >
-          FRAME · {FRAME_NUM[templateId]}
-        </span>
+        {/* 테두리 on/off 토글 */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+          {(["vertical-full", "vertical-frame"] as TemplateId[]).map((id) => {
+            const isActive = templateId === id;
+            const label = id === "vertical-full" ? "No border" : "Border";
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => onTemplateChange?.(id)}
+                style={{
+                  flex: 1,
+                  padding: "8px 0",
+                  borderRadius: 8,
+                  border: `1.5px solid ${isActive ? "#C6FD09" : "#ccc"}`,
+                  background: isActive ? "#C6FD09" : "transparent",
+                  color: isActive ? "#0b0b0b" : "#888",
+                  fontWeight: 600,
+                  fontSize: 13,
+                  cursor: "pointer",
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
 
         {/* 캔버스 미리보기 */}
         <FrameCanvasPreview templateId={templateId} slots={slotEntries} />

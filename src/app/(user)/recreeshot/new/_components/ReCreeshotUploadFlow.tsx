@@ -12,8 +12,6 @@ import {
   deleteReCreeshotImages,
 } from "@/lib/actions/upload-actions";
 import { UploadStep2 } from "./UploadStep2";
-import { TemplateModeSelector } from "./TemplateModeSelector";
-import { LayoutSelector } from "./editor/LayoutSelector";
 import { PhotoPlacer } from "./editor/PhotoPlacer";
 import { ReCreeshotEditor } from "./editor/ReCreeshotEditor";
 import { DoneStep } from "./editor/DoneStep";
@@ -50,14 +48,11 @@ interface Props {
   prefillTopicIds?: string[];
 }
 
-// 플로우 단계 — 문자열 기반으로 관리하면 모드별 분기가 명확해짐
 type FlowStep =
-  | "choose-mode"     // Step 1: 모드 선택 (전체 공통)
-  | "choose-layout"   // Step 2: 레이아웃 선택 (side-by-side 전용)
-  | "add-photos"      // Step 3/2: 사진 추가
-  | "decorate"        // Step 4/3: 꾸미기
-  | "share"           // Step 5/4: 공유
-  | "done";           // 완료
+  | "add-photos"
+  | "decorate"
+  | "share"
+  | "done";
 
 type State = {
   step: FlowStep;
@@ -102,18 +97,14 @@ type State = {
 
 // 헤더 제목 및 progress 계산 헬퍼
 function getStepMeta(step: FlowStep, mode: TemplateModeId | null): { title: string; progress: string } {
-  const TOTAL = 5;
+  const TOTAL = 3;
   const NUM: Record<FlowStep, number> = {
-    "choose-mode": 1,
-    "choose-layout": 2,
-    "add-photos": 3,
-    "decorate": 4,
-    "share": 5,
+    "add-photos": 1,
+    "decorate": 2,
+    "share": 3,
     "done": 0,
   };
   const TITLES: Record<FlowStep, string> = {
-    "choose-mode": "Choose template",
-    "choose-layout": "Choose layout",
     "add-photos": "Add photos",
     "decorate": "Decorate",
     "share": "Share",
@@ -133,9 +124,9 @@ export function ReCreeshotUploadFlow({
 }: Props) {
   const router = useRouter();
   const [state, setState] = useState<State>({
-    step: "choose-mode",
-    templateMode: null,
-    selectedTemplateId: null,
+    step: "add-photos",
+    templateMode: "side-by-side",
+    selectedTemplateId: DEFAULT_TEMPLATE_ID,
     referenceFile: null,
     referencePreviewUrl: prefillReferenceUrl ?? null,
     shotFile: null,
@@ -249,15 +240,12 @@ export function ReCreeshotUploadFlow({
 
   function handleBack() {
     if (state.step === "done") { router.push("/explore?tab=hall"); return; }
-    if (state.step === "choose-mode") {
+    if (state.step === "add-photos") {
       if (hasUnsavedUpload) { setState((s) => ({ ...s, showLeaveDialog: true })); }
       else { router.back(); }
       return;
     }
-    // 단계 역방향
     const PREV_STEP: Partial<Record<FlowStep, FlowStep>> = {
-      "choose-layout": "choose-mode",
-      "add-photos": "choose-layout",
       "decorate": "add-photos",
       "share": "decorate",
     };
@@ -268,19 +256,6 @@ export function ReCreeshotUploadFlow({
   async function confirmLeave() {
     await deleteOrphanedFiles();
     router.back();
-  }
-
-  // ── Step 1: 모드 선택 → 다음 ────────────────────────────────────────────────
-
-  function handleModeNext() {
-    if (!state.templateMode) return;
-    setState((s) => ({ ...s, step: "choose-layout", selectedTemplateId: null }));
-  }
-
-  // ── Step 2 (side-by-side): 레이아웃 선택 → 다음 ────────────────────────────
-
-  function handleLayoutNext() {
-    setState((s) => ({ ...s, step: "add-photos" }));
   }
 
   // ── Add photos → Decorate: R2 업로드 후 진행 ─────────────────────────────────
@@ -375,25 +350,6 @@ export function ReCreeshotUploadFlow({
         </div>
       </header>
 
-      {/* Step 1: 모드 선택 */}
-      {state.step === "choose-mode" && (
-        <TemplateModeSelector
-          selected={state.templateMode}
-          onSelect={(mode) => setState((s) => ({ ...s, templateMode: mode }))}
-          onNext={handleModeNext}
-        />
-      )}
-
-      {/* Step 2: 레이아웃 선택 (전체 모드) */}
-      {state.step === "choose-layout" && state.templateMode && (
-        <LayoutSelector
-          mode={state.templateMode}
-          selected={state.selectedTemplateId}
-          onSelect={(id) => setState((s) => ({ ...s, selectedTemplateId: id }))}
-          onNext={handleLayoutNext}
-        />
-      )}
-
       {/* Add photos (side-by-side) */}
       {state.step === "add-photos" && state.templateMode === "side-by-side" && (
         <>
@@ -405,6 +361,7 @@ export function ReCreeshotUploadFlow({
             onShotChange={setShotPhoto}
             onReferenceRemove={removeReferencePhoto}
             onShotRemove={removeShotPhoto}
+            onTemplateChange={(id) => setState((s) => ({ ...s, selectedTemplateId: id }))}
             onNext={handlePhotosNext}
             isUploading={state.isUploading}
           />

@@ -13,8 +13,6 @@ interface Props {
   templateConfig: TemplateConfig;
   frameColorHex: string;
   onFrameColorChange: (hex: string) => void;
-  labelColor: string;
-  onLabelColorChange: (v: string) => void;
   referenceLabel: string;
   shotLabel: string;
   onReferenceLabelChange: (v: string) => void;
@@ -50,8 +48,6 @@ export function EditorToolbar({
   templateConfig,
   frameColorHex,
   onFrameColorChange,
-  labelColor,
-  onLabelColorChange,
   referenceLabel,
   shotLabel,
   onReferenceLabelChange,
@@ -103,7 +99,6 @@ export function EditorToolbar({
         <div className="px-4 pt-3 pb-2 space-y-2 border-b border-border/30">
           <LabelRow hint="Artist" value={referenceLabel} placeholder="Artist name" onChange={onReferenceLabelChange} />
           <LabelRow hint="ME" value={shotLabel} placeholder="Your label" onChange={onShotLabelChange} />
-          <LabelColorRow value={labelColor} onChange={onLabelColorChange} />
         </div>
       )}
 
@@ -213,43 +208,6 @@ function LabelRow({ hint, value, placeholder, onChange }: {
             <X className="size-3.5" />
           </button>
         )}
-      </div>
-    </div>
-  );
-}
-
-// ── LabelColorRow ─────────────────────────────────────────────────────────────
-
-const LABEL_COLORS = [
-  { hex: "#000000", label: "Black" },
-  { hex: "#ffffff", label: "White" },
-  { hex: "#555555", label: "Gray" },
-  { hex: "#C8FF09", label: "Brand" },
-  { hex: "#ff4444", label: "Red" },
-  { hex: "#4499ff", label: "Blue" },
-];
-
-function LabelColorRow({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  return (
-    <div className="flex items-center gap-2 pt-0.5">
-      <span className="text-xs text-muted-foreground w-10 shrink-0">Text</span>
-      <div className="flex gap-2">
-        {LABEL_COLORS.map((c) => {
-          const isSelected = value.toLowerCase() === c.hex.toLowerCase();
-          return (
-            <button
-              key={c.hex}
-              type="button"
-              onClick={() => onChange(c.hex)}
-              className={`size-6 rounded-full transition-transform ${isSelected ? "scale-125 ring-2 ring-brand ring-offset-1 ring-offset-background" : ""}`}
-              style={{
-                backgroundColor: c.hex,
-                boxShadow: "0 0 0 1px rgba(0,0,0,0.15)",
-              }}
-              title={c.label}
-            />
-          );
-        })}
       </div>
     </div>
   );

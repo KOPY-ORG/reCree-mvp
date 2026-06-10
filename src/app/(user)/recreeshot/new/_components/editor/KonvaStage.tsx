@@ -16,7 +16,6 @@ interface Props {
   frameColorHex: string;
   referenceLabel: string;
   shotLabel: string;
-  labelColor: string;
   matchScore?: number | null;
   showMatchScore?: boolean;
   stickerStyle?: StickerStyle;
@@ -35,7 +34,6 @@ export default function KonvaStage({
   frameColorHex,
   referenceLabel,
   shotLabel,
-  labelColor,
   matchScore,
   showMatchScore,
   stickerStyle = "pill",
@@ -86,7 +84,7 @@ export default function KonvaStage({
                   x={dX} y={dY + dH + Math.round(frame.labelHeight * scale * 0.4)}
                   width={dW} text={i === 0 ? refLabel : meLabel}
                   align="center" fontSize={Math.round(frame.fontSize * scale)}
-                  fill={labelColor} listening={false}
+                  fill="#000000" listening={false}
                 />
               )}
             </React.Fragment>

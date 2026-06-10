@@ -38,7 +38,6 @@ interface Props {
 
 interface EditorState {
   frameColorHex: string;
-  labelColor: string;
   referenceLabel: string;
   shotLabel: string;
 }
@@ -84,7 +83,6 @@ export function ReCreeshotEditor({
 
   const [editorState, setEditorState] = useState<EditorState>({
     frameColorHex: "#ffffff",
-    labelColor: "#000000",
     referenceLabel: templateConfig.frame?.defaultLabels[0] ?? "Artist",
     shotLabel: templateConfig.frame?.defaultLabels[1] ?? "ME",
   });
@@ -178,7 +176,6 @@ export function ReCreeshotEditor({
                 frameColorHex={editorState.frameColorHex}
                 referenceLabel={editorState.referenceLabel}
                 shotLabel={editorState.shotLabel}
-                labelColor={editorState.labelColor}
                 matchScore={matchScore}
                 showMatchScore={showMatchScore}
                 stickerStyle={stickerStyle}
@@ -196,8 +193,6 @@ export function ReCreeshotEditor({
         templateConfig={templateConfig}
         frameColorHex={editorState.frameColorHex}
         onFrameColorChange={(hex) => setEditorState((s) => ({ ...s, frameColorHex: hex }))}
-        labelColor={editorState.labelColor}
-        onLabelColorChange={(c) => setEditorState((s) => ({ ...s, labelColor: c }))}
         referenceLabel={editorState.referenceLabel}
         shotLabel={editorState.shotLabel}
         onReferenceLabelChange={(v) => setEditorState((s) => ({ ...s, referenceLabel: v }))}
