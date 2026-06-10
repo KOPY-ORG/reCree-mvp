@@ -39,12 +39,12 @@ export function UploadStep2({
 
         {/* 합성 이미지 프리뷰 */}
         {compositeUrl && (
-          <div className="mx-auto max-h-[45dvh] flex items-center justify-center overflow-hidden rounded-lg">
+          <div className="mx-auto max-h-[45dvh] flex items-center justify-center overflow-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={compositeUrl}
               alt="recreeshot preview"
-              className="max-h-[45dvh] w-auto rounded-lg object-contain"
+              className="max-h-[45dvh] w-auto object-contain"
               style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.15)" }}
             />
           </div>

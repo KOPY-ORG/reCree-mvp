@@ -249,7 +249,8 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
       </div>
 
       {/* 이미지 — HTML 오버레이 방식 (CORS 불필요) */}
-      <div className="relative aspect-[4/5] bg-muted overflow-hidden">
+      <div className="px-4">
+      <div className="relative aspect-[4/5] bg-muted overflow-hidden shadow-md">
         {/* eslint-disable-next-line @next/next/no-img-element -- HTML 오버레이 렌더링(CORS 불필요), 사용자 업로드 이미지 */}
         <img
           src={imageUrl}
@@ -267,7 +268,6 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
               style={{
                 position: "absolute",
                 inset: "-12%",
-                borderRadius: "16%",
                 background: "rgba(255,255,255,0.3)",
                 filter: "blur(5px)",
                 zIndex: -1,
@@ -278,7 +278,6 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
                 position: "relative",
                 width: "100%",
                 height: "100%",
-                borderRadius: "12%",
                 overflow: "hidden",
                 outline: "1px solid white",
               }}
@@ -303,6 +302,7 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
             {Math.round(matchScore)}% Match
           </div>
         )}
+      </div>
       </div>
     </>
   );

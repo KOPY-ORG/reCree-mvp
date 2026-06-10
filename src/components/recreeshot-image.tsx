@@ -41,9 +41,6 @@ export function ReCreeshotImage({
   // showMatchLabel: preview 기본 true, thumb 기본 false
   const showLabel = showMatchLabel ?? !isThumb;
 
-  // 메인 이미지 둥근 모서리
-  // thumb-sm(소형 인라인 카드): 비례 7%, thumb-md(HallGrid): 가이드 영상과 동일한 rounded-lg
-  const roundedClass = variant === "thumb-sm" ? "rounded-[7%]" : "rounded-lg";
 
   // 배지 위치 / 크기
   let badgePosClass: string;
@@ -78,7 +75,7 @@ export function ReCreeshotImage({
   const previewBottom = referencePosition === "bottom-left" ? "2.4%" : undefined;
 
   return (
-    <div className={`relative overflow-hidden bg-muted ${roundedClass} ${className}`}>
+    <div className={`relative overflow-hidden bg-muted ${className}`}>
       <Image
         src={shotUrl}
         alt="recreeshot"
@@ -92,7 +89,7 @@ export function ReCreeshotImage({
       {/* thumb 변형: boxShadow 글로우 */}
       {referenceUrl && isThumb && (
         <div
-          className="absolute rounded-[10%] overflow-hidden"
+          className="absolute overflow-hidden"
           style={{
             top: referencePosition === "top-left" ? thumbOffset : undefined,
             bottom: referencePosition === "bottom-left" ? thumbOffset : undefined,
@@ -125,7 +122,6 @@ export function ReCreeshotImage({
             style={{
               position: "absolute",
               inset: "-8%",
-              borderRadius: "16%",
               background: "rgba(255,255,255,0.3)",
               filter: "blur(0.6vw)",
               zIndex: -1,
@@ -136,7 +132,6 @@ export function ReCreeshotImage({
               position: "relative",
               width: "100%",
               height: "100%",
-              borderRadius: "12%",
               overflow: "hidden",
               outline: "0.5px solid rgba(255,255,255,0.8)",
             }}

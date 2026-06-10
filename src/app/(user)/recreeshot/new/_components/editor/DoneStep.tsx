@@ -20,7 +20,7 @@ export function DoneStep({ shotPreviewUrl, createdId }: Props) {
       </div>
 
       {/* 사진 미리보기 */}
-      <div className="w-48 aspect-[4/5] rounded-2xl overflow-hidden bg-muted mx-auto">
+      <div className="w-48 aspect-[4/5] overflow-hidden bg-muted mx-auto shadow-md">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={shotPreviewUrl} alt="recreeshot" className="w-full h-full object-cover" />
       </div>
@@ -31,14 +31,14 @@ export function DoneStep({ shotPreviewUrl, createdId }: Props) {
           onClick={() => router.push(`/recreeshot/${createdId}`)}
           className="w-full py-3 rounded-full font-semibold text-sm bg-brand text-black"
         >
-          View recreeshot
+          View your recreeshot
         </button>
         <button
           type="button"
-          onClick={() => router.push("/explore?tab=hall")}
+          onClick={() => router.push("/recreeshot")}
           className="w-full py-3 rounded-full font-semibold text-sm border border-border"
         >
-          Back to Hall
+          View all recreeshots
         </button>
       </div>
     </div>

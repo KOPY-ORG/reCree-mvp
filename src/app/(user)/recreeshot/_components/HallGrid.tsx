@@ -39,7 +39,7 @@ export function HallGrid({ shots, guideVideo }: Props) {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-2 gap-3">
       {guideVideo && (
         <GuideVideoCard
           videoUrl={guideVideo.videoUrl}
@@ -58,7 +58,7 @@ export function HallGrid({ shots, guideVideo }: Props) {
             referencePosition="top-left"
             badgePosition="top-right"
             variant="thumb-md"
-            className="w-full aspect-[4/5]"
+            className="w-full aspect-[4/5] shadow-md"
             sizes="50vw"
           />
           {shot.labels.length > 0 && (
