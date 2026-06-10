@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 import type Konva from "konva";
 import { MapPin } from "lucide-react";
-import { loadImage } from "@/lib/canvas-utils";
+import { loadImage, drawReCreeshotWatermark } from "@/lib/canvas-utils";
 import { getReCreeshotPresignedUrl } from "@/lib/actions/upload-actions";
 import { previewMatchScore } from "@/app/(user)/_actions/recreeshot-actions";
 import { exportStageToBlob } from "./canvas-export";
@@ -43,6 +43,31 @@ interface Props {
   onTagsChange: (tagIds: string[], topicIds: string[]) => void;
   tagGroups: TagGroup[];
   topics: TopicItem[];
+}
+
+async function applyWatermark(blob: Blob): Promise<Blob> {
+  const url = URL.createObjectURL(blob);
+  try {
+    const img = await loadImage(url);
+    const W = img.naturalWidth;
+    const H = img.naturalHeight;
+    const canvas = document.createElement("canvas");
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return blob;
+    ctx.drawImage(img, 0, 0, W, H);
+    await document.fonts.ready;
+    drawReCreeshotWatermark(ctx, W, H);
+    return await new Promise<Blob>((resolve) => {
+      canvas.toBlob((b) => resolve(b ?? blob), "image/jpeg", 0.92);
+    });
+  } catch (e) {
+    console.warn("[reCree] watermark failed, uploading without:", e);
+    return blob;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 export function ReCreeshotEditor({
@@ -137,7 +162,8 @@ export function ReCreeshotEditor({
     if (!stageInstance || isExporting) return;
     setIsExporting(true);
     try {
-      const blob = await exportStageToBlob(stageInstance, templateConfig.canvasWidth, stageW);
+      const rawBlob = await exportStageToBlob(stageInstance, templateConfig.canvasWidth, stageW);
+      const blob = await applyWatermark(rawBlob);
       const file = new File([blob], "recreeshot.jpg", { type: "image/jpeg" });
       const presigned = await getReCreeshotPresignedUrl(file.name, file.type);
       if ("error" in presigned) throw new Error(presigned.error);
