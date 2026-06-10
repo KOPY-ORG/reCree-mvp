@@ -207,8 +207,8 @@ function groupByPlace(rows: RawPostPlaceRow[]): MapPlace[] {
       topics: post.postTopics.map((pt) => pt.topic),
       tags: post.postTags.filter((pt) => pt.isVisible).map((pt) => pt.tag),
       allTagGroups: post.postTags.map((pt) => pt.tag.group),
-      publishedAt: post.publishedAt,
-      createdAt: post.createdAt,
+      publishedAt: post.publishedAt ? post.publishedAt.toISOString() : null,
+      createdAt: post.createdAt.toISOString(),
     };
 
     const existing = map.get(place.id);
