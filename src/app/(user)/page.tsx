@@ -323,7 +323,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                     </div>
                   )}
                   {data.items.map((shot) => (
-                    <Link key={shot.id} href={`/discover/hall/${shot.id}`} className="shrink-0 w-[120px] block">
+                    <Link key={shot.id} href={`/recreeshot/${shot.id}`} className="shrink-0 w-[120px] block">
                       <ReCreeshotImage
                         shotUrl={shot.imageUrl}
                         referenceUrl={shot.referencePhotoUrl}

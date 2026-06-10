@@ -281,7 +281,7 @@ export async function scoreReCreeshot(
       data: { matchScore, showBadge: true },
     });
 
-    revalidatePath(`/explore/hall/${id}`);
+    revalidatePath(`/recreeshot/${id}`);
     revalidatePath("/discover");
     return { matchScore };
   } catch (e) {
@@ -316,7 +316,7 @@ export async function toggleReCreeshotLike(
         data: { likeCount: { decrement: 1 } },
       }),
     ]);
-    revalidatePath(`/explore/hall/${reCreeshotId}`);
+    revalidatePath(`/recreeshot/${reCreeshotId}`);
     return { liked: false };
   } else {
     await prisma.$transaction([
@@ -328,7 +328,7 @@ export async function toggleReCreeshotLike(
         data: { likeCount: { increment: 1 } },
       }),
     ]);
-    revalidatePath(`/explore/hall/${reCreeshotId}`);
+    revalidatePath(`/recreeshot/${reCreeshotId}`);
     return { liked: true };
   }
 }
@@ -433,7 +433,7 @@ export async function updateReCreeshot(
     },
   });
 
-  revalidatePath(`/explore/hall/${id}`);
+  revalidatePath(`/recreeshot/${id}`);
   return {};
 }
 
@@ -456,7 +456,7 @@ export async function updateReCreeshotImageUrl(
     data: { imageUrl: compositeUrl },
   });
 
-  revalidatePath(`/explore/hall/${id}`);
+  revalidatePath(`/recreeshot/${id}`);
   revalidatePath("/discover");
   revalidatePath("/");
   return {};

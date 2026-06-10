@@ -45,7 +45,7 @@ export function ExploreTabBar({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
         </div>
         {tab === "hall" && (
           <button
-            onClick={() => isLoggedIn ? router.push("/discover/hall/new") : setShowLoginDialog(true)}
+            onClick={() => isLoggedIn ? router.push("/recreeshot/new") : setShowLoginDialog(true)}
             className="pointer-events-auto absolute right-4 size-12 rounded-full text-black flex items-center justify-center shadow-[0_4px_16px_rgba(0,0,0,0.25),0_1px_4px_rgba(0,0,0,0.15)] opacity-90"
             style={{ background: "linear-gradient(135deg, var(--color-brand) 0%, white 150%)" }}
           >

@@ -195,7 +195,7 @@ export function SavedClient({ posts, recreeshots, tagGroupConfigs, savedEvents }
               {recreeshots.map((shot) => (
                 <Link
                   key={shot.id}
-                  href={`/discover/hall/${shot.id}?from=saved&savedTab=recreeshots`}
+                  href={`/recreeshot/${shot.id}?from=saved&savedTab=recreeshots`}
                   className="block"
                 >
                   <ReCreeshotImage
