@@ -478,28 +478,29 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   }, [query, visiblePlaces]);
 
   const allVisiblePosts = useMemo(() => {
-    const flat = filteredPlaces.flatMap((place) =>
-      place.posts.map((post) => ({ post, place }))
-    );
+    const ts = (p: MapPost) =>
+      new Date(p.publishedAt ?? p.createdAt).getTime();
+
+    // 그룹 내 최신 post 시각 기준 place desc 정렬
+    const sortedPlaces = [...filteredPlaces].sort((pa, pb) => {
+      const maxA = Math.max(...pa.posts.map(ts));
+      const maxB = Math.max(...pb.posts.map(ts));
+      return maxB - maxA;
+    });
+
+    // 그룹 순서 유지, 그룹 내부 최신순 + post.id 전역 dedupe
     const seen = new Set<string>();
-    const deduped = flat.filter(({ post }) => {
-      if (seen.has(post.id)) return false;
-      seen.add(post.id);
-      return true;
-    });
-    return deduped.sort((a, b) => {
-      // 1차: 필터 매칭 우선 (필터 없으면 둘 다 0이라 무영향)
-      if (hasFilters) {
-        const am = postMatchesFilters(a.post, appliedTopicIds, appliedTagIds) ? 0 : 1;
-        const bm = postMatchesFilters(b.post, appliedTopicIds, appliedTagIds) ? 0 : 1;
-        if (am !== bm) return am - bm;
-      }
-      // 2차: 최신순
-      const ta = new Date(a.post.publishedAt ?? a.post.createdAt).getTime();
-      const tb = new Date(b.post.publishedAt ?? b.post.createdAt).getTime();
-      return tb - ta;
-    });
-  }, [filteredPlaces, hasFilters, appliedTopicIds, appliedTagIds]);
+    return sortedPlaces.flatMap((place) =>
+      [...place.posts]
+        .sort((a, b) => ts(b) - ts(a))
+        .filter((post) => {
+          if (seen.has(post.id)) return false;
+          seen.add(post.id);
+          return true;
+        })
+        .map((post) => ({ post, place }))
+    );
+  }, [filteredPlaces]);
 
   // ── 이벤트 모드 파생 (계속) ──────────────────────────────────────────────────
 
