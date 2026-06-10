@@ -156,7 +156,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     selectedPlaceId ? "hidden" : "half"
   );
   const [focusedPlaceIds, setFocusedPlaceIds] = useState<Set<string>>(new Set());
-  const [contentTab, setContentTab] = useState<"hot" | "list">("list");
+  const [contentTab, setContentTab] = useState<"hot" | "list">("hot");
   const [query, setQuery] = useState("");
   const [eventQuery, setEventQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
