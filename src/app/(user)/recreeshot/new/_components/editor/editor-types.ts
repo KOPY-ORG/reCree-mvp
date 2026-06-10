@@ -1,5 +1,3 @@
-export type TemplateModeId = "side-by-side" | "4-cuts" | "solo";
-
 export type StickerStyle = "pill" | "stamp" | "ribbon" | "ticket";
 
 export type TemplateId =
@@ -84,12 +82,3 @@ export interface FrameConfig {
   defaultLabels: [string, string]; // [원본 레이블, 재현 레이블]
 }
 
-// 에디터 UI 상태 (Konva 좌표계 — display 크기 기준)
-export interface EditorState {
-  templateId: TemplateId;
-  frameColorHex: string;
-  referenceLabel: string | null; // null = 삭제됨
-  shotLabel: string | null;      // null = 삭제됨
-  layers: EditorLayer[];
-  selectedLayerId: string | null;
-}

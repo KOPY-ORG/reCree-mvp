@@ -16,7 +16,7 @@ import { PhotoPlacer } from "./editor/PhotoPlacer";
 import { ReCreeshotEditor } from "./editor/ReCreeshotEditor";
 import { DoneStep } from "./editor/DoneStep";
 import { DEFAULT_TEMPLATE_ID } from "./editor/template-config";
-import type { TemplateId, TemplateModeId } from "./editor/editor-types";
+import type { TemplateId } from "./editor/editor-types";
 import type { PlaceResult, TagGroup as EditorTagGroup, TopicItem } from "./editor/StickerPanel";
 import { resolveBadgeOptions } from "./editor/StickerPanel";
 
@@ -56,8 +56,7 @@ type FlowStep =
 
 type State = {
   step: FlowStep;
-  // ── 모드/레이아웃
-  templateMode: TemplateModeId | null;
+  // ── 레이아웃
   selectedTemplateId: TemplateId | null;
   // ── 사진 (side-by-side)
   referenceFile: File | null;
@@ -69,16 +68,6 @@ type State = {
   uploadedShotUrl: string | null;
   uploadedShotPath: string | null;
   uploadedReferencePath: string | null;
-  // ── 사진 (4-cuts) — 4개 슬롯
-  cutFiles: [File | null, File | null, File | null, File | null];
-  cutPreviewUrls: [string | null, string | null, string | null, string | null];
-  uploadedCutUrls: [string | null, string | null, string | null, string | null];
-  uploadedCutPaths: [string | null, string | null, string | null, string | null];
-  // ── 사진 (solo) — 1개 슬롯
-  soloFile: File | null;
-  soloPreviewUrl: string | null;
-  uploadedSoloUrl: string | null;
-  uploadedSoloPath: string | null;
   // ── 프레임 라벨 (decorate step에서 편집, createReCreeshot으로 전달)
   referenceLabel: string;
   shotLabel: string;
@@ -102,7 +91,7 @@ type State = {
 };
 
 // 헤더 제목 및 progress 계산 헬퍼
-function getStepMeta(step: FlowStep, mode: TemplateModeId | null): { title: string; progress: string } {
+function getStepMeta(step: FlowStep): { title: string; progress: string } {
   const TOTAL = 3;
   const NUM: Record<FlowStep, number> = {
     "add-photos": 1,
@@ -131,7 +120,6 @@ export function ReCreeshotUploadFlow({
   const router = useRouter();
   const [state, setState] = useState<State>({
     step: "add-photos",
-    templateMode: "side-by-side",
     selectedTemplateId: DEFAULT_TEMPLATE_ID,
     referenceFile: null,
     referencePreviewUrl: prefillReferenceUrl ?? null,
@@ -141,14 +129,6 @@ export function ReCreeshotUploadFlow({
     uploadedShotUrl: null,
     uploadedShotPath: null,
     uploadedReferencePath: null,
-    cutFiles: [null, null, null, null],
-    cutPreviewUrls: [null, null, null, null],
-    uploadedCutUrls: [null, null, null, null],
-    uploadedCutPaths: [null, null, null, null],
-    soloFile: null,
-    soloPreviewUrl: null,
-    uploadedSoloUrl: null,
-    uploadedSoloPath: null,
     referenceLabel: "Artist",
     shotLabel: "ME",
     matchScore: null,
@@ -180,9 +160,7 @@ export function ReCreeshotUploadFlow({
   }, [state.selectedPlace?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 업로드 후 DB 저장 전 이탈 방지
-  const hasUnsavedUpload =
-    (!!state.uploadedShotUrl || !!state.uploadedCutUrls[0] || !!state.uploadedSoloUrl) &&
-    !state.createdId;
+  const hasUnsavedUpload = !!state.uploadedShotUrl && !state.createdId;
 
   useEffect(() => {
     if (!hasUnsavedUpload) return;
@@ -209,8 +187,6 @@ export function ReCreeshotUploadFlow({
     const paths: string[] = [];
     if (state.uploadedShotPath) paths.push(state.uploadedShotPath);
     if (state.uploadedReferencePath) paths.push(state.uploadedReferencePath);
-    if (state.uploadedSoloPath) paths.push(state.uploadedSoloPath);
-    state.uploadedCutPaths.forEach((p) => { if (p) paths.push(p); });
     if (paths.length > 0) await deleteReCreeshotImages(paths);
   }
 
@@ -319,13 +295,8 @@ export function ReCreeshotUploadFlow({
       tagIds: state.selectedTagIds,
       topicIds: state.selectedTopicIds,
       templateId: state.selectedTemplateId ?? undefined,
-      templateMode: state.templateMode ?? undefined,
       referenceLabel: state.referenceLabel || undefined,
       shotLabel: state.shotLabel || undefined,
-      cut1Url: state.uploadedCutUrls[0] ?? undefined,
-      cut2Url: state.uploadedCutUrls[1] ?? undefined,
-      cut3Url: state.uploadedCutUrls[2] ?? undefined,
-      cut4Url: state.uploadedCutUrls[3] ?? undefined,
     });
 
     if ("error" in result) {
@@ -337,7 +308,7 @@ export function ReCreeshotUploadFlow({
 
   // ── 렌더링 ───────────────────────────────────────────────────────────────────
 
-  const { title, progress } = getStepMeta(state.step, state.templateMode);
+  const { title, progress } = getStepMeta(state.step);
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -364,8 +335,8 @@ export function ReCreeshotUploadFlow({
         </div>
       </header>
 
-      {/* Add photos (side-by-side) */}
-      {state.step === "add-photos" && state.templateMode === "side-by-side" && (
+      {/* Add photos */}
+      {state.step === "add-photos" && (
         <>
           <PhotoPlacer
             templateId={state.selectedTemplateId!}
@@ -384,40 +355,8 @@ export function ReCreeshotUploadFlow({
         </>
       )}
 
-      {/* Add photos (4-cuts) — TODO: 전용 컴포넌트 구현 예정 */}
-      {state.step === "add-photos" && state.templateMode === "4-cuts" && (
-        <div className="flex flex-col flex-1 items-center justify-center gap-4 px-4">
-          <p className="text-muted-foreground text-sm text-center">
-            4 cuts photo picker — coming next
-          </p>
-          <button
-            type="button"
-            onClick={() => setState((s) => ({ ...s, step: "decorate" }))}
-            className="px-6 py-2 rounded-full bg-brand text-black text-sm font-semibold"
-          >
-            Next →
-          </button>
-        </div>
-      )}
-
-      {/* Add photos (solo) — TODO: 전용 컴포넌트 구현 예정 */}
-      {state.step === "add-photos" && state.templateMode === "solo" && (
-        <div className="flex flex-col flex-1 items-center justify-center gap-4 px-4">
-          <p className="text-muted-foreground text-sm text-center">
-            Solo photo picker — coming next
-          </p>
-          <button
-            type="button"
-            onClick={() => setState((s) => ({ ...s, step: "decorate" }))}
-            className="px-6 py-2 rounded-full bg-brand text-black text-sm font-semibold"
-          >
-            Next →
-          </button>
-        </div>
-      )}
-
-      {/* Decorate (side-by-side) */}
-      {state.step === "decorate" && state.templateMode === "side-by-side" && state.shotPreviewUrl && (
+      {/* Decorate */}
+      {state.step === "decorate" && state.shotPreviewUrl && (
         <>
           <ReCreeshotEditor
             templateId={state.selectedTemplateId!}
@@ -463,38 +402,6 @@ export function ReCreeshotUploadFlow({
         </>
       )}
 
-      {/* Decorate (4-cuts) — TODO */}
-      {state.step === "decorate" && state.templateMode === "4-cuts" && (
-        <div className="flex flex-col flex-1 items-center justify-center gap-4 px-4">
-          <p className="text-muted-foreground text-sm text-center">
-            4 cuts decorator — coming next
-          </p>
-          <button
-            type="button"
-            onClick={() => handleEditorNext("")}
-            className="px-6 py-2 rounded-full bg-brand text-black text-sm font-semibold"
-          >
-            Next →
-          </button>
-        </div>
-      )}
-
-      {/* Decorate (solo) — TODO */}
-      {state.step === "decorate" && state.templateMode === "solo" && (
-        <div className="flex flex-col flex-1 items-center justify-center gap-4 px-4">
-          <p className="text-muted-foreground text-sm text-center">
-            Solo decorator — coming next
-          </p>
-          <button
-            type="button"
-            onClick={() => handleEditorNext("")}
-            className="px-6 py-2 rounded-full bg-brand text-black text-sm font-semibold"
-          >
-            Next →
-          </button>
-        </div>
-      )}
-
       {/* Share */}
       {state.step === "share" && (state.compositeUrl ?? state.uploadedShotUrl) && (
         <>
@@ -514,13 +421,7 @@ export function ReCreeshotUploadFlow({
       {/* Done */}
       {state.step === "done" && state.createdId && (
         <DoneStep
-          shotPreviewUrl={
-            state.compositeUrl ??
-            state.shotPreviewUrl ??
-            state.soloPreviewUrl ??
-            state.cutPreviewUrls[0] ??
-            ""
-          }
+          shotPreviewUrl={state.compositeUrl ?? state.shotPreviewUrl ?? ""}
           createdId={state.createdId}
         />
       )}
