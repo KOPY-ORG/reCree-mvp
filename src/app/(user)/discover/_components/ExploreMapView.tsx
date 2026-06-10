@@ -403,6 +403,9 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
 
   const hasFilters = appliedTopicIds.length > 0 || appliedTagIds.length > 0;
   const isResultMode = !isEventMode && (query.trim() !== "" || hasFilters);
+  // 이벤트 모드는 EventSearchBar(검색+칩)가 항상 떠 있어 동일한 top reserve가 필요.
+  // 비이벤트는 facet 칩이 떠 있을 때(isResultMode)만 필요. 두 조건의 OR는 새 변수에서만.
+  const needsTopReserve = isEventMode || isResultMode;
 
   const searchedPlaces = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -638,7 +641,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
       : sheetState;
 
   // FAB bottom 계산용 — tabOnlyH는 측정값 근사(80), fullTop은 PlaceListSheet와 동일 공식
-  const fabSheetH = getSheetHeight(effectiveSheetState, 80, isResultMode ? 96 : 64);
+  const fabSheetH = getSheetHeight(effectiveSheetState, 80, needsTopReserve ? 96 : 64);
 
   return (
     // bottomnav(h-16=64px) — ExploreHeader 제거됨
@@ -720,7 +723,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
         state={effectiveSheetState}
         onStateChange={setSheetState}
         topOffset={64}
-        hasActiveFacets={isResultMode}
+        hasActiveFacets={needsTopReserve}
         scrollContainerRef={listScrollRef}
         header={
           isEventMode && activeEventData ? (
