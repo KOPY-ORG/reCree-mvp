@@ -4,8 +4,9 @@ import { POST_SLUG_REDIRECTS } from "./src/lib/post-redirects";
 const nextConfig: NextConfig = {
   async redirects() {
     return [
+      { source: "/discover/hall/:path*", destination: "/recreeshot/:path*", permanent: true },
+      { source: "/explore/hall/:path*", destination: "/recreeshot/:path*", permanent: true },
       { source: "/explore", destination: "/discover", permanent: true },
-      { source: "/explore/hall/:id*", destination: "/discover/hall/:id*", permanent: true },
       { source: "/my-map", destination: "/discover", permanent: false },
       ...POST_SLUG_REDIRECTS.map((r) => ({
         source: `/posts/${r.from}`,
