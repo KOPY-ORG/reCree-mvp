@@ -1,18 +1,16 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Palette, MapPin, Tag, Image, X, Percent } from "lucide-react";
-import { FrameColorPicker } from "./FrameColorPicker";
+import { useState } from "react";
+import { Palette, MapPin, Tag, X, Percent } from "lucide-react";
 import { StickerPanel } from "./StickerPanel";
 import type { PlaceResult, TagGroup, TopicItem, PostResult } from "./StickerPanel";
-import { resolveBadgeOptions } from "./StickerPanel";
 import { ScoreSheet } from "./ScoreSheet";
-import type { TemplateConfig, StickerStyle } from "./editor-types";
+import type { TemplateConfig, TemplateId } from "./editor-types";
 
 interface Props {
+  templateId: TemplateId;
+  onTemplateChange: (id: TemplateId) => void;
   templateConfig: TemplateConfig;
-  frameColorHex: string;
-  onFrameColorChange: (hex: string) => void;
   referenceLabel: string;
   shotLabel: string;
   onReferenceLabelChange: (v: string) => void;
@@ -34,20 +32,14 @@ interface Props {
   scorePhase?: "idle" | "calculating" | "result";
   matchScore?: number | null;
   showMatchScore?: boolean;
-  stickerStyle?: StickerStyle;
-  stickerColor?: string;
   onCalculateScore?: () => void;
-  onStickerStyleChange?: (style: StickerStyle) => void;
-  onStickerColorChange?: (color: string) => void;
-  onPlaceSticker?: () => void;
-  onRemoveSticker?: () => void;
   onToggleMatchScore?: () => void;
 }
 
 export function EditorToolbar({
+  templateId,
+  onTemplateChange,
   templateConfig,
-  frameColorHex,
-  onFrameColorChange,
   referenceLabel,
   shotLabel,
   onReferenceLabelChange,
@@ -69,13 +61,7 @@ export function EditorToolbar({
   scorePhase = "idle",
   matchScore,
   showMatchScore,
-  stickerStyle = "pill",
-  stickerColor = "#C8FF09",
   onCalculateScore,
-  onStickerStyleChange,
-  onStickerColorChange,
-  onPlaceSticker,
-  onRemoveSticker,
   onToggleMatchScore,
 }: Props) {
   const [colorPanelOpen, setColorPanelOpen] = useState(false);
@@ -86,26 +72,32 @@ export function EditorToolbar({
   const hasFrame = templateConfig.frame !== null;
   const tagCount = selectedTagIds.length + selectedTopicIds.length;
 
-  const topicTagColors = useMemo(() => {
-    return resolveBadgeOptions(topics, tagGroups, selectedTopicIds, selectedTagIds)
-      .map((opt) => opt.colorHex)
-      .filter(Boolean) as string[];
-  }, [topics, tagGroups, selectedTopicIds, selectedTagIds]);
-
   return (
     <div className="shrink-0 bg-background">
-      {/* 라벨 인라인 영역 (프레임 템플릿 전용 — 항상 표시) */}
-      {hasFrame && (
-        <div className="px-4 pt-3 pb-2 space-y-2 border-b border-border/30">
-          <LabelRow hint="Artist" value={referenceLabel} placeholder="Artist name" onChange={onReferenceLabelChange} />
-          <LabelRow hint="ME" value={shotLabel} placeholder="Your label" onChange={onShotLabelChange} />
-        </div>
-      )}
-
-      {/* Color 패널 (색상만) */}
-      {colorPanelOpen && hasFrame && (
-        <div className="px-4 py-3 bg-background">
-          <FrameColorPicker value={frameColorHex} onChange={onFrameColorChange} extraColors={topicTagColors} />
+      {/* Frame 패널: 토글 + 조건부 라벨/색상 */}
+      {colorPanelOpen && (
+        <div className="px-4 py-3 bg-background border-b border-border/30 space-y-3">
+          <div className="flex gap-2">
+            {(["vertical-full", "vertical-frame"] as TemplateId[]).map((id) => {
+              const isActive = templateId === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => onTemplateChange(id)}
+                  className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors ${isActive ? "bg-brand text-black border-brand" : "bg-transparent text-muted-foreground border-border"}`}
+                >
+                  {id === "vertical-full" ? "No border" : "Border"}
+                </button>
+              );
+            })}
+          </div>
+          {hasFrame && (
+            <>
+              <LabelRow hint="Artist" value={referenceLabel} placeholder="Artist name" onChange={onReferenceLabelChange} />
+              <LabelRow hint="ME" value={shotLabel} placeholder="Your label" onChange={onShotLabelChange} />
+            </>
+          )}
         </div>
       )}
 
@@ -137,19 +129,19 @@ export function EditorToolbar({
           phase={isScoring ? "calculating" : scorePhase}
           score={matchScore ?? null}
           showMatchScore={!!showMatchScore}
-          selectedStyle={stickerStyle}
-          selectedColor={stickerColor}
           onCalculate={() => onCalculateScore?.()}
-          onStyleChange={(s) => onStickerStyleChange?.(s)}
-          onColorChange={(c) => onStickerColorChange?.(c)}
-          onPlace={() => onPlaceSticker?.()}
-          onRemove={() => onRemoveSticker?.()}
+          onToggle={() => onToggleMatchScore?.()}
         />
       )}
 
-      {/* 탭 바 */}
+      {/* 탭 바: Frame · Location · Tag · Score */}
       <div className="flex">
-        <SheetTabButton icon={<Image className="size-5" />} label="Photo" checked onPress={() => {}} />
+        <TabButton
+          icon={<Palette className="size-5" />}
+          label="Frame"
+          active={colorPanelOpen}
+          onPress={() => setColorPanelOpen((p) => !p)}
+        />
         <SheetTabButton
           icon={<MapPin className="size-5" />}
           label="Location"
@@ -164,14 +156,6 @@ export function EditorToolbar({
           required
           onPress={() => { setColorPanelOpen(false); setTagSheetOpen(true); }}
         />
-        {hasFrame && (
-          <TabButton
-            icon={<Palette className="size-5" />}
-            label="Frame"
-            active={colorPanelOpen}
-            onPress={() => setColorPanelOpen((p) => !p)}
-          />
-        )}
         {hasReference && (
           <ScoreTabButton
             matchScore={matchScore ?? null}

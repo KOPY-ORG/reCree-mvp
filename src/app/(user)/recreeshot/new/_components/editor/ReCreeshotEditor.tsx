@@ -11,13 +11,22 @@ import { exportStageToBlob } from "./canvas-export";
 import { getTemplateConfig } from "./template-config";
 import { EditorToolbar } from "./EditorToolbar";
 import type { PlaceResult, TagGroup, TopicItem, PostResult } from "./StickerPanel";
-import type { TemplateId, StickerStyle } from "./editor-types";
+import type { TemplateId } from "./editor-types";
 import { computeTopicEffectiveColors, resolveTagColors } from "@/lib/post-labels";
 
 const KonvaStage = dynamic(() => import("./KonvaStage"), { ssr: false });
 
 interface Props {
   templateId: TemplateId;
+  onTemplateChange: (id: TemplateId) => void;
+  referenceLabel: string;
+  shotLabel: string;
+  onReferenceLabelChange: (v: string) => void;
+  onShotLabelChange: (v: string) => void;
+  matchScore: number | null;
+  showMatchScore: boolean;
+  onMatchScoreChange: (v: number | null) => void;
+  onShowMatchScoreChange: (v: boolean) => void;
   referencePreviewUrl: string | null;
   shotPreviewUrl: string;
   uploadedReferenceUrl: string | null;
@@ -36,14 +45,17 @@ interface Props {
   topics: TopicItem[];
 }
 
-interface EditorState {
-  frameColorHex: string;
-  referenceLabel: string;
-  shotLabel: string;
-}
-
 export function ReCreeshotEditor({
   templateId,
+  onTemplateChange,
+  referenceLabel,
+  shotLabel,
+  onReferenceLabelChange,
+  onShotLabelChange,
+  matchScore,
+  showMatchScore,
+  onMatchScoreChange,
+  onShowMatchScoreChange,
   referencePreviewUrl,
   shotPreviewUrl,
   uploadedReferenceUrl,
@@ -69,23 +81,12 @@ export function ReCreeshotEditor({
   const [isExporting, setIsExporting] = useState(false);
   const [scorePhase, setScorePhase] = useState<"idle" | "calculating" | "result">("idle");
   const [isScoring, setIsScoring] = useState(false);
-  const [matchScore, setMatchScore] = useState<number | null>(null);
-  const [showMatchScore, setShowMatchScore] = useState(false);
-  const [stickerStyle, setStickerStyle] = useState<StickerStyle>("pill");
-  const [stickerColor, setStickerColor] = useState("#C8FF09");
-  const [matchScorePos, setMatchScorePos] = useState({ x: 60, y: 60 });
 
   const templateConfig = getTemplateConfig(templateId);
   const stageH =
     stageW > 0
       ? Math.round(stageW * (templateConfig.canvasHeight / templateConfig.canvasWidth))
       : 0;
-
-  const [editorState, setEditorState] = useState<EditorState>({
-    frameColorHex: "#ffffff",
-    referenceLabel: templateConfig.frame?.defaultLabels[0] ?? "Artist",
-    shotLabel: templateConfig.frame?.defaultLabels[1] ?? "ME",
-  });
 
   useEffect(() => {
     const el = containerRef.current;
@@ -116,11 +117,13 @@ export function ReCreeshotEditor({
     if (!uploadedReferenceUrl || isScoring) return;
     setIsScoring(true);
     setScorePhase("calculating");
+    const wasNull = matchScore === null;
     try {
       const result = await previewMatchScore(uploadedReferenceUrl, uploadedShotUrl);
       if ("error" in result) throw new Error(result.error);
-      setMatchScore(result.score);
+      onMatchScoreChange(result.score);
       setScorePhase("result");
+      if (wasNull) onShowMatchScoreChange(true);
     } catch (e) {
       console.error(e);
       setScorePhase("idle");
@@ -173,15 +176,10 @@ export function ReCreeshotEditor({
                 templateConfig={templateConfig}
                 referenceImg={referenceImg}
                 shotImg={shotImg}
-                frameColorHex={editorState.frameColorHex}
-                referenceLabel={editorState.referenceLabel}
-                shotLabel={editorState.shotLabel}
+                referenceLabel={referenceLabel}
+                shotLabel={shotLabel}
                 matchScore={matchScore}
                 showMatchScore={showMatchScore}
-                stickerStyle={stickerStyle}
-                stickerColor={stickerColor}
-                matchScorePos={matchScorePos}
-                onMatchScoreDragEnd={setMatchScorePos}
                 onStageReady={handleStageReady}
               />
             )}
@@ -190,13 +188,13 @@ export function ReCreeshotEditor({
       </div>
 
       <EditorToolbar
+        templateId={templateId}
+        onTemplateChange={onTemplateChange}
         templateConfig={templateConfig}
-        frameColorHex={editorState.frameColorHex}
-        onFrameColorChange={(hex) => setEditorState((s) => ({ ...s, frameColorHex: hex }))}
-        referenceLabel={editorState.referenceLabel}
-        shotLabel={editorState.shotLabel}
-        onReferenceLabelChange={(v) => setEditorState((s) => ({ ...s, referenceLabel: v }))}
-        onShotLabelChange={(v) => setEditorState((s) => ({ ...s, shotLabel: v }))}
+        referenceLabel={referenceLabel}
+        shotLabel={shotLabel}
+        onReferenceLabelChange={onReferenceLabelChange}
+        onShotLabelChange={onShotLabelChange}
         selectedPlace={selectedPlace}
         onPlaceChange={onPlaceChange}
         linkedPosts={linkedPosts}
@@ -214,14 +212,8 @@ export function ReCreeshotEditor({
         scorePhase={scorePhase}
         matchScore={matchScore}
         showMatchScore={showMatchScore}
-        stickerStyle={stickerStyle}
-        stickerColor={stickerColor}
         onCalculateScore={handleCalculateScore}
-        onStickerStyleChange={setStickerStyle}
-        onStickerColorChange={setStickerColor}
-        onPlaceSticker={() => setShowMatchScore(true)}
-        onRemoveSticker={() => setShowMatchScore(false)}
-        onToggleMatchScore={() => setShowMatchScore((v) => !v)}
+        onToggleMatchScore={() => onShowMatchScoreChange(!showMatchScore)}
       />
 
       <div className="px-4 py-3 shrink-0">

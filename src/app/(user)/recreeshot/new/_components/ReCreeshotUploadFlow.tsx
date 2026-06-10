@@ -79,6 +79,12 @@ type State = {
   soloPreviewUrl: string | null;
   uploadedSoloUrl: string | null;
   uploadedSoloPath: string | null;
+  // ── 프레임 라벨 (decorate step에서 편집, createReCreeshot으로 전달)
+  referenceLabel: string;
+  shotLabel: string;
+  // ── 매치 스코어 (decorate step에서 계산, createReCreeshot으로 전달)
+  matchScore: number | null;
+  showMatchScore: boolean;
   // ── 공통 메타데이터
   selectedPlace: PlaceResult | null;
   selectedTagIds: string[];
@@ -143,6 +149,10 @@ export function ReCreeshotUploadFlow({
     soloPreviewUrl: null,
     uploadedSoloUrl: null,
     uploadedSoloPath: null,
+    referenceLabel: "Artist",
+    shotLabel: "ME",
+    matchScore: null,
+    showMatchScore: false,
     selectedPlace: prefillPlace
       ? { id: prefillPlace.id, nameEn: prefillPlace.nameEn, nameKo: prefillPlace.nameKo, addressEn: prefillPlace.addressEn, city: null, imageUrl: prefillPlace.imageUrl }
       : null,
@@ -299,6 +309,8 @@ export function ReCreeshotUploadFlow({
     const result = await createReCreeshot({
       imageUrl,
       referencePhotoUrl: state.uploadedReferenceUrl ?? undefined,
+      matchScore: state.matchScore ?? undefined,
+      showBadge: state.showMatchScore,
       placeId: state.selectedPlace?.id,
       linkedPostId: state.linkedPostId,
       locationName: state.selectedPlace?.nameEn ?? state.selectedPlace?.nameKo ?? undefined,
@@ -308,6 +320,8 @@ export function ReCreeshotUploadFlow({
       topicIds: state.selectedTopicIds,
       templateId: state.selectedTemplateId ?? undefined,
       templateMode: state.templateMode ?? undefined,
+      referenceLabel: state.referenceLabel || undefined,
+      shotLabel: state.shotLabel || undefined,
       cut1Url: state.uploadedCutUrls[0] ?? undefined,
       cut2Url: state.uploadedCutUrls[1] ?? undefined,
       cut3Url: state.uploadedCutUrls[2] ?? undefined,
@@ -361,7 +375,6 @@ export function ReCreeshotUploadFlow({
             onShotChange={setShotPhoto}
             onReferenceRemove={removeReferencePhoto}
             onShotRemove={removeShotPhoto}
-            onTemplateChange={(id) => setState((s) => ({ ...s, selectedTemplateId: id }))}
             onNext={handlePhotosNext}
             isUploading={state.isUploading}
           />
@@ -408,6 +421,15 @@ export function ReCreeshotUploadFlow({
         <>
           <ReCreeshotEditor
             templateId={state.selectedTemplateId!}
+            onTemplateChange={(id) => setState((s) => ({ ...s, selectedTemplateId: id }))}
+            referenceLabel={state.referenceLabel}
+            shotLabel={state.shotLabel}
+            onReferenceLabelChange={(v) => setState((s) => ({ ...s, referenceLabel: v }))}
+            onShotLabelChange={(v) => setState((s) => ({ ...s, shotLabel: v }))}
+            matchScore={state.matchScore}
+            showMatchScore={state.showMatchScore}
+            onMatchScoreChange={(v) => setState((s) => ({ ...s, matchScore: v }))}
+            onShowMatchScoreChange={(v) => setState((s) => ({ ...s, showMatchScore: v }))}
             referencePreviewUrl={state.referencePreviewUrl}
             shotPreviewUrl={state.shotPreviewUrl}
             uploadedReferenceUrl={state.uploadedReferenceUrl}

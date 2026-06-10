@@ -164,7 +164,6 @@ interface Props {
   onShotChange: (file: File) => void;
   onReferenceRemove: () => void;
   onShotRemove: () => void;
-  onTemplateChange?: (id: TemplateId) => void;
   onNext: () => void;
   isUploading?: boolean;
 }
@@ -177,7 +176,6 @@ export function PhotoPlacer({
   onShotChange,
   onReferenceRemove,
   onShotRemove,
-  onTemplateChange,
   onNext,
   isUploading,
 }: Props) {
@@ -245,34 +243,6 @@ export function PhotoPlacer({
           <p style={{ fontSize: 14, color: "#666", margin: "4px 0 0" }}>
             Upload the artist reference & your shot
           </p>
-        </div>
-
-        {/* 테두리 on/off 토글 */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-          {(["vertical-full", "vertical-frame"] as TemplateId[]).map((id) => {
-            const isActive = templateId === id;
-            const label = id === "vertical-full" ? "No border" : "Border";
-            return (
-              <button
-                key={id}
-                type="button"
-                onClick={() => onTemplateChange?.(id)}
-                style={{
-                  flex: 1,
-                  padding: "8px 0",
-                  borderRadius: 8,
-                  border: `1.5px solid ${isActive ? "#C6FD09" : "#ccc"}`,
-                  background: isActive ? "#C6FD09" : "transparent",
-                  color: isActive ? "#0b0b0b" : "#888",
-                  fontWeight: 600,
-                  fontSize: 13,
-                  cursor: "pointer",
-                }}
-              >
-                {label}
-              </button>
-            );
-          })}
         </div>
 
         {/* 캔버스 미리보기 */}
