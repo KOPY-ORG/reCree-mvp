@@ -222,7 +222,7 @@ export function UploadStep3({
                 try {
                   await navigator.share({
                     title: "My recreeshot on reCree",
-                    url: `${window.location.origin}/discover/hall/${createdId}`,
+                    url: `${window.location.origin}/recreeshot/${createdId}`,
                   });
                 } catch {
                   // 취소 또는 미지원 시 무시
@@ -237,7 +237,7 @@ export function UploadStep3({
         )}
         <button
           type="button"
-          onClick={() => router.replace(`/discover/hall/${createdId}`)}
+          onClick={() => router.replace(`/recreeshot/${createdId}`)}
           className="flex items-center justify-center w-full py-3 rounded-full font-semibold text-sm bg-brand text-black"
         >
           {isComposing ? "Skip" : "Done"}

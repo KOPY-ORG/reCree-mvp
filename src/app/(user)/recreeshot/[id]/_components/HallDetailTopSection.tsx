@@ -217,7 +217,7 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
                     </button>
                     <button
                       type="button"
-                      onClick={() => { setMenuOpen(false); router.push(`/discover/hall/${id}/edit`); }}
+                      onClick={() => { setMenuOpen(false); router.push(`/recreeshot/${id}/edit`); }}
                       className="flex items-center gap-2 w-full px-4 py-3 text-sm font-medium text-gray-800 hover:bg-gray-50 transition-colors border-b border-gray-100"
                     >
                       <Pencil className="size-4 shrink-0" />

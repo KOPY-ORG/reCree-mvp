@@ -28,7 +28,7 @@ export function DoneStep({ shotPreviewUrl, createdId }: Props) {
       <div className="w-full space-y-2">
         <button
           type="button"
-          onClick={() => router.push(`/explore/hall/${createdId}`)}
+          onClick={() => router.push(`/recreeshot/${createdId}`)}
           className="w-full py-3 rounded-full font-semibold text-sm bg-brand text-black"
         >
           View recreeshot

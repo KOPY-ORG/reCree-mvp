@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { HallGrid } from "../discover/_components/HallGrid";
+import { HallGrid } from "./_components/HallGrid";
 
 export default async function ReCreeshotPage() {
   const shots = await prisma.reCreeshot.findMany({
@@ -11,6 +11,7 @@ export default async function ReCreeshotPage() {
       matchScore: true,
       showBadge: true,
       referencePhotoUrl: true,
+      templateId: true,
     },
   });
 
