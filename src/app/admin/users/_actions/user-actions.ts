@@ -3,6 +3,7 @@
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { getCurrentUser } from "@/lib/auth";
 
 function getAdminClient() {
   return createAdminClient(
@@ -12,6 +13,9 @@ function getAdminClient() {
 }
 
 export async function deleteUser(userId: string): Promise<{ error?: string }> {
+  const caller = await getCurrentUser();
+  if (!caller || caller.role !== "ADMIN") return { error: "권한이 없습니다." };
+
   try {
     await prisma.user.delete({ where: { id: userId } });
     await getAdminClient().auth.admin.deleteUser(userId);

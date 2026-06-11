@@ -1,9 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
+  const [isPending, setIsPending] = useState(false);
+
   async function handleGoogleLogin() {
+    if (isPending) return;
+    setIsPending(true);
     const supabase = createClient();
     const origin = window.location.origin;
 
@@ -29,10 +34,11 @@ export default function LoginPage() {
         {/* Google 로그인 */}
         <button
           onClick={handleGoogleLogin}
-          className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl font-semibold text-black bg-brand hover:opacity-90 active:scale-95 transition-all"
+          disabled={isPending}
+          className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl font-semibold text-black bg-brand hover:opacity-90 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <GoogleIcon />
-          Continue with Google
+          {isPending ? "Redirecting..." : "Continue with Google"}
         </button>
       </div>
     </div>

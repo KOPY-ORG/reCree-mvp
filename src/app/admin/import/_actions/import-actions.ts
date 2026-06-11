@@ -3,6 +3,7 @@
 import Papa from "papaparse";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { getCurrentUser } from "@/lib/auth";
 import { expandGoogleMapsShortUrl, resolveGoogleMapsUrl, buildStreetViewUrl, buildMapsUrlByCoords } from "@/lib/google-maps-url";
 import { detectPlatform } from "@/lib/platform";
 import type { SourceType } from "@prisma/client";
@@ -191,6 +192,9 @@ export async function fetchSheetPreview(): Promise<{
   rows: SheetRow[];
   errors: string[];
 }> {
+  const caller = await getCurrentUser();
+  if (!caller || caller.role === "USER") return { rows: [], errors: ["권한이 없습니다."] };
+
   const errors: string[] = [];
 
   let rawRows: RawRow[];
@@ -372,6 +376,9 @@ export async function importSheetRows(rowIds: string[]): Promise<{
   imported: number;
   errors: string[];
 }> {
+  const caller = await getCurrentUser();
+  if (!caller || caller.role === "USER") return { imported: 0, errors: ["권한이 없습니다."] };
+
   const errors: string[] = [];
   let imported = 0;
 
