@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronLeft, Loader2, MapPin, Search, X } from "lucide-react";
+import { ChevronLeft, Loader2, MapPin, Search, X, LocateFixed } from "lucide-react";
 import {
   APIProvider,
   Map,
@@ -11,6 +11,7 @@ import {
 } from "@vis.gl/react-google-maps";
 import { createPlaceFromGoogleMaps } from "@/app/(user)/_actions/recreeshot-actions";
 import { buildMapsUrlByPlaceId } from "@/lib/google-maps-url";
+import { useGeolocation } from "@/app/(user)/_hooks/useGeolocation";
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 const MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID ?? "DEMO_MAP_ID";
@@ -70,6 +71,15 @@ function AddPlaceContent({ onSelect, onClose }: Props) {
   const [isFetchingPlace, setIsFetchingPlace] = useState(false);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const { coords: myCoords, status: geoStatus, request: requestGeo } = useGeolocation();
+
+  // 지도가 로드된 후 좌표가 도착하면 카메라 이동
+  useEffect(() => {
+    if (!map || !myCoords) return;
+    map.panTo({ lat: myCoords.lat, lng: myCoords.lng });
+    map.setZoom(15);
+  }, [map, myCoords]);
 
   // 검색 디바운스
   const doSearch = useCallback(
@@ -205,7 +215,30 @@ function AddPlaceContent({ onSelect, onClose }: Props) {
           {selected && (
             <AdvancedMarker position={{ lat: selected.lat, lng: selected.lng }} />
           )}
+          {/* 현위치 파란 점 */}
+          {myCoords && (
+            <AdvancedMarker position={{ lat: myCoords.lat, lng: myCoords.lng }}>
+              <div className="relative flex items-center justify-center">
+                <div className="absolute size-10 rounded-full bg-blue-400/20 animate-ping" />
+                <div className="relative size-4 rounded-full bg-blue-500 border-2 border-white shadow-md" />
+              </div>
+            </AdvancedMarker>
+          )}
         </Map>
+
+        {/* 현위치 FAB */}
+        <button
+          type="button"
+          onClick={requestGeo}
+          disabled={geoStatus === "loading"}
+          className="absolute bottom-4 right-4 z-10 size-11 rounded-full bg-white shadow-lg flex items-center justify-center disabled:opacity-50"
+          aria-label="현위치로 이동"
+        >
+          {geoStatus === "loading"
+            ? <Loader2 className="size-5 text-blue-500 animate-spin" />
+            : <LocateFixed className="size-5 text-blue-500" />
+          }
+        </button>
 
         {/* POI 로딩 인디케이터 */}
         {isFetchingPlace && (

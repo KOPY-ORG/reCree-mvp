@@ -69,8 +69,8 @@ export function drawReCreeshotWatermark(
   ctx.font = `600 28px 'Noto Sans', sans-serif`;
   ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
   ctx.textBaseline = "alphabetic";
-  ctx.shadowColor = "rgba(0, 0, 0, 0.75)";
-  ctx.shadowBlur = 8;
+  ctx.shadowColor = "rgba(0, 0, 0, 0.6)";
+  ctx.shadowBlur = 3;
   ctx.shadowOffsetY = 2;
   ctx.fillText("reCree", W - ctx.measureText("reCree").width - W * 0.03, H - W * 0.03);
   ctx.restore();

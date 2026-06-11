@@ -362,6 +362,9 @@ model ReCreeshot {
   locationLng       Float?
   matchScore        Float?
   showBadge         Boolean          @default(false)
+  templateId        String?          // "vertical-full" | "vertical-frame" | "horizontal-full" | "horizontal-frame"
+  referenceLabel    String?          // 원본 사진 아래 아티스트명
+  shotLabel         String?          // 재현 사진 아래 레이블 (기본 "ME")
   status            ReCreeshotStatus @default(ACTIVE)
   saveCount         Int              @default(0)
   likeCount         Int              @default(0)
@@ -716,4 +719,15 @@ model EventPlace {
   @@unique([eventId, placeId])
   @@index([eventId])
   @@index([placeId])
+}
+
+model Sticker {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  imageUrl  String   // R2 CDN URL (PNG / SVG / WEBP)
+  mimeType  String   // "image/png" | "image/svg+xml" | "image/webp"
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

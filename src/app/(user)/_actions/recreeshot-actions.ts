@@ -18,8 +18,9 @@ export async function previewMatchScore(
     const score = await calculateMatchScore(referenceUrl, shotUrl);
     return { score };
   } catch (e) {
-    console.error(e);
-    return { error: "점수 계산 실패" };
+    const detail = e instanceof Error ? e.message : String(e);
+    console.error("[previewMatchScore]", detail);
+    return { error: `점수 계산 실패: ${detail}` };
   }
 }
 
@@ -76,6 +77,8 @@ const PLACE_SELECT = {
   addressEn: true,
   city: true,
   imageUrl: true,
+  latitude: true,
+  longitude: true,
   placeImages: {
     where: { isThumbnail: true },
     select: { url: true },
@@ -90,10 +93,12 @@ type PlaceRow = {
   addressEn: string | null;
   city: string | null;
   imageUrl: string | null;
+  latitude: number | null;
+  longitude: number | null;
   placeImages: { url: string }[];
 };
 
-function normalizePlaces(places: PlaceRow[]): { id: string; nameKo: string; nameEn: string | null; addressEn: string | null; city: string | null; imageUrl: string | null }[] {
+function normalizePlaces(places: PlaceRow[]): { id: string; nameKo: string; nameEn: string | null; addressEn: string | null; city: string | null; imageUrl: string | null; latitude: number | null; longitude: number | null }[] {
   return places.map(({ placeImages, imageUrl, ...rest }) => ({
     ...rest,
     imageUrl: placeImages[0]?.url ?? imageUrl,
@@ -106,7 +111,6 @@ export async function getPopularPlaces() {
       where: { isVerified: true },
       orderBy: { createdAt: "desc" },
       select: PLACE_SELECT,
-      take: 20,
     });
     return normalizePlaces(places);
   } catch (e) {
@@ -188,6 +192,10 @@ interface CreateReCreeshotData {
   tips?: string;
   topicIds?: string[];
   tagIds?: string[];
+  // 템플릿 필드
+  templateId?: string;
+  referenceLabel?: string | null;
+  shotLabel?: string | null;
 }
 
 export async function createReCreeshot(
@@ -213,6 +221,9 @@ export async function createReCreeshot(
         locationName: data.locationName ?? null,
         story: data.story ?? null,
         tips: data.tips ?? null,
+        templateId: data.templateId ?? null,
+        referenceLabel: data.referenceLabel ?? null,
+        shotLabel: data.shotLabel ?? null,
         reCreeshotTopics: data.topicIds?.length
           ? {
               create: data.topicIds.map((topicId) => ({ topicId })),
@@ -259,7 +270,7 @@ export async function scoreReCreeshot(
       data: { matchScore, showBadge: true },
     });
 
-    revalidatePath(`/explore/hall/${id}`);
+    revalidatePath(`/recreeshot/${id}`);
     revalidatePath("/discover");
     return { matchScore };
   } catch (e) {
@@ -294,7 +305,7 @@ export async function toggleReCreeshotLike(
         data: { likeCount: { decrement: 1 } },
       }),
     ]);
-    revalidatePath(`/explore/hall/${reCreeshotId}`);
+    revalidatePath(`/recreeshot/${reCreeshotId}`);
     return { liked: false };
   } else {
     await prisma.$transaction([
@@ -306,7 +317,7 @@ export async function toggleReCreeshotLike(
         data: { likeCount: { increment: 1 } },
       }),
     ]);
-    revalidatePath(`/explore/hall/${reCreeshotId}`);
+    revalidatePath(`/recreeshot/${reCreeshotId}`);
     return { liked: true };
   }
 }
@@ -411,31 +422,7 @@ export async function updateReCreeshot(
     },
   });
 
-  revalidatePath(`/explore/hall/${id}`);
+  revalidatePath(`/recreeshot/${id}`);
   return {};
 }
 
-// ─── updateReCreeshotImageUrl ─────────────────────────────────────────────────
-// Step3에서 합성 이미지 업로드 후 imageUrl을 교체
-
-export async function updateReCreeshotImageUrl(
-  id: string,
-  compositeUrl: string
-): Promise<{ error?: string }> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "unauthenticated" };
-
-  const shot = await prisma.reCreeshot.findUnique({ where: { id }, select: { userId: true } });
-  if (!shot || shot.userId !== user.id) return { error: "forbidden" };
-
-  await prisma.reCreeshot.update({
-    where: { id },
-    data: { imageUrl: compositeUrl },
-  });
-
-  revalidatePath(`/explore/hall/${id}`);
-  revalidatePath("/discover");
-  revalidatePath("/");
-  return {};
-}

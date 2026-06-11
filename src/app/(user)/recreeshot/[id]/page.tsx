@@ -165,6 +165,11 @@ export default async function HallDetailPage({
   });
   const groupMap: TagGroupColorMap = new Map(tagGroups.map((g) => [g.group, g]));
 
+  // 장소에 연결된 포스트가 있어야만 Discover 링크 표시
+  const placeHasPosts = shot.placeId
+    ? (await prisma.postPlace.count({ where: { placeId: shot.placeId } })) > 0
+    : false;
+
   const liked = currentUser
     ? !!(await prisma.reCreeshotLike.findUnique({
         where: { userId_reCreeshotId: { userId: currentUser.id, reCreeshotId: id } },
@@ -186,9 +191,7 @@ export default async function HallDetailPage({
         isOwner={isOwner}
         isLoggedIn={!!currentUser}
         imageUrl={shot.imageUrl}
-        referencePhotoUrl={shot.referencePhotoUrl}
-        matchScore={shot.matchScore}
-        showBadge={shot.showBadge}
+        referencePhotoUrl={shot.templateId ? null : shot.referencePhotoUrl}
       />
 
       {/* 콘텐츠 */}
@@ -229,7 +232,7 @@ export default async function HallDetailPage({
 
         {/* 장소명 */}
         {shot.locationName && (
-          shot.placeId ? (
+          placeHasPosts ? (
             <Link
               href={`/discover?place=${shot.placeId}`}
               className="flex items-center gap-1.5 text-sm text-muted-foreground w-fit"

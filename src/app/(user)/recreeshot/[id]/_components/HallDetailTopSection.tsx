@@ -6,7 +6,7 @@ import { ChevronLeft, MoreVertical, Download, Pencil, Trash2, Flag } from "lucid
 import { showError } from "@/lib/toast";
 import { deleteReCreeshot } from "@/app/(user)/_actions/recreeshot-actions";
 import { ReportDialog } from "@/components/ReportDialog";
-import { coverRect, loadImage, drawReCreeshotBadge } from "@/lib/canvas-utils";
+import { coverRect, loadImage } from "@/lib/canvas-utils";
 
 interface Props {
   id: string;
@@ -14,11 +14,9 @@ interface Props {
   isLoggedIn: boolean;
   imageUrl: string;
   referencePhotoUrl: string | null;
-  matchScore: number | null;
-  showBadge: boolean;
 }
 
-export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, referencePhotoUrl, matchScore, showBadge }: Props) {
+export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, referencePhotoUrl }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const from = searchParams.get("from");
@@ -28,6 +26,7 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
   function handleBack() {
     if (from === "profile") router.push("/profile");
     else if (from === "saved") router.push(savedTab ? `/saved?tab=${savedTab}` : "/saved");
+    else if (from === "new") router.push("/recreeshot");
     else router.back();
   }
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -94,7 +93,6 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
       ctx.restore();
     }
 
-    if (showBadge && matchScore !== null) drawReCreeshotBadge(ctx, W, matchScore);
 
     return new Promise((resolve) => {
       canvas.toBlob((blob) => {
@@ -133,7 +131,7 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
       return;
     }
     if (from === "profile") router.push("/profile");
-    else router.push("/discover?tab=hall");
+    else router.push("/recreeshot");
   }
 
   function handleReport() {
@@ -217,7 +215,7 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
                     </button>
                     <button
                       type="button"
-                      onClick={() => { setMenuOpen(false); router.push(`/discover/hall/${id}/edit`); }}
+                      onClick={() => { setMenuOpen(false); router.push(`/recreeshot/${id}/edit`); }}
                       className="flex items-center gap-2 w-full px-4 py-3 text-sm font-medium text-gray-800 hover:bg-gray-50 transition-colors border-b border-gray-100"
                     >
                       <Pencil className="size-4 shrink-0" />
@@ -249,7 +247,8 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
       </div>
 
       {/* 이미지 — HTML 오버레이 방식 (CORS 불필요) */}
-      <div className="relative aspect-[4/5] bg-muted overflow-hidden">
+      <div className="px-4">
+      <div className="relative aspect-[4/5] bg-muted overflow-hidden shadow-md">
         {/* eslint-disable-next-line @next/next/no-img-element -- HTML 오버레이 렌더링(CORS 불필요), 사용자 업로드 이미지 */}
         <img
           src={imageUrl}
@@ -267,7 +266,6 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
               style={{
                 position: "absolute",
                 inset: "-12%",
-                borderRadius: "16%",
                 background: "rgba(255,255,255,0.3)",
                 filter: "blur(5px)",
                 zIndex: -1,
@@ -278,7 +276,6 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
                 position: "relative",
                 width: "100%",
                 height: "100%",
-                borderRadius: "12%",
                 overflow: "hidden",
                 outline: "1px solid white",
               }}
@@ -289,20 +286,7 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
           </div>
         )}
 
-        {/* 매치 스코어 배지 (우상단) */}
-        {showBadge && matchScore !== null && (
-          <div
-            className="absolute text-xs font-bold px-2.5 py-[3px] rounded-full text-black"
-            style={{
-              top: "3%",
-              right: "3%",
-              background: "linear-gradient(to right, #C8FF09, white 150%)",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-            }}
-          >
-            {Math.round(matchScore)}% Match
-          </div>
-        )}
+      </div>
       </div>
     </>
   );

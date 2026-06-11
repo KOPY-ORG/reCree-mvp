@@ -21,7 +21,7 @@ export function HallDetailOwnerDeleteButton({ id }: { id: string }) {
       setShowConfirm(false);
       return;
     }
-    router.back();
+    router.push("/recreeshot");
   }
 
   return (

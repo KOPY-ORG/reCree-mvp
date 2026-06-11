@@ -64,7 +64,7 @@ export async function createReport(data: {
     });
 
     if (data.reCreeshotId) {
-      revalidatePath(`/discover/hall/${data.reCreeshotId}`);
+      revalidatePath(`/recreeshot/${data.reCreeshotId}`);
     }
 
     return {};

@@ -3,10 +3,9 @@
 import { useState, useRef, useEffect } from "react";
 import { X } from "lucide-react";
 
-const CROP_RATIO = 4 / 5; // width / height
+const DEFAULT_cropRatio = 4 / 5; // width / height
 const MIN_BOX_W = 80;
-const OUTPUT_W = 1080;
-const OUTPUT_H = Math.round(OUTPUT_W / CROP_RATIO); // 1350
+const OUTPUT_BASE = 1080;
 
 type DragMode = "move" | "tl" | "tr" | "bl" | "br";
 
@@ -25,9 +24,13 @@ interface Props {
   file: File;
   onConfirm: (croppedFile: File) => void;
   onClose: () => void;
+  cropRatio?: number; // width/height, 기본 4/5
 }
 
-export function ImageCropOverlay({ file, onConfirm, onClose }: Props) {
+export function ImageCropOverlay({ file, onConfirm, onClose, cropRatio = DEFAULT_cropRatio }: Props) {
+  // cropRatio >= 1(가로): 출력 1080×(1080/ratio), cropRatio < 1(세로): 출력 (1080*ratio)×1080
+  const OUTPUT_W = cropRatio >= 1 ? OUTPUT_BASE : Math.round(OUTPUT_BASE * cropRatio);
+  const OUTPUT_H = cropRatio >= 1 ? Math.round(OUTPUT_BASE / cropRatio) : OUTPUT_BASE;
   const [imageUrl, setImageUrl] = useState("");
   const [imgDisplayH, setImgDisplayH] = useState(0);
   const [box, setBox] = useState<Box>({ x: 0, y: 0, w: 0, h: 0 });
@@ -56,8 +59,8 @@ export function ImageCropOverlay({ file, onConfirm, onClose }: Props) {
     setImgDisplayH(dh);
 
     let bw = dw;
-    let bh = bw / CROP_RATIO;
-    if (bh > dh) { bh = dh; bw = bh * CROP_RATIO; }
+    let bh = bw / cropRatio;
+    if (bh > dh) { bh = dh; bw = bh * cropRatio; }
 
     const b = { x: (dw - bw) / 2, y: (dh - bh) / 2, w: bw, h: bh };
     setBox(b);
@@ -89,32 +92,32 @@ export function ImageCropOverlay({ file, onConfirm, onClose }: Props) {
       nw = Math.max(MIN_BOX_W, w - dx);
     }
 
-    let nh = nw / CROP_RATIO;
+    let nh = nw / cropRatio;
 
     // 이미지 경계 초과 보정
     if (drag.mode === "br") {
-      if (x + nw > imgW) { nw = imgW - x; nh = nw / CROP_RATIO; }
-      if (y + nh > imgH) { nh = imgH - y; nw = nh * CROP_RATIO; }
+      if (x + nw > imgW) { nw = imgW - x; nh = nw / cropRatio; }
+      if (y + nh > imgH) { nh = imgH - y; nw = nh * cropRatio; }
       nx = x; ny = y;
     } else if (drag.mode === "bl") {
       const fixedRight = x + w;
       nx = fixedRight - nw;
-      if (nx < 0) { nx = 0; nw = fixedRight; nh = nw / CROP_RATIO; }
-      if (y + nh > imgH) { nh = imgH - y; nw = nh * CROP_RATIO; nx = fixedRight - nw; }
+      if (nx < 0) { nx = 0; nw = fixedRight; nh = nw / cropRatio; }
+      if (y + nh > imgH) { nh = imgH - y; nw = nh * cropRatio; nx = fixedRight - nw; }
       ny = y;
     } else if (drag.mode === "tr") {
       const fixedBottom = y + h;
       ny = fixedBottom - nh;
-      if (x + nw > imgW) { nw = imgW - x; nh = nw / CROP_RATIO; }
-      if (ny < 0) { ny = 0; nh = fixedBottom; nw = nh * CROP_RATIO; }
+      if (x + nw > imgW) { nw = imgW - x; nh = nw / cropRatio; }
+      if (ny < 0) { ny = 0; nh = fixedBottom; nw = nh * cropRatio; }
       nx = x;
     } else if (drag.mode === "tl") {
       const fixedRight = x + w;
       const fixedBottom = y + h;
       nx = fixedRight - nw;
       ny = fixedBottom - nh;
-      if (nx < 0) { nx = 0; nw = fixedRight; nh = nw / CROP_RATIO; ny = fixedBottom - nh; }
-      if (ny < 0) { ny = 0; nh = fixedBottom; nw = nh * CROP_RATIO; nx = fixedRight - nw; }
+      if (nx < 0) { nx = 0; nw = fixedRight; nh = nw / cropRatio; ny = fixedBottom - nh; }
+      if (ny < 0) { ny = 0; nh = fixedBottom; nw = nh * cropRatio; nx = fixedRight - nw; }
     }
 
     return { x: Math.max(0, nx), y: Math.max(0, ny), w: nw, h: nh };

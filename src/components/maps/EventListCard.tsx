@@ -173,7 +173,7 @@ export function EventListCard({
                   e.stopPropagation();
                   onViewMap?.();
                 }}
-                className="text-xs px-2.5 py-1 rounded-full bg-white shadow-sm text-muted-foreground shrink-0"
+                className="relative z-[4] text-xs px-2.5 py-1 rounded-full bg-white shadow-sm text-muted-foreground shrink-0"
               >
                 On map
               </button>
@@ -189,16 +189,19 @@ export function EventListCard({
           </div>
         </div>
 
-        {/* 이벤트 상세 chevron */}
-        <Link
-          href={`/events/${collectionSlug}/${event.eventSlug}`}
-          onClick={(e) => e.stopPropagation()}
-          className="shrink-0 self-stretch flex items-center pl-1 pr-3"
-          aria-label="View event detail"
-        >
+        {/* 이벤트 상세 chevron (시각적 요소만) */}
+        <div className="shrink-0 self-stretch flex items-center pl-1 pr-3">
           <ChevronRight className="w-5 h-5 text-muted-foreground" />
-        </Link>
+        </div>
       </div>
+
+      {/* 카드 전체 클릭 영역 — 북마크(z-[4])·On map(z-[4]) 버튼 아래에 위치 */}
+      <Link
+        href={`/events/${collectionSlug}/${event.eventSlug}`}
+        onClick={(e) => e.stopPropagation()}
+        className="absolute inset-0 z-[3]"
+        aria-label={`View ${event.nameEn} detail`}
+      />
 
       {/* ── 북마크 버튼 ── */}
       <button

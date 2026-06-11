@@ -28,14 +28,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
-  // /discover/hall/[id] — ACTIVE 상태만
+  // /recreeshot/[id] — ACTIVE 상태만
   const shots = await prisma.reCreeshot.findMany({
     where: { status: "ACTIVE" },
     select: { id: true, updatedAt: true },
   });
 
   const hallRoutes: MetadataRoute.Sitemap = shots.map((shot) => ({
-    url: `${BASE_URL}/discover/hall/${shot.id}`,
+    url: `${BASE_URL}/recreeshot/${shot.id}`,
     lastModified: shot.updatedAt,
     changeFrequency: "weekly",
     priority: 0.6,

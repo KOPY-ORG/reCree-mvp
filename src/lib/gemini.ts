@@ -23,7 +23,7 @@ export async function calculateMatchScore(
     urlToInlineData(recreationUrl),
   ]);
 
-  const result = await model.generateContent([
+  const prompt = [
     {
       text: `두 사진의 장면 재현 유사도를 0-100으로 평가해줘.
 Photo 1: 원본 참조 사진 (연예인/드라마 장면)
@@ -34,11 +34,27 @@ JSON만 반환: {"score": <number>}`,
     },
     refData,
     recData,
-  ]);
+  ];
 
-  const text = result.response.text().trim();
-  const match = text.match(/\{"score"\s*:\s*(\d+(?:\.\d+)?)\}/)
-    ?? text.match(/"score"\s*:\s*(\d+(?:\.\d+)?)/);
-  if (!match?.[1]) return 0;
-  return Math.min(100, Math.max(0, parseFloat(match[1])));
+  // 503(과부하) 재시도: 최대 3회, 지수 백오프
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) {
+      await new Promise((r) => setTimeout(r, 1500 * attempt));
+    }
+    try {
+      const result = await model.generateContent(prompt);
+      const text = result.response.text().trim();
+      const match =
+        text.match(/\{"score"\s*:\s*(\d+(?:\.\d+)?)\}/) ??
+        text.match(/"score"\s*:\s*(\d+(?:\.\d+)?)/);
+      if (!match?.[1]) return 0;
+      return Math.min(100, Math.max(0, parseFloat(match[1])));
+    } catch (e) {
+      lastError = e;
+      const msg = e instanceof Error ? e.message : String(e);
+      if (!msg.includes("503")) throw e; // 503 외 에러는 즉시 전파
+    }
+  }
+  throw lastError;
 }
