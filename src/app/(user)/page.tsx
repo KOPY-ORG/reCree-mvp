@@ -326,7 +326,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                     <Link key={shot.id} href={`/recreeshot/${shot.id}`} className="shrink-0 w-[120px] block">
                       <ReCreeshotImage
                         shotUrl={shot.imageUrl}
-                        referencePosition="top-left"
                         variant="thumb-sm"
                         className="aspect-[4/5]"
                         sizes="120px"

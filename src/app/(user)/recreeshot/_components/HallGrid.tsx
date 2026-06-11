@@ -50,7 +50,6 @@ export function HallGrid({ shots, guideVideo }: Props) {
         <Link key={shot.id} href={`/recreeshot/${shot.id}`} className="block relative">
           <ReCreeshotImage
             shotUrl={shot.imageUrl}
-            referencePosition="top-left"
             variant="thumb-md"
             className="w-full aspect-[4/5] shadow-md"
             sizes="50vw"
