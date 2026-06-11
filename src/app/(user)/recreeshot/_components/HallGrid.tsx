@@ -14,6 +14,7 @@ interface HallShot {
   matchScore: number | null;
   showBadge: boolean;
   referencePhotoUrl: string | null;
+  templateId: string | null;
   labels: LabelItem[];
 }
 
@@ -32,13 +33,13 @@ export function HallGrid({ shots, guideVideo }: Props) {
   if (shots.length === 0 && !guideVideo) {
     return (
       <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
-        아직 리크리샷이 없습니다.
+        No recreeshots yet.
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-2 gap-3">
       {guideVideo && (
         <GuideVideoCard
           videoUrl={guideVideo.videoUrl}
@@ -48,16 +49,16 @@ export function HallGrid({ shots, guideVideo }: Props) {
         />
       )}
       {shots.map((shot) => (
-        <Link key={shot.id} href={`/discover/hall/${shot.id}`} className="block relative">
+        <Link key={shot.id} href={`/recreeshot/${shot.id}`} className="block relative">
           <ReCreeshotImage
             shotUrl={shot.imageUrl}
-            referenceUrl={shot.referencePhotoUrl}
+            referenceUrl={shot.templateId ? null : shot.referencePhotoUrl}
             matchScore={shot.matchScore}
             showBadge={shot.showBadge}
             referencePosition="top-left"
             badgePosition="top-right"
             variant="thumb-md"
-            className="w-full aspect-[4/5]"
+            className="w-full aspect-[4/5] shadow-md"
             sizes="50vw"
           />
           {shot.labels.length > 0 && (

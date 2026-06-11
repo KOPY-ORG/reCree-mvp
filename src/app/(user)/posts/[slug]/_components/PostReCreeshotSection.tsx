@@ -19,6 +19,7 @@ interface Shot {
   matchScore: number | null;
   showBadge: boolean;
   referencePhotoUrl: string | null;
+  templateId?: string | null;
   user: { nickname: string | null };
   tips: string | null;
 }
@@ -41,7 +42,7 @@ export function PostReCreeshotSection({ postId, shots, originalImageUrl, isLogge
     }
     const params = new URLSearchParams({ postId });
     if (originalImageUrl) params.set("referenceUrl", originalImageUrl);
-    router.push(`/discover/hall/new?${params.toString()}`);
+    router.push(`/recreeshot/new?${params.toString()}`);
   }
 
   return (
@@ -71,12 +72,12 @@ export function PostReCreeshotSection({ postId, shots, originalImageUrl, isLogge
           <button
             key={shot.id}
             type="button"
-            onClick={() => router.push(`/discover/hall/${shot.id}`)}
+            onClick={() => router.push(`/recreeshot/${shot.id}`)}
             className="shrink-0 w-[90px]"
           >
             <ReCreeshotImage
               shotUrl={shot.imageUrl}
-              referenceUrl={shot.referencePhotoUrl}
+              referenceUrl={shot.templateId ? null : shot.referencePhotoUrl}
               matchScore={shot.matchScore}
               showBadge={shot.showBadge}
               referencePosition="top-left"

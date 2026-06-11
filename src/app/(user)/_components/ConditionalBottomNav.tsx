@@ -11,7 +11,7 @@ interface Props {
 export function ConditionalBottomNav({ isLoggedIn, profileImageUrl }: Props) {
   const pathname = usePathname();
   if (
-    pathname.startsWith("/discover/hall/") ||
+    pathname.startsWith("/recreeshot/") ||
     pathname.endsWith("/edit") ||
     pathname.startsWith("/policy/") ||
     pathname === "/onboarding"

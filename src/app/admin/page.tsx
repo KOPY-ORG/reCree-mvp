@@ -332,7 +332,7 @@ export default async function AdminPage() {
             items={topSavedRecreeshots.map((s) => ({
               id: s.id, name: s.locationName ?? "(장소 없음)",
               sub: s.user.nickname ?? "익명", count: s.saveCount,
-              href: `/discover/hall/${s.id}`,
+              href: `/recreeshot/${s.id}`,
             }))}
             icon={Bookmark} countColor="text-sky-500"
           />
@@ -343,7 +343,7 @@ export default async function AdminPage() {
             items={topLikedRecreeshots.map((s) => ({
               id: s.id, name: s.locationName ?? "(장소 없음)",
               sub: s.user.nickname ?? "익명", count: s.likeCount,
-              href: `/discover/hall/${s.id}`,
+              href: `/recreeshot/${s.id}`,
             }))}
             icon={Heart} countColor="text-rose-500"
           />

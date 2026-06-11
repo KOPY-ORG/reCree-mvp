@@ -26,6 +26,7 @@ type ReCreeshot = {
   id: string;
   imageUrl: string;
   referencePhotoUrl: string | null;
+  templateId?: string | null;
   matchScore: number | null;
   showBadge: boolean;
   status: string;
@@ -194,12 +195,12 @@ export function SavedClient({ posts, recreeshots, tagGroupConfigs, savedEvents }
               {recreeshots.map((shot) => (
                 <Link
                   key={shot.id}
-                  href={`/discover/hall/${shot.id}?from=saved&savedTab=recreeshots`}
+                  href={`/recreeshot/${shot.id}?from=saved&savedTab=recreeshots`}
                   className="block"
                 >
                   <ReCreeshotImage
                     shotUrl={shot.imageUrl}
-                    referenceUrl={shot.referencePhotoUrl}
+                    referenceUrl={shot.templateId ? null : shot.referencePhotoUrl}
                     matchScore={shot.matchScore}
                     showBadge={shot.showBadge}
                     referencePosition="top-left"

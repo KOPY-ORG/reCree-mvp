@@ -106,7 +106,7 @@ export function ProfileView({
               <span className="text-xs text-muted-foreground">recreeshots</span>
             </div>
             <Link
-              href="/discover/hall/new"
+              href="/recreeshot/new"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-black text-xs font-medium"
               style={{ background: "var(--color-brand-sub3)" }}
             >
@@ -163,7 +163,7 @@ export function ProfileView({
         <div className="flex-1 flex flex-col items-center justify-center gap-2 py-16 text-muted-foreground">
           <p className="text-sm font-medium">No recreeshots yet</p>
           <Link
-            href="/discover/hall/new"
+            href="/recreeshot/new"
             className="text-xs underline underline-offset-2"
           >
             Share your first recreeshot
@@ -177,7 +177,7 @@ export function ProfileView({
               <button
                 key={shot.id}
                 type="button"
-                onClick={() => router.push(`/discover/hall/${shot.id}?from=profile`)}
+                onClick={() => router.push(`/recreeshot/${shot.id}?from=profile`)}
                 className="relative block w-full"
               >
                 <ReCreeshotImage

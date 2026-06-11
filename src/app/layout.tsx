@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Noto_Sans_KR } from "next/font/google";
+import { Noto_Sans_KR, Chakra_Petch, Space_Mono } from "next/font/google";
 import { GeistSans } from "geist/font/sans";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ToastProvider } from "@/components/toast-provider";
@@ -11,6 +11,18 @@ const notoSansKR = Noto_Sans_KR({
   variable: "--font-noto-sans-kr",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
+});
+
+const chakraPetch = Chakra_Petch({
+  variable: "--font-chakra-petch",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+});
+
+const spaceMono = Space_Mono({
+  variable: "--font-space-mono",
+  subsets: ["latin"],
+  weight: ["400", "700"],
 });
 
 const isProduction = process.env.VERCEL_ENV === "production";
@@ -50,7 +62,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko" suppressHydrationWarning>
-      <body className={`${GeistSans.variable} ${notoSansKR.variable} font-sans antialiased`} suppressHydrationWarning>
+      <body className={`${GeistSans.variable} ${notoSansKR.variable} ${chakraPetch.variable} ${spaceMono.variable} font-sans antialiased`} suppressHydrationWarning>
         <GoogleAnalytics />
         <ToastProvider>{children}</ToastProvider>
         <VercelAnalytics />

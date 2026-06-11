@@ -207,6 +207,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
       matchScore: true,
       showBadge: true,
       referencePhotoUrl: true,
+      templateId: true,
       tips: true,
       user: { select: { nickname: true } },
     },
