@@ -9,7 +9,7 @@ export default async function ProfilePage() {
 
   const recreeshots = await prisma.reCreeshot.findMany({
     where: { userId: user.id, status: { not: "DELETED" } },
-    select: { id: true, imageUrl: true, referencePhotoUrl: true, matchScore: true, showBadge: true, status: true },
+    select: { id: true, imageUrl: true, referencePhotoUrl: true, status: true },
     orderBy: { createdAt: "desc" },
   });
 

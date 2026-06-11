@@ -16,8 +16,6 @@ import {
 interface Shot {
   id: string;
   imageUrl: string;
-  matchScore: number | null;
-  showBadge: boolean;
   referencePhotoUrl: string | null;
   templateId?: string | null;
   user: { nickname: string | null };
@@ -78,12 +76,9 @@ export function PostReCreeshotSection({ postId, shots, originalImageUrl, isLogge
             <ReCreeshotImage
               shotUrl={shot.imageUrl}
               referenceUrl={shot.templateId ? null : shot.referencePhotoUrl}
-              matchScore={shot.matchScore}
-              showBadge={shot.showBadge}
               referencePosition="top-left"
-              badgePosition="top-right"
               variant="thumb-sm"
-              className="aspect-[4/5]"
+              className="aspect-[4/5] shadow-md"
               sizes="90px"
             />
           </button>

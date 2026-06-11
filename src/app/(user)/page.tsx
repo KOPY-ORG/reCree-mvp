@@ -327,10 +327,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                       <ReCreeshotImage
                         shotUrl={shot.imageUrl}
                         referenceUrl={shot.referencePhotoUrl}
-                        matchScore={shot.matchScore}
-                        showBadge={shot.showBadge}
                         referencePosition="top-left"
-                        badgePosition="top-right"
                         variant="thumb-sm"
                         className="aspect-[4/5]"
                         sizes="120px"

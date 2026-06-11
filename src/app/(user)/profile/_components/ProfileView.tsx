@@ -27,8 +27,6 @@ interface ReCreeshot {
   id: string;
   imageUrl: string;
   referencePhotoUrl: string | null;
-  matchScore: number | null;
-  showBadge: boolean;
   status: string;
 }
 
@@ -183,10 +181,7 @@ export function ProfileView({
                 <ReCreeshotImage
                   shotUrl={shot.imageUrl}
                   referenceUrl={shot.referencePhotoUrl}
-                  matchScore={isHidden ? null : shot.matchScore}
-                  showBadge={isHidden ? false : shot.showBadge}
                   referencePosition="top-left"
-                  badgePosition="top-right"
                   variant="thumb-md"
                   className="w-full aspect-[4/5] rounded-none"
                   sizes="50vw"
