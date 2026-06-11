@@ -30,6 +30,28 @@ export function ReCreeshotImage({
   const isThumb = variant === "thumb-sm" || variant === "thumb-md";
   const isThumbSm = variant === "thumb-sm";
 
+  // showMatchLabel: preview 기본 true, thumb 기본 false
+  const showLabel = showMatchLabel ?? !isThumb;
+
+
+  // 배지 위치 / 크기
+  let badgePosClass: string;
+  let badgeSizeClass: string;
+  let badgeShadow: string;
+  if (variant === "thumb-sm") {
+    badgePosClass = badgePosition === "top-right" ? "top-1 right-1" : "bottom-1 right-1";
+    badgeSizeClass = "text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none";
+    badgeShadow = "0 1px 3px rgba(0,0,0,0.15)";
+  } else if (variant === "thumb-md") {
+    badgePosClass = badgePosition === "top-right" ? "top-1.5 right-1.5" : "bottom-1.5 right-1.5";
+    badgeSizeClass = "text-[10px] font-bold px-2 py-0.5 rounded-full leading-none";
+    badgeShadow = "0 1px 4px rgba(0,0,0,0.15)";
+  } else {
+    badgePosClass = badgePosition === "top-right" ? "top-2 right-2" : "bottom-2 right-2";
+    badgeSizeClass = "text-xs font-bold px-2.5 py-[3px] rounded-full";
+    badgeShadow = "0 2px 8px rgba(0,0,0,0.15)";
+  }
+
   // thumb 변형용 소스 이미지 파라미터
   const thumbOffset = isThumbSm ? "4%" : "3%";
   const thumbRefWidth = isThumbSm ? "22%" : "18%";
