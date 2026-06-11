@@ -16,10 +16,6 @@ import {
 interface Shot {
   id: string;
   imageUrl: string;
-  referencePhotoUrl: string | null;
-  templateId?: string | null;
-  user: { nickname: string | null };
-  tips: string | null;
 }
 
 interface Props {
@@ -59,10 +55,10 @@ export function PostReCreeshotSection({ postId, shots, originalImageUrl, isLogge
         <button
           type="button"
           onClick={handleAdd}
-          className="shrink-0 w-[90px] aspect-[4/5] rounded-[7%] border-2 border-dashed border-border flex flex-col items-center justify-center gap-1.5 bg-muted/30 hover:bg-muted/50 transition-colors"
+          className="shrink-0 w-[140px] aspect-[4/5] rounded-[7%] border-2 border-dashed border-border flex flex-col items-center justify-center gap-1.5 bg-muted/30 hover:bg-muted/50 transition-colors"
         >
-          <Camera className="size-5 text-muted-foreground" />
-          <span className="text-[10px] font-semibold text-muted-foreground leading-tight text-center">Add<br />recreeshot</span>
+          <Camera className="size-6 text-muted-foreground" />
+          <span className="text-xs font-semibold text-muted-foreground leading-tight text-center">Add<br />recreeshot</span>
         </button>
 
         {/* 리크리샷 카드 목록 */}
@@ -71,42 +67,17 @@ export function PostReCreeshotSection({ postId, shots, originalImageUrl, isLogge
             key={shot.id}
             type="button"
             onClick={() => router.push(`/recreeshot/${shot.id}`)}
-            className="shrink-0 w-[90px]"
+            className="shrink-0 w-[140px]"
           >
             <ReCreeshotImage
               shotUrl={shot.imageUrl}
-              referencePosition="top-left"
-              variant="thumb-sm"
+              variant="thumb-md"
               className="aspect-[4/5] shadow-md"
-              sizes="90px"
+              sizes="140px"
             />
           </button>
         ))}
       </div>
-
-      {/* Tips 섹션 */}
-      {shots.some((s) => s.tips) && (
-        <div className="mt-4">
-          <div className="px-4 mb-2">
-            <p className="text-sm font-bold">Tips from reCree&apos;rs</p>
-          </div>
-          <div className="px-4 space-y-2">
-            {shots
-              .filter((s) => s.tips)
-              .slice(0, 3)
-              .map((shot) => (
-                <div key={shot.id} className="rounded-xl bg-muted/50 px-3.5 py-3 space-y-1">
-                  <p className="text-xs font-semibold text-muted-foreground">
-                    {shot.user.nickname ?? "Anonymous"}
-                  </p>
-                  <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">
-                    {shot.tips}
-                  </p>
-                </div>
-              ))}
-          </div>
-        </div>
-      )}
 
       <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
         <DialogContent className="max-w-xs rounded-2xl text-center">
