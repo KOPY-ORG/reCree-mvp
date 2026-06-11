@@ -180,10 +180,9 @@ export function ProfileView({
               >
                 <ReCreeshotImage
                   shotUrl={shot.imageUrl}
-                  referenceUrl={shot.referencePhotoUrl}
                   referencePosition="top-left"
                   variant="thumb-md"
-                  className="w-full aspect-[4/5] rounded-none"
+                  className="w-full aspect-[4/5] rounded-none shadow-md"
                   sizes="50vw"
                 />
                 {isHidden && (

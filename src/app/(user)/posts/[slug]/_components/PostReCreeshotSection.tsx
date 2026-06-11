@@ -75,7 +75,6 @@ export function PostReCreeshotSection({ postId, shots, originalImageUrl, isLogge
           >
             <ReCreeshotImage
               shotUrl={shot.imageUrl}
-              referenceUrl={shot.templateId ? null : shot.referencePhotoUrl}
               referencePosition="top-left"
               variant="thumb-sm"
               className="aspect-[4/5] shadow-md"

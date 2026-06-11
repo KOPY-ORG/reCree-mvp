@@ -198,7 +198,6 @@ export function SavedClient({ posts, recreeshots, tagGroupConfigs, savedEvents }
                 >
                   <ReCreeshotImage
                     shotUrl={shot.imageUrl}
-                    referenceUrl={shot.templateId ? null : shot.referencePhotoUrl}
                     referencePosition="top-left"
                     variant="thumb-md"
                     className="w-full aspect-[4/5] shadow-md"
