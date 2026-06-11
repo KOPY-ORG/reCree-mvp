@@ -12,7 +12,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
-const ASPECT = 4 / 5;
+const ASPECT = 8 / 5;
 
 function initCrop(width: number, height: number): Crop {
   return centerCrop(
@@ -88,7 +88,7 @@ export function ReCreeshotCropDialog({ open, imageSrc, onConfirm, onClose }: Pro
         </DialogHeader>
 
         <p className="text-xs text-muted-foreground -mt-1">
-          4:5 비율로 고정됩니다. 드래그해서 영역을 조정하세요.
+          8:5 비율로 고정됩니다. 드래그해서 영역을 조정하세요.
         </p>
 
         <div className="flex justify-center overflow-auto max-h-[60vh] bg-zinc-100 rounded-lg p-2">
