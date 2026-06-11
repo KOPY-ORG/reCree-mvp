@@ -673,13 +673,13 @@ export function PostImageSection({ postId, placeId, images, onChange, sources, r
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold">리크리샷 기준 이미지</span>
-          <span className="text-xs text-muted-foreground">(4:5 · 사용자 리크리샷 참고용)</span>
+          <span className="text-xs text-muted-foreground">(8:5 · 사용자 리크리샷 참고용)</span>
         </div>
 
         <div className="border rounded-lg p-3 bg-muted/20 space-y-3">
           {recreePhotoUrl ? (
             <div className="flex gap-4 items-start">
-              <div className="relative group w-24 aspect-[4/5] rounded-lg overflow-hidden border shrink-0">
+              <div className="relative group w-24 aspect-[8/5] rounded-lg overflow-hidden border shrink-0">
                 {/* eslint-disable-next-line @next/next/no-img-element -- 리크리샷 기준 이미지 미리보기 */}
                 <img src={recreePhotoUrl} alt="" className="w-full h-full object-cover" />
                 <button

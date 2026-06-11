@@ -60,7 +60,7 @@ export default async function SavedPage() {
     savedReCreeshotIds.length > 0
       ? await prisma.reCreeshot.findMany({
           where: { id: { in: savedReCreeshotIds }, status: { not: "DELETED" } },
-          select: { id: true, imageUrl: true, referencePhotoUrl: true, matchScore: true, showBadge: true, status: true },
+          select: { id: true, imageUrl: true, referencePhotoUrl: true, status: true },
           orderBy: { createdAt: "desc" },
         })
       : [];

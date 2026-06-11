@@ -9,8 +9,6 @@ export default async function ReCreeshotPage() {
     select: {
       id: true,
       imageUrl: true,
-      matchScore: true,
-      showBadge: true,
       referencePhotoUrl: true,
       templateId: true,
     },

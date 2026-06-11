@@ -20,26 +20,26 @@ export async function GET(request: NextRequest) {
 
   const { user } = data.session;
 
-  // Prisma users 테이블에 upsert (Supabase auth.users와 동기화)
-  const dbUser = await prisma.user.upsert({
-    where: { id: user.id },
-    create: {
-      id: user.id,
-      email: user.email!,
-    },
-    update: {
-      email: user.email!,
-    },
-  });
-
-  // 기존에 저장된 Google 프로필 사진 URL 제거 (직접 업로드한 사진은 유지)
-  await prisma.user.updateMany({
-    where: {
-      id: user.id,
-      profileImageUrl: { contains: "googleusercontent.com" },
-    },
-    data: { profileImageUrl: null },
-  });
+  // Prisma users 테이블에 upsert + Google 프로필 사진 URL 정리 병렬 실행
+  const [dbUser] = await Promise.all([
+    prisma.user.upsert({
+      where: { id: user.id },
+      create: {
+        id: user.id,
+        email: user.email!,
+      },
+      update: {
+        email: user.email!,
+      },
+    }),
+    prisma.user.updateMany({
+      where: {
+        id: user.id,
+        profileImageUrl: { contains: "googleusercontent.com" },
+      },
+      data: { profileImageUrl: null },
+    }),
+  ]);
 
   // 온보딩 미완료 유저 → /onboarding
   if (!dbUser.termsAcceptedAt) {

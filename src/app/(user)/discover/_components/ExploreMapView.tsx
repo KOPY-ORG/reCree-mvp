@@ -19,7 +19,7 @@ import { DiscoverSheetHeader } from "./DiscoverSheetHeader";
 import { EventSheetHeader } from "./EventSheetHeader";
 import { EventPeekCarousel } from "./EventPeekCarousel";
 import { HotTabStub } from "./HotTabStub";
-import { ListScrollTopButton } from "./ListScrollTopButton";
+import { ScrollToTopButton } from "../../_components/ScrollToTopButton";
 import { useRecentSearches } from "../_hooks/useRecentSearches";
 import { useDiscoverViewState } from "../_hooks/useDiscoverViewState";
 import type { MapPlace, MapPost } from "@/lib/map-queries";
@@ -809,7 +809,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
       </PlaceListSheet>
 
       {/* 리스트 맨 위로 버튼 — z-30, 시트 위에 absolute */}
-      <ListScrollTopButton scrollRef={listScrollRef} />
+      <ScrollToTopButton scrollRef={listScrollRef} />
 
       {/* FAB 그룹 — 시트 상단 위 12px에 붙어서 이동, 선택 중이거나 full이면 둘 다 숨김 */}
       {!selectedPlaceId && (

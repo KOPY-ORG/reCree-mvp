@@ -18,7 +18,8 @@ export function PostDetailHeader({ postId, isLoggedIn }: Props) {
 
   return (
     <>
-      <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between h-12 px-3">
+      <div className="fixed top-0 left-0 right-0 z-50 h-12">
+        <div className="max-w-[540px] mx-auto h-full flex items-center justify-between px-3">
         <button
           type="button"
           onClick={() => router.back()}
@@ -54,6 +55,7 @@ export function PostDetailHeader({ postId, isLoggedIn }: Props) {
             )}
           </div>
         )}
+        </div>
       </div>
 
       <ReportDialog

@@ -7,7 +7,7 @@ import type { CuratedSection } from "@prisma/client";
 
 export type SectionData =
   | { kind: "posts"; items: PostItem[] }
-  | { kind: "reCreeshots"; items: { id: string; imageUrl: string; matchScore: number | null; showBadge: boolean; referencePhotoUrl: string | null }[] };
+  | { kind: "reCreeshots"; items: { id: string; imageUrl: string; referencePhotoUrl: string | null }[] };
 
 // ─── 섹션 목록 조회 ───────────────────────────────────────────────────────────
 
@@ -59,7 +59,7 @@ export async function getSectionData(sections: CuratedSection[]): Promise<Sectio
           },
           orderBy: { createdAt: "desc" },
           take: section.maxCount,
-          select: { id: true, imageUrl: true, matchScore: true, showBadge: true, referencePhotoUrl: true },
+          select: { id: true, imageUrl: true, referencePhotoUrl: true },
         });
         return { kind: "reCreeshots", items };
       }
