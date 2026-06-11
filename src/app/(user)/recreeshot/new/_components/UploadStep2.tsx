@@ -52,8 +52,8 @@ export function UploadStep2({
 
         {/* 선택된 장소 (read-only) */}
         {selectedPlace ? (
-          <div className="flex items-center gap-2 border border-brand/50 rounded-xl px-3 py-2.5 bg-brand/5">
-            <MapPin className="size-4 text-brand shrink-0" />
+          <div className="flex items-center gap-2 bg-brand-sub3 border border-brand rounded-xl px-3 py-2.5">
+            <MapPin className="size-4 text-foreground shrink-0" />
             <span className="text-sm font-medium">{selectedPlace.nameEn ?? selectedPlace.nameKo}</span>
           </div>
         ) : (

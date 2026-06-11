@@ -77,7 +77,7 @@ export function EditorToolbar({
       {/* Frame 패널: 토글 + 조건부 라벨/색상 */}
       {colorPanelOpen && (
         <div className="px-4 py-3 bg-background border-b border-border/30 space-y-3">
-          <div className="flex gap-2">
+          <div className="flex bg-[#F1F2F4] border border-[#E6E7EB] rounded-full p-[3px] gap-[2px]">
             {(["vertical-full", "vertical-frame"] as TemplateId[]).map((id) => {
               const isActive = templateId === id;
               return (
@@ -85,7 +85,7 @@ export function EditorToolbar({
                   key={id}
                   type="button"
                   onClick={() => onTemplateChange(id)}
-                  className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors ${isActive ? "bg-brand text-black border-brand" : "bg-transparent text-muted-foreground border-border"}`}
+                  className={`flex-1 py-2.5 rounded-full text-sm font-bold transition-colors ${isActive ? "bg-brand text-[#0C0D0E] shadow-[0_1px_4px_rgba(0,0,0,.12)]" : "text-[#8A8E94]"}`}
                 >
                   {id === "vertical-full" ? "No border" : "Border"}
                 </button>
@@ -206,7 +206,7 @@ function TabButton({ icon, label, active, onPress }: {
     <button
       type="button"
       onClick={onPress}
-      className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition-colors ${active ? "text-brand" : "text-foreground"}`}
+      className="flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition-colors text-foreground"
     >
       {icon}
       {label}
@@ -227,7 +227,7 @@ function ScoreTabButton({ matchScore, showMatchScore, onPress, onToggle }: {
       <button
         type="button"
         onClick={onPress}
-        className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition-colors ${showMatchScore ? "text-brand" : "text-foreground"}`}
+        className="flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition-colors text-foreground"
       >
         <div className="relative">
           <Percent className="size-5" />

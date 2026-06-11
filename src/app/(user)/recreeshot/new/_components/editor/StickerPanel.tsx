@@ -2,11 +2,13 @@
 
 import { useEffect, useState, useMemo, useRef } from "react";
 import Image from "next/image";
-import { MapPin, Loader2, Search, X, Check, ImageIcon } from "lucide-react";
+import { MapPin, Loader2, Search, X, Check, ImageIcon, PlusCircle } from "lucide-react";
 import { isExternalImage } from "@/lib/image";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { LabelBadge } from "@/components/LabelBadge";
 import { searchPlaces, getPopularPlaces } from "@/app/(user)/_actions/recreeshot-actions";
+import { AddPlaceOverlay } from "../AddPlaceOverlay";
+import { useGeolocation } from "@/app/(user)/_hooks/useGeolocation";
 import {
   computeTopicEffectiveColors,
   resolveTagColors,
@@ -25,6 +27,8 @@ export interface PlaceResult {
   addressEn: string | null;
   city: string | null;
   imageUrl: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 interface TagItem {
@@ -66,6 +70,18 @@ export interface PostResult {
   thumbnailUrl: string | null;
   topicIds: string[];
   tagIds: string[];
+}
+
+// ── 거리 계산 (Haversine) ──────────────────────────────────────────────────────
+
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 // ── Topic 유틸 ─────────────────────────────────────────────────────────────────
@@ -166,7 +182,11 @@ export function StickerPanel({
   const [popularPlaces, setPopularPlaces] = useState<PlaceResult[]>([]);
   const [placeResults, setPlaceResults] = useState<PlaceResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [addPlaceOpen, setAddPlaceOpen] = useState(false);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const geoRequestedRef = useRef(false);
+
+  const { coords: geoCoords, request: requestGeo } = useGeolocation();
 
   const [activeThemeL0Id, setActiveThemeL0Id] = useState<string | null>(null);
   const [themeSearchQuery, setThemeSearchQuery] = useState("");
@@ -176,6 +196,13 @@ export function StickerPanel({
     if (!locationSheetOpen || popularPlaces.length > 0) return;
     getPopularPlaces().then(setPopularPlaces);
   }, [locationSheetOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 시트가 처음 열릴 때 한 번만 조용히 현위치 요청 (권한 거부/미지원 시 폴백)
+  useEffect(() => {
+    if (!locationSheetOpen || geoRequestedRef.current) return;
+    geoRequestedRef.current = true;
+    requestGeo();
+  }, [locationSheetOpen, requestGeo]);
 
   useEffect(() => {
     if (!locationQuery.trim()) { setPlaceResults([]); return; }
@@ -187,6 +214,22 @@ export function StickerPanel({
       setIsSearching(false);
     }, 400);
   }, [locationQuery]);
+
+  // 좌표 있으면 거리순, 없으면 서버 반환 순(최신순) 그대로
+  const sortedPopularPlaces = useMemo(() => {
+    if (!geoCoords) return popularPlaces;
+    return [...popularPlaces].sort((a, b) => {
+      const aDist =
+        a.latitude != null && a.longitude != null
+          ? haversineKm(geoCoords.lat, geoCoords.lng, a.latitude, a.longitude)
+          : Infinity;
+      const bDist =
+        b.latitude != null && b.longitude != null
+          ? haversineKm(geoCoords.lat, geoCoords.lng, b.latitude, b.longitude)
+          : Infinity;
+      return aDist - bDist;
+    });
+  }, [popularPlaces, geoCoords]);
 
   const topicTree = useMemo(() => buildTopicTree(topics), [topics]);
   const topicColorMap = useMemo(() => computeTopicEffectiveColors(topics), [topics]);
@@ -221,6 +264,7 @@ export function StickerPanel({
     onPlaceChange(place);
     onLocationSheetChange(false);
     setLocationQuery("");
+    setAddPlaceOpen(false);
   }
 
   function toggleTag(id: string) {
@@ -256,22 +300,53 @@ export function StickerPanel({
               {locationQuery && <button type="button" onClick={() => setLocationQuery("")}><X className="size-3.5 text-muted-foreground" /></button>}
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto px-4 pb-6">
+          <div className="flex-1 overflow-y-auto px-4 pb-4">
             {isSearching && <p className="text-sm text-muted-foreground text-center py-8">Searching...</p>}
             {!isSearching && locationQuery.trim() && (
               placeResults.length === 0
-                ? <p className="text-sm text-muted-foreground text-center py-8">No places found</p>
+                ? (
+                  <div className="flex flex-col items-center gap-3 py-8">
+                    <p className="text-sm text-muted-foreground">No places found</p>
+                    <button
+                      type="button"
+                      onClick={() => { onLocationSheetChange(false); setAddPlaceOpen(true); }}
+                      className="flex items-center gap-1.5 text-sm font-semibold text-foreground"
+                    >
+                      <PlusCircle className="size-4" />
+                      Add this place
+                    </button>
+                  </div>
+                )
                 : <div className="space-y-1">{placeResults.map((p) => <PlaceRow key={p.id} place={p} onSelect={handleSelectPlace} />)}</div>
             )}
-            {!isSearching && !locationQuery.trim() && popularPlaces.length > 0 && (
+            {!isSearching && !locationQuery.trim() && sortedPopularPlaces.length > 0 && (
               <>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Our places</p>
-                <div className="space-y-1">{popularPlaces.map((p) => <PlaceRow key={p.id} place={p} onSelect={handleSelectPlace} />)}</div>
+                <div className="space-y-1">{sortedPopularPlaces.map((p) => <PlaceRow key={p.id} place={p} onSelect={handleSelectPlace} />)}</div>
               </>
             )}
           </div>
+          {/* 항상 보이는 하단 버튼 */}
+          <div className="shrink-0 px-4 pb-6 pt-2 border-t border-border/30">
+            <button
+              type="button"
+              onClick={() => { onLocationSheetChange(false); setAddPlaceOpen(true); }}
+              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-full text-sm font-semibold border border-border text-foreground"
+            >
+              <PlusCircle className="size-4" />
+              Can&apos;t find it? Add a place
+            </button>
+          </div>
         </SheetContent>
       </Sheet>
+
+      {/* 미등록 장소 추가 오버레이 */}
+      {addPlaceOpen && (
+        <AddPlaceOverlay
+          onSelect={handleSelectPlace}
+          onClose={() => setAddPlaceOpen(false)}
+        />
+      )}
 
       {/* 태그 시트 */}
       <Sheet open={tagSheetOpen} onOpenChange={(v) => { onTagSheetChange(v); if (!v) setThemeSearchQuery(""); }}>

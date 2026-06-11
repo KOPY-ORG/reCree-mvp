@@ -6,7 +6,7 @@ import { ChevronLeft, MoreVertical, Download, Pencil, Trash2, Flag } from "lucid
 import { showError } from "@/lib/toast";
 import { deleteReCreeshot } from "@/app/(user)/_actions/recreeshot-actions";
 import { ReportDialog } from "@/components/ReportDialog";
-import { coverRect, loadImage, drawReCreeshotBadge } from "@/lib/canvas-utils";
+import { coverRect, loadImage } from "@/lib/canvas-utils";
 
 interface Props {
   id: string;
@@ -14,11 +14,9 @@ interface Props {
   isLoggedIn: boolean;
   imageUrl: string;
   referencePhotoUrl: string | null;
-  matchScore: number | null;
-  showBadge: boolean;
 }
 
-export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, referencePhotoUrl, matchScore, showBadge }: Props) {
+export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, referencePhotoUrl }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const from = searchParams.get("from");
@@ -28,6 +26,7 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
   function handleBack() {
     if (from === "profile") router.push("/profile");
     else if (from === "saved") router.push(savedTab ? `/saved?tab=${savedTab}` : "/saved");
+    else if (from === "new") router.push("/recreeshot");
     else router.back();
   }
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -94,7 +93,6 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
       ctx.restore();
     }
 
-    if (showBadge && matchScore !== null) drawReCreeshotBadge(ctx, W, matchScore);
 
     return new Promise((resolve) => {
       canvas.toBlob((blob) => {
@@ -133,7 +131,7 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
       return;
     }
     if (from === "profile") router.push("/profile");
-    else router.push("/discover?tab=hall");
+    else router.push("/recreeshot");
   }
 
   function handleReport() {
@@ -288,20 +286,6 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
           </div>
         )}
 
-        {/* 매치 스코어 배지 (우상단) */}
-        {showBadge && matchScore !== null && (
-          <div
-            className="absolute text-xs font-bold px-2.5 py-[3px] rounded-full text-black"
-            style={{
-              top: "3%",
-              right: "3%",
-              background: "linear-gradient(to right, #C8FF09, white 150%)",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-            }}
-          >
-            {Math.round(matchScore)}% Match
-          </div>
-        )}
       </div>
       </div>
     </>

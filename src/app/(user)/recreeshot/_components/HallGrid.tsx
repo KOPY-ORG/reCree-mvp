@@ -33,7 +33,7 @@ export function HallGrid({ shots, guideVideo }: Props) {
   if (shots.length === 0 && !guideVideo) {
     return (
       <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
-        아직 리크리샷이 없습니다.
+        No recreeshots yet.
       </div>
     );
   }

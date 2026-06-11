@@ -18,8 +18,9 @@ export async function previewMatchScore(
     const score = await calculateMatchScore(referenceUrl, shotUrl);
     return { score };
   } catch (e) {
-    console.error(e);
-    return { error: "점수 계산 실패" };
+    const detail = e instanceof Error ? e.message : String(e);
+    console.error("[previewMatchScore]", detail);
+    return { error: `점수 계산 실패: ${detail}` };
   }
 }
 
@@ -76,6 +77,8 @@ const PLACE_SELECT = {
   addressEn: true,
   city: true,
   imageUrl: true,
+  latitude: true,
+  longitude: true,
   placeImages: {
     where: { isThumbnail: true },
     select: { url: true },
@@ -90,10 +93,12 @@ type PlaceRow = {
   addressEn: string | null;
   city: string | null;
   imageUrl: string | null;
+  latitude: number | null;
+  longitude: number | null;
   placeImages: { url: string }[];
 };
 
-function normalizePlaces(places: PlaceRow[]): { id: string; nameKo: string; nameEn: string | null; addressEn: string | null; city: string | null; imageUrl: string | null }[] {
+function normalizePlaces(places: PlaceRow[]): { id: string; nameKo: string; nameEn: string | null; addressEn: string | null; city: string | null; imageUrl: string | null; latitude: number | null; longitude: number | null }[] {
   return places.map(({ placeImages, imageUrl, ...rest }) => ({
     ...rest,
     imageUrl: placeImages[0]?.url ?? imageUrl,
@@ -106,7 +111,6 @@ export async function getPopularPlaces() {
       where: { isVerified: true },
       orderBy: { createdAt: "desc" },
       select: PLACE_SELECT,
-      take: 20,
     });
     return normalizePlaces(places);
   } catch (e) {
@@ -422,27 +426,3 @@ export async function updateReCreeshot(
   return {};
 }
 
-// ─── updateReCreeshotImageUrl ─────────────────────────────────────────────────
-// Step3에서 합성 이미지 업로드 후 imageUrl을 교체
-
-export async function updateReCreeshotImageUrl(
-  id: string,
-  compositeUrl: string
-): Promise<{ error?: string }> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "unauthenticated" };
-
-  const shot = await prisma.reCreeshot.findUnique({ where: { id }, select: { userId: true } });
-  if (!shot || shot.userId !== user.id) return { error: "forbidden" };
-
-  await prisma.reCreeshot.update({
-    where: { id },
-    data: { imageUrl: compositeUrl },
-  });
-
-  revalidatePath(`/recreeshot/${id}`);
-  revalidatePath("/discover");
-  revalidatePath("/");
-  return {};
-}

@@ -54,7 +54,7 @@ export function ScoreSheet({
           />
         )}
         {phase === "result" && score != null && (
-          <ResultPhase score={score} showMatchScore={showMatchScore} onToggle={onToggle} />
+          <ResultPhase score={score} showMatchScore={showMatchScore} />
         )}
       </SheetContent>
     </Sheet>
@@ -181,28 +181,36 @@ function ScannedPhoto({ url, delay }: { url: string | null; delay: string }) {
 
 // ── ResultPhase ───────────────────────────────────────────────────────────────
 
-function ResultPhase({ score, showMatchScore, onToggle }: {
-  score: number; showMatchScore: boolean; onToggle: () => void;
+function ResultPhase({ score, showMatchScore }: {
+  score: number; showMatchScore: boolean;
 }) {
   const tier = getScoreTier(score);
   const pct = Math.round(score);
   return (
-    <div className="px-5 pb-8">
-      <h2 className="text-xl font-bold mt-3">{pct}% match</h2>
-      <p className="text-sm text-muted-foreground mt-0.5">STAMP badge placed on your shot</p>
-      <div className="text-center py-5 border-b border-border/30">
-        <p className="text-7xl font-black leading-none">{pct}%</p>
-        <p className="text-[11px] tracking-widest text-muted-foreground font-medium mt-2 uppercase">
-          {tier.label} · {"★".repeat(tier.stars)}{"☆".repeat(5 - tier.stars)}
+    <div className="px-5 pb-8 text-center">
+      <div className="pt-5 pb-2">
+        <p className="font-black leading-none" style={{ fontSize: 92, letterSpacing: "-.04em" }}>
+          {pct}<span style={{ fontSize: 46 }}>%</span>
         </p>
+        <div className="flex items-center justify-center gap-2 mt-2 text-[#8A8E94] text-[13px] font-bold tracking-[.04em] uppercase">
+          <span>{tier.label}</span>
+          <span className="opacity-40">·</span>
+          <span>
+            {[1, 2, 3, 4, 5].map((i) => (
+              <span key={i} style={{ color: i <= tier.stars ? "#0c0d0e" : "#D6D8DC" }}>
+                {i <= tier.stars ? "★" : "☆"}
+              </span>
+            ))}
+          </span>
+        </div>
       </div>
-      <button
-        type="button"
-        onClick={onToggle}
-        className={`w-full mt-5 py-4 rounded-full font-bold text-base border-2 transition-colors ${showMatchScore ? "bg-brand text-black border-brand" : "bg-transparent text-foreground border-border"}`}
-      >
-        {showMatchScore ? "Hide badge" : "Show badge"}
-      </button>
+      <div className="inline-flex items-center gap-[7px] rounded-full mt-3.5"
+           style={{ background: "#F4F5F7", padding: "7px 14px" }}>
+        <Sparkles className="shrink-0 text-[#7E838A]" style={{ width: 13, height: 13 }} />
+        <span className="text-[12.5px] font-semibold text-[#7E838A]">
+          {showMatchScore ? "Badge shown on your shot - toggle below" : "Turn the switch below to place it"}
+        </span>
+      </div>
     </div>
   );
 }

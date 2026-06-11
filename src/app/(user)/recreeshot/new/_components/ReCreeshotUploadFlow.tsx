@@ -225,7 +225,7 @@ export function ReCreeshotUploadFlow({
   // ── 네비게이션 ───────────────────────────────────────────────────────────────
 
   function handleBack() {
-    if (state.step === "done") { router.push("/explore?tab=hall"); return; }
+    if (state.step === "done") { router.push("/recreeshot"); return; }
     if (state.step === "add-photos") {
       if (hasUnsavedUpload) { setState((s) => ({ ...s, showLeaveDialog: true })); }
       else { router.back(); }
@@ -374,7 +374,7 @@ export function ReCreeshotUploadFlow({
             uploadedReferenceUrl={state.uploadedReferenceUrl}
             uploadedShotUrl={state.uploadedShotUrl ?? ""}
             onNext={handleEditorNext}
-            onError={(msg) => setState((s) => ({ ...s, error: msg }))}
+            onError={(msg) => setState((s) => ({ ...s, error: msg || null }))}
             selectedPlace={state.selectedPlace}
             onPlaceChange={(place) => setState((s) => ({ ...s, selectedPlace: place }))}
             linkedPosts={state.linkedPosts}

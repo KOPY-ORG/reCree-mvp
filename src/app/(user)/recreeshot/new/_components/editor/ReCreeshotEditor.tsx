@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 import type Konva from "konva";
 import { MapPin } from "lucide-react";
-import { loadImage, drawReCreeshotWatermark } from "@/lib/canvas-utils";
+import { loadImage, drawReCreeshotWatermark, drawReCreeshotBadge } from "@/lib/canvas-utils";
 import { getReCreeshotPresignedUrl } from "@/lib/actions/upload-actions";
 import { previewMatchScore } from "@/app/(user)/_actions/recreeshot-actions";
 import { exportStageToBlob } from "./canvas-export";
@@ -45,7 +45,7 @@ interface Props {
   topics: TopicItem[];
 }
 
-async function applyWatermark(blob: Blob): Promise<Blob> {
+async function applyWatermark(blob: Blob, matchScore?: number | null): Promise<Blob> {
   const url = URL.createObjectURL(blob);
   try {
     const img = await loadImage(url);
@@ -59,6 +59,7 @@ async function applyWatermark(blob: Blob): Promise<Blob> {
     ctx.drawImage(img, 0, 0, W, H);
     await document.fonts.ready;
     drawReCreeshotWatermark(ctx, W, H);
+    if (matchScore != null) drawReCreeshotBadge(ctx, W, matchScore);
     return await new Promise<Blob>((resolve) => {
       canvas.toBlob((b) => resolve(b ?? blob), "image/jpeg", 0.92);
     });
@@ -98,8 +99,10 @@ export function ReCreeshotEditor({
   tagGroups,
   topics,
 }: Props) {
+  const sectionRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [stageW, setStageW] = useState(0);
+  const [sectionW, setSectionW] = useState(0);
+  const [sectionH, setSectionH] = useState(0);
   const [stageInstance, setStageInstance] = useState<Konva.Stage | null>(null);
   const [referenceImg, setReferenceImg] = useState<HTMLImageElement | null>(null);
   const [shotImg, setShotImg] = useState<HTMLImageElement | null>(null);
@@ -108,20 +111,32 @@ export function ReCreeshotEditor({
   const [isScoring, setIsScoring] = useState(false);
 
   const templateConfig = getTemplateConfig(templateId);
-  const stageH =
-    stageW > 0
-      ? Math.round(stageW * (templateConfig.canvasHeight / templateConfig.canvasWidth))
+  const aspect = templateConfig.canvasHeight / templateConfig.canvasWidth;
+  // 장소 박스가 sectionRef 안에 위치하므로 높이 차감
+  const locationOverhead = selectedPlace ? 48 : 0; // box ~40px + mt-1 4px + buffer
+  const stageW =
+    sectionW > 0 && sectionH > 0
+      ? Math.round(Math.min(sectionW, (sectionH - locationOverhead) / aspect))
       : 0;
+  const stageH = stageW > 0 ? Math.round(stageW * aspect) : 0;
+
+  // HTML 배지 오버레이 위치 — 카드 우상단 코너 고정 6px
+  const badgeTop = 6;
+  const badgeRight = 6;
 
   useEffect(() => {
-    const el = containerRef.current;
+    const el = sectionRef.current;
     if (!el) return;
     const ro = new ResizeObserver((entries) => {
-      const w = entries[0]?.contentRect.width;
-      if (w) setStageW(Math.round(w));
+      const rect = entries[0]?.contentRect;
+      if (rect) {
+        setSectionW(Math.round(rect.width));
+        setSectionH(Math.round(rect.height));
+      }
     });
     ro.observe(el);
-    setStageW(Math.round(el.clientWidth));
+    setSectionW(Math.round(el.clientWidth));
+    setSectionH(Math.round(el.clientHeight));
     return () => ro.disconnect();
   }, []);
 
@@ -140,6 +155,7 @@ export function ReCreeshotEditor({
 
   async function handleCalculateScore() {
     if (!uploadedReferenceUrl || isScoring) return;
+    onError("");
     setIsScoring(true);
     setScorePhase("calculating");
     const wasNull = matchScore === null;
@@ -163,7 +179,7 @@ export function ReCreeshotEditor({
     setIsExporting(true);
     try {
       const rawBlob = await exportStageToBlob(stageInstance, templateConfig.canvasWidth, stageW);
-      const blob = await applyWatermark(rawBlob);
+      const blob = await applyWatermark(rawBlob, showMatchScore ? matchScore : null);
       const file = new File([blob], "recreeshot.jpg", { type: "image/jpeg" });
       const presigned = await getReCreeshotPresignedUrl(file.name, file.type);
       if ("error" in presigned) throw new Error(presigned.error);
@@ -183,33 +199,95 @@ export function ReCreeshotEditor({
 
   return (
     <div className="flex flex-col flex-1">
-      <div className="flex-1 overflow-y-auto" style={{ background: "#F4F3EF" }}>
-        {(selectedPlace || selectedTagIds.length > 0 || selectedTopicIds.length > 0) && (
-          <SelectionStrip
-            selectedPlace={selectedPlace}
-            selectedTagIds={selectedTagIds}
-            selectedTopicIds={selectedTopicIds}
-            tagGroups={tagGroups}
-            topics={topics}
-          />
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden" style={{ background: "#F4F3EF" }}>
+        {(selectedTagIds.length > 0 || selectedTopicIds.length > 0) && (
+          <div className="shrink-0">
+            <SelectionStrip
+              selectedTagIds={selectedTagIds}
+              selectedTopicIds={selectedTopicIds}
+              tagGroups={tagGroups}
+              topics={topics}
+            />
+          </div>
         )}
-        <div className="px-4 py-6">
-          <div ref={containerRef} className="w-full" style={{ boxShadow: "0 4px 28px rgba(0,0,0,0.18)" }}>
-            {stageW > 0 && (
-              <KonvaStage
-                stageW={stageW}
-                stageH={stageH}
-                templateConfig={templateConfig}
-                referenceImg={referenceImg}
-                shotImg={shotImg}
-                referenceLabel={referenceLabel}
-                shotLabel={shotLabel}
-                matchScore={matchScore}
-                showMatchScore={showMatchScore}
-                onStageReady={handleStageReady}
-              />
+        {/* sectionRef: 캔버스 가용 공간 측정 (badge switch 제외) */}
+        <div className="flex-1 min-h-0 flex flex-col px-4 py-3">
+          <div ref={sectionRef} className="flex-1 min-h-0 flex flex-col items-center">
+            <div
+              ref={containerRef}
+              className="relative"
+              style={{
+                width: stageW > 0 ? stageW : undefined,
+                boxShadow: "0 4px 28px rgba(0,0,0,0.18)",
+              }}
+            >
+              {stageW > 0 && (
+                <KonvaStage
+                  stageW={stageW}
+                  stageH={stageH}
+                  templateConfig={templateConfig}
+                  referenceImg={referenceImg}
+                  shotImg={shotImg}
+                  referenceLabel={referenceLabel}
+                  shotLabel={shotLabel}
+                  onStageReady={handleStageReady}
+                />
+              )}
+              {/* HTML match badge — ③④와 동일한 룩 */}
+              {matchScore != null && showMatchScore && stageW > 0 && (
+                <div
+                  className="absolute z-10 pointer-events-none text-xs font-bold px-2.5 py-[3px] rounded-full text-black"
+                  style={{
+                    top: badgeTop,
+                    right: badgeRight,
+                    background: "linear-gradient(to right, #C8FF09, white 150%)",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                  }}
+                >
+                  {Math.round(matchScore)}% Match
+                </div>
+              )}
+            </div>
+            {/* 장소 — 캔버스 바로 아래, 흰 박스 + 라임 윤곽선 */}
+            {selectedPlace && stageW > 0 && (
+              <div
+                className="flex items-center gap-2 bg-brand-sub3 border border-brand rounded-xl px-3 py-2.5 mt-1"
+                style={{ width: stageW }}
+              >
+                <MapPin className="size-4 text-foreground shrink-0" />
+                <span className="text-sm font-medium">{selectedPlace.nameEn ?? selectedPlace.nameKo}</span>
+              </div>
             )}
           </div>
+          {/* BadgeSwitch — shrink-0으로 sectionRef 높이에서 자동 제외 */}
+          {matchScore != null && (
+            <div className="shrink-0 flex justify-end mt-2.5">
+              <button
+                type="button"
+                onClick={() => onShowMatchScoreChange(!showMatchScore)}
+                className="inline-flex items-center gap-2 rounded-full select-none"
+                style={{
+                  background: "rgba(16,18,22,.58)",
+                  backdropFilter: "blur(8px)",
+                  border: "1px solid rgba(255,255,255,.14)",
+                  padding: "5px 9px 5px 11px",
+                }}
+              >
+                <span className="font-bold text-[10.5px] tracking-[.04em] text-white/90">
+                  {showMatchScore ? "Badge on" : "Badge off"}
+                </span>
+                <span
+                  className="relative shrink-0 rounded-full transition-colors"
+                  style={{ width: 34, height: 19, background: showMatchScore ? "#C8FF09" : "rgba(255,255,255,.26)" }}
+                >
+                  <span
+                    className="absolute w-[15px] h-[15px] rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,.3)] transition-[left]"
+                    style={{ top: 2, left: showMatchScore ? 17 : 2 }}
+                  />
+                </span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -273,57 +351,48 @@ export function ReCreeshotEditor({
 // ── SelectionStrip ─────────────────────────────────────────────────────────────
 
 function SelectionStrip({
-  selectedPlace,
   selectedTagIds,
   selectedTopicIds,
   tagGroups,
   topics,
 }: {
-  selectedPlace: PlaceResult | null;
   selectedTagIds: string[];
   selectedTopicIds: string[];
   tagGroups: TagGroup[];
   topics: TopicItem[];
 }) {
   const topicColorMap = computeTopicEffectiveColors(topics);
-  const placeName = selectedPlace?.nameEn ?? selectedPlace?.nameKo ?? null;
 
   return (
-    <div className="px-4 pt-4 pb-0">
+    <div className="px-4 pt-3 pb-0">
       <div className="flex flex-wrap gap-1.5">
-        {placeName && (
-          <span className="pill-badge bg-white/80 text-foreground shadow-sm">
-            <MapPin className="size-3 shrink-0 text-muted-foreground" />
-            {placeName}
-          </span>
-        )}
-        {selectedTopicIds.map((id) => {
-          const colors = topicColorMap.get(id);
-          const topic = topics.find((t) => t.id === id);
-          if (!topic || !colors) return null;
-          const bg = colors.hex2
-            ? `linear-gradient(${colors.dir}, ${colors.hex}, ${colors.hex2} ${colors.stop}%)`
-            : colors.hex;
-          return (
-            <span key={id} className="pill-badge shadow-sm" style={{ background: bg, color: colors.textHex }}>
-              {topic.nameEn}
-            </span>
-          );
-        })}
-        {selectedTagIds.map((id) => {
-          const groupData = tagGroups.find((g) => g.tags.some((t) => t.id === id));
-          const tag = groupData?.tags.find((t) => t.id === id);
-          if (!tag || !groupData) return null;
-          const c = resolveTagColors(tag, groupData);
-          const bg = c.colorHex2
-            ? `linear-gradient(${c.gradientDir}, ${c.colorHex}, ${c.colorHex2} ${c.gradientStop}%)`
-            : c.colorHex;
-          return (
-            <span key={id} className="pill-badge shadow-sm" style={{ background: bg, color: c.textColorHex }}>
-              {tag.name}
-            </span>
-          );
-        })}
+          {selectedTopicIds.map((id) => {
+            const colors = topicColorMap.get(id);
+            const topic = topics.find((t) => t.id === id);
+            if (!topic || !colors) return null;
+            const bg = colors.hex2
+              ? `linear-gradient(${colors.dir}, ${colors.hex}, ${colors.hex2} ${colors.stop}%)`
+              : colors.hex;
+            return (
+              <span key={id} className="px-2.5 py-0.5 rounded-full text-xs font-semibold" style={{ background: bg, color: colors.textHex }}>
+                {topic.nameEn}
+              </span>
+            );
+          })}
+          {selectedTagIds.map((id) => {
+            const groupData = tagGroups.find((g) => g.tags.some((t) => t.id === id));
+            const tag = groupData?.tags.find((t) => t.id === id);
+            if (!tag || !groupData) return null;
+            const c = resolveTagColors(tag, groupData);
+            const bg = c.colorHex2
+              ? `linear-gradient(${c.gradientDir}, ${c.colorHex}, ${c.colorHex2} ${c.gradientStop}%)`
+              : c.colorHex;
+            return (
+              <span key={id} className="px-2.5 py-0.5 rounded-full text-xs font-semibold" style={{ background: bg, color: c.textColorHex }}>
+                {tag.name}
+              </span>
+            );
+          })}
       </div>
     </div>
   );
