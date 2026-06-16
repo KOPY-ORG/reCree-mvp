@@ -62,7 +62,7 @@ export default async function TopicDetailPage({
             },
           },
         },
-        { take: 20, orderBy: { createdAt: "desc" } }
+        { orderBy: { createdAt: "desc" } }
       ),
       prisma.tagGroupConfig.findMany({
         select: {
