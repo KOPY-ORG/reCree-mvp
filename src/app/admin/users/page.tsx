@@ -32,7 +32,12 @@ export default async function UsersPage({
         email: true,
         nickname: true,
         createdAt: true,
-        _count: { select: { reCreeshots: true, saves: true } },
+        _count: {
+          select: {
+            reCreeshots: { where: { status: { not: "DELETED" } } },
+            saves: true,
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * PAGE_SIZE,
