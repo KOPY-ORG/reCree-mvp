@@ -12,6 +12,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import {
   addComment,
   deleteComment,
@@ -51,37 +52,6 @@ function formatRelativeTime(date: Date): string {
   const d = Math.floor(h / 24);
   if (d < 7) return `${d}d ago`;
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-// ─── 인라인 아바타 ────────────────────────────────────────────────────────────
-
-function CommentAvatar({
-  nickname,
-  profileImageUrl,
-}: {
-  nickname: string | null;
-  profileImageUrl: string | null;
-}) {
-  const [imgError, setImgError] = useState(false);
-  const initial = nickname ? nickname[0].toUpperCase() : "?";
-
-  if (profileImageUrl && !imgError) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={profileImageUrl}
-        alt={nickname ?? "User"}
-        className="size-8 rounded-full object-cover shrink-0"
-        onError={() => setImgError(true)}
-      />
-    );
-  }
-
-  return (
-    <div className="size-8 rounded-full bg-muted flex items-center justify-center shrink-0 text-xs font-medium text-muted-foreground">
-      {initial}
-    </div>
-  );
 }
 
 // ─── PostComments ─────────────────────────────────────────────────────────────
@@ -216,9 +186,10 @@ export function PostComments({
           ) : (
             comments.map((comment) => (
               <div key={comment.id} className="flex gap-2.5">
-                <CommentAvatar
-                  nickname={comment.user.nickname}
-                  profileImageUrl={comment.user.profileImageUrl}
+                <UserAvatar
+                  imageUrl={comment.user.profileImageUrl}
+                  name={comment.user.nickname}
+                  size={32}
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
