@@ -7,6 +7,7 @@ interface DiscoverSheetHeaderProps {
   onContentTabChange: (tab: "hot" | "list") => void;
   placeCount: number;
   isResultMode: boolean;
+  isSavedView?: boolean;
   query: string;
   onExitResultMode: () => void;
 }
@@ -16,12 +17,18 @@ export function DiscoverSheetHeader({
   onContentTabChange,
   placeCount,
   isResultMode,
+  isSavedView = false,
   query,
   onExitResultMode,
 }: DiscoverSheetHeaderProps) {
   return (
-    <div className={`flex items-center px-4 ${isResultMode ? "justify-between pt-2 pb-4" : "justify-center pt-1 pb-3"}`}>
-      {isResultMode ? (
+    <div className={`flex items-center px-4 ${isResultMode || isSavedView ? "justify-between pt-2 pb-4" : "justify-center pt-1 pb-3"}`}>
+      {isSavedView ? (
+        <>
+          <span className="text-lg font-semibold text-foreground">My Maps</span>
+          <span className="text-sm text-muted-foreground">{placeCount} places</span>
+        </>
+      ) : isResultMode ? (
         <>
           <div className="flex items-center min-w-0">
             <span className="text-lg font-semibold text-foreground truncate">{query}</span>

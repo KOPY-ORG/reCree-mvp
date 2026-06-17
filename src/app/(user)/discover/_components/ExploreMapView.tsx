@@ -748,6 +748,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
               onContentTabChange={handleContentTabChange}
               placeCount={filteredPlaces.length}
               isResultMode={isResultMode}
+              isSavedView={isSavedView}
               query={query}
               onExitResultMode={exitResultMode}
             />
@@ -779,11 +780,13 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
               ))}
             </div>
           )
-        ) : (contentTab === "list" || isResultMode) ? (
-          isResultMode && allVisiblePosts.length === 0 ? (
+        ) : (contentTab === "list" || isResultMode || isSavedView) ? (
+          allVisiblePosts.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
-              <p className="text-sm font-semibold text-foreground">No places match your filters</p>
-              <p className="text-xs text-muted-foreground mt-1.5">Try removing a filter.</p>
+              <p className="text-sm font-semibold text-foreground">
+                {isSavedView ? "No saved places yet" : "No places match your filters"}
+              </p>
+              {!isSavedView && <p className="text-xs text-muted-foreground mt-1.5">Try removing a filter.</p>}
             </div>
           ) : (
             <div className="px-4 pt-2 pb-4 space-y-2">
