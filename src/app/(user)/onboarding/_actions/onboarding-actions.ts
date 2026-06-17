@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { checkNicknameAvailable } from "@/lib/actions/user-actions";
+import { nicknameSchema } from "@/lib/validators/user";
 
 export { checkNicknameAvailable };
 
@@ -18,17 +19,17 @@ export async function completeOnboarding({
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const trimmedNickname = nickname.trim();
+  const nickResult = nicknameSchema.safeParse(nickname);
+  if (!nickResult.success) return { error: nickResult.error.issues[0]?.message ?? "Invalid nickname." };
+  const trimmedNickname = nickResult.data;
 
-  if (trimmedNickname) {
-    const available = await checkNicknameAvailable(trimmedNickname, user.id);
-    if (!available) return { error: "This nickname is already taken." };
-  }
+  const available = await checkNicknameAvailable(trimmedNickname, user.id);
+  if (!available) return { error: "This nickname is already taken." };
 
   await prisma.user.update({
     where: { id: user.id },
     data: {
-      nickname: trimmedNickname || null,
+      nickname: trimmedNickname,
       bio: bio.trim() || null,
       termsAcceptedAt: new Date(),
     },

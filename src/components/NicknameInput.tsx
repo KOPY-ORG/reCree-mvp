@@ -27,7 +27,7 @@ export function NicknameInput({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          maxLength={30}
+          maxLength={20}
           className={`w-full text-sm bg-transparent border rounded-lg px-3 py-2.5 pr-9 outline-none transition-colors placeholder:text-muted-foreground/50 ${
             status === "taken"
               ? "border-destructive focus:border-destructive"

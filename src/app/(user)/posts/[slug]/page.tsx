@@ -15,6 +15,9 @@ import { PostMetaBar } from "./_components/PostMetaBar";
 import { getCurrentUser } from "@/lib/auth";
 import type { SourcePlatform } from "@/types";
 import { PostReCreeshotSection } from "./_components/PostReCreeshotSection";
+import { getPostDetail } from "@/lib/post-detail-query";
+import { PostActionBar } from "./_components/PostActionBar";
+import { PostComments } from "./_components/PostComments";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -90,103 +93,17 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
   const { preview } = await searchParams;
   const isPreview = preview === "1";
 
-  const [post, tagGroupConfigs] = await Promise.all([
-    prisma.post.findUnique({
-    where: { slug },
-    include: {
-      postTopics: {
-        where: { isVisible: true },
-        orderBy: [{ topic: { level: "asc" } }, { displayOrder: "asc" }],
-        include: {
-          topic: {
-            select: {
-              id: true,
-              nameEn: true,
-              slug: true,
-              level: true,
-              colorHex: true,
-              colorHex2: true,
-              gradientDir: true,
-              gradientStop: true,
-              textColorHex: true,
-              parent: {
-                select: {
-                  colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true,
-                  parent: {
-                    select: {
-                      colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true,
-                      parent: { select: { colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true } },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-      postTags: {
-        where: { isVisible: true },
-        orderBy: { displayOrder: "asc" },
-        include: {
-          tag: {
-            select: {
-              id: true,
-              name: true,
-              group: true,
-              colorHex: true,
-              colorHex2: true,
-              textColorHex: true,
-            },
-          },
-        },
-      },
-      postImages: {
-        orderBy: { sortOrder: "asc" },
-      },
-      postSources: {
-        orderBy: { sortOrder: "asc" },
-        select: {
-          id: true,
-          url: true,
-          sourceType: true,
-          platform: true,
-          sourceDetail: true,
-          isOriginalLink: true,
-        },
-      },
-      postPlaces: {
-        select: {
-          context: true,
-          vibe: true,
-          mustTry: true,
-          tip: true,
-          insightEn: true,
-          place: {
-            select: {
-              id: true,
-              nameEn: true,
-              nameKo: true,
-              addressEn: true,
-              latitude: true,
-              longitude: true,
-              googleMapsUrl: true,
-              naverMapsUrl: true,
-              streetViewUrl: true,
-              phone: true,
-              operatingHours: true,
-              gettingThere: true,
-            },
-          },
-        },
-      },
-    },
-  }),
+  const [currentUser, tagGroupConfigs] = await Promise.all([
+    getCurrentUser(),
     prisma.tagGroupConfig.findMany({
       select: { group: true, displayLabel: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true },
     }),
   ]);
 
-  if (!post || (!isPreview && post.status !== "PUBLISHED")) notFound();
+  const result = await getPostDetail(slug, { userId: currentUser?.id, isPreview });
+  if (!result) notFound();
+
+  const { post, comments, isSaved, isLikedByMe } = result;
 
   if (!isPreview) {
     after(async () => {
@@ -222,12 +139,6 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
     ...post.postTags.filter(({ tag }) => tag.group !== K_MEDIA_GROUP).map(({ tag }) => ({ text: tag.name, ...resolveTagColors(tag, configMap.get(tag.group)) })),
   ];
 
-  const currentUser = await getCurrentUser();
-  const isSaved = currentUser
-    ? !!(await prisma.save.findUnique({
-        where: { userId_targetType_targetId: { userId: currentUser.id, targetType: "POST", targetId: post.id } },
-      }))
-    : false;
   const spotInsight = post.postPlaces[0] ?? null;
   const insightEn = spotInsight?.insightEn as {
     context?: string;
@@ -316,6 +227,14 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
           {post.titleEn}
         </h1>
       </div>
+
+      {/* 좋아요 · 댓글 */}
+      <PostActionBar
+        postId={post.id}
+        initialLiked={isLikedByMe}
+        initialLikeCount={post.likeCount}
+        commentCount={post.commentCount}
+      />
 
       {/* Spot Insight */}
       {spotInsight && (
@@ -421,8 +340,8 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
       {/* Photo Credits */}
       <ImageCreditSection
         credits={post.postImages
-          .filter((img) => img.creditText)
-          .map((img) => img.creditText!)}
+          .filter((img): img is typeof img & { creditText: string } => !!img.creditText)
+          .map((img) => img.creditText)}
       />
 
       {/* 출처 */}
@@ -431,6 +350,17 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
           Source: {post.source}
         </p>
       )}
+
+      {/* 댓글 섹션 */}
+      <PostComments
+        postId={post.id}
+        initialComments={comments}
+        initialCommentCount={post.commentCount}
+        currentUserId={currentUser?.id ?? null}
+        currentUserRole={currentUser?.role ?? null}
+        currentUserNickname={currentUser?.nickname ?? null}
+        currentUserProfileImageUrl={currentUser?.profileImageUrl ?? null}
+      />
     </article>
   );
 }

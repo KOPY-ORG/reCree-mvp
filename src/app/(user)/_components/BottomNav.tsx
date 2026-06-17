@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { House, Camera, User, MapPinned, Map } from "lucide-react";
-import { useState } from "react";
+import { UserAvatar } from "@/components/ui/user-avatar";
 
 const TABS = [
   { label: "Home", icon: House, href: "/" },
@@ -18,43 +18,6 @@ interface Props {
   profileImageUrl: string | null;
 }
 
-function MeAvatar({
-  isLoggedIn,
-  profileImageUrl,
-  active,
-}: {
-  isLoggedIn: boolean;
-  profileImageUrl: string | null;
-  active: boolean;
-}) {
-  const [imgError, setImgError] = useState(false);
-
-  if (isLoggedIn && profileImageUrl && !imgError) {
-    return (
-      <div
-        className={`size-6 rounded-full overflow-hidden shrink-0 ${
-          active ? "ring-2 ring-foreground ring-offset-1" : ""
-        }`}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={profileImageUrl}
-          alt="Profile"
-          className="size-6 object-cover"
-          onError={() => setImgError(true)}
-        />
-      </div>
-    );
-  }
-
-  return (
-    <User
-      className={`size-5 transition-colors ${
-        active ? "text-foreground" : "text-muted-foreground/50"
-      }`}
-    />
-  );
-}
 
 export function BottomNav({ isLoggedIn, profileImageUrl }: Props) {
   const pathname = usePathname();
@@ -76,11 +39,19 @@ export function BottomNav({ isLoggedIn, profileImageUrl }: Props) {
           >
             <div className="relative flex flex-col items-center">
               {isMe ? (
-                <MeAvatar
-                  isLoggedIn={isLoggedIn}
-                  profileImageUrl={profileImageUrl}
-                  active={active}
-                />
+                isLoggedIn ? (
+                  <UserAvatar
+                    imageUrl={profileImageUrl}
+                    size={24}
+                    className={active ? "ring-2 ring-foreground ring-offset-1" : ""}
+                  />
+                ) : (
+                  <User
+                    className={`size-5 transition-colors ${
+                      active ? "text-foreground" : "text-muted-foreground/50"
+                    }`}
+                  />
+                )
               ) : (
                 <Icon
                   className={`size-5 transition-colors ${
