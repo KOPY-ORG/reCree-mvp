@@ -17,6 +17,7 @@ import type { SourcePlatform } from "@/types";
 import { PostReCreeshotSection } from "./_components/PostReCreeshotSection";
 import { getPostDetail } from "@/lib/post-detail-query";
 import { PostActionBar } from "./_components/PostActionBar";
+import { PostComments } from "./_components/PostComments";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -349,6 +350,17 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
           Source: {post.source}
         </p>
       )}
+
+      {/* 댓글 섹션 */}
+      <PostComments
+        postId={post.id}
+        initialComments={comments}
+        initialCommentCount={post.commentCount}
+        currentUserId={currentUser?.id ?? null}
+        currentUserRole={currentUser?.role ?? null}
+        currentUserNickname={currentUser?.nickname ?? null}
+        currentUserProfileImageUrl={currentUser?.profileImageUrl ?? null}
+      />
     </article>
   );
 }
