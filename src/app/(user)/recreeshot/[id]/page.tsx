@@ -80,7 +80,7 @@ export default async function HallDetailPage({
   const shot = await prisma.reCreeshot.findUnique({
     where: { id },
     include: {
-      user: { select: { id: true, email: true, nickname: true, profileImageUrl: true } },
+      user: { select: { id: true, nickname: true, profileImageUrl: true } },
       reCreeshotTopics: {
         include: {
           topic: {
