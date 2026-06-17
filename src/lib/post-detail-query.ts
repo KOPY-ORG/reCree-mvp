@@ -1,15 +1,7 @@
 import { prisma } from "@/lib/prisma";
+import type { CommentData } from "@/app/(user)/_actions/post-interaction-actions";
 
-export type PostComment = {
-  id: string;
-  body: string;
-  createdAt: Date;
-  user: {
-    id: string;
-    nickname: string | null;
-    profileImageUrl: string | null;
-  };
-};
+export type { CommentData as PostComment };
 
 export async function getPostDetail(
   slug: string,

@@ -25,7 +25,7 @@ export type CommentAuthor = {
 export type CommentData = {
   id: string;
   body: string;
-  createdAt: Date;
+  createdAt: Date | string;
   user: CommentAuthor;
 };
 

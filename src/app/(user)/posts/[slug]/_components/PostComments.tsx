@@ -16,22 +16,13 @@ import { UserAvatar } from "@/components/ui/user-avatar";
 import {
   addComment,
   deleteComment,
+  type CommentData,
 } from "@/app/(user)/_actions/post-interaction-actions";
 import { useToast } from "@/app/(user)/_hooks/useToast";
-import type { PostComment } from "@/lib/post-detail-query";
-
-// CommentItem: 실제 + optimistic(temp-*) 항목 공통 타입.
-// createdAt은 RSC 직렬화로 string으로 올 수 있어 Date | string 허용.
-type CommentItem = {
-  id: string;
-  body: string;
-  createdAt: Date | string;
-  user: { id: string; nickname: string | null; profileImageUrl: string | null };
-};
 
 interface Props {
   postId: string;
-  initialComments: PostComment[];
+  initialComments: CommentData[];
   initialCommentCount: number;
   currentUserId: string | null;
   currentUserRole: string | null;
@@ -65,7 +56,7 @@ export function PostComments({
   currentUserNickname,
   currentUserProfileImageUrl,
 }: Props) {
-  const [comments, setComments] = useState<CommentItem[]>(initialComments);
+  const [comments, setComments] = useState<CommentData[]>(initialComments);
   const [commentCount, setCommentCount] = useState(initialCommentCount);
   const [body, setBody] = useState("");
   const [pending, startTransition] = useTransition();
@@ -81,7 +72,7 @@ export function PostComments({
     if (!trimmedBody) return;
 
     const tempId = `temp-${Date.now()}`;
-    const optimistic: CommentItem = {
+    const optimistic: CommentData = {
       id: tempId,
       body: trimmedBody,
       createdAt: new Date(),
@@ -154,7 +145,7 @@ export function PostComments({
 
   // ── 권한 판정 ─────────────────────────────────────────────────────────────
 
-  function canDelete(comment: CommentItem) {
+  function canDelete(comment: CommentData) {
     return (
       !comment.id.startsWith("temp-") &&
       !!currentUserId &&

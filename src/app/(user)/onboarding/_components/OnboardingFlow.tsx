@@ -9,12 +9,10 @@ import { NicknameInput } from "@/components/NicknameInput";
 
 export function OnboardingFlow({
   emailPrefix,
-  isExistingUser,
   existingNickname,
   existingBio,
 }: {
   emailPrefix: string;
-  isExistingUser: boolean;
   existingNickname: string;
   existingBio: string;
 }) {
@@ -28,7 +26,7 @@ export function OnboardingFlow({
 
   function handleAgree() {
     if (!agreed) return;
-    if (isExistingUser && existingNickname) {
+    if (existingNickname) {
       startTransition(async () => {
         const result = await completeOnboarding({ nickname: existingNickname, bio: existingBio });
         if (result?.error) setSubmitError(result.error);
@@ -60,7 +58,7 @@ export function OnboardingFlow({
       </div>
 
       {/* 스텝 인디케이터 (신규 회원만) */}
-      {!isExistingUser && (
+      {!existingNickname && (
         <div className="flex items-center justify-center gap-2 pb-8">
           <div className={`size-2 rounded-full transition-colors ${step === 1 ? "bg-foreground" : "bg-foreground/20"}`} />
           <div className={`size-2 rounded-full transition-colors ${step === 2 ? "bg-foreground" : "bg-foreground/20"}`} />

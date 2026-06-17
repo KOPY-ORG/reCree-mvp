@@ -8,12 +8,10 @@ export default async function OnboardingPage() {
   if (user.termsAcceptedAt) redirect("/");
 
   const emailPrefix = user.email.split("@")[0];
-  const isExistingUser = !!(user.nickname || user.bio);
 
   return (
     <OnboardingFlow
       emailPrefix={emailPrefix}
-      isExistingUser={isExistingUser}
       existingNickname={user.nickname ?? ""}
       existingBio={user.bio ?? ""}
     />
