@@ -1,8 +1,16 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Trash2 } from "lucide-react";
+import Link from "next/link";
+import { LogIn, Trash2 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import {
   addComment,
   deleteComment,
@@ -90,6 +98,7 @@ export function PostComments({
   const [commentCount, setCommentCount] = useState(initialCommentCount);
   const [body, setBody] = useState("");
   const [pending, startTransition] = useTransition();
+  const [showLoginDialog, setShowLoginDialog] = useState(false);
   const { toast, showToast } = useToast();
 
   const trimmedBody = body.trim();
@@ -180,24 +189,20 @@ export function PostComments({
   // ── 렌더 ──────────────────────────────────────────────────────────────────
 
   return (
-    <section id="comments" className="mx-4 mt-3 mb-2">
+    <section id="comments" className="px-4 mt-8 mb-6">
+      <h2 className="text-base font-bold mb-3">
+        Comments
+        {commentCount > 0 && (
+          <span className="font-normal text-muted-foreground ml-1">
+            ({commentCount})
+          </span>
+        )}
+      </h2>
       <div className="rounded-2xl border border-secondary bg-white overflow-hidden">
-        {/* 헤더 */}
-        <div className="px-4 pt-4 pb-3">
-          <p className="text-sm font-bold">
-            Comments{" "}
-            {commentCount > 0 && (
-              <span className="font-normal text-muted-foreground">
-                ({commentCount})
-              </span>
-            )}
-          </p>
-        </div>
-
         {/* 댓글 목록 */}
-        <div className="px-4 pb-2 space-y-4">
+        <div className="px-4 py-4 space-y-4">
           {comments.length === 0 ? (
-            <p className="text-sm text-muted-foreground pb-2">
+            <p className="text-sm text-muted-foreground">
               Be the first to comment
             </p>
           ) : (
@@ -237,7 +242,7 @@ export function PostComments({
         </div>
 
         {/* 입력창 */}
-        <div className="px-4 pb-4 pt-3 border-t border-border/30">
+        <div className="px-4 pb-4 pt-3">
           {currentUserId ? (
             <>
               <Textarea
@@ -260,9 +265,15 @@ export function PostComments({
               </div>
             </>
           ) : (
-            <p className="text-sm text-muted-foreground text-center py-1">
-              Sign in to comment
-            </p>
+            <div className="flex justify-center py-1">
+              <button
+                type="button"
+                onClick={() => setShowLoginDialog(true)}
+                className="px-5 py-2 rounded-full text-sm font-semibold bg-brand text-black hover:opacity-90 active:scale-95 transition-all"
+              >
+                Sign in to comment
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -272,6 +283,24 @@ export function PostComments({
           {toast.message}
         </div>
       )}
+
+      <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
+        <DialogContent className="max-w-xs rounded-2xl text-center">
+          <DialogHeader className="items-center gap-3">
+            <LogIn className="size-8 text-muted-foreground" strokeWidth={1.5} />
+            <DialogTitle>Sign in to comment</DialogTitle>
+            <DialogDescription>
+              Join the conversation and share your thoughts.
+            </DialogDescription>
+          </DialogHeader>
+          <Link
+            href="/login"
+            className="mt-2 w-full py-2.5 rounded-full bg-brand text-black text-sm font-semibold text-center block transition-opacity hover:opacity-80"
+          >
+            Sign in
+          </Link>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

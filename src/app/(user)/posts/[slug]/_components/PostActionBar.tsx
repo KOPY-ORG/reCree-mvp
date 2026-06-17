@@ -61,7 +61,7 @@ export function PostActionBar({
           className="flex items-center gap-1.5 transition-colors disabled:opacity-60"
         >
           <Heart
-            className="size-5"
+            className="size-5 text-muted-foreground"
             strokeWidth={1.5}
             style={liked ? { fill: "#ef4444", stroke: "#ef4444" } : undefined}
           />
