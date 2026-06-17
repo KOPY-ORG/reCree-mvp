@@ -135,6 +135,8 @@ model User {
   reCreeshots     ReCreeshot[]
   saves           Save[]
   reCreeshotLikes ReCreeshotLike[]
+  postLikes       PostLike[]
+  comments        Comment[]
   reports         Report[]
   dailyActivities DailyActiveUser[]
   topicFollows    TopicFollow[]
@@ -215,6 +217,8 @@ model Post {
   recreePhotoUrl String? // 리크리샷 기준 이미지 (4:5, 관리자 설정)
   viewCount      Int        @default(0)
   saveCount      Int        @default(0)
+  likeCount      Int        @default(0)
+  commentCount   Int        @default(0)
   authorId       String?    @db.Uuid
   translatedAt   DateTime?
   publishedAt    DateTime?
@@ -229,6 +233,8 @@ model Post {
   postSources PostSource[]
   homeBanners HomeBanner[]
   reports     Report[]
+  likes       PostLike[]
+  comments    Comment[]
 
   @@index([saveCount])
 }
@@ -458,6 +464,32 @@ model ReCreeshotLike {
   reCreeshot ReCreeshot @relation(fields: [reCreeshotId], references: [id], onDelete: Cascade)
 
   @@unique([userId, reCreeshotId])
+}
+
+model PostLike {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  postId    String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@index([postId])
+}
+
+model Comment {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  postId    String   @db.Uuid
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt])
 }
 
 // ─── 기타 모델 ────────────────────────────────────────────────────────────────
