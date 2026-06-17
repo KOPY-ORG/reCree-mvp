@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { checkNicknameAvailable } from "@/lib/actions/user-actions";
+import { nicknameSchema } from "@/lib/validators/user";
 
 const extractProfileImageStoragePath = makeStorageExtractor("profile-images");
 
@@ -23,11 +24,12 @@ export async function updateProfile(data: {
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
-  const trimmedNickname = data.nickname.trim();
-  if (trimmedNickname) {
-    const available = await checkNicknameAvailable(trimmedNickname, user.id);
-    if (!available) return { error: "This nickname is already taken." };
-  }
+  const nickResult = nicknameSchema.safeParse(data.nickname);
+  if (!nickResult.success) return { error: nickResult.error.issues[0]?.message ?? "Invalid nickname." };
+  const trimmedNickname = nickResult.data;
+
+  const available = await checkNicknameAvailable(trimmedNickname, user.id);
+  if (!available) return { error: "This nickname is already taken." };
 
   // 기존 프로필 이미지 URL 조회 (변경 시 Storage 정리용)
   const existingUser = await prisma.user.findUnique({
@@ -39,7 +41,7 @@ export async function updateProfile(data: {
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        nickname: trimmedNickname || null,
+        nickname: trimmedNickname,
         bio: data.bio.trim() || null,
         profileImageUrl: data.profileImageUrl,
       },
