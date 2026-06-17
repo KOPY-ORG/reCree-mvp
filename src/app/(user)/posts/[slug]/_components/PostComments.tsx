@@ -11,6 +11,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   addComment,
   deleteComment,
@@ -99,6 +100,7 @@ export function PostComments({
   const [body, setBody] = useState("");
   const [pending, startTransition] = useTransition();
   const [showLoginDialog, setShowLoginDialog] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const { toast, showToast } = useToast();
 
   const trimmedBody = body.trim();
@@ -156,7 +158,13 @@ export function PostComments({
   // ── 삭제 ──────────────────────────────────────────────────────────────────
 
   function handleDelete(commentId: string) {
-    if (!window.confirm("Delete this comment?")) return;
+    setPendingDeleteId(commentId);
+  }
+
+  function executeDelete() {
+    if (!pendingDeleteId) return;
+    const commentId = pendingDeleteId;
+    setPendingDeleteId(null);
 
     const prevComments = comments;
     const prevCount = commentCount;
@@ -283,6 +291,16 @@ export function PostComments({
           {toast.message}
         </div>
       )}
+
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        title="Delete comment?"
+        description="This can't be undone."
+        confirmLabel="Delete"
+        destructive
+        onConfirm={executeDelete}
+        onCancel={() => setPendingDeleteId(null)}
+      />
 
       <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
         <DialogContent className="max-w-xs rounded-2xl text-center">
