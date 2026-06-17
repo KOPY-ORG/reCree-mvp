@@ -16,6 +16,7 @@ import { getCurrentUser } from "@/lib/auth";
 import type { SourcePlatform } from "@/types";
 import { PostReCreeshotSection } from "./_components/PostReCreeshotSection";
 import { getPostDetail } from "@/lib/post-detail-query";
+import { PostActionBar } from "./_components/PostActionBar";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -225,6 +226,14 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
           {post.titleEn}
         </h1>
       </div>
+
+      {/* 좋아요 · 댓글 */}
+      <PostActionBar
+        postId={post.id}
+        initialLiked={isLikedByMe}
+        initialLikeCount={post.likeCount}
+        commentCount={post.commentCount}
+      />
 
       {/* Spot Insight */}
       {spotInsight && (
