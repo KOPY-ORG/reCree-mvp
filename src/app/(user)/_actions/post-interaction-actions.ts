@@ -148,13 +148,20 @@ export async function deleteComment(
   if (!user) return { error: "unauthenticated" };
 
   try {
-    const comment = await prisma.comment.findUnique({
-      where: { id: parsed.data },
-      select: { userId: true, postId: true },
-    });
+    const [comment, actor] = await Promise.all([
+      prisma.comment.findUnique({
+        where: { id: parsed.data },
+        select: { userId: true, postId: true },
+      }),
+      prisma.user.findUnique({
+        where: { id: user.id },
+        select: { role: true },
+      }),
+    ]);
 
     if (!comment) return { error: "not_found" };
-    if (comment.userId !== user.id) return { error: "forbidden" };
+    const isModerator = actor?.role === "ADMIN" || actor?.role === "EDITOR";
+    if (comment.userId !== user.id && !isModerator) return { error: "forbidden" };
 
     await prisma.$transaction([
       prisma.comment.delete({ where: { id: parsed.data } }),
