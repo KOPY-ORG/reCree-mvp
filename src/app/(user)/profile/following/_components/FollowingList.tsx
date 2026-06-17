@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect, useRef } from "react";
 import Link from "next/link";
 import { resolveTopicColors, labelBackground } from "@/lib/post-labels";
 import { unfollowTopic } from "@/app/(user)/_actions/follow-actions";
@@ -39,7 +39,7 @@ export function FollowingList({ initialFollows }: FollowingListProps) {
           You&apos;re not following any topics yet.
         </p>
         <Link
-          href="/discover"
+          href="/topics"
           className="inline-block px-4 py-2 bg-brand text-black font-semibold rounded-full text-sm"
         >
           Discover topics
@@ -71,8 +71,23 @@ function FollowRow({
   isPending: boolean;
   onUnfollow: () => void;
 }) {
+  const [confirming, setConfirming] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resolved = resolveTopicColors(item.topic);
   const background = labelBackground({ text: item.topic.nameEn, ...resolved });
+
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
+  function handleClick() {
+    if (!confirming) {
+      setConfirming(true);
+      timerRef.current = setTimeout(() => setConfirming(false), 2000);
+      return;
+    }
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setConfirming(false);
+    onUnfollow();
+  }
 
   return (
     <li className="flex items-center gap-3 px-4 py-3">
@@ -91,11 +106,15 @@ function FollowRow({
 
       <button
         type="button"
-        onClick={onUnfollow}
+        onClick={handleClick}
         disabled={isPending}
-        className="shrink-0 px-3 py-1.5 text-sm font-medium border border-border rounded-full disabled:opacity-50"
+        className={`shrink-0 px-3 py-1.5 text-sm font-medium rounded-full transition-colors disabled:opacity-50 ${
+          confirming
+            ? "border border-destructive text-destructive bg-destructive/5"
+            : "border border-border"
+        }`}
       >
-        {isPending ? "..." : "Following"}
+        {isPending ? "..." : confirming ? "Unfollow?" : "Following"}
       </button>
     </li>
   );

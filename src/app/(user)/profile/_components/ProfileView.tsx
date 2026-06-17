@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -50,7 +51,6 @@ export function ProfileView({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const initial = email[0].toUpperCase();
   const displayName = nickname || email.split("@")[0];
   const activeRecreeshotCount = recreeshots.filter(
     (s) => s.status === "ACTIVE" || s.status === "REPORTED"
@@ -86,18 +86,11 @@ export function ProfileView({
       <div className="px-4 pt-4">
         {/* 아바타 + 통계 */}
         <div className="flex items-center justify-between mb-6">
-          <div className="size-24 rounded-full bg-brand flex items-center justify-center text-black text-3xl font-bold shrink-0 overflow-hidden">
-            {profileImageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={profileImageUrl}
-                alt="Profile"
-                className="size-24 object-cover"
-              />
-            ) : (
-              initial
-            )}
-          </div>
+          <UserAvatar
+            imageUrl={profileImageUrl}
+            name={nickname ?? email}
+            size={96}
+          />
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
               <span className="font-bold text-lg">{activeRecreeshotCount}</span>

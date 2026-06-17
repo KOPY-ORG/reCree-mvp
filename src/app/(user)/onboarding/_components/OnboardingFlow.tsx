@@ -9,10 +9,12 @@ import { NicknameInput } from "@/components/NicknameInput";
 
 export function OnboardingFlow({
   emailPrefix,
-  isExistingUser,
+  existingNickname,
+  existingBio,
 }: {
   emailPrefix: string;
-  isExistingUser: boolean;
+  existingNickname: string;
+  existingBio: string;
 }) {
   const [step, setStep] = useState<1 | 2>(1);
   const [agreed, setAgreed] = useState(false);
@@ -24,9 +26,10 @@ export function OnboardingFlow({
 
   function handleAgree() {
     if (!agreed) return;
-    if (isExistingUser) {
+    if (existingNickname) {
       startTransition(async () => {
-        await completeOnboarding({ nickname: "", bio: "" });
+        const result = await completeOnboarding({ nickname: existingNickname, bio: existingBio });
+        if (result?.error) setSubmitError(result.error);
       });
     } else {
       setStep(2);
@@ -55,7 +58,7 @@ export function OnboardingFlow({
       </div>
 
       {/* 스텝 인디케이터 (신규 회원만) */}
-      {!isExistingUser && (
+      {!existingNickname && (
         <div className="flex items-center justify-center gap-2 pb-8">
           <div className={`size-2 rounded-full transition-colors ${step === 1 ? "bg-foreground" : "bg-foreground/20"}`} />
           <div className={`size-2 rounded-full transition-colors ${step === 2 ? "bg-foreground" : "bg-foreground/20"}`} />
@@ -104,6 +107,10 @@ export function OnboardingFlow({
                 I have read and agree to the Terms of Service and Privacy Policy.
               </span>
             </button>
+
+            {submitError && (
+              <p className="mb-4 text-sm text-destructive text-center">{submitError}</p>
+            )}
 
             <button
               type="button"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { X } from "lucide-react";
 import { ImageCropOverlay } from "../ImageCropOverlay";
 import { getTemplateConfig } from "./template-config";
@@ -185,22 +185,26 @@ export function PhotoPlacer({
     cropRatio: number;
   } | null>(null);
 
+  const referenceInputRef = useRef<HTMLInputElement>(null);
+  const shotInputRef = useRef<HTMLInputElement>(null);
+
   const canProceed = !!shotPreviewUrl;
   const photoCount = (referencePreviewUrl ? 1 : 0) + (shotPreviewUrl ? 1 : 0);
   const remaining = 2 - photoCount;
 
   function openFilePicker(type: "reference" | "shot") {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/jpeg,image/png,image/webp";
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        const cropRatio = getSlotCropRatio(templateId, type === "reference" ? 0 : 1);
-        setPendingCrop({ file, type, cropRatio });
-      }
-    };
-    input.click();
+    const ref = type === "reference" ? referenceInputRef : shotInputRef;
+    if (!ref.current) return;
+    ref.current.value = "";
+    ref.current.click();
+  }
+
+  function handleFileChange(type: "reference" | "shot", e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) {
+      const cropRatio = getSlotCropRatio(templateId, type === "reference" ? 0 : 1);
+      setPendingCrop({ file, type, cropRatio });
+    }
   }
 
   function handleCropConfirm(croppedFile: File) {
@@ -233,6 +237,22 @@ export function PhotoPlacer({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1, background: "#F4F3EF" }}>
+      <input
+        ref={referenceInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="sr-only"
+        tabIndex={-1}
+        onChange={(e) => handleFileChange("reference", e)}
+      />
+      <input
+        ref={shotInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="sr-only"
+        tabIndex={-1}
+        onChange={(e) => handleFileChange("shot", e)}
+      />
       <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px 8px" }}>
 
         {/* 헤더 */}

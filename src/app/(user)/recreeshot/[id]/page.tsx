@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import type { Metadata } from "next";
-import { isExternalImage } from "@/lib/image";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import Link from "next/link";
 import { ChevronRight, MapPin, EyeOff, Trash2 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
@@ -81,7 +80,7 @@ export default async function HallDetailPage({
   const shot = await prisma.reCreeshot.findUnique({
     where: { id },
     include: {
-      user: { select: { id: true, email: true, nickname: true, profileImageUrl: true } },
+      user: { select: { id: true, nickname: true, profileImageUrl: true } },
       reCreeshotTopics: {
         include: {
           topic: {
@@ -199,22 +198,11 @@ export default async function HallDetailPage({
         {/* 사용자 정보 + 날짜 + 액션 버튼 */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="size-8 rounded-full bg-brand overflow-hidden flex items-center justify-center shrink-0">
-              {shot.user.profileImageUrl ? (
-                <Image
-                  src={shot.user.profileImageUrl}
-                  alt={shot.user.nickname ?? "user"}
-                  width={32}
-                  height={32}
-                  unoptimized={isExternalImage(shot.user.profileImageUrl)}
-                  className="object-cover w-full h-full"
-                />
-              ) : (
-                <span className="text-xs font-bold text-black">
-                  {shot.user.email[0].toUpperCase()}
-                </span>
-              )}
-            </div>
+            <UserAvatar
+              imageUrl={shot.user.profileImageUrl}
+              name={shot.user.nickname}
+              size={32}
+            />
             <div>
               <p className="text-sm font-semibold leading-tight">{shot.user.nickname ?? "Anonymous"}</p>
               <p className="text-xs text-muted-foreground/60 leading-tight mt-0.5">
