@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { X, MapPin } from "lucide-react";
 import { LabelBadge } from "@/components/LabelBadge";
 import {
   resolveTopicColors,
@@ -29,6 +29,9 @@ interface Props {
   onToggleTag: (id: string) => void;
   onReset: () => void;
   onApply: () => void;
+  regions?: { slug: string; label: string }[];
+  stagedRegion?: string | null;
+  onToggleRegion?: (slug: string) => void;
 }
 
 export function DiscoverFilterSheet({
@@ -44,8 +47,11 @@ export function DiscoverFilterSheet({
   onToggleTag,
   onReset,
   onApply,
+  regions = [],
+  stagedRegion = null,
+  onToggleRegion,
 }: Props) {
-  const totalSelected = stagedTopicIds.length + stagedTagIds.length;
+  const totalSelected = stagedTopicIds.length + stagedTagIds.length + (stagedRegion != null ? 1 : 0);
 
   return (
     <>
@@ -126,6 +132,20 @@ export function DiscoverFilterSheet({
                   </LabelBadge>
                 );
               })}
+              {stagedRegion != null && (() => {
+                const label = regions.find((r) => r.slug === stagedRegion)?.label ?? stagedRegion;
+                return (
+                  <button
+                    type="button"
+                    onClick={() => onToggleRegion?.(stagedRegion)}
+                    className="shrink-0 inline-flex items-center gap-1 px-3 h-7 rounded-full bg-white text-xs font-semibold whitespace-nowrap shadow-sm active:opacity-70 transition-opacity"
+                  >
+                    <MapPin className="w-3 h-3 shrink-0" />
+                    {label}
+                    <X className="size-3" />
+                  </button>
+                );
+              })()}
             </div>
           </div>
         )}
@@ -275,6 +295,31 @@ export function DiscoverFilterSheet({
                   </div>
                 </section>
               ))}
+
+            {/* ── 지역 섹션 ── */}
+            {regions.length > 0 && (
+              <section>
+                <h3 className="text-sm font-bold mb-3">REGION</h3>
+                <div className="flex flex-wrap gap-x-2 gap-y-2.5">
+                  {regions.map((r) => {
+                    const isSelected = stagedRegion === r.slug;
+                    return (
+                      <button
+                        key={r.slug}
+                        type="button"
+                        onClick={() => onToggleRegion?.(r.slug)}
+                        className={`shrink-0 inline-flex items-center gap-1 px-3 h-7 rounded-full bg-white text-xs font-semibold whitespace-nowrap shadow-sm active:opacity-70 transition-all ${
+                          isSelected ? "ring-2 ring-foreground" : ""
+                        }`}
+                      >
+                        <MapPin className="w-3 h-3 shrink-0" />
+                        {r.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
 
           </div>
         </div>

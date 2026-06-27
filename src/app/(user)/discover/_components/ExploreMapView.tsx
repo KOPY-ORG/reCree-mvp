@@ -168,6 +168,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [stagedTopicIds, setStagedTopicIds] = useState<string[]>([]);
   const [stagedTagIds, setStagedTagIds] = useState<string[]>([]);
+  const [stagedRegion, setStagedRegion] = useState<string | null>(null);
   const [appliedTopicIds, setAppliedTopicIds] = useState<string[]>([]);
   const [appliedTagIds, setAppliedTagIds] = useState<string[]>([]);
   const [appliedRegion, setAppliedRegion] = useState<string | null>(null);
@@ -653,15 +654,17 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   const openFilter = () => {
     setStagedTopicIds(appliedTopicIds);
     setStagedTagIds(appliedTagIds);
+    setStagedRegion(appliedRegion);
     setIsFilterOpen(true);
   };
   const applyFilters = () => {
     setAppliedTopicIds(stagedTopicIds);
     setAppliedTagIds(stagedTagIds);
+    setAppliedRegion(stagedRegion);
     setIsFilterOpen(false);
     setSheetState("half");
   };
-  const resetStaged = () => { setStagedTopicIds([]); setStagedTagIds([]); };
+  const resetStaged = () => { setStagedTopicIds([]); setStagedTagIds([]); setStagedRegion(null); };
   const removeAppliedTopic = (id: string) =>
     setAppliedTopicIds((prev) => prev.filter((x) => x !== id));
   const removeAppliedTag = (id: string) =>
@@ -671,6 +674,8 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     setStagedTopicIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
   const toggleTag = (id: string) =>
     setStagedTagIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  const toggleRegion = (slug: string) =>
+    setStagedRegion((prev) => prev === slug ? null : slug);
 
   const effectiveSheetState = selectedPlaceId
     ? "hidden"
@@ -917,6 +922,9 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
         onToggleTag={toggleTag}
         onReset={resetStaged}
         onApply={applyFilters}
+        regions={availableCities}
+        stagedRegion={stagedRegion}
+        onToggleRegion={toggleRegion}
       />
     </div>
   );
