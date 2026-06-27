@@ -327,7 +327,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                       <ReCreeshotImage
                         shotUrl={shot.imageUrl}
                         variant="thumb-sm"
-                        className="aspect-[4/5]"
+                        className="aspect-[4/5] [filter:drop-shadow(0_3px_5px_rgba(0,0,0,0.18))]"
                         sizes="120px"
                       />
                     </Link>

@@ -24,6 +24,7 @@ import { useRecentSearches } from "../_hooks/useRecentSearches";
 import { useDiscoverViewState } from "../_hooks/useDiscoverViewState";
 import type { MapPlace, MapPost } from "@/lib/map-queries";
 import { getTopicMarkerColor, getTopicMarkerGradient, topicMatchesFilter, matchesQuery } from "@/lib/map-utils";
+import { getPlaceRegionSlug, getPlaceRegionLabel } from "@/lib/region-utils";
 import {
   resolveTopicColors,
   resolveTagColors,
@@ -68,10 +69,12 @@ function postMatchesFilters(post: MapPost, topicIds: string[], tagIds: string[])
 }
 
 function placeMatchesFilters(
-  place: Pick<MapPlace, "posts">,
+  place: Pick<MapPlace, "posts" | "area">,
   topicIds: string[],
-  tagIds: string[]
+  tagIds: string[],
+  region: string | null
 ): boolean {
+  if (region !== null && getPlaceRegionSlug(place.area) !== region) return false;
   if (topicIds.length === 0 && tagIds.length === 0) return true;
   return place.posts.some((post) => postMatchesFilters(post, topicIds, tagIds));
 }
@@ -165,8 +168,10 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [stagedTopicIds, setStagedTopicIds] = useState<string[]>([]);
   const [stagedTagIds, setStagedTagIds] = useState<string[]>([]);
+  const [stagedRegion, setStagedRegion] = useState<string | null>(null);
   const [appliedTopicIds, setAppliedTopicIds] = useState<string[]>([]);
   const [appliedTagIds, setAppliedTagIds] = useState<string[]>([]);
+  const [appliedRegion, setAppliedRegion] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const { toast, showToast } = useToast();
@@ -176,6 +181,20 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   const urlFilterInitRef = useRef(false);
   const { recents, addRecent, removeRecent, clearRecents } = useRecentSearches();
   const { restored, save, clear } = useDiscoverViewState();
+
+  // allPlaces에서 등장하는 도시만 추출 (level=1은 parent로 rollup). useEffect보다 먼저 선언.
+  const availableCities = useMemo(() => {
+    const map = new Map<string, string>(); // slug → label(원본 nameEn)
+    for (const place of allPlaces) {
+      const slug = getPlaceRegionSlug(place.area);
+      const label = getPlaceRegionLabel(place.area);
+      if (!slug || !label) continue;
+      if (!map.has(slug)) map.set(slug, label);
+    }
+    return [...map.entries()]
+      .map(([slug, label]) => ({ slug, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [allPlaces]);
 
   useEffect(() => {
     if (!restored) return;
@@ -192,12 +211,13 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     }
   }, [restored, clear]);
 
-  // URL ?topic=<slug> / ?tag=<slug> → 마운트 1회 초기 필터 적용
+  // URL ?topic=<slug> / ?tag=<slug> / ?region=<slug> → 마운트 1회 초기 필터 적용
   useEffect(() => {
     if (urlFilterInitRef.current) return;
     urlFilterInitRef.current = true;
     const topicSlug = searchParams.get("topic");
     const tagSlug = searchParams.get("tag");
+    const regionSlug = searchParams.get("region");
     if (topicSlug) {
       const id = findTopicIdBySlug(topicTree, topicSlug);
       if (id) setAppliedTopicIds([id]);
@@ -206,7 +226,10 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
       const id = findTagIdBySlug(tagGroups, tagSlug);
       if (id) setAppliedTagIds([id]);
     }
-  }, [searchParams, topicTree, tagGroups]);
+    if (regionSlug && availableCities.some((c) => c.slug === regionSlug)) {
+      setAppliedRegion(regionSlug);
+    }
+  }, [searchParams, topicTree, tagGroups, availableCities]);
 
   // 컬렉션 진입/변경/종료 시 이벤트 검색·카테고리·북마크 초기화
   useEffect(() => {
@@ -401,11 +424,12 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   );
   const isEventMode = activeEventData !== null;
 
-  const hasFilters = appliedTopicIds.length > 0 || appliedTagIds.length > 0;
+  const hasFilters = appliedTopicIds.length > 0 || appliedTagIds.length > 0 || appliedRegion !== null;
   const isResultMode = !isEventMode && (query.trim() !== "" || hasFilters);
+  const hasRegionChips = !isEventMode && availableCities.length >= 2;
   // 이벤트 모드는 EventSearchBar(검색+칩)가 항상 떠 있어 동일한 top reserve가 필요.
   // 비이벤트는 facet 칩이 떠 있을 때(isResultMode)만 필요. 두 조건의 OR는 새 변수에서만.
-  const needsTopReserve = isEventMode || isResultMode;
+  const needsTopReserve = isEventMode || isResultMode || hasRegionChips;
 
   const searchedPlaces = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -427,14 +451,14 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   const filteredPlaces = useMemo(() => {
     if (!hasFilters) return searchedPlaces;
     const matched = searchedPlaces.filter((p) =>
-      placeMatchesFilters(p, appliedTopicIds, appliedTagIds)
+      placeMatchesFilters(p, appliedTopicIds, appliedTagIds, appliedRegion)
     );
     return [...matched].sort(
       (a, b) =>
         placeMatchScore(b, appliedTopicIds, appliedTagIds) -
         placeMatchScore(a, appliedTopicIds, appliedTagIds)
     );
-  }, [searchedPlaces, hasFilters, appliedTopicIds, appliedTagIds]);
+  }, [searchedPlaces, hasFilters, appliedTopicIds, appliedTagIds, appliedRegion]);
 
   const suggestions = useMemo((): DiscoverSuggestion[] => {
     const q = query.trim().toLowerCase();
@@ -621,20 +645,23 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     setQuery("");
     setAppliedTopicIds([]);
     setAppliedTagIds([]);
+    setAppliedRegion(null);
   };
 
   const openFilter = () => {
     setStagedTopicIds(appliedTopicIds);
     setStagedTagIds(appliedTagIds);
+    setStagedRegion(appliedRegion);
     setIsFilterOpen(true);
   };
   const applyFilters = () => {
     setAppliedTopicIds(stagedTopicIds);
     setAppliedTagIds(stagedTagIds);
+    setAppliedRegion(stagedRegion);
     setIsFilterOpen(false);
     setSheetState("half");
   };
-  const resetStaged = () => { setStagedTopicIds([]); setStagedTagIds([]); };
+  const resetStaged = () => { setStagedTopicIds([]); setStagedTagIds([]); setStagedRegion(null); };
   const removeAppliedTopic = (id: string) =>
     setAppliedTopicIds((prev) => prev.filter((x) => x !== id));
   const removeAppliedTag = (id: string) =>
@@ -644,6 +671,8 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     setStagedTopicIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
   const toggleTag = (id: string) =>
     setStagedTagIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  const toggleRegion = (slug: string) =>
+    setStagedRegion((prev) => prev === slug ? null : slug);
 
   const effectiveSheetState = selectedPlaceId
     ? "hidden"
@@ -668,7 +697,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
           isEventMode
             ? `collection:${collectionSlug}`
             : isResultMode
-              ? `q:${query}|t:${[...appliedTopicIds].sort().join(",")}|g:${[...appliedTagIds].sort().join(",")}`
+              ? `q:${query}|t:${[...appliedTopicIds].sort().join(",")}|g:${[...appliedTagIds].sort().join(",")}|r:${appliedRegion ?? ""}`
               : isSavedView ? "saved" : "all"
         }
         highlightedIds={
@@ -726,6 +755,9 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
           onQuickTopicClick={() => {
             if (btsTopicId) setAppliedTopicIds([btsTopicId]);
           }}
+          regions={availableCities}
+          appliedRegion={appliedRegion}
+          onRegionChange={setAppliedRegion}
         />
       )}
 
@@ -887,6 +919,9 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
         onToggleTag={toggleTag}
         onReset={resetStaged}
         onApply={applyFilters}
+        regions={availableCities}
+        stagedRegion={stagedRegion}
+        onToggleRegion={toggleRegion}
       />
     </div>
   );

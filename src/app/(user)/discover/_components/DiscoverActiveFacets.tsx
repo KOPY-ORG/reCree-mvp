@@ -1,8 +1,9 @@
 "use client";
 
-import { X, Search, CalendarDays } from "lucide-react";
+import { X, Search, CalendarDays, MapPin } from "lucide-react";
 import { LabelBadge } from "@/components/LabelBadge";
 import { EVENT_RED } from "@/lib/event-format";
+import { FEATURED_REGION_SLUGS } from "@/lib/region-utils";
 import type { ActiveEventCollection } from "@/lib/event-collection-queries";
 
 type ChipInfo = { id: string; label: string; bg: string; fg: string };
@@ -20,6 +21,9 @@ interface Props {
   onEventCollectionClick?: (id: string) => void;
   quickTopicChip?: ChipInfo | null;
   onQuickTopicClick?: () => void;
+  regions?: { slug: string; label: string }[];
+  appliedRegion?: string | null;
+  onRegionChange?: (slug: string | null) => void;
 }
 
 export function DiscoverActiveFacets({
@@ -35,18 +39,26 @@ export function DiscoverActiveFacets({
   onEventCollectionClick,
   quickTopicChip,
   onQuickTopicClick,
+  regions = [],
+  appliedRegion = null,
+  onRegionChange,
 }: Props) {
   const hasQuery = query.trim() !== "";
-  const hasFilters = appliedTopicIds.length > 0 || appliedTagIds.length > 0;
+  const hasFilters = appliedTopicIds.length > 0 || appliedTagIds.length > 0 || appliedRegion !== null;
   const hasEventCollections = eventCollections.length > 0;
   const showEventCollections = hasEventCollections && !hasQuery && !hasFilters;
   const showQuickChips = !hasQuery && !hasFilters && !!quickTopicChip;
+  // FEATURED 순서 유지 + availableCities에 없는 도시(장소 0개) 자동 제외
+  const featuredRegions = FEATURED_REGION_SLUGS
+    .map((slug) => regions.find((r) => r.slug === slug) ?? null)
+    .filter((r): r is { slug: string; label: string } => r !== null);
+  const showRegionChips = featuredRegions.length >= 1;
 
-  if (!showEventCollections && !showQuickChips && !hasQuery && !hasFilters) return null;
+  if (!showEventCollections && !showQuickChips && !hasQuery && !hasFilters && !showRegionChips) return null;
 
   return (
     <div className="absolute top-[60px] inset-x-0 z-[60] px-3 pb-2 space-y-1.5">
-      {(showEventCollections || showQuickChips) && (
+      {(showEventCollections || showQuickChips || showRegionChips) && !hasQuery && !hasFilters && (
         <div className="flex gap-2 overflow-x-auto py-[6px] -my-[6px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {showEventCollections && eventCollections.map((col) => {
             const nameEn =
@@ -74,6 +86,19 @@ export function DiscoverActiveFacets({
               {quickTopicChip.label}
             </button>
           )}
+          {showRegionChips && featuredRegions.map(({ slug, label }) => (
+            <button
+              key={slug}
+              type="button"
+              onClick={() => onRegionChange?.(appliedRegion === slug ? null : slug)}
+              className={`shrink-0 inline-flex items-center gap-1 px-3 h-7 rounded-full bg-white text-xs font-semibold whitespace-nowrap shadow-sm active:opacity-70 transition-all ${
+                appliedRegion === slug ? "ring-2 ring-foreground" : ""
+              }`}
+            >
+              <MapPin className="w-3 h-3 shrink-0" />
+              {label}
+            </button>
+          ))}
         </div>
       )}
 
@@ -124,6 +149,20 @@ export function DiscoverActiveFacets({
               </LabelBadge>
             );
           })}
+          {appliedRegion !== null && (() => {
+            const label = regions.find((r) => r.slug === appliedRegion)?.label ?? appliedRegion;
+            return (
+              <button
+                type="button"
+                onClick={() => onRegionChange?.(null)}
+                className="shrink-0 inline-flex items-center gap-1 px-3 h-7 rounded-full bg-white text-xs font-semibold whitespace-nowrap shadow-sm active:opacity-70 transition-opacity"
+              >
+                <MapPin className="w-3 h-3 shrink-0" />
+                {label}
+                <X className="size-3" />
+              </button>
+            );
+          })()}
         </div>
       )}
     </div>
