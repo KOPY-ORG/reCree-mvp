@@ -42,7 +42,6 @@ type PlaceImageItem = { id: string; url: string; isThumbnail: boolean; caption: 
 
 const MAX_BANNER = 5;
 const NONE_VALUE = "__none__";
-const CUSTOM_VALUE = "__custom__";
 
 type OriginalMode = "idle" | "url";
 
@@ -192,9 +191,7 @@ function LinkSelector({
   onChange: (url: string | null) => void;
 }) {
   const sourceUrls = sources.filter((s) => s.url);
-  const isCustom = !!linkUrl && !sourceUrls.find((s) => s.url === linkUrl);
-  const [customInput, setCustomInput] = useState(isCustom ? (linkUrl ?? "") : "");
-  const selectValue = isCustom ? CUSTOM_VALUE : (linkUrl ?? NONE_VALUE);
+  const selectValue = linkUrl ?? NONE_VALUE;
 
   return (
     <div className="space-y-1.5">
@@ -203,8 +200,6 @@ function LinkSelector({
         onValueChange={(v) => {
           if (v === NONE_VALUE) {
             onChange(null);
-          } else if (v === CUSTOM_VALUE) {
-            onChange(customInput || null);
           } else {
             onChange(v);
           }
@@ -240,20 +235,8 @@ function LinkSelector({
               </SelectItem>
             );
           })}
-          <SelectItem value={CUSTOM_VALUE}>직접 입력</SelectItem>
         </SelectContent>
       </Select>
-      {(isCustom || selectValue === CUSTOM_VALUE) && (
-        <Input
-          value={customInput}
-          onChange={(e) => {
-            setCustomInput(e.target.value);
-            onChange(e.target.value || null);
-          }}
-          placeholder="https://..."
-          className="h-8 text-xs"
-        />
-      )}
     </div>
   );
 }
