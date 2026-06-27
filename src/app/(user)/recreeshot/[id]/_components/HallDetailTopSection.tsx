@@ -32,6 +32,7 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
 
@@ -94,30 +95,42 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
     }
 
 
-    return new Promise((resolve) => {
+    return new Promise<string>((resolve, reject) => {
       canvas.toBlob((blob) => {
-        if (!blob) { resolve(imageUrl); return; }
+        if (!blob) { reject(new Error("toBlob returned null")); return; }
         resolve(URL.createObjectURL(blob));
       }, "image/jpeg", 0.92);
     });
   }
 
+  function triggerDownload(blobUrl: string, filename: string) {
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);   // Safari: DOM 삽입돼야 신뢰된 click
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+  }
+
   async function handleSave() {
     setMenuOpen(false);
+    if (isDownloading) return;
+    setIsDownloading(true);
     try {
-      const url = await composeForDownload();
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "recreeshot.jpg";
-      a.click();
-      // blob URL은 짧은 지연 후 해제
-      if (url.startsWith("blob:")) setTimeout(() => URL.revokeObjectURL(url), 5000);
+      const url = await composeForDownload();   // 항상 blob:
+      triggerDownload(url, "recreeshot.jpg");
     } catch {
-      // 합성 실패 시 프록시 경유 원본 이미지 다운로드
-      const a = document.createElement("a");
-      a.href = `/api/proxy-image?url=${encodeURIComponent(imageUrl)}`;
-      a.download = "recreeshot.jpg";
-      a.click();
+      try {
+        const res = await fetch(`/api/proxy-image?url=${encodeURIComponent(imageUrl)}`);
+        if (!res.ok) throw new Error("proxy fetch failed");
+        const blob = await res.blob();
+        triggerDownload(URL.createObjectURL(blob), "recreeshot.jpg");
+      } catch {
+        showError("이미지를 다운로드하지 못했어요. 잠시 후 다시 시도해 주세요.");
+      }
+    } finally {
+      setIsDownloading(false);
     }
   }
 
@@ -208,10 +221,11 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
                     <button
                       type="button"
                       onClick={handleSave}
-                      className="flex items-center gap-2 w-full px-4 py-3 text-sm font-medium text-gray-800 hover:bg-gray-50 transition-colors border-b border-gray-100"
+                      disabled={isDownloading}
+                      className="flex items-center gap-2 w-full px-4 py-3 text-sm font-medium text-gray-800 hover:bg-gray-50 transition-colors border-b border-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Download className="size-4 shrink-0" />
-                      Download
+                      {isDownloading ? "Downloading..." : "Download"}
                     </button>
                     <button
                       type="button"
