@@ -24,7 +24,7 @@ export function HScrollSection({
           </Link>
         )}
       </div>
-      <div className="overflow-x-auto scrollbar-hide">
+      <div className="overflow-x-auto scrollbar-hide pb-2">
         <div className="flex gap-3 pl-4 pb-1">
           {children}
           <div className="shrink-0 w-1" />
