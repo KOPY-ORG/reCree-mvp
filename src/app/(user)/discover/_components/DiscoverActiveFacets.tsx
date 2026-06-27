@@ -91,8 +91,8 @@ export function DiscoverActiveFacets({
               key={slug}
               type="button"
               onClick={() => onRegionChange?.(appliedRegion === slug ? null : slug)}
-              className={`shrink-0 inline-flex items-center gap-1 px-3 h-7 rounded-full bg-white text-xs font-semibold whitespace-nowrap shadow-sm active:opacity-70 transition-opacity ${
-                appliedRegion === slug ? "ring-1 ring-foreground" : ""
+              className={`shrink-0 inline-flex items-center gap-1 px-3 h-7 rounded-full bg-white text-xs font-semibold whitespace-nowrap shadow-sm active:opacity-70 transition-all ${
+                appliedRegion === slug ? "ring-2 ring-foreground" : ""
               }`}
             >
               <MapPin className="w-3 h-3 shrink-0" />

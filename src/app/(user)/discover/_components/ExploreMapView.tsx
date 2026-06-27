@@ -24,7 +24,7 @@ import { useRecentSearches } from "../_hooks/useRecentSearches";
 import { useDiscoverViewState } from "../_hooks/useDiscoverViewState";
 import type { MapPlace, MapPost } from "@/lib/map-queries";
 import { getTopicMarkerColor, getTopicMarkerGradient, topicMatchesFilter, matchesQuery } from "@/lib/map-utils";
-import { getPlaceRegionSlug } from "@/lib/region-utils";
+import { getPlaceRegionSlug, getPlaceRegionLabel } from "@/lib/region-utils";
 import {
   resolveTopicColors,
   resolveTagColors,
@@ -187,12 +187,9 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     const map = new Map<string, string>(); // slug → label(원본 nameEn)
     for (const place of allPlaces) {
       const slug = getPlaceRegionSlug(place.area);
-      if (!slug) continue;
-      const nameEn =
-        place.area!.level === 0
-          ? place.area!.nameEn!
-          : place.area!.parent!.nameEn!;
-      if (!map.has(slug)) map.set(slug, nameEn);
+      const label = getPlaceRegionLabel(place.area);
+      if (!slug || !label) continue;
+      if (!map.has(slug)) map.set(slug, label);
     }
     return [...map.entries()]
       .map(([slug, label]) => ({ slug, label }))

@@ -7,8 +7,7 @@ type AreaLike = {
   parent: { nameEn: string | null } | null;
 };
 
-/** nameEn → URL slug. null/빈값이면 null 반환. */
-export function slugifyRegion(name: string | null | undefined): string | null {
+function slugifyRegion(name: string | null | undefined): string | null {
   if (!name?.trim()) return null;
   return name.toLowerCase();
 }
@@ -18,4 +17,11 @@ export function getPlaceRegionSlug(area: AreaLike | null | undefined): string | 
   if (!area) return null;
   const name = area.level === 0 ? area.nameEn : (area.parent?.nameEn ?? null);
   return slugifyRegion(name);
+}
+
+/** place.area에서 도시 원문 표시명(nameEn)을 추출. slug와 동일한 분기, 소문자화 없음. */
+export function getPlaceRegionLabel(area: AreaLike | null | undefined): string | null {
+  if (!area) return null;
+  if (area.level === 0) return area.nameEn ?? null;
+  return area.parent?.nameEn ?? null;
 }

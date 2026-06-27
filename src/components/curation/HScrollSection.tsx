@@ -24,6 +24,7 @@ export function HScrollSection({
           </Link>
         )}
       </div>
+      {/* pb-2: 카드 box/drop-shadow가 overflow-x clip에 잘리지 않도록 하단 여백 확보 */}
       <div className="overflow-x-auto scrollbar-hide pb-2">
         <div className="flex gap-3 pl-4 pb-1">
           {children}
