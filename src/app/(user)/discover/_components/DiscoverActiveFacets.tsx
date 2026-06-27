@@ -20,6 +20,9 @@ interface Props {
   onEventCollectionClick?: (id: string) => void;
   quickTopicChip?: ChipInfo | null;
   onQuickTopicClick?: () => void;
+  regions?: { slug: string; label: string }[];
+  appliedRegion?: string | null;
+  onRegionChange?: (slug: string | null) => void;
 }
 
 export function DiscoverActiveFacets({
@@ -35,17 +38,46 @@ export function DiscoverActiveFacets({
   onEventCollectionClick,
   quickTopicChip,
   onQuickTopicClick,
+  regions = [],
+  appliedRegion = null,
+  onRegionChange,
 }: Props) {
   const hasQuery = query.trim() !== "";
   const hasFilters = appliedTopicIds.length > 0 || appliedTagIds.length > 0;
   const hasEventCollections = eventCollections.length > 0;
   const showEventCollections = hasEventCollections && !hasQuery && !hasFilters;
   const showQuickChips = !hasQuery && !hasFilters && !!quickTopicChip;
+  const showRegionChips = regions.length >= 2;
 
-  if (!showEventCollections && !showQuickChips && !hasQuery && !hasFilters) return null;
+  if (!showEventCollections && !showQuickChips && !hasQuery && !hasFilters && !showRegionChips) return null;
 
   return (
     <div className="absolute top-[60px] inset-x-0 z-[60] px-3 pb-2 space-y-1.5">
+      {showRegionChips && !hasQuery && !hasFilters && (
+        <div className="flex gap-2 overflow-x-auto py-[6px] -my-[6px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <button
+            type="button"
+            onClick={() => onRegionChange?.(null)}
+            className={`shrink-0 inline-flex items-center px-3 h-7 rounded-full bg-white text-xs font-semibold whitespace-nowrap shadow-sm active:opacity-70 transition-opacity ${
+              appliedRegion === null ? "ring-1 ring-foreground" : ""
+            }`}
+          >
+            All
+          </button>
+          {regions.map(({ slug, label }) => (
+            <button
+              key={slug}
+              type="button"
+              onClick={() => onRegionChange?.(slug)}
+              className={`shrink-0 inline-flex items-center px-3 h-7 rounded-full bg-white text-xs font-semibold whitespace-nowrap shadow-sm active:opacity-70 transition-opacity ${
+                appliedRegion === slug ? "ring-1 ring-foreground" : ""
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
       {(showEventCollections || showQuickChips) && (
         <div className="flex gap-2 overflow-x-auto py-[6px] -my-[6px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {showEventCollections && eventCollections.map((col) => {
