@@ -1,3 +1,6 @@
+// 추후 Area.isFeatured 또는 admin 관리로 승격 가능, 현재 MVP 하드코딩.
+export const FEATURED_REGION_SLUGS = ["seoul", "busan"] as const;
+
 type AreaLike = {
   nameEn: string | null;
   level: number;
