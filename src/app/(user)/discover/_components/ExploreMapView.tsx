@@ -5,7 +5,8 @@ import { Loader2, LocateFixed, Maximize } from "lucide-react";
 import { useToast } from "../../_hooks/useToast";
 import { dedupeEventMarkers } from "@/lib/event-utils";
 import { EVENT_RED, getDDay, sortEventMarkers } from "@/lib/event-format";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { parseFilterParams, serializeFilterParams } from "@/lib/filter-params";
 import { InteractiveMap, type FocusCameraHandle } from "@/components/maps/InteractiveMap";
 import { PlaceBottomSheet } from "@/components/maps/PlaceBottomSheet";
 import { PlaceListSheet, getSheetHeight, type PlaceListSheetState } from "@/components/maps/PlaceListSheet";
@@ -129,12 +130,6 @@ function findTopicIdBySlug(topicTree: Level0TopicDeep[], slug: string): string |
   return null;
 }
 
-function findTagIdBySlug(tagGroups: TagGroupWithTags[], slug: string): string | null {
-  for (const group of tagGroups)
-    for (const tag of group.tags)
-      if (tag.slug === slug) return tag.id;
-  return null;
-}
 
 interface Props {
   allPlaces: (MapPlace & { isSaved?: boolean })[];
@@ -150,6 +145,7 @@ interface Props {
 export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], tagGroups, topicTree, isLoggedIn, eventCollections = [], eventMapData = {} }: Props) {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const pathname = usePathname();
 
   const isSavedView = searchParams.get("saved") === "1";
   const selectedPlaceId = searchParams.get("place");
@@ -211,23 +207,20 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     }
   }, [restored, clear]);
 
-  // URL ?topic=<slug> / ?tag=<slug> / ?region=<slug> → 마운트 1회 초기 필터 적용
+  // URL ?topics=<slug,…> / ?tags=<slug,…> / ?region=<slug> → 마운트 1회 초기 필터 적용
   useEffect(() => {
     if (urlFilterInitRef.current) return;
     urlFilterInitRef.current = true;
-    const topicSlug = searchParams.get("topic");
-    const tagSlug = searchParams.get("tag");
-    const regionSlug = searchParams.get("region");
-    if (topicSlug) {
-      const id = findTopicIdBySlug(topicTree, topicSlug);
-      if (id) setAppliedTopicIds([id]);
-    }
-    if (tagSlug) {
-      const id = findTagIdBySlug(tagGroups, tagSlug);
-      if (id) setAppliedTagIds([id]);
-    }
-    if (regionSlug && availableCities.some((c) => c.slug === regionSlug)) {
-      setAppliedRegion(regionSlug);
+    const parsed = parseFilterParams(
+      new URLSearchParams(searchParams.toString()),
+      topicTree,
+      tagGroups
+    );
+    if (parsed.topicIds.length > 0) { setAppliedTopicIds(parsed.topicIds); setStagedTopicIds(parsed.topicIds); }
+    if (parsed.tagIds.length > 0) { setAppliedTagIds(parsed.tagIds); setStagedTagIds(parsed.tagIds); }
+    if (parsed.region && availableCities.some((c) => c.slug === parsed.region)) {
+      setAppliedRegion(parsed.region);
+      setStagedRegion(parsed.region);
     }
   }, [searchParams, topicTree, tagGroups, availableCities]);
 
@@ -283,6 +276,15 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
       params.delete("place");
     }
     router.replace(`?${params.toString()}`);
+  }
+
+  function commitFilters(next: { topicIds: string[]; tagIds: string[]; region: string | null }) {
+    setAppliedTopicIds(next.topicIds);
+    setAppliedTagIds(next.tagIds);
+    setAppliedRegion(next.region);
+    const params = serializeFilterParams(next, { topicTree, tagGroups }, new URLSearchParams(searchParams.toString()));
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }
 
   const handleLocateMe = () => {
@@ -643,9 +645,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
 
   const exitResultMode = () => {
     setQuery("");
-    setAppliedTopicIds([]);
-    setAppliedTagIds([]);
-    setAppliedRegion(null);
+    commitFilters({ topicIds: [], tagIds: [], region: null });
   };
 
   const openFilter = () => {
@@ -655,17 +655,15 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     setIsFilterOpen(true);
   };
   const applyFilters = () => {
-    setAppliedTopicIds(stagedTopicIds);
-    setAppliedTagIds(stagedTagIds);
-    setAppliedRegion(stagedRegion);
+    commitFilters({ topicIds: stagedTopicIds, tagIds: stagedTagIds, region: stagedRegion });
     setIsFilterOpen(false);
     setSheetState("half");
   };
   const resetStaged = () => { setStagedTopicIds([]); setStagedTagIds([]); setStagedRegion(null); };
   const removeAppliedTopic = (id: string) =>
-    setAppliedTopicIds((prev) => prev.filter((x) => x !== id));
+    commitFilters({ topicIds: appliedTopicIds.filter((x) => x !== id), tagIds: appliedTagIds, region: appliedRegion });
   const removeAppliedTag = (id: string) =>
-    setAppliedTagIds((prev) => prev.filter((x) => x !== id));
+    commitFilters({ topicIds: appliedTopicIds, tagIds: appliedTagIds.filter((x) => x !== id), region: appliedRegion });
 
   const toggleTopic = (id: string) =>
     setStagedTopicIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
@@ -753,11 +751,11 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
           onEventCollectionClick={(slug) => setCollectionSlug(slug)}
           quickTopicChip={btsChipInfo}
           onQuickTopicClick={() => {
-            if (btsTopicId) setAppliedTopicIds([btsTopicId]);
+            if (btsTopicId) commitFilters({ topicIds: [btsTopicId], tagIds: appliedTagIds, region: appliedRegion });
           }}
           regions={availableCities}
           appliedRegion={appliedRegion}
-          onRegionChange={setAppliedRegion}
+          onRegionChange={(slug) => commitFilters({ topicIds: appliedTopicIds, tagIds: appliedTagIds, region: slug })}
         />
       )}
 
