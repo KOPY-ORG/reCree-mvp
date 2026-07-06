@@ -61,23 +61,25 @@ function calcEventPassesFilter(
   return matchesSearch && matchesCategory && matchesSaved;
 }
 
-function postMatchesFilters(post: MapPost, topicIds: string[], tagIds: string[]): boolean {
+function postMatchesFilters(post: MapPost, topicIds: string[], tagIds: string[], tagGroupKeys: string[]): boolean {
   const topicHit =
     topicIds.length > 0 &&
     post.topics.some((t) => topicIds.some((id) => topicMatchesFilter(t, id)));
   const tagHit = tagIds.length > 0 && post.tags.some((tag) => tagIds.includes(tag.id));
-  return topicHit || tagHit;
+  const groupHit = tagGroupKeys.length > 0 && post.tags.some((tag) => tagGroupKeys.includes(tag.group));
+  return topicHit || tagHit || groupHit;
 }
 
 function placeMatchesFilters(
   place: Pick<MapPlace, "posts" | "area">,
   topicIds: string[],
   tagIds: string[],
+  tagGroupKeys: string[],
   region: string | null
 ): boolean {
   if (region !== null && getPlaceRegionSlug(place.area) !== region) return false;
-  if (topicIds.length === 0 && tagIds.length === 0) return true;
-  return place.posts.some((post) => postMatchesFilters(post, topicIds, tagIds));
+  if (topicIds.length === 0 && tagIds.length === 0 && tagGroupKeys.length === 0) return true;
+  return place.posts.some((post) => postMatchesFilters(post, topicIds, tagIds, tagGroupKeys));
 }
 
 // 토픽 매칭은 항상 태그보다 위. 같은 급 안에서는 먼저 선택한 필터 기준.
@@ -164,9 +166,11 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [stagedTopicIds, setStagedTopicIds] = useState<string[]>([]);
   const [stagedTagIds, setStagedTagIds] = useState<string[]>([]);
+  const [stagedTagGroupKeys, setStagedTagGroupKeys] = useState<string[]>([]);
   const [stagedRegion, setStagedRegion] = useState<string | null>(null);
   const [appliedTopicIds, setAppliedTopicIds] = useState<string[]>([]);
   const [appliedTagIds, setAppliedTagIds] = useState<string[]>([]);
+  const [appliedTagGroupKeys, setAppliedTagGroupKeys] = useState<string[]>([]);
   const [appliedRegion, setAppliedRegion] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -218,6 +222,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     );
     if (parsed.topicIds.length > 0) { setAppliedTopicIds(parsed.topicIds); setStagedTopicIds(parsed.topicIds); }
     if (parsed.tagIds.length > 0) { setAppliedTagIds(parsed.tagIds); setStagedTagIds(parsed.tagIds); }
+    if (parsed.tagGroupKeys.length > 0) { setAppliedTagGroupKeys(parsed.tagGroupKeys); setStagedTagGroupKeys(parsed.tagGroupKeys); }
     if (parsed.region && availableCities.some((c) => c.slug === parsed.region)) {
       setAppliedRegion(parsed.region);
       setStagedRegion(parsed.region);
@@ -278,9 +283,10 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     router.replace(`?${params.toString()}`);
   }
 
-  function commitFilters(next: { topicIds: string[]; tagIds: string[]; region: string | null }) {
+  function commitFilters(next: { topicIds: string[]; tagIds: string[]; tagGroupKeys: string[]; region: string | null }) {
     setAppliedTopicIds(next.topicIds);
     setAppliedTagIds(next.tagIds);
+    setAppliedTagGroupKeys(next.tagGroupKeys);
     setAppliedRegion(next.region);
     const params = serializeFilterParams(next, { topicTree, tagGroups }, new URLSearchParams(searchParams.toString()));
     const qs = params.toString();
@@ -426,7 +432,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   );
   const isEventMode = activeEventData !== null;
 
-  const hasFilters = appliedTopicIds.length > 0 || appliedTagIds.length > 0 || appliedRegion !== null;
+  const hasFilters = appliedTopicIds.length > 0 || appliedTagIds.length > 0 || appliedTagGroupKeys.length > 0 || appliedRegion !== null;
   const isResultMode = !isEventMode && (query.trim() !== "" || hasFilters);
   const hasRegionChips = !isEventMode && availableCities.length >= 2;
   // 이벤트 모드는 EventSearchBar(검색+칩)가 항상 떠 있어 동일한 top reserve가 필요.
@@ -453,14 +459,14 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   const filteredPlaces = useMemo(() => {
     if (!hasFilters) return searchedPlaces;
     const matched = searchedPlaces.filter((p) =>
-      placeMatchesFilters(p, appliedTopicIds, appliedTagIds, appliedRegion)
+      placeMatchesFilters(p, appliedTopicIds, appliedTagIds, appliedTagGroupKeys, appliedRegion)
     );
     return [...matched].sort(
       (a, b) =>
         placeMatchScore(b, appliedTopicIds, appliedTagIds) -
         placeMatchScore(a, appliedTopicIds, appliedTagIds)
     );
-  }, [searchedPlaces, hasFilters, appliedTopicIds, appliedTagIds, appliedRegion]);
+  }, [searchedPlaces, hasFilters, appliedTopicIds, appliedTagIds, appliedTagGroupKeys, appliedRegion]);
 
   const suggestions = useMemo((): DiscoverSuggestion[] => {
     const q = query.trim().toLowerCase();
@@ -645,25 +651,26 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
 
   const exitResultMode = () => {
     setQuery("");
-    commitFilters({ topicIds: [], tagIds: [], region: null });
+    commitFilters({ topicIds: [], tagIds: [], tagGroupKeys: [], region: null });
   };
 
   const openFilter = () => {
     setStagedTopicIds(appliedTopicIds);
     setStagedTagIds(appliedTagIds);
+    setStagedTagGroupKeys(appliedTagGroupKeys);
     setStagedRegion(appliedRegion);
     setIsFilterOpen(true);
   };
   const applyFilters = () => {
-    commitFilters({ topicIds: stagedTopicIds, tagIds: stagedTagIds, region: stagedRegion });
+    commitFilters({ topicIds: stagedTopicIds, tagIds: stagedTagIds, tagGroupKeys: stagedTagGroupKeys, region: stagedRegion });
     setIsFilterOpen(false);
     setSheetState("half");
   };
-  const resetStaged = () => { setStagedTopicIds([]); setStagedTagIds([]); setStagedRegion(null); };
+  const resetStaged = () => { setStagedTopicIds([]); setStagedTagIds([]); setStagedTagGroupKeys([]); setStagedRegion(null); };
   const removeAppliedTopic = (id: string) =>
-    commitFilters({ topicIds: appliedTopicIds.filter((x) => x !== id), tagIds: appliedTagIds, region: appliedRegion });
+    commitFilters({ topicIds: appliedTopicIds.filter((x) => x !== id), tagIds: appliedTagIds, tagGroupKeys: appliedTagGroupKeys, region: appliedRegion });
   const removeAppliedTag = (id: string) =>
-    commitFilters({ topicIds: appliedTopicIds, tagIds: appliedTagIds.filter((x) => x !== id), region: appliedRegion });
+    commitFilters({ topicIds: appliedTopicIds, tagIds: appliedTagIds.filter((x) => x !== id), tagGroupKeys: appliedTagGroupKeys, region: appliedRegion });
 
   const toggleTopic = (id: string) =>
     setStagedTopicIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
@@ -751,11 +758,11 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
           onEventCollectionClick={(slug) => setCollectionSlug(slug)}
           quickTopicChip={btsChipInfo}
           onQuickTopicClick={() => {
-            if (btsTopicId) commitFilters({ topicIds: [btsTopicId], tagIds: appliedTagIds, region: appliedRegion });
+            if (btsTopicId) commitFilters({ topicIds: [btsTopicId], tagIds: appliedTagIds, tagGroupKeys: appliedTagGroupKeys, region: appliedRegion });
           }}
           regions={availableCities}
           appliedRegion={appliedRegion}
-          onRegionChange={(slug) => commitFilters({ topicIds: appliedTopicIds, tagIds: appliedTagIds, region: slug })}
+          onRegionChange={(slug) => commitFilters({ topicIds: appliedTopicIds, tagIds: appliedTagIds, tagGroupKeys: appliedTagGroupKeys, region: slug })}
         />
       )}
 

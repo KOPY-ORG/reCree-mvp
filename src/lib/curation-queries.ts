@@ -112,9 +112,8 @@ export async function getSectionData(sections: CuratedSection[]): Promise<Sectio
  */
 export function getPostMoreHref(section: CuratedSectionWithSlug): string {
   if (section.type === "MANUAL") return "/discover";
-  if (section.filterTopicId && section.filterTopic?.slug)
-    return buildDiscoverHref({ topicSlugs: [section.filterTopic.slug] });
-  if (section.filterTagId && section.filterTag?.slug)
-    return buildDiscoverHref({ tagSlugs: [section.filterTag.slug] });
-  return "/discover";
+  const topicSlugs = section.filterTopicId && section.filterTopic?.slug ? [section.filterTopic.slug] : [];
+  const tagSlugs = section.filterTagId && section.filterTag?.slug ? [section.filterTag.slug] : [];
+  if (topicSlugs.length === 0 && tagSlugs.length === 0) return "/discover";
+  return buildDiscoverHref({ topicSlugs, tagSlugs });
 }

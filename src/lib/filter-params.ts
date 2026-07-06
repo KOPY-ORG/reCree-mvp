@@ -4,6 +4,7 @@ import type { TagGroupWithTags } from "./filter-queries";
 export interface FilterState {
   topicIds: string[];
   tagIds: string[];
+  tagGroupKeys: string[];
   region: string | null;
 }
 
@@ -80,10 +81,12 @@ export function parseFilterParams(
 ): FilterState {
   const rawTopics = searchParams.get("topics");
   const rawTags = searchParams.get("tags");
+  const rawTagGroups = searchParams.get("tagGroups");
   const rawRegion = searchParams.get("region");
 
   const topicSlugs = rawTopics ? rawTopics.split(",").filter(Boolean) : [];
   const tagSlugs = rawTags ? rawTags.split(",").filter(Boolean) : [];
+  const rawTagGroupKeys = rawTagGroups ? rawTagGroups.split(",").filter(Boolean) : [];
 
   const topicIds = topicSlugs
     .map((slug) => topicSlugToId(topicTree, slug))
@@ -93,7 +96,10 @@ export function parseFilterParams(
     .map((slug) => tagSlugToId(tagGroups, slug))
     .filter((id): id is string => id !== null);
 
-  return { topicIds, tagIds, region: rawRegion || null };
+  const validGroupKeys = new Set(tagGroups.map((g) => g.group));
+  const tagGroupKeys = rawTagGroupKeys.filter((k) => validGroupKeys.has(k));
+
+  return { topicIds, tagIds, tagGroupKeys, region: rawRegion || null };
 }
 
 /**
@@ -130,6 +136,12 @@ export function serializeFilterParams(
     params.delete("tags");
   }
 
+  if (state.tagGroupKeys.length > 0) {
+    params.set("tagGroups", state.tagGroupKeys.join(","));
+  } else {
+    params.delete("tagGroups");
+  }
+
   if (state.region !== null) {
     params.set("region", state.region);
   } else {
@@ -146,11 +158,13 @@ export function serializeFilterParams(
 export function buildDiscoverHref(opts: {
   topicSlugs?: string[];
   tagSlugs?: string[];
+  tagGroupKeys?: string[];
   region?: string | null;
 }): string {
   const params = new URLSearchParams();
   if (opts.topicSlugs?.length) params.set("topics", opts.topicSlugs.join(","));
   if (opts.tagSlugs?.length) params.set("tags", opts.tagSlugs.join(","));
+  if (opts.tagGroupKeys?.length) params.set("tagGroups", opts.tagGroupKeys.join(","));
   if (opts.region) params.set("region", opts.region);
   const qs = params.toString();
   return qs ? `/discover?${qs}` : "/discover";
