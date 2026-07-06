@@ -20,6 +20,22 @@ export function getTopicMarkerColor(posts: TopicPost[]): string | undefined {
   return undefined;
 }
 
+type IdentifiedTopicPost = { topics: (TopicColorNode & { id: string })[] };
+
+export function getFilterTopicMarkerColor(
+  posts: IdentifiedTopicPost[],
+  topicId: string
+): string | undefined {
+  for (const post of posts) {
+    const node = post.topics.find((t) => t.id === topicId);
+    if (node) {
+      const color = resolveTopicColorHex(node);
+      if (color) return color;
+    }
+  }
+  return undefined;
+}
+
 export type MarkerGradient = {
   colorHex: string;
   colorHex2: string | null;
@@ -50,6 +66,22 @@ export function getTopicMarkerGradient(posts: TopicGradientPost[]): MarkerGradie
   for (const post of sorted) {
     for (const topic of post.topics) {
       const gradient = resolveTopicGradient(topic);
+      if (gradient) return gradient;
+    }
+  }
+  return undefined;
+}
+
+type IdentifiedTopicGradientPost = { topics: (TopicGradientNode & { id: string })[] };
+
+export function getFilterTopicMarkerGradient(
+  posts: IdentifiedTopicGradientPost[],
+  topicId: string
+): MarkerGradient | undefined {
+  for (const post of posts) {
+    const node = post.topics.find((t) => t.id === topicId);
+    if (node) {
+      const gradient = resolveTopicGradient(node);
       if (gradient) return gradient;
     }
   }

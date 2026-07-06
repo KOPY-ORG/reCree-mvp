@@ -6,7 +6,7 @@ import { useToast } from "../../_hooks/useToast";
 import { dedupeEventMarkers } from "@/lib/event-utils";
 import { EVENT_RED, getDDay, sortEventMarkers } from "@/lib/event-format";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { parseFilterParams, serializeFilterParams } from "@/lib/filter-params";
+import { parseFilterParams, serializeFilterParams, topicIdToMarkerGradient } from "@/lib/filter-params";
 import { InteractiveMap, type FocusCameraHandle } from "@/components/maps/InteractiveMap";
 import { PlaceBottomSheet } from "@/components/maps/PlaceBottomSheet";
 import { PlaceListSheet, getSheetHeight, type PlaceListSheetState } from "@/components/maps/PlaceListSheet";
@@ -480,6 +480,52 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     );
   }, [searchedPlaces, hasFilters, appliedTopicIds, appliedTagIds, appliedTagGroupKeys, appliedRegion]);
 
+  const filteredMarkerPlaces = useMemo(() => {
+    // 필터 미적용이면 색/숫자 재계산 불필요 — 원본 그대로 통과
+    if (!hasFilters) return filteredPlaces;
+
+    return filteredPlaces.map((place) => {
+      // 1) 현재 적용된 필터에 매칭되는 posts만 추림
+      const matchedPosts = place.posts.filter((post) =>
+        postMatchesFilters(post, appliedTopicIds, appliedTagIds, appliedTagGroupKeys)
+      );
+
+      // 2) 색/그라디언트 결정 — 적용된 topic 필터 중 이 place에 실제로 매칭되는 첫 topic을 우선 사용
+      const firstMatchTopicId = appliedTopicIds.find((id) =>
+        matchedPosts.some((post) => post.topics.some((t) => topicMatchesFilter(t, id)))
+      );
+
+      let markerColor: string | undefined;
+      let markerGradient: ReturnType<typeof getTopicMarkerGradient>;
+
+      if (firstMatchTopicId) {
+        // 필터한 토픽의 색을 topicTree에서 직접 조회 (posts 순회 X)
+        const filterGradient = topicIdToMarkerGradient(topicTree, firstMatchTopicId);
+        markerColor = filterGradient?.colorHex;
+        markerGradient = filterGradient;
+      } else {
+        // topic 필터 없음(tag-only 등) → 기존처럼 매칭된 posts 기준으로 계산
+        markerColor = getTopicMarkerColor(matchedPosts);
+        markerGradient = getTopicMarkerGradient(matchedPosts);
+      }
+
+      // 3) 필드만 override한 새 객체 반환 (원본 place 불변)
+      return {
+        ...place,
+        markerColor,
+        markerGradient,
+        postCount: matchedPosts.length,
+      };
+    });
+  }, [
+    filteredPlaces,
+    hasFilters,
+    appliedTopicIds,
+    appliedTagIds,
+    appliedTagGroupKeys,
+    topicTree,
+  ]);
+
   const suggestions = useMemo((): DiscoverSuggestion[] => {
     const q = query.trim().toLowerCase();
     if (!q) return [];
@@ -707,7 +753,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     <div className="relative h-[calc(100dvh-64px)] overflow-hidden">
       <InteractiveMap
         ref={mapRef}
-        places={isEventMode ? visibleEventMarkers : filteredPlaces}
+        places={isEventMode ? visibleEventMarkers : filteredMarkerPlaces}
         selectedPlaceId={selectedPlaceId}
         focusedPlaceIds={focusedPlaceIds}
         onMarkerClick={handleMarkerClick}

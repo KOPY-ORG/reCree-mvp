@@ -1,5 +1,6 @@
 import type { Level0TopicDeep } from "./topic-queries";
 import type { TagGroupWithTags } from "./filter-queries";
+import type { MarkerGradient } from "./map-utils";
 
 export interface FilterState {
   topicIds: string[];
@@ -52,6 +53,40 @@ function topicIdToSlug(topicTree: Level0TopicDeep[], id: string): string | null 
     }
   }
   return null;
+}
+
+// 노드 자신의 colorHex가 없으면 부모(inherited)의 색을 그대로 물려받는다
+function inheritedMarkerGradient(
+  node: { colorHex: string | null; colorHex2: string | null; gradientDir: string; gradientStop: number },
+  inherited: MarkerGradient | undefined
+): MarkerGradient | undefined {
+  return node.colorHex
+    ? { colorHex: node.colorHex, colorHex2: node.colorHex2, gradientDir: node.gradientDir, gradientStop: node.gradientStop }
+    : inherited;
+}
+
+/** topicTree(L0~L3)를 위→아래로 훑으며 id 노드를 찾아, 그 시점까지 상속된 색 필드를 반환 */
+export function topicIdToMarkerGradient(
+  topicTree: Level0TopicDeep[],
+  id: string
+): MarkerGradient | undefined {
+  for (const root of topicTree) {
+    const rootColor = inheritedMarkerGradient(root, undefined);
+    if (root.id === id) return rootColor;
+    for (const l1 of root.children) {
+      const l1Color = inheritedMarkerGradient(l1, rootColor);
+      if (l1.id === id) return l1Color;
+      for (const l2 of l1.children) {
+        const l2Color = inheritedMarkerGradient(l2, l1Color);
+        if (l2.id === id) return l2Color;
+        for (const l3 of l2.children) {
+          const l3Color = inheritedMarkerGradient(l3, l2Color);
+          if (l3.id === id) return l3Color;
+        }
+      }
+    }
+  }
+  return undefined;
 }
 
 function tagSlugToId(tagGroups: TagGroupWithTags[], slug: string): string | null {
