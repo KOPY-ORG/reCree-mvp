@@ -2,6 +2,7 @@
 import { prisma } from "@/lib/prisma";
 import { getPostsWithLabels, type PostItem } from "@/lib/post-queries";
 import type { CuratedSection } from "@prisma/client";
+import { buildDiscoverHref } from "@/lib/filter-params";
 
 // ─── 타입 ─────────────────────────────────────────────────────────────────────
 
@@ -111,7 +112,9 @@ export async function getSectionData(sections: CuratedSection[]): Promise<Sectio
  */
 export function getPostMoreHref(section: CuratedSectionWithSlug): string {
   if (section.type === "MANUAL") return "/discover";
-  if (section.filterTopicId && section.filterTopic?.slug) return `/discover?topic=${section.filterTopic.slug}`;
-  if (section.filterTagId && section.filterTag?.slug) return `/discover?tag=${section.filterTag.slug}`;
+  if (section.filterTopicId && section.filterTopic?.slug)
+    return buildDiscoverHref({ topicSlugs: [section.filterTopic.slug] });
+  if (section.filterTagId && section.filterTag?.slug)
+    return buildDiscoverHref({ tagSlugs: [section.filterTag.slug] });
   return "/discover";
 }

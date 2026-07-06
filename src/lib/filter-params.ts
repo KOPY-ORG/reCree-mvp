@@ -138,3 +138,20 @@ export function serializeFilterParams(
 
   return params;
 }
+
+/**
+ * slug를 직접 받아 Discover URL을 조립.
+ * slug→id 변환 없이 URL 파라미터 이름만 중앙화.
+ */
+export function buildDiscoverHref(opts: {
+  topicSlugs?: string[];
+  tagSlugs?: string[];
+  region?: string | null;
+}): string {
+  const params = new URLSearchParams();
+  if (opts.topicSlugs?.length) params.set("topics", opts.topicSlugs.join(","));
+  if (opts.tagSlugs?.length) params.set("tags", opts.tagSlugs.join(","));
+  if (opts.region) params.set("region", opts.region);
+  const qs = params.toString();
+  return qs ? `/discover?${qs}` : "/discover";
+}
