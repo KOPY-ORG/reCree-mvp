@@ -55,7 +55,7 @@ export function FeedbackForm({ source }: Props) {
 
   if (status === "success") {
     return (
-      <div className="rounded-xl border border-border bg-muted/40 px-4 py-3 text-center text-sm text-muted-foreground">
+      <div className="rounded-xl bg-white shadow-[0_2px_16px_rgba(0,0,0,0.06)] px-4 py-3 text-center text-sm text-muted-foreground">
         Thanks for your feedback! 🙌
       </div>
     );
@@ -63,7 +63,7 @@ export function FeedbackForm({ source }: Props) {
 
   if (!expanded) {
     return (
-      <div className="flex items-center justify-between gap-4 rounded-xl border border-border px-4 py-3">
+      <div className="flex items-center justify-between gap-4 rounded-xl bg-white shadow-[0_2px_16px_rgba(0,0,0,0.06)] px-4 py-3">
         <p className="text-sm text-muted-foreground">
           Help us make reCree better — share your thoughts.
         </p>
@@ -80,7 +80,7 @@ export function FeedbackForm({ source }: Props) {
   }
 
   return (
-    <div className="space-y-3 rounded-xl border border-border bg-background px-4 py-4">
+    <div className="space-y-3 rounded-xl bg-white shadow-[0_2px_16px_rgba(0,0,0,0.06)] px-4 py-4">
       <p className="text-sm font-medium">Share your thoughts</p>
 
       <div className="space-y-1">
@@ -92,8 +92,12 @@ export function FeedbackForm({ source }: Props) {
           disabled={status === "submitting"}
           className="text-sm"
         />
-        {!emailValid && (
+        {!emailValid ? (
           <p className="text-xs text-destructive">Invalid email address.</p>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Leave your email for early updates — we won&apos;t use it for anything else.
+          </p>
         )}
       </div>
 
