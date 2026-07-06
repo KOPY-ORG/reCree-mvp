@@ -67,6 +67,9 @@ const LOCALES = [
 
 type EventLocale = (typeof LOCALES)[number]["key"];
 
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
+const MINUTE_OPTIONS = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0"));
+
 // ─── 타입 ──────────────────────────────────────────────────────────────────────
 
 export type EventInitialData = {
@@ -643,6 +646,50 @@ function initTranslations(
   return t;
 }
 
+function TimeSelect({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [rawHour, rawMinute] = value.split(":");
+  const hour = HOUR_OPTIONS.includes(rawHour) ? rawHour : "00";
+  const minute = MINUTE_OPTIONS.includes(rawMinute)
+    ? rawMinute
+    : String(Math.round(Number(rawMinute || 0) / 5) * 5 % 60).padStart(2, "0");
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <Select value={hour} onValueChange={(h) => onChange(`${h}:${minute}`)}>
+        <SelectTrigger className="w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {HOUR_OPTIONS.map((h) => (
+            <SelectItem key={h} value={h}>
+              {h}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <span className="text-muted-foreground">:</span>
+      <Select value={minute} onValueChange={(m) => onChange(`${hour}:${m}`)}>
+        <SelectTrigger className="w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {MINUTE_OPTIONS.map((m) => (
+            <SelectItem key={m} value={m}>
+              {m}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
 // ─── 배너 이미지 업로드 ────────────────────────────────────────────────────────
 
 async function uploadBannerImage(
@@ -688,8 +735,8 @@ export function EventForm({
   );
   const [startDate, setStartDate] = useState(initialData?.startDate ?? "");
   const [endDate, setEndDate] = useState(initialData?.endDate ?? "");
-  const [openTime, setOpenTime] = useState(initialData?.openTime ?? "");
-  const [closeTime, setCloseTime] = useState(initialData?.closeTime ?? "");
+  const [openTime, setOpenTime] = useState(initialData?.openTime || "00:00");
+  const [closeTime, setCloseTime] = useState(initialData?.closeTime || "00:00");
   const [entryType, setEntryType] = useState<EventEntryType>(
     initialData?.entryType ?? "WALK_IN",
   );
@@ -1073,19 +1120,11 @@ export function EventForm({
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5">
                           <Label>오픈 시간</Label>
-                          <Input
-                            type="time"
-                            value={openTime}
-                            onChange={(e) => setOpenTime(e.target.value)}
-                          />
+                          <TimeSelect value={openTime} onChange={setOpenTime} />
                         </div>
                         <div className="space-y-1.5">
                           <Label>마감 시간</Label>
-                          <Input
-                            type="time"
-                            value={closeTime}
-                            onChange={(e) => setCloseTime(e.target.value)}
-                          />
+                          <TimeSelect value={closeTime} onChange={setCloseTime} />
                         </div>
                       </div>
 
