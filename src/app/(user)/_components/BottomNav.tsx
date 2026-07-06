@@ -2,15 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { House, Camera, User, MapPinned, Map } from "lucide-react";
+import { Search, Bookmark, Map, Camera, User } from "lucide-react";
 import { UserAvatar } from "@/components/ui/user-avatar";
 
 const TABS = [
-  { label: "Home", icon: House, href: "/" },
-  { label: "Discover", icon: Map, href: "/discover" },
-  { label: "Trips", icon: MapPinned, href: "/plan" },
-  { label: "recreeshot", icon: Camera, href: "/recreeshot" },
-  { label: "Profile", icon: User, href: "/profile" },
+  { label: "Discover",   icon: Search,   href: "/feed" },
+  { label: "Saved",      icon: Bookmark, href: "/saved" },
+  { label: "Home",       icon: Map,      href: "/discover" },
+  { label: "recreeshot", icon: Camera,   href: "/recreeshot" },
+  { label: "Profile",    icon: User,     href: "/profile" },
 ] as const;
 
 interface Props {
