@@ -1,3 +1,6 @@
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+
 export function SavedHeader() {
   return (
     <header className="app-header">
