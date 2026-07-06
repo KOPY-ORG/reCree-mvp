@@ -1,5 +1,6 @@
 import type { Level0TopicDeep } from "./topic-queries";
 import type { TagGroupWithTags } from "./filter-queries";
+import type { MarkerGradient } from "./map-utils";
 
 export interface FilterState {
   topicIds: string[];
@@ -39,19 +40,58 @@ function topicSlugToId(topicTree: Level0TopicDeep[], slug: string): string | nul
   return null;
 }
 
-function topicIdToSlug(topicTree: Level0TopicDeep[], id: string): string | null {
-  for (const root of topicTree) {
-    if (root.id === id) return root.slug;
-    for (const l1 of root.children) {
-      if (l1.id === id) return l1.slug;
-      for (const l2 of l1.children) {
-        if (l2.id === id) return l2.slug;
-        for (const l3 of l2.children)
-          if (l3.id === id) return l3.slug;
-      }
+// topicTree 각 레벨(L0~L3)이 공통으로 갖는 필드만 뽑은 구조적 타입 — 재귀 순회를 레벨 무관하게 공유하기 위함
+type TopicTreeNode = {
+  id: string;
+  slug: string;
+  colorHex: string | null;
+  colorHex2: string | null;
+  gradientDir: string;
+  gradientStop: number;
+  children?: readonly TopicTreeNode[];
+};
+
+// children을 타고 내려가며 id가 일치하는 노드를 찾는다 (topicIdToSlug/buildTopicColorMap 공용)
+function findTopicNode(nodes: readonly TopicTreeNode[], id: string): TopicTreeNode | null {
+  for (const node of nodes) {
+    if (node.id === id) return node;
+    if (node.children) {
+      const found = findTopicNode(node.children, id);
+      if (found) return found;
     }
   }
   return null;
+}
+
+function topicIdToSlug(topicTree: Level0TopicDeep[], id: string): string | null {
+  return findTopicNode(topicTree, id)?.slug ?? null;
+}
+
+// 노드 자신의 colorHex가 null이 아니면(빈 문자열도 포함) 자기 색을 쓰고, null이면 부모(inherited)의 색을 물려받는다
+// — resolveTopicColorHex(map-utils.ts)와 동일하게 nullish 기준으로 판단
+function inheritedMarkerGradient(
+  node: { colorHex: string | null; colorHex2: string | null; gradientDir: string; gradientStop: number },
+  inherited: MarkerGradient | undefined
+): MarkerGradient | undefined {
+  return node.colorHex !== null
+    ? { colorHex: node.colorHex, colorHex2: node.colorHex2, gradientDir: node.gradientDir, gradientStop: node.gradientStop }
+    : inherited;
+}
+
+/** topicTree(L0~L3) 전체를 한 번만 순회하며 모든 노드의 id → 상속 완료된 MarkerGradient 맵을 만든다 */
+export function buildTopicColorMap(topicTree: Level0TopicDeep[]): Map<string, MarkerGradient> {
+  const map = new Map<string, MarkerGradient>();
+
+  function visit(nodes: readonly TopicTreeNode[], inherited: MarkerGradient | undefined) {
+    for (const node of nodes) {
+      const resolved = inheritedMarkerGradient(node, inherited);
+      if (resolved) map.set(node.id, resolved);
+      if (node.children) visit(node.children, resolved);
+    }
+  }
+
+  visit(topicTree, undefined);
+  return map;
 }
 
 function tagSlugToId(tagGroups: TagGroupWithTags[], slug: string): string | null {

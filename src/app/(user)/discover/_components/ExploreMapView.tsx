@@ -6,7 +6,7 @@ import { useToast } from "../../_hooks/useToast";
 import { dedupeEventMarkers } from "@/lib/event-utils";
 import { EVENT_RED, getDDay, sortEventMarkers } from "@/lib/event-format";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { parseFilterParams, serializeFilterParams } from "@/lib/filter-params";
+import { parseFilterParams, serializeFilterParams, buildTopicColorMap } from "@/lib/filter-params";
 import { InteractiveMap, type FocusCameraHandle } from "@/components/maps/InteractiveMap";
 import { PlaceBottomSheet } from "@/components/maps/PlaceBottomSheet";
 import { PlaceListSheet, getSheetHeight, type PlaceListSheetState } from "@/components/maps/PlaceListSheet";
@@ -72,15 +72,14 @@ function postMatchesFilters(post: MapPost, topicIds: string[], tagIds: string[],
 }
 
 function placeMatchesFilters(
-  place: Pick<MapPlace, "posts" | "area">,
-  topicIds: string[],
-  tagIds: string[],
-  tagGroupKeys: string[],
+  place: Pick<MapPlace, "id" | "posts" | "area">,
+  hasPostLevelFilter: boolean,
+  matchedPostsByPlaceId: Map<string, MapPost[]>,
   region: string | null
 ): boolean {
   if (region !== null && getPlaceRegionSlug(place.area) !== region) return false;
-  if (topicIds.length === 0 && tagIds.length === 0 && tagGroupKeys.length === 0) return true;
-  return place.posts.some((post) => postMatchesFilters(post, topicIds, tagIds, tagGroupKeys));
+  if (!hasPostLevelFilter) return true;
+  return (matchedPostsByPlaceId.get(place.id)?.length ?? 0) > 0;
 }
 
 // 토픽 매칭은 항상 태그보다 위. 같은 급 안에서는 먼저 선택한 필터 기준.
@@ -445,6 +444,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   const isEventMode = activeEventData !== null;
 
   const hasFilters = appliedTopicIds.length > 0 || appliedTagIds.length > 0 || appliedTagGroupKeys.length > 0 || appliedRegion !== null;
+  const hasPostLevelFilter = appliedTopicIds.length > 0 || appliedTagIds.length > 0 || appliedTagGroupKeys.length > 0;
   const isResultMode = !isEventMode && (query.trim() !== "" || hasFilters);
   const hasRegionChips = !isEventMode && availableCities.length >= 2;
   // 이벤트 모드는 EventSearchBar(검색+칩)가 항상 떠 있어 동일한 top reserve가 필요.
@@ -468,17 +468,71 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     });
   }, [query, visiblePlaces]);
 
+  // topic/tag/tagGroup 필터에 매칭되는 posts를 place당 한 번만 계산 — filteredPlaces 포함 판정과
+  // filteredMarkerPlaces 색/카운트 계산이 이 결과를 공유해 동일 post 배열을 중복 스캔하지 않는다.
+  const matchedPostsByPlaceId = useMemo(() => {
+    const map = new Map<string, MapPost[]>();
+    if (!hasPostLevelFilter) return map;
+    for (const place of searchedPlaces) {
+      map.set(
+        place.id,
+        place.posts.filter((post) => postMatchesFilters(post, appliedTopicIds, appliedTagIds, appliedTagGroupKeys))
+      );
+    }
+    return map;
+  }, [searchedPlaces, hasPostLevelFilter, appliedTopicIds, appliedTagIds, appliedTagGroupKeys]);
+
   const filteredPlaces = useMemo(() => {
     if (!hasFilters) return searchedPlaces;
     const matched = searchedPlaces.filter((p) =>
-      placeMatchesFilters(p, appliedTopicIds, appliedTagIds, appliedTagGroupKeys, appliedRegion)
+      placeMatchesFilters(p, hasPostLevelFilter, matchedPostsByPlaceId, appliedRegion)
     );
     return [...matched].sort(
       (a, b) =>
         placeMatchScore(b, appliedTopicIds, appliedTagIds) -
         placeMatchScore(a, appliedTopicIds, appliedTagIds)
     );
-  }, [searchedPlaces, hasFilters, appliedTopicIds, appliedTagIds, appliedTagGroupKeys, appliedRegion]);
+  }, [searchedPlaces, hasFilters, hasPostLevelFilter, matchedPostsByPlaceId, appliedTopicIds, appliedTagIds, appliedRegion]);
+
+  // topicTree 전체를 한 번만 순회해 topicId → 색 맵을 만들어둔다 (place마다 트리 재순회 방지)
+  const topicColorMap = useMemo(() => buildTopicColorMap(topicTree), [topicTree]);
+
+  const filteredMarkerPlaces = useMemo(() => {
+    // 색/카운트 재계산은 topic 또는 tag 필터가 있을 때만 의미가 있고, 이벤트 모드에서는
+    // 이 결과 자체가 렌더에 쓰이지 않으므로(아래 places prop 참고) 재계산을 건너뛴다.
+    // 지역(region) 전용 필터는 place만 걸러낼 뿐 posts 구성/색을 바꾸지 않으므로 마찬가지로 건너뛴다.
+    if (isEventMode || !hasPostLevelFilter) return filteredPlaces;
+
+    return filteredPlaces.map((place) => {
+      const matchedPosts = matchedPostsByPlaceId.get(place.id) ?? [];
+
+      // 적용된 topic 필터 중 이 place에 실제로 매칭되는 첫 topic을 우선 사용
+      const firstMatchTopicId = appliedTopicIds.find((id) =>
+        matchedPosts.some((post) => post.topics.some((t) => topicMatchesFilter(t, id)))
+      );
+      const filterGradient = firstMatchTopicId ? topicColorMap.get(firstMatchTopicId) : undefined;
+
+      let markerColor: string | undefined;
+      let markerGradient: ReturnType<typeof getTopicMarkerGradient>;
+
+      if (filterGradient) {
+        markerColor = filterGradient.colorHex;
+        markerGradient = filterGradient;
+      } else {
+        // 필터 topic이 topicColorMap에 없거나(예: 토픽 비활성화) topic 필터가 없는 경우(tag-only 등)
+        markerColor = getTopicMarkerColor(matchedPosts);
+        markerGradient = getTopicMarkerGradient(matchedPosts);
+      }
+
+      // 필드만 override한 새 객체 반환 (원본 place 불변)
+      return {
+        ...place,
+        markerColor,
+        markerGradient,
+        postCount: matchedPosts.length,
+      };
+    });
+  }, [isEventMode, filteredPlaces, hasPostLevelFilter, matchedPostsByPlaceId, appliedTopicIds, topicColorMap]);
 
   const suggestions = useMemo((): DiscoverSuggestion[] => {
     const q = query.trim().toLowerCase();
@@ -707,7 +761,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     <div className="relative h-[calc(100dvh-64px)] overflow-hidden">
       <InteractiveMap
         ref={mapRef}
-        places={isEventMode ? visibleEventMarkers : filteredPlaces}
+        places={isEventMode ? visibleEventMarkers : filteredMarkerPlaces}
         selectedPlaceId={selectedPlaceId}
         focusedPlaceIds={focusedPlaceIds}
         onMarkerClick={handleMarkerClick}
