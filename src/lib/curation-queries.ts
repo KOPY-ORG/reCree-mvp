@@ -45,6 +45,15 @@ export async function getCuratedSections(opts: { showOnHome?: boolean }): Promis
 export async function getSectionData(sections: CuratedSection[]): Promise<SectionData[]> {
   return Promise.all(
     sections.map(async (section): Promise<SectionData> => {
+      const regionAreaFilter = section.filterRegion
+        ? {
+            OR: [
+              { level: 0, nameEn: { equals: section.filterRegion, mode: "insensitive" as const } },
+              { level: 1, parent: { nameEn: { equals: section.filterRegion, mode: "insensitive" as const } } },
+            ],
+          }
+        : null;
+
       if (section.contentType === "RECREESHOT") {
         const items = await prisma.reCreeshot.findMany({
           where: {
@@ -57,6 +66,7 @@ export async function getSectionData(sections: CuratedSection[]): Promise<Sectio
               : section.filterTagGroup
               ? { reCreeshotTags: { some: { tag: { group: section.filterTagGroup } } } }
               : {}),
+            ...(regionAreaFilter ? { place: { area: regionAreaFilter } } : {}),
           },
           orderBy: { createdAt: "desc" },
           take: section.maxCount,
@@ -93,6 +103,7 @@ export async function getSectionData(sections: CuratedSection[]): Promise<Sectio
             : section.filterTagGroup
             ? { postTags: { some: { tag: { group: section.filterTagGroup } } } }
             : {}),
+          ...(regionAreaFilter ? { postPlaces: { some: { place: { area: regionAreaFilter } } } } : {}),
         },
         {
           take: section.maxCount,
@@ -116,6 +127,6 @@ export function getPostMoreHref(section: CuratedSectionWithSlug): string {
   const tagSlugs = section.filterTagId && section.filterTag?.slug ? [section.filterTag.slug] : [];
   // filterTagId 없을 때만 그룹 폴백 (getSectionData의 우선순위와 동일)
   const tagGroupKeys = !section.filterTagId && section.filterTagGroup ? [section.filterTagGroup] : [];
-  if (topicSlugs.length === 0 && tagSlugs.length === 0 && tagGroupKeys.length === 0) return "/discover";
-  return buildDiscoverHref({ topicSlugs, tagSlugs, tagGroupKeys });
+  if (topicSlugs.length === 0 && tagSlugs.length === 0 && tagGroupKeys.length === 0 && !section.filterRegion) return "/discover";
+  return buildDiscoverHref({ topicSlugs, tagSlugs, tagGroupKeys, region: section.filterRegion || undefined });
 }
