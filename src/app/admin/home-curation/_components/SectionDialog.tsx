@@ -48,6 +48,7 @@ type TopicOption = {
 };
 type TagOption = { id: string; nameKo: string; name: string; group: string };
 type TagGroupOption = { group: string; nameEn: string; colorHex: string; textColorHex: string };
+type RegionOption = { label: string; slug: string };
 
 interface SectionDialogProps {
   open: boolean;
@@ -56,6 +57,7 @@ interface SectionDialogProps {
   topics: TopicOption[];
   tags: TagOption[];
   tagGroups: TagGroupOption[];
+  regions: RegionOption[];
   editTarget?: {
     id: string;
     titleEn: string;
@@ -65,6 +67,7 @@ interface SectionDialogProps {
     filterTopicId: string | null;
     filterTagId: string | null;
     filterTagGroup: string | null;
+    filterRegion: string | null;
     maxCount: number;
     isActive: boolean;
   };
@@ -78,6 +81,7 @@ const INITIAL: SectionFormData = {
   filterTopicId: "",
   filterTagId: "",
   filterTagGroup: "",
+  filterRegion: "",
   maxCount: 20,
   isActive: true,
 };
@@ -492,6 +496,7 @@ export function SectionDialog({
   topics,
   tags,
   tagGroups,
+  regions,
   editTarget,
 }: SectionDialogProps) {
   const [form, setForm] = useState<SectionFormData>(INITIAL);
@@ -516,6 +521,7 @@ export function SectionDialog({
               filterTopicId: editTarget.filterTopicId ?? "",
               filterTagId: editTarget.filterTagId ?? "",
               filterTagGroup: editTarget.filterTagGroup ?? "",
+              filterRegion: editTarget.filterRegion ?? "",
               maxCount: editTarget.maxCount,
               isActive: editTarget.isActive,
             }
@@ -789,6 +795,23 @@ export function SectionDialog({
                       }}
                     />
                   </div>
+                  {regions.length > 0 && (
+                    <div className="space-y-1.5">
+                      <p className="text-xs text-zinc-500">지역 필터</p>
+                      <select
+                        value={form.filterRegion || ""}
+                        onChange={(e) => set("filterRegion", e.target.value)}
+                        className="w-full h-9 px-3 rounded-lg border border-zinc-200 bg-white text-sm hover:border-zinc-400 focus:outline-none focus:border-zinc-500 transition-colors"
+                      >
+                        <option value="">전체</option>
+                        {regions.map((r) => (
+                          <option key={r.slug} value={r.slug}>
+                            {r.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   {/* 표시 개수 스테퍼 */}
                   <div className="flex items-center justify-between pt-1 border-t border-zinc-200">
                     <p className="text-xs text-zinc-500">표시 개수 <span className="text-zinc-400">(최대 20개)</span></p>
