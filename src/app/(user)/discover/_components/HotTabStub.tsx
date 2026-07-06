@@ -16,7 +16,7 @@ export function HotTabStub({ eventCollections, eventMapData }: Props) {
     <div className="pb-4 space-y-6">
       {/* Trending now — 실제 이벤트 캐러셀 */}
       <EventVerticalCarousel
-        title="Catch it in Busan Now"
+        title="Catch it in London Now"
         titleClassName="text-sm font-semibold text-foreground"
         events={colData?.markers ?? []}
         collectionSlug={colData?.collection.slug ?? firstCol?.slug ?? ""}
