@@ -47,6 +47,7 @@ import {
   type EventCollectionForMap,
 } from "@/lib/event-collection-queries";
 import { EventVerticalCarousel } from "@/components/maps/EventVerticalCarousel";
+import { FeedbackForm } from "@/components/feedback/FeedbackForm";
 
 // ─── 탭 바 ───────────────────────────────────────────────────────────────────
 
@@ -344,8 +345,12 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
               </HScrollSection>
             );
           })}
+          <div className="px-4 mb-4">
+            <FeedbackForm source="feed" />
+          </div>
+
           <div className="flex items-center justify-between mb-3 px-4 mt-2">
-            <h2 className="font-bold text-lg">Latest</h2>
+            <h2 className="font-bold text-lg">Fresh Drops</h2>
           </div>
           <div className="px-4">
             <InfiniteFeed

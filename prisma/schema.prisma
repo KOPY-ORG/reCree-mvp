@@ -764,3 +764,11 @@ model Sticker {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model Feedback {
+  id        String   @id @default(uuid()) @db.Uuid
+  content   String
+  email     String?
+  source    String   // "feed" | "discover" | 기타 진입점 식별자
+  createdAt DateTime @default(now())
+}
