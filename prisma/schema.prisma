@@ -526,6 +526,7 @@ model CuratedSection {
   filterTopicId  String?     @db.Uuid
   filterTagId    String?     @db.Uuid
   filterTagGroup String?
+  filterRegion   String?
   maxCount       Int         @default(10)
   order          Int         @default(0)
   isActive       Boolean     @default(true)
@@ -762,4 +763,12 @@ model Sticker {
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Feedback {
+  id        String   @id @default(uuid()) @db.Uuid
+  content   String
+  email     String?
+  source    String   // "feed" | "discover" | 기타 진입점 식별자
+  createdAt DateTime @default(now())
 }

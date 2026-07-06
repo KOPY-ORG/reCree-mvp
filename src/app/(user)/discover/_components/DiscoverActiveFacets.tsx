@@ -12,11 +12,14 @@ interface Props {
   query: string;
   appliedTopicIds: string[];
   appliedTagIds: string[];
+  appliedTagGroupKeys: string[];
   topicChipMap: Map<string, ChipInfo>;
   tagChipMap: Map<string, ChipInfo>;
+  tagGroupChipMap: Map<string, ChipInfo>;
   onClearQuery: () => void;
   onRemoveTopic: (id: string) => void;
   onRemoveTag: (id: string) => void;
+  onRemoveTagGroup: (key: string) => void;
   eventCollections?: ActiveEventCollection[];
   onEventCollectionClick?: (id: string) => void;
   quickTopicChip?: ChipInfo | null;
@@ -30,11 +33,14 @@ export function DiscoverActiveFacets({
   query,
   appliedTopicIds,
   appliedTagIds,
+  appliedTagGroupKeys,
   topicChipMap,
   tagChipMap,
+  tagGroupChipMap,
   onClearQuery,
   onRemoveTopic,
   onRemoveTag,
+  onRemoveTagGroup,
   eventCollections = [],
   onEventCollectionClick,
   quickTopicChip,
@@ -44,7 +50,7 @@ export function DiscoverActiveFacets({
   onRegionChange,
 }: Props) {
   const hasQuery = query.trim() !== "";
-  const hasFilters = appliedTopicIds.length > 0 || appliedTagIds.length > 0 || appliedRegion !== null;
+  const hasFilters = appliedTopicIds.length > 0 || appliedTagIds.length > 0 || appliedTagGroupKeys.length > 0 || appliedRegion !== null;
   const hasEventCollections = eventCollections.length > 0;
   const showEventCollections = hasEventCollections && !hasQuery && !hasFilters;
   const showQuickChips = !hasQuery && !hasFilters && !!quickTopicChip;
@@ -144,6 +150,23 @@ export function DiscoverActiveFacets({
                 color={chip.fg}
                 className="shrink-0 !px-3 h-7 !font-semibold shadow-sm active:opacity-70"
                 onClick={() => onRemoveTag(id)}
+              >
+                <X className="size-3" />
+              </LabelBadge>
+            );
+          })}
+          {appliedTagGroupKeys.map((key) => {
+            const chip = tagGroupChipMap.get(key);
+            if (!chip) return null;
+            return (
+              <LabelBadge
+                key={key}
+                as="button"
+                text={chip.label}
+                background={chip.bg}
+                color={chip.fg}
+                className="shrink-0 !px-3 h-7 !font-semibold shadow-sm active:opacity-70"
+                onClick={() => onRemoveTagGroup(key)}
               >
                 <X className="size-3" />
               </LabelBadge>

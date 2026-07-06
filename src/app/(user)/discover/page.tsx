@@ -8,6 +8,7 @@ import {
   getEventCollectionForMap,
 } from "@/lib/event-collection-queries";
 import type { EventCollectionForMap } from "@/lib/event-collection-queries";
+import { getCuratedSections, getSectionData } from "@/lib/curation-queries";
 import { ExploreMapView } from "./_components/ExploreMapView";
 
 export default async function ExplorePage() {
@@ -16,7 +17,7 @@ export default async function ExplorePage() {
   // 칩용 컬렉션 목록을 먼저 받아야 맵데이터 병렬 preload 가능
   const eventCollections = await getActiveEventCollections();
 
-  const [tagGroups, savedPostIds, savedEventIds, allPlaces, topicTree, eventMapDataEntries] =
+  const [tagGroups, savedPostIds, savedEventIds, allPlaces, topicTree, eventMapDataEntries, curation] =
     await Promise.all([
       getTagGroupsWithTags(),
       getSavedPostIds(currentUser?.id ?? null),
@@ -29,10 +30,16 @@ export default async function ExplorePage() {
             [c.slug, await getEventCollectionForMap(c.slug)] as const
         )
       ),
+      (async () => {
+        const sections = await getCuratedSections({});
+        const sectionData = await getSectionData(sections);
+        return { sections, sectionData };
+      })(),
     ]);
 
   const eventMapData: Record<string, EventCollectionForMap | null> =
     Object.fromEntries(eventMapDataEntries);
+  const { sections, sectionData } = curation;
 
   const placesWithSaved = allPlaces.map((place) => ({
     ...place,
@@ -49,6 +56,8 @@ export default async function ExplorePage() {
       isLoggedIn={!!currentUser}
       eventCollections={eventCollections}
       eventMapData={eventMapData}
+      sections={sections}
+      sectionData={sectionData}
     />
   );
 }

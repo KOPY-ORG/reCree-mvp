@@ -2,12 +2,10 @@
 import { prisma } from "@/lib/prisma";
 import { getPostsWithLabels, type PostItem } from "@/lib/post-queries";
 import type { CuratedSection } from "@prisma/client";
+import type { CuratedSectionWithSlug, SectionData } from "@/lib/curation-types";
 
-// ─── 타입 ─────────────────────────────────────────────────────────────────────
-
-export type SectionData =
-  | { kind: "posts"; items: PostItem[] }
-  | { kind: "reCreeshots"; items: { id: string; imageUrl: string; referencePhotoUrl: string | null }[] };
+export type { SectionData, CuratedSectionWithSlug } from "@/lib/curation-types";
+export { getPostMoreHref } from "@/lib/curation-types";
 
 // ─── 섹션 목록 조회 ───────────────────────────────────────────────────────────
 
@@ -16,11 +14,6 @@ export type SectionData =
  * showOnHome: true 를 넘기면 홈 노출 조건 추가.
  * Discover에서는 getCuratedSections({}) 로 호출.
  */
-export type CuratedSectionWithSlug = CuratedSection & {
-  filterTopic: { slug: string } | null;
-  filterTag: { slug: string } | null;
-};
-
 export async function getCuratedSections(opts: { showOnHome?: boolean }): Promise<CuratedSectionWithSlug[]> {
   return prisma.curatedSection.findMany({
     where: {
@@ -44,6 +37,15 @@ export async function getCuratedSections(opts: { showOnHome?: boolean }): Promis
 export async function getSectionData(sections: CuratedSection[]): Promise<SectionData[]> {
   return Promise.all(
     sections.map(async (section): Promise<SectionData> => {
+      const regionAreaFilter = section.filterRegion
+        ? {
+            OR: [
+              { level: 0, nameEn: { equals: section.filterRegion, mode: "insensitive" as const } },
+              { level: 1, parent: { nameEn: { equals: section.filterRegion, mode: "insensitive" as const } } },
+            ],
+          }
+        : null;
+
       if (section.contentType === "RECREESHOT") {
         const items = await prisma.reCreeshot.findMany({
           where: {
@@ -56,6 +58,7 @@ export async function getSectionData(sections: CuratedSection[]): Promise<Sectio
               : section.filterTagGroup
               ? { reCreeshotTags: { some: { tag: { group: section.filterTagGroup } } } }
               : {}),
+            ...(regionAreaFilter ? { place: { area: regionAreaFilter } } : {}),
           },
           orderBy: { createdAt: "desc" },
           take: section.maxCount,
@@ -92,6 +95,7 @@ export async function getSectionData(sections: CuratedSection[]): Promise<Sectio
             : section.filterTagGroup
             ? { postTags: { some: { tag: { group: section.filterTagGroup } } } }
             : {}),
+          ...(regionAreaFilter ? { postPlaces: { some: { place: { area: regionAreaFilter } } } } : {}),
         },
         {
           take: section.maxCount,
@@ -101,17 +105,4 @@ export async function getSectionData(sections: CuratedSection[]): Promise<Sectio
       return { kind: "posts", items };
     })
   );
-}
-
-// ─── 더보기 링크 ──────────────────────────────────────────────────────────────
-
-/**
- * 섹션의 타입·필터 조건을 기반으로 "더보기" href를 반환.
- * MANUAL → /discover, AUTO → /discover?{filter}
- */
-export function getPostMoreHref(section: CuratedSectionWithSlug): string {
-  if (section.type === "MANUAL") return "/discover";
-  if (section.filterTopicId && section.filterTopic?.slug) return `/discover?topic=${section.filterTopic.slug}`;
-  if (section.filterTagId && section.filterTag?.slug) return `/discover?tag=${section.filterTag.slug}`;
-  return "/discover";
 }
