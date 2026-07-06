@@ -11,7 +11,7 @@ export default async function HomeCurationPage({
 }) {
   const { tab = "banner" } = await searchParams;
 
-  const [homeBanners, sections, publishedPosts, topics, tags, tagGroups] =
+  const [homeBanners, sections, publishedPosts, topics, tags, tagGroups, areas] =
     await Promise.all([
       prisma.homeBanner.findMany({
         orderBy: { order: "asc" },
@@ -44,6 +44,7 @@ export default async function HomeCurationPage({
           filterTopicId: true,
           filterTagId: true,
           filterTagGroup: true,
+          filterRegion: true,
           maxCount: true,
           order: true,
           isActive: true,
@@ -101,6 +102,11 @@ export default async function HomeCurationPage({
         orderBy: { sortOrder: "asc" },
         select: { group: true, nameEn: true, colorHex: true, textColorHex: true },
       }),
+      prisma.area.findMany({
+        where: { level: 0, isActive: true, nameEn: { not: null } },
+        orderBy: { sortOrder: "asc" },
+        select: { nameKo: true, nameEn: true },
+      }),
     ]);
 
   const bannerRows: BannerRow[] = homeBanners.map((b) => ({
@@ -117,6 +123,7 @@ export default async function HomeCurationPage({
 
   const sectionRows: SectionRow[] = sections;
   const tagGroupMap = new Map(tagGroups.map((g) => [g.group, g]));
+  const regionOptions = areas.map((a) => ({ label: a.nameKo, slug: a.nameEn!.toLowerCase() }));
 
   const pickablePosts: PickablePost[] = publishedPosts.map((p) => ({
     id: p.id,
@@ -192,6 +199,7 @@ export default async function HomeCurationPage({
           topics={topics}
           tags={tags}
           tagGroups={tagGroups}
+          regions={regionOptions}
         />
       )}
     </div>

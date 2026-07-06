@@ -32,6 +32,7 @@ import type { SectionType, ContentType } from "@prisma/client";
 type TopicOption = { id: string; nameKo: string; nameEn: string; level: number; parentId: string | null; colorHex: string | null; textColorHex: string | null };
 type TagOption = { id: string; nameKo: string; name: string; group: string };
 type TagGroupOption = { group: string; nameEn: string; colorHex: string; textColorHex: string };
+type RegionOption = { label: string; slug: string };
 
 export type SectionRow = {
   id: string;
@@ -42,6 +43,7 @@ export type SectionRow = {
   filterTopicId: string | null;
   filterTagId: string | null;
   filterTagGroup: string | null;
+  filterRegion: string | null;
   maxCount: number;
   order: number;
   isActive: boolean;
@@ -163,12 +165,14 @@ export function SectionTab({
   topics,
   tags,
   tagGroups,
+  regions,
 }: {
   initialSections: SectionRow[];
   posts: PickablePost[];
   topics: TopicOption[];
   tags: TagOption[];
   tagGroups: TagGroupOption[];
+  regions: RegionOption[];
 }) {
   const [sections, setSections] = useState(initialSections);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -286,6 +290,7 @@ export function SectionTab({
         topics={topics}
         tags={tags}
         tagGroups={tagGroups}
+        regions={regions}
         editTarget={
           editTarget
             ? {
@@ -297,6 +302,7 @@ export function SectionTab({
                 filterTopicId: editTarget.filterTopicId,
                 filterTagId: editTarget.filterTagId,
                 filterTagGroup: editTarget.filterTagGroup,
+                filterRegion: editTarget.filterRegion,
                 maxCount: editTarget.maxCount,
                 isActive: editTarget.isActive,
               }

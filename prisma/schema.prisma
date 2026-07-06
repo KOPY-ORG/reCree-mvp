@@ -526,6 +526,7 @@ model CuratedSection {
   filterTopicId  String?     @db.Uuid
   filterTagId    String?     @db.Uuid
   filterTagGroup String?
+  filterRegion   String?
   maxCount       Int         @default(10)
   order          Int         @default(0)
   isActive       Boolean     @default(true)
