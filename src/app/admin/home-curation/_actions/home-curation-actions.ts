@@ -3,6 +3,13 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import type { SectionType, ContentType } from "@prisma/client";
+import { getCurrentUser } from "@/lib/auth";
+
+async function requireEditor() {
+  const user = await getCurrentUser();
+  if (!user || user.role === "USER") throw new Error("권한이 없습니다.");
+  return user;
+}
 
 // ─── 타입 ─────────────────────────────────────────────────────────────────────
 
@@ -26,6 +33,7 @@ function revalidate() {
 // ─── 배너 액션 ────────────────────────────────────────────────────────────────
 
 export async function addBanner(postId: string) {
+  await requireEditor();
   const existing = await prisma.homeBanner.findFirst({ where: { postId } });
   if (existing) return;
   const max = await prisma.homeBanner.findFirst({
@@ -39,11 +47,13 @@ export async function addBanner(postId: string) {
 }
 
 export async function removeBanner(bannerId: string) {
+  await requireEditor();
   await prisma.homeBanner.delete({ where: { id: bannerId } });
   revalidate();
 }
 
 export async function reorderBanners(orderedIds: string[]) {
+  await requireEditor();
   await Promise.all(
     orderedIds.map((id, i) =>
       prisma.homeBanner.update({ where: { id }, data: { order: i } })
@@ -53,6 +63,7 @@ export async function reorderBanners(orderedIds: string[]) {
 }
 
 export async function toggleBannerActive(bannerId: string, isActive: boolean) {
+  await requireEditor();
   await prisma.homeBanner.update({ where: { id: bannerId }, data: { isActive } });
   revalidate();
 }
@@ -60,6 +71,7 @@ export async function toggleBannerActive(bannerId: string, isActive: boolean) {
 // ─── 섹션 액션 ────────────────────────────────────────────────────────────────
 
 export async function createSection(data: SectionFormData) {
+  await requireEditor();
   const max = await prisma.curatedSection.findFirst({
     orderBy: { order: "desc" },
     select: { order: true },
@@ -82,6 +94,7 @@ export async function createSection(data: SectionFormData) {
 }
 
 export async function updateSection(id: string, data: SectionFormData) {
+  await requireEditor();
   await prisma.curatedSection.update({
     where: { id },
     data: {
@@ -100,11 +113,13 @@ export async function updateSection(id: string, data: SectionFormData) {
 }
 
 export async function deleteSection(id: string) {
+  await requireEditor();
   await prisma.curatedSection.delete({ where: { id } });
   revalidate();
 }
 
 export async function reorderSections(orderedIds: string[]) {
+  await requireEditor();
   await Promise.all(
     orderedIds.map((id, i) =>
       prisma.curatedSection.update({ where: { id }, data: { order: i } })
@@ -114,11 +129,13 @@ export async function reorderSections(orderedIds: string[]) {
 }
 
 export async function toggleSectionActive(id: string, isActive: boolean) {
+  await requireEditor();
   await prisma.curatedSection.update({ where: { id }, data: { isActive } });
   revalidate();
 }
 
 export async function toggleHomeSection(id: string, showOnHome: boolean) {
+  await requireEditor();
   await prisma.curatedSection.update({ where: { id }, data: { showOnHome } });
   revalidate();
 }
