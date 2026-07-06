@@ -47,6 +47,7 @@ import {
   type EventCollectionForMap,
 } from "@/lib/event-collection-queries";
 import { EventVerticalCarousel } from "@/components/maps/EventVerticalCarousel";
+import { FeedbackForm } from "@/components/feedback/FeedbackForm";
 
 // ─── 탭 바 ───────────────────────────────────────────────────────────────────
 
@@ -288,6 +289,10 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
         )
       ) : (
         <>
+          <div className="px-4 mb-4">
+            <FeedbackForm source="feed" />
+          </div>
+
           {hasBanners && (
             <div className="mb-4">
               <HomeBannerCarousel banners={bannerItems} />

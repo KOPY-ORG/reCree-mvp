@@ -17,8 +17,8 @@ export async function submitFeedback(input: {
   const content = input.content?.trim() ?? "";
   if (content.length < 10)
     return { error: "Please write at least 10 characters." };
-  if (content.length > 1000)
-    return { error: "Feedback must be 1000 characters or fewer." };
+  if (content.length > 500)
+    return { error: "Feedback must be 500 characters or fewer." };
 
   if (!isValidSource(input.source))
     return { error: "Invalid source." };

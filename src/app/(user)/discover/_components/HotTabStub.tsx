@@ -1,4 +1,5 @@
 import type { ActiveEventCollection, EventCollectionForMap } from "@/lib/event-collection-queries";
+import { FeedbackForm } from "@/components/feedback/FeedbackForm";
 import type { CuratedSectionWithSlug, SectionData } from "@/lib/curation-types";
 import type { TagGroupColorMap } from "@/lib/post-labels";
 import { EventVerticalCarousel } from "@/components/maps/EventVerticalCarousel";
@@ -50,6 +51,10 @@ export function HotTabStub({ eventCollections, eventMapData, sections, sectionDa
           </HScrollSection>
         );
       })}
+
+      <div className="px-4">
+        <FeedbackForm source="discover" />
+      </div>
     </div>
   );
 }
