@@ -402,6 +402,13 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     return map;
   }, [tagGroups]);
 
+  const tagGroupChipMap = useMemo(() => {
+    const map = new Map<string, ChipInfo>();
+    for (const g of tagGroups)
+      map.set(g.group, { id: g.group, label: g.nameEn, bg: g.colorHex, fg: g.textColorHex });
+    return map;
+  }, [tagGroups]);
+
   const btsTopicId = useMemo(() => findTopicIdBySlug(topicTree, "bts"), [topicTree]);
   const btsChipInfo = useMemo(
     () => (btsTopicId ? (topicChipMap.get(btsTopicId) ?? null) : null),
@@ -671,6 +678,8 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     commitFilters({ topicIds: appliedTopicIds.filter((x) => x !== id), tagIds: appliedTagIds, tagGroupKeys: appliedTagGroupKeys, region: appliedRegion });
   const removeAppliedTag = (id: string) =>
     commitFilters({ topicIds: appliedTopicIds, tagIds: appliedTagIds.filter((x) => x !== id), tagGroupKeys: appliedTagGroupKeys, region: appliedRegion });
+  const removeAppliedTagGroup = (key: string) =>
+    commitFilters({ topicIds: appliedTopicIds, tagIds: appliedTagIds, tagGroupKeys: appliedTagGroupKeys.filter((k) => k !== key), region: appliedRegion });
 
   const toggleTopic = (id: string) =>
     setStagedTopicIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
@@ -749,11 +758,14 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
           query={query}
           appliedTopicIds={appliedTopicIds}
           appliedTagIds={appliedTagIds}
+          appliedTagGroupKeys={appliedTagGroupKeys}
           topicChipMap={topicChipMap}
           tagChipMap={tagChipMap}
+          tagGroupChipMap={tagGroupChipMap}
           onClearQuery={handleClearQuery}
           onRemoveTopic={removeAppliedTopic}
           onRemoveTag={removeAppliedTag}
+          onRemoveTagGroup={removeAppliedTagGroup}
           eventCollections={eventCollections}
           onEventCollectionClick={(slug) => setCollectionSlug(slug)}
           quickTopicChip={btsChipInfo}
