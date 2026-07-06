@@ -2,13 +2,10 @@
 import { prisma } from "@/lib/prisma";
 import { getPostsWithLabels, type PostItem } from "@/lib/post-queries";
 import type { CuratedSection } from "@prisma/client";
-import { buildDiscoverHref } from "@/lib/filter-params";
+import type { CuratedSectionWithSlug, SectionData } from "@/lib/curation-types";
 
-// ─── 타입 ─────────────────────────────────────────────────────────────────────
-
-export type SectionData =
-  | { kind: "posts"; items: PostItem[] }
-  | { kind: "reCreeshots"; items: { id: string; imageUrl: string; referencePhotoUrl: string | null }[] };
+export type { SectionData, CuratedSectionWithSlug } from "@/lib/curation-types";
+export { getPostMoreHref } from "@/lib/curation-types";
 
 // ─── 섹션 목록 조회 ───────────────────────────────────────────────────────────
 
@@ -17,11 +14,6 @@ export type SectionData =
  * showOnHome: true 를 넘기면 홈 노출 조건 추가.
  * Discover에서는 getCuratedSections({}) 로 호출.
  */
-export type CuratedSectionWithSlug = CuratedSection & {
-  filterTopic: { slug: string } | null;
-  filterTag: { slug: string } | null;
-};
-
 export async function getCuratedSections(opts: { showOnHome?: boolean }): Promise<CuratedSectionWithSlug[]> {
   return prisma.curatedSection.findMany({
     where: {
@@ -113,20 +105,4 @@ export async function getSectionData(sections: CuratedSection[]): Promise<Sectio
       return { kind: "posts", items };
     })
   );
-}
-
-// ─── 더보기 링크 ──────────────────────────────────────────────────────────────
-
-/**
- * 섹션의 타입·필터 조건을 기반으로 "더보기" href를 반환.
- * MANUAL → /discover, AUTO → /discover?{filter}
- */
-export function getPostMoreHref(section: CuratedSectionWithSlug): string {
-  if (section.type === "MANUAL") return "/discover";
-  const topicSlugs = section.filterTopicId && section.filterTopic?.slug ? [section.filterTopic.slug] : [];
-  const tagSlugs = section.filterTagId && section.filterTag?.slug ? [section.filterTag.slug] : [];
-  // filterTagId 없을 때만 그룹 폴백 (getSectionData의 우선순위와 동일)
-  const tagGroupKeys = !section.filterTagId && section.filterTagGroup ? [section.filterTagGroup] : [];
-  if (topicSlugs.length === 0 && tagSlugs.length === 0 && tagGroupKeys.length === 0 && !section.filterRegion) return "/discover";
-  return buildDiscoverHref({ topicSlugs, tagSlugs, tagGroupKeys, region: section.filterRegion || undefined });
 }

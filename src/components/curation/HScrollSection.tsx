@@ -5,17 +5,19 @@ import { ChevronRight } from "lucide-react";
 export function HScrollSection({
   title,
   moreHref,
+  showMore = true,
   children,
 }: {
   title: string;
   moreHref?: string;
+  showMore?: boolean;
   children: ReactNode;
 }) {
   return (
     <section className="mb-6">
       <div className="flex items-center justify-between mb-3 px-4">
         <h2 className="font-bold text-lg">{title}</h2>
-        {moreHref && (
+        {moreHref && showMore && (
           <Link
             href={moreHref}
             className="text-sm text-muted-foreground flex items-center gap-0.5 hover:text-foreground transition-colors"
