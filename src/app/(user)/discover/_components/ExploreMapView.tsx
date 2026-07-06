@@ -404,8 +404,10 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
 
   const tagGroupChipMap = useMemo(() => {
     const map = new Map<string, ChipInfo>();
-    for (const g of tagGroups)
-      map.set(g.group, { id: g.group, label: g.nameEn, bg: g.colorHex, fg: g.textColorHex });
+    for (const g of tagGroups) {
+      const bg = labelBackground({ text: "", colorHex: g.colorHex, colorHex2: g.colorHex2, gradientDir: g.gradientDir, gradientStop: g.gradientStop, textColorHex: g.textColorHex });
+      map.set(g.group, { id: g.group, label: g.nameEn, bg, fg: g.textColorHex });
+    }
     return map;
   }, [tagGroups]);
 
