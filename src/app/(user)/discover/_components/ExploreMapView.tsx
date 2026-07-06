@@ -40,6 +40,7 @@ import type {
   EventCollectionForMap,
   EventCollectionMapMarker,
 } from "@/lib/event-collection-queries";
+import type { CuratedSectionWithSlug, SectionData } from "@/lib/curation-types";
 
 type ChipInfo = { id: string; label: string; bg: string; fg: string };
 const KPOP_NAME = "K-POP";
@@ -142,9 +143,11 @@ interface Props {
   isLoggedIn: boolean;
   eventCollections?: ActiveEventCollection[];
   eventMapData?: Record<string, EventCollectionForMap | null>;
+  sections?: CuratedSectionWithSlug[];
+  sectionData?: SectionData[];
 }
 
-export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], tagGroups, topicTree, isLoggedIn, eventCollections = [], eventMapData = {} }: Props) {
+export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], tagGroups, topicTree, isLoggedIn, eventCollections = [], eventMapData = {}, sections, sectionData }: Props) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -858,7 +861,14 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
             </div>
           )
         ) : (
-          <HotTabStub eventCollections={eventCollections} eventMapData={eventMapData} />
+          <HotTabStub
+            eventCollections={eventCollections}
+            eventMapData={eventMapData}
+            sections={sections}
+            sectionData={sectionData}
+            tagGroupMap={tagGroupMap}
+            savedPostIdsSet={savedPostIdsSet}
+          />
         )}
       </PlaceListSheet>
 
