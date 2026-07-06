@@ -481,8 +481,12 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   }, [searchedPlaces, hasFilters, appliedTopicIds, appliedTagIds, appliedTagGroupKeys, appliedRegion]);
 
   const filteredMarkerPlaces = useMemo(() => {
-    // 필터 미적용이면 색/숫자 재계산 불필요 — 원본 그대로 통과
-    if (!hasFilters) return filteredPlaces;
+    // 색/카운트 재계산은 topic 또는 tag 필터가 있을 때만 의미가 있음.
+    // 지역(region) 전용 필터는 place만 걸러낼 뿐 posts 구성/색을 바꾸지 않으므로
+    // 이 경우 재계산을 건너뛰고 원본 마커 값을 유지한다.
+    const hasPostLevelFilter =
+      appliedTopicIds.length > 0 || appliedTagIds.length > 0 || appliedTagGroupKeys.length > 0;
+    if (!hasPostLevelFilter) return filteredPlaces;
 
     return filteredPlaces.map((place) => {
       // 1) 현재 적용된 필터에 매칭되는 posts만 추림
@@ -519,7 +523,6 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     });
   }, [
     filteredPlaces,
-    hasFilters,
     appliedTopicIds,
     appliedTagIds,
     appliedTagGroupKeys,
