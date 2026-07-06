@@ -66,7 +66,7 @@ function postMatchesFilters(post: MapPost, topicIds: string[], tagIds: string[],
     topicIds.length > 0 &&
     post.topics.some((t) => topicIds.some((id) => topicMatchesFilter(t, id)));
   const tagHit = tagIds.length > 0 && post.tags.some((tag) => tagIds.includes(tag.id));
-  const groupHit = tagGroupKeys.length > 0 && post.tags.some((tag) => tagGroupKeys.includes(tag.group));
+  const groupHit = tagGroupKeys.length > 0 && post.allTagGroups.some((g) => tagGroupKeys.includes(g));
   return topicHit || tagHit || groupHit;
 }
 
