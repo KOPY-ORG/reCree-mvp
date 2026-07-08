@@ -220,24 +220,24 @@ export default async function AdminPage() {
   const trendTabs = [
     {
       key: "dau", label: "DAU", color: "#a3e635",
-      total: dauDays.reduce((s, d) => s + d.count, 0),
+      total: dauDays[dauDays.length - 1]?.count ?? 0,
       unit: "명",
       values: dauDays.map((d) => d.count),
     },
     {
-      key: "signup", label: "신규 가입", color: "#a78bfa",
+      key: "signup", label: "신규 가입 (7일)", color: "#a78bfa",
       total: newUsersDays.reduce((s, d) => s + d.count, 0),
       unit: "명",
       values: newUsersDays.map((d) => d.count),
     },
     {
-      key: "save", label: "스크랩", color: "#38bdf8",
+      key: "save", label: "스크랩 (7일)", color: "#38bdf8",
       total: savesDays.reduce((s, d) => s + d.count, 0),
       unit: "건",
       values: savesDays.map((d) => d.count),
     },
     {
-      key: "like", label: "좋아요", color: "#fb7185",
+      key: "like", label: "리크리샷 좋아요 (7일)", color: "#fb7185",
       total: likesDays.reduce((s, d) => s + d.count, 0),
       unit: "건",
       values: likesDays.map((d) => d.count),
@@ -327,7 +327,7 @@ export default async function AdminPage() {
           />
         </SectionCard>
 
-        <SectionCard title="저장 Top 리크리샷" href="/admin/recreeshots" linkLabel="전체">
+        <SectionCard title="스크랩 Top 리크리샷" href="/admin/recreeshots" linkLabel="전체">
           <RankList
             items={topSavedRecreeshots.map((s) => ({
               id: s.id, name: s.locationName ?? "(장소 없음)",
