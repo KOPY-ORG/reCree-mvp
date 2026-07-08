@@ -1,6 +1,6 @@
 import Link from "next/link";
 import {
-  ArrowRight, Search, Bookmark, Heart, Eye, ExternalLink,
+  ArrowRight, Search, Bookmark, Heart, Eye, ExternalLink, Star,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/utils";
@@ -142,6 +142,7 @@ export default async function AdminPage() {
     newUsersRaw, savesRaw, likesRaw,
     topViewedPosts, topSavedPosts,
     topSavedRecreeshots, topLikedRecreeshots,
+    topScrapedEvents, topFollowedTopicsGrouped,
     topSearches,
     recentPosts,
   ] = await Promise.all([
@@ -190,6 +191,20 @@ export default async function AdminPage() {
       select: { id: true, locationName: true, likeCount: true, user: { select: { nickname: true } } },
       orderBy: { likeCount: "desc" }, take: 5,
     }),
+    prisma.event.findMany({
+      where: { saveCount: { gt: 0 } },
+      select: {
+        id: true, slug: true, saveCount: true, eventCollectionId: true,
+        translations: { where: { locale: "en" }, select: { name: true } },
+      },
+      orderBy: { saveCount: "desc" }, take: 5,
+    }),
+    prisma.topicFollow.groupBy({
+      by: ["topicId"],
+      _count: { topicId: true },
+      orderBy: { _count: { topicId: "desc" } },
+      take: 5,
+    }),
     prisma.searchLog.groupBy({
       by: ["query"],
       _count: { query: true },
@@ -202,6 +217,21 @@ export default async function AdminPage() {
       orderBy: { createdAt: "desc" }, take: 6,
     }),
   ]);
+
+  // ── 팔로우 Top 토픽: groupBy(topicId) 결과에 Topic.nameEn 조인 (순서는 groupBy 기준 보존) ──
+  const followedTopicIds = topFollowedTopicsGrouped.map((g) => g.topicId);
+  const followedTopics = followedTopicIds.length === 0
+    ? []
+    : await prisma.topic.findMany({
+        where: { id: { in: followedTopicIds } },
+        select: { id: true, nameEn: true },
+      });
+  const topicNameMap = new Map(followedTopics.map((t) => [t.id, t.nameEn]));
+  const topFollowedTopics = topFollowedTopicsGrouped.map((g) => ({
+    id: g.topicId,
+    name: topicNameMap.get(g.topicId) ?? g.topicId,
+    count: g._count.topicId,
+  }));
 
   // ── 차트 데이터 ──
   const dauMap = new Map(dauRaw.map((r) => [toKSTDateKey(r.date), r._count.userId]));
@@ -305,8 +335,8 @@ export default async function AdminPage() {
         <DashboardTrendChart tabs={trendTabs} labels={chartLabels} />
       </SectionCard>
 
-      {/* ── 랭킹 4열 ── */}
-      <div className="grid grid-cols-4 gap-4">
+      {/* ── 랭킹 6종 (3열 x 2행) ── */}
+      <div className="grid grid-cols-3 gap-4">
         <SectionCard title="조회수 Top 포스트" href="/admin/posts" linkLabel="전체">
           <RankList
             items={topViewedPosts.map((p) => ({
@@ -346,6 +376,25 @@ export default async function AdminPage() {
               href: `/recreeshot/${s.id}`,
             }))}
             icon={Heart} countColor="text-rose-500"
+          />
+        </SectionCard>
+
+        <SectionCard title="스크랩 Top 이벤트" href="/admin/events" linkLabel="전체">
+          <RankList
+            items={topScrapedEvents.map((e) => ({
+              id: e.id, name: e.translations[0]?.name ?? e.slug, count: e.saveCount,
+              href: `/admin/events/${e.eventCollectionId}/${e.id}/edit`,
+            }))}
+            icon={Bookmark} countColor="text-sky-500"
+          />
+        </SectionCard>
+
+        <SectionCard title="팔로우 Top 토픽" href="/admin/categories?tab=topic" linkLabel="전체">
+          <RankList
+            items={topFollowedTopics.map((t) => ({
+              id: t.id, name: t.name, count: t.count,
+            }))}
+            icon={Star} countColor="text-violet-500"
           />
         </SectionCard>
       </div>
