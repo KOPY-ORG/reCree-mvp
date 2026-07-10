@@ -4,6 +4,7 @@ import { GeistSans } from "geist/font/sans";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ToastProvider } from "@/components/toast-provider";
 import { GoogleAnalytics } from "@/components/GoogleAnalytics";
+import { ClarityAnalytics } from "@/components/ClarityAnalytics";
 import { VercelAnalytics } from "@/components/VercelAnalytics";
 import "./globals.css";
 
@@ -64,6 +65,7 @@ export default function RootLayout({
     <html lang="ko" suppressHydrationWarning>
       <body className={`${GeistSans.variable} ${notoSansKR.variable} ${chakraPetch.variable} ${spaceMono.variable} font-sans antialiased`} suppressHydrationWarning>
         <GoogleAnalytics />
+        <ClarityAnalytics />
         <ToastProvider>{children}</ToastProvider>
         <VercelAnalytics />
         <SpeedInsights />

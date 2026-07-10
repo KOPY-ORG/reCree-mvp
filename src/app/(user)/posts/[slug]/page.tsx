@@ -105,7 +105,9 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
 
   const { post, comments, isSaved, isLikedByMe } = result;
 
-  if (!isPreview) {
+  const isStaff = currentUser?.role === "ADMIN" || currentUser?.role === "EDITOR";
+
+  if (!isPreview && !isStaff) {
     after(async () => {
       await prisma.post.update({
         where: { id: post.id },
