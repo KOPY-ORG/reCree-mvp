@@ -19,6 +19,8 @@ export async function getPostsWithLabels(
       id: true,
       slug: true,
       titleEn: true,
+      subtitle: true,
+      isShop: true,
       createdAt: true,
       postImages: {
         where: { isThumbnail: true },

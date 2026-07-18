@@ -39,12 +39,17 @@ type SavedEventCardData = {
 
 interface Props {
   posts: PostItem[];
+  shopPosts: PostItem[];
   recreeshots: ReCreeshot[];
   tagGroupConfigs: TagGroupConfig[];
   savedEvents: SavedEventCardData[];
 }
 
 function SavedPostCard({ post, tagGroupMap }: { post: PostItem; tagGroupMap: TagGroupColorMap }) {
+  const place = post.postPlaces[0]?.place;
+  const placeLabel = place?.nameEn ?? place?.nameKo ?? null;
+  const heading = placeLabel ?? (post.isShop && post.subtitle ? post.subtitle : null);
+
   return (
     <Link
       href={`/posts/${post.slug}`}
@@ -68,9 +73,9 @@ function SavedPostCard({ post, tagGroupMap }: { post: PostItem; tagGroupMap: Tag
 
       <div className="flex-1 min-w-0">
         <p className="font-semibold text-base line-clamp-2 leading-snug">
-          {post.postPlaces[0]?.place.nameEn ?? post.postPlaces[0]?.place.nameKo ?? post.titleEn}
+          {heading ?? post.titleEn}
         </p>
-        {post.postPlaces[0] && (
+        {heading && (
           <p className="text-[10px] font-normal text-muted-foreground line-clamp-2 leading-snug mt-0.5">
             {post.titleEn}
           </p>
@@ -85,7 +90,7 @@ function SavedPostCard({ post, tagGroupMap }: { post: PostItem; tagGroupMap: Tag
   );
 }
 
-const TABS = ["events", "posts", "recreeshots"] as const;
+const TABS = ["events", "posts", "recreeshots", "shop"] as const;
 type SavedTab = (typeof TABS)[number];
 
 function tabHref(t: SavedTab): string {
@@ -93,23 +98,24 @@ function tabHref(t: SavedTab): string {
   return `/saved?tab=${t}`;
 }
 
-export function SavedClient({ posts, recreeshots, tagGroupConfigs, savedEvents }: Props) {
+export function SavedClient({ posts, shopPosts, recreeshots, tagGroupConfigs, savedEvents }: Props) {
   const tagGroupMap: TagGroupColorMap = new Map(tagGroupConfigs.map((c) => [c.group, c]));
   const searchParams = useSearchParams();
   const rawTab = searchParams.get("tab");
-  const tab: SavedTab = rawTab === "posts" ? "posts" : rawTab === "recreeshots" ? "recreeshots" : "events";
+  const tab: SavedTab =
+    rawTab === "posts" ? "posts" : rawTab === "recreeshots" ? "recreeshots" : rawTab === "shop" ? "shop" : "events";
   const router = useRouter();
 
   return (
     <div>
       {/* 탭 바 */}
-      <div className="flex border-b border-secondary sticky top-0 bg-background z-10 max-w-2xl mx-auto">
+      <div className="flex border-b border-secondary sticky top-0 bg-background z-10 max-w-2xl mx-auto overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {TABS.map((t) => (
           <button
             key={t}
             type="button"
             onClick={() => router.push(tabHref(t))}
-            className={`flex-1 py-3 text-sm font-medium transition-colors relative ${
+            className={`shrink-0 px-5 py-3 text-sm font-medium whitespace-nowrap transition-colors relative ${
               tab === t ? "text-foreground" : "text-muted-foreground"
             }`}
           >
@@ -171,6 +177,30 @@ export function SavedClient({ posts, recreeshots, tagGroupConfigs, savedEvents }
             </div>
           ) : (
             posts.map((post) => (
+              <SavedPostCard key={post.id} post={post} tagGroupMap={tagGroupMap} />
+            ))
+          )}
+        </div>
+      )}
+
+      {/* Shop 탭 */}
+      {tab === "shop" && (
+        <div className="px-4 max-w-2xl mx-auto">
+          {shopPosts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-[50vh] gap-3 text-center">
+              <p className="text-base font-semibold">No saved shop items yet</p>
+              <p className="text-sm text-muted-foreground">
+                Tap the bookmark icon on any product to save it here.
+              </p>
+              <Link
+                href="/shop"
+                className="mt-2 px-5 py-2.5 rounded-full bg-brand text-black text-sm font-semibold"
+              >
+                Explore shop
+              </Link>
+            </div>
+          ) : (
+            shopPosts.map((post) => (
               <SavedPostCard key={post.id} post={post} tagGroupMap={tagGroupMap} />
             ))
           )}
