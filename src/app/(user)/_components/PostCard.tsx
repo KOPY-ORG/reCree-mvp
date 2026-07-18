@@ -16,8 +16,14 @@ import { LabelBadge } from "@/components/LabelBadge";
 import type { PostItem } from "@/lib/post-queries";
 import { ScrapButton } from "./ScrapButton";
 
+/** PostBadges가 필요로 하는 최소 형태 — PostItem뿐 아니라 동일 shape의 ShopPostItem 등도 재사용 가능 */
+export type LabelablePost = {
+  postTopics: PostItem["postTopics"];
+  postTags: PostItem["postTags"];
+};
+
 function resolvePostLabels(
-  post: PostItem,
+  post: LabelablePost,
   tagGroupMap: TagGroupColorMap,
   variant: "home" | "list",
 ): ResolvedLabel[] {
@@ -53,18 +59,20 @@ export function PostBadges({
   tagGroupMap,
   variant = "home",
   pillFontSize = "0.625rem",
+  className = "flex flex-wrap gap-1",
 }: {
-  post: PostItem;
+  post: LabelablePost;
   tagGroupMap: TagGroupColorMap;
   variant?: "home" | "list";
   pillFontSize?: string;
+  className?: string;
 }) {
   const labels = resolvePostLabels(post, tagGroupMap, variant);
   if (labels.length === 0) return null;
 
   return (
     <div
-      className="flex flex-wrap gap-1"
+      className={className}
       style={{ "--pill-fs": pillFontSize } as React.CSSProperties}
     >
       {labels.map((label, i) => (

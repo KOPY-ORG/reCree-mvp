@@ -188,7 +188,7 @@ export function SavedClient({ posts, shopPosts, recreeshots, tagGroupConfigs, sa
         <div className="px-4 max-w-2xl mx-auto">
           {shopPosts.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-[50vh] gap-3 text-center">
-              <p className="text-base font-semibold">No saved shop items yet</p>
+              <p className="text-base font-semibold">No saved products yet</p>
               <p className="text-sm text-muted-foreground">
                 Tap the bookmark icon on any product to save it here.
               </p>

@@ -140,7 +140,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
 
   const placeLabel = spotInsight?.place.nameEn ?? spotInsight?.place.nameKo;
   const headline = placeLabel ?? (post.isShop && post.subtitle ? post.subtitle : null);
-  const storySubtitle = post.isShop ? "The full story behind this item" : "The full story behind this spot";
+  const storySubtitle = post.isShop ? "The full story behind this product" : "The full story behind this spot";
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Article",
