@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { after } from "next/server";
 import type { Metadata } from "next";
 import { Sparkles, Waves, Flame, Lightbulb } from "lucide-react";
 import { LocationCard } from "./_components/LocationCard";
@@ -18,6 +17,7 @@ import { PostReCreeshotSection } from "./_components/PostReCreeshotSection";
 import { getPostDetail } from "@/lib/post-detail-query";
 import { PostActionBar } from "./_components/PostActionBar";
 import { PostComments } from "./_components/PostComments";
+import { PostViewTracker } from "./_components/PostViewTracker";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -105,17 +105,6 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
 
   const { post, comments, isSaved, isLikedByMe } = result;
 
-  const isStaff = currentUser?.role === "ADMIN" || currentUser?.role === "EDITOR";
-
-  if (!isPreview && !isStaff) {
-    after(async () => {
-      await prisma.post.update({
-        where: { id: post.id },
-        data: { viewCount: { increment: 1 } },
-      }).catch(() => {});
-    });
-  }
-
   const reCreeshorts = await prisma.reCreeshot.findMany({
     where: { linkedPostId: post.id, status: "ACTIVE" },
     orderBy: { createdAt: "desc" },
@@ -183,6 +172,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       {!isPreview && <PostDetailHeader postId={post.id} isLoggedIn={!!currentUser} />}
+      {!isPreview && <PostViewTracker postId={post.id} />}
       {isPreview && (
         <div className="bg-amber-100 text-amber-800 text-xs text-center py-2 font-medium">
           미리보기 모드 — 실제 발행 전 상태입니다
