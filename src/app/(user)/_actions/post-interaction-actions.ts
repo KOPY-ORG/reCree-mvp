@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
+import { getCurrentUser } from "@/lib/auth";
 
 // ─── Zod 스키마 ─────────────────────────────────────────────────────────────
 
@@ -131,6 +132,21 @@ export async function addComment(
     console.error("[addComment] server_error", e);
     return { error: "server_error" };
   }
+}
+
+// ─── incrementPostView ───────────────────────────────────────────────────────
+
+export async function incrementPostView(postId: string): Promise<void> {
+  const parsed = postIdSchema.safeParse(postId);
+  if (!parsed.success) return;
+
+  const user = await getCurrentUser();
+  if (user?.role === "ADMIN" || user?.role === "EDITOR") return;
+
+  await prisma.post.update({
+    where: { id: parsed.data },
+    data: { viewCount: { increment: 1 } },
+  }).catch(() => {});
 }
 
 // ─── deleteComment ───────────────────────────────────────────────────────────
