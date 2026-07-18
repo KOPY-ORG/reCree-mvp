@@ -41,6 +41,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   checkPostSlug,
   type PostFormData,
@@ -150,6 +151,10 @@ export type PostInitialData = {
   recreePhotoUrl?: string | null;
   collectedBy: string | null;
   collectedAt: string | null;
+  isShop: boolean;
+  subtitle: string | null;
+  purchaseUrl: string | null;
+  isAffiliate: boolean;
   postTopics: { topicId: string; isVisible: boolean; displayOrder: number }[];
   postTags: { tagId: string; isVisible: boolean; displayOrder: number }[];
   postImages: PostImageInput[];
@@ -300,6 +305,10 @@ export function PostForm({
   const [collectedBy, setCollectedBy] = useState(initialData?.collectedBy ?? "");
   const [collectedAt, setCollectedAt] = useState(initialData?.collectedAt ?? "");
   const [sources, setSources] = useState<PostSourceInput[]>(initSources);
+  const [isShop, setIsShop] = useState(initialData?.isShop ?? false);
+  const [subtitle, setSubtitle] = useState(initialData?.subtitle ?? "");
+  const [purchaseUrl, setPurchaseUrl] = useState(initialData?.purchaseUrl ?? "");
+  const [isAffiliate, setIsAffiliate] = useState(initialData?.isAffiliate ?? false);
 
   type PostTopicState = { topicId: string; isVisible: boolean; displayOrder: number };
   type PostTagState = { tagId: string; isVisible: boolean; displayOrder: number };
@@ -314,6 +323,10 @@ export function PostForm({
     memo: string;
     collectedBy: string;
     collectedAt: string;
+    isShop: boolean;
+    subtitle: string;
+    purchaseUrl: string;
+    isAffiliate: boolean;
     sources: PostSourceInput[];
     postTopics: PostTopicState[];
     postTags: PostTagState[];
@@ -414,6 +427,10 @@ export function PostForm({
         if (draft.memo) setMemo(draft.memo);
         if (draft.collectedBy) setCollectedBy(draft.collectedBy);
         if (draft.collectedAt) setCollectedAt(draft.collectedAt);
+        if (draft.isShop !== undefined) setIsShop(draft.isShop);
+        if (draft.subtitle) setSubtitle(draft.subtitle);
+        if (draft.purchaseUrl) setPurchaseUrl(draft.purchaseUrl);
+        if (draft.isAffiliate !== undefined) setIsAffiliate(draft.isAffiliate);
         if (Array.isArray(draft.sources) && draft.sources.length) setSources(draft.sources);
         if (Array.isArray(draft.postTopics) && draft.postTopics.length) setPostTopics(draft.postTopics);
         if (Array.isArray(draft.postTags) && draft.postTags.length) setPostTags(draft.postTags);
@@ -440,6 +457,7 @@ export function PostForm({
         const draft: PostDraftState = {
           titleKo, titleEn, slug, bodyKo, bodyEn,
           memo, collectedBy, collectedAt,
+          isShop, subtitle, purchaseUrl, isAffiliate,
           sources, postTopics, postTags, placeEntries,
           images, recreePhotoUrl,
           savedAt: new Date().toISOString(),
@@ -454,6 +472,7 @@ export function PostForm({
       if (draftSaveTimerRef.current) clearTimeout(draftSaveTimerRef.current);
     };
   }, [draftKey, titleKo, titleEn, slug, bodyKo, bodyEn, memo, collectedBy, collectedAt,
+      isShop, subtitle, purchaseUrl, isAffiliate,
       sources, postTopics, postTags, placeEntries, images, recreePhotoUrl]);
 
   // ── 폼 콘텐츠 존재 여부 추적 (beforeunload 판단용) ────────────────────────
@@ -612,6 +631,10 @@ export function PostForm({
     setMemo(draft.memo ?? "");
     setCollectedBy(draft.collectedBy ?? "");
     setCollectedAt(draft.collectedAt ?? "");
+    setIsShop(draft.isShop ?? false);
+    setSubtitle(draft.subtitle ?? "");
+    setPurchaseUrl(draft.purchaseUrl ?? "");
+    setIsAffiliate(draft.isAffiliate ?? false);
     if (Array.isArray(draft.sources)) setSources(draft.sources);
     if (Array.isArray(draft.postTopics)) setPostTopics(draft.postTopics);
     if (Array.isArray(draft.postTags)) setPostTags(draft.postTags);
@@ -669,24 +692,31 @@ export function PostForm({
       recreePhotoUrl: recreePhotoUrl || null,
       collectedBy: collectedBy.trim(),
       collectedAt: collectedAt.trim(),
+      isShop,
+      subtitle: subtitle.trim(),
+      purchaseUrl: purchaseUrl.trim(),
+      isAffiliate,
       images,
       sources: sources.filter((s) => s.url || s.sourceNote),
       topics: postTopics,
       tags: postTags,
-      places: placeEntries.map((e) => {
-        const hasInsight =
-          e.contextKo || e.contextEn || e.vibe.length > 0 ||
-          e.mustTryKo || e.mustTryEn || e.tipKo || e.tipEn;
-        const spotInsight: SpotInsightData | null = hasInsight
-          ? {
-              contextKo: e.contextKo, contextEn: e.contextEn,
-              vibe: e.vibe,
-              mustTryKo: e.mustTryKo, mustTryEn: e.mustTryEn,
-              tipKo: e.tipKo, tipEn: e.tipEn,
-            }
-          : null;
-        return { placeId: e.place.id, spotInsight };
-      }),
+      // shop 포스트는 장소를 가질 수 없음 — 지도/상세에서 혼종이 되는 것을 방지
+      places: isShop
+        ? []
+        : placeEntries.map((e) => {
+            const hasInsight =
+              e.contextKo || e.contextEn || e.vibe.length > 0 ||
+              e.mustTryKo || e.mustTryEn || e.tipKo || e.tipEn;
+            const spotInsight: SpotInsightData | null = hasInsight
+              ? {
+                  contextKo: e.contextKo, contextEn: e.contextEn,
+                  vibe: e.vibe,
+                  mustTryKo: e.mustTryKo, mustTryEn: e.mustTryEn,
+                  tipKo: e.tipKo, tipEn: e.tipEn,
+                }
+              : null;
+            return { placeId: e.place.id, spotInsight };
+          }),
     };
   }
 
@@ -707,6 +737,12 @@ export function PostForm({
         postTopics.filter((t) => t.isVisible).length + postTags.filter((t) => t.isVisible).length;
       if (visibleCount < 1) missing.push("라벨 1개 이상 표시 설정 필요");
       if (missing.length > 0) { toast.error(`발행 불가: ${missing.join(", ")} 필요`); return; }
+      if (isShop && !purchaseUrl.trim()) {
+        const proceed = window.confirm(
+          "구매 링크가 비어 있습니다. 이대로 발행하면 상세 페이지에 구매 버튼이 표시되지 않습니다. 계속하시겠습니까?",
+        );
+        if (!proceed) return;
+      }
     }
 
     startTransition(async () => {
@@ -975,6 +1011,54 @@ export function PostForm({
                       )}
                       {slugStatus === "error" && (
                         <p className="text-xs text-destructive">이미 사용 중인 슬러그입니다.</p>
+                      )}
+                    </div>
+
+                    {/* Shop 포스트 */}
+                    <div className="space-y-3 rounded-md border p-3">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="isShop" className="text-sm cursor-pointer">
+                          Shop 포스트
+                        </Label>
+                        <Switch id="isShop" checked={isShop} onCheckedChange={setIsShop} />
+                      </div>
+                      {isShop && placeEntries.length > 0 && (
+                        <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+                          Shop 포스트로 전환하면 연결된 장소가 해제됩니다.
+                        </p>
+                      )}
+                      {isShop && (
+                        <div className="space-y-2.5">
+                          <div className="space-y-1">
+                            <Label htmlFor="subtitle" className="text-xs">서브타이틀 (제품명 헤드라인)</Label>
+                            <Input
+                              id="subtitle"
+                              value={subtitle}
+                              onChange={(e) => setSubtitle(e.target.value)}
+                              placeholder="예: 무드 립 틴트 3종 세트"
+                              className="h-8 text-sm"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label htmlFor="purchaseUrl" className="text-xs">구매 링크 (https://)</Label>
+                            <Input
+                              id="purchaseUrl"
+                              value={purchaseUrl}
+                              onChange={(e) => setPurchaseUrl(e.target.value)}
+                              placeholder="https://..."
+                              className="h-8 text-sm"
+                            />
+                            {purchaseUrl.trim() && !purchaseUrl.trim().startsWith("https://") && (
+                              <p className="text-xs text-destructive">https://로 시작해야 합니다.</p>
+                            )}
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <Label htmlFor="isAffiliate" className="text-xs cursor-pointer">
+                              제휴 링크 (수수료 안내 문구 표시)
+                            </Label>
+                            <Switch id="isAffiliate" checked={isAffiliate} onCheckedChange={setIsAffiliate} />
+                          </div>
+                        </div>
                       )}
                     </div>
 
