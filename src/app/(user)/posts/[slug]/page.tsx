@@ -140,6 +140,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
 
   const placeLabel = spotInsight?.place.nameEn ?? spotInsight?.place.nameKo;
   const headline = placeLabel ?? (post.isShop && post.subtitle ? post.subtitle : null);
+  const storySubtitle = post.isShop ? "The full story behind this item" : "The full story behind this spot";
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Article",
@@ -312,20 +313,22 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
         />
       )}
 
-      {/* How others reCree'd + Tips */}
-      <PostReCreeshotSection
-        postId={post.id}
-        shots={reCreeshorts}
-        originalImageUrl={originalImages[0]?.url ?? null}
-        isLoggedIn={!!currentUser}
-      />
+      {/* How others reCree'd + Tips (shop 포스트는 숨김) */}
+      {!post.isShop && (
+        <PostReCreeshotSection
+          postId={post.id}
+          shots={reCreeshorts}
+          originalImageUrl={originalImages[0]?.url ?? null}
+          isLoggedIn={!!currentUser}
+        />
+      )}
 
       {/* 본문 */}
       {post.bodyEn && (
         <div className="mx-4 mt-3 rounded-2xl border border-secondary bg-white overflow-hidden">
           <div className="px-4 pt-4 pb-3">
             <p className="text-sm font-bold">Story</p>
-            <p className="text-xs text-muted-foreground mt-0.5">The full story behind this spot</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{storySubtitle}</p>
           </div>
           <div className="px-4 pb-4">
             <MarkdownContent source={post.bodyEn} />
