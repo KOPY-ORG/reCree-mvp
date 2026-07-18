@@ -70,6 +70,44 @@ export async function getPostsWithLabels(
 
 export type PostItem = Awaited<ReturnType<typeof getPostsWithLabels>>[number];
 
+/** shop 포스트 목록 — postTags는 isVisible 필터 없이 전체 로드 (카드 표시용/필터 매칭용 겸용) */
+export async function getShopPosts() {
+  return prisma.post.findMany({
+    where: { status: "PUBLISHED", isShop: true },
+    orderBy: { createdAt: "desc" },
+    take: 100,
+    select: {
+      id: true,
+      slug: true,
+      titleEn: true,
+      subtitle: true,
+      postImages: {
+        where: { isThumbnail: true },
+        select: { url: true, focalX: true, focalY: true, zoom: true },
+        take: 1,
+      },
+      postTags: {
+        orderBy: { displayOrder: "asc" },
+        select: {
+          isVisible: true,
+          tag: {
+            select: {
+              id: true,
+              name: true,
+              group: true,
+              colorHex: true,
+              colorHex2: true,
+              textColorHex: true,
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
+export type ShopPostItem = Awaited<ReturnType<typeof getShopPosts>>[number];
+
 export async function getSavedPostIds(userId: string | null): Promise<Set<string>> {
   if (!userId) return new Set();
   const rows = await prisma.save.findMany({
