@@ -9,6 +9,7 @@ import {
   X,
   ChevronRight,
   MapPin,
+  Bookmark,
   Heart,
   Pencil,
   LogOut,
@@ -130,6 +131,13 @@ export function ProfileView({
           >
             <MapPin className="size-4" />
             My Maps
+          </Link>
+          <Link
+            href="/saved"
+            className="flex flex-1 items-center justify-center gap-2 py-2 rounded-full bg-muted text-sm font-medium"
+          >
+            <Bookmark className="size-4" />
+            Saved
           </Link>
           <Link
             href="/profile/following"
