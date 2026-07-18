@@ -55,6 +55,7 @@ export default async function TopicDetailPage({
       getPostsWithLabels(
         {
           status: "PUBLISHED",
+          isShop: false,
           postTopics: {
             some: {
               topicId: { in: descendantIds },

@@ -90,7 +90,7 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
 
   const [homeBanners, sections, tagGroupConfigs, savedPostIds, latestFeedResult] = await Promise.all([
     prisma.homeBanner.findMany({
-      where: { isActive: true },
+      where: { isActive: true, post: { isShop: false } },
       orderBy: { order: "asc" },
       select: {
         id: true,
@@ -192,7 +192,7 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
 
   if (!hasBanners && !hasSections && activeTab !== "follow") {
     const fallbackPosts = await getPostsWithLabels(
-      { status: "PUBLISHED" },
+      { status: "PUBLISHED", isShop: false },
       { orderBy: { createdAt: "desc" } }
     );
 
