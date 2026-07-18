@@ -16,6 +16,7 @@ import type { SourcePlatform } from "@/types";
 import { PostReCreeshotSection } from "./_components/PostReCreeshotSection";
 import { getPostDetail } from "@/lib/post-detail-query";
 import { PostActionBar } from "./_components/PostActionBar";
+import { PurchaseButton } from "./_components/PurchaseButton";
 import { PostComments } from "./_components/PostComments";
 import { PostViewTracker } from "./_components/PostViewTracker";
 
@@ -138,6 +139,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
   } | null;
 
   const placeLabel = spotInsight?.place.nameEn ?? spotInsight?.place.nameKo;
+  const headline = placeLabel ?? (post.isShop && post.subtitle ? post.subtitle : null);
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Article",
@@ -210,12 +212,12 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
 
       {/* 제목 */}
       <div className="px-4 pb-2 space-y-1">
-        {spotInsight && (
+        {headline && (
           <p className="text-xl font-bold leading-tight">
-            {spotInsight.place.nameEn ?? spotInsight.place.nameKo}
+            {headline}
           </p>
         )}
-        <h1 className={spotInsight ? "text-sm text-muted-foreground leading-snug" : "text-xl font-bold leading-tight"}>
+        <h1 className={headline ? "text-sm text-muted-foreground leading-snug" : "text-xl font-bold leading-tight"}>
           {post.titleEn}
         </h1>
       </div>
@@ -227,6 +229,11 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
         initialLikeCount={post.likeCount}
         commentCount={post.commentCount}
       />
+
+      {/* 구매 버튼 (shop 포스트) */}
+      {post.isShop && post.purchaseUrl && (
+        <PurchaseButton purchaseUrl={post.purchaseUrl} isAffiliate={post.isAffiliate} />
+      )}
 
       {/* Spot Insight */}
       {spotInsight && (
