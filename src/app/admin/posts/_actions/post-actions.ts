@@ -63,6 +63,11 @@ export type PostFormData = {
   collectedAt: string;
   // 리크리샷 기준 이미지
   recreePhotoUrl: string | null;
+  // Shop 포스트
+  isShop: boolean;
+  subtitle: string;
+  purchaseUrl: string;
+  isAffiliate: boolean;
   // 이미지
   images: PostImageInput[];
   // 복수 출처
@@ -172,6 +177,8 @@ export async function getPlaceDetail(id: string) {
 // ─── 공통 관계 빌더 ─────────────────────────────────────────────────────────────
 
 function buildPostRelations(data: PostFormData) {
+  // shop 포스트는 장소를 가질 수 없음 — 클라이언트 payload와 무관하게 서버에서 강제 (이중 방어)
+  const places = data.isShop ? [] : data.places;
   return {
     postTopics: {
       create: data.topics.map((t) => ({
@@ -221,9 +228,9 @@ function buildPostRelations(data: PostFormData) {
         })),
       },
     }),
-    ...(data.places.length > 0 && {
+    ...(places.length > 0 && {
       postPlaces: {
-        create: data.places.map((p) => ({
+        create: places.map((p) => ({
           placeId: p.placeId,
           context: p.spotInsight?.contextKo || null,
           vibe: p.spotInsight?.vibe ?? [],
@@ -253,6 +260,13 @@ function validateSlug(slug: string): string | null {
   return null;
 }
 
+// 값이 있을 때만 https:// 시작 여부 검증 (렌더 가드가 유일한 방어선이 되지 않도록 서버에서도 확인)
+function validatePurchaseUrl(purchaseUrl: string): string | null {
+  if (!purchaseUrl.trim()) return null;
+  if (!purchaseUrl.trim().startsWith("https://")) return "구매 링크는 https://로 시작해야 합니다.";
+  return null;
+}
+
 // ─── 포스트 생성 ────────────────────────────────────────────────────────────────
 
 export async function createPost(
@@ -261,6 +275,8 @@ export async function createPost(
 ): Promise<{ error?: string; id?: string }> {
   const slugError = validateSlug(data.slug);
   if (slugError) return { error: slugError };
+  const purchaseUrlError = validatePurchaseUrl(data.purchaseUrl);
+  if (purchaseUrlError) return { error: purchaseUrlError };
 
   let newId: string | undefined;
   try {
@@ -279,6 +295,10 @@ export async function createPost(
         collectedBy: data.collectedBy || null,
         collectedAt: data.collectedAt || null,
         authorId: user?.id ?? null,
+        isShop: data.isShop,
+        subtitle: data.subtitle || null,
+        purchaseUrl: data.purchaseUrl || null,
+        isAffiliate: data.isAffiliate,
         ...buildPostRelations(data),
       },
     });
@@ -306,6 +326,8 @@ export async function updatePost(
 ): Promise<{ error?: string }> {
   const slugError = validateSlug(data.slug);
   if (slugError) return { error: slugError };
+  const purchaseUrlError = validatePurchaseUrl(data.purchaseUrl);
+  if (purchaseUrlError) return { error: purchaseUrlError };
 
   try {
     // Storage 정리를 위해 기존 데이터 먼저 조회
@@ -337,6 +359,10 @@ export async function updatePost(
           recreePhotoUrl: data.recreePhotoUrl || null,
           collectedBy: data.collectedBy || null,
           collectedAt: data.collectedAt || null,
+          isShop: data.isShop,
+          subtitle: data.subtitle || null,
+          purchaseUrl: data.purchaseUrl || null,
+          isAffiliate: data.isAffiliate,
           ...buildPostRelations(data),
         },
       });
@@ -625,6 +651,10 @@ export async function getPostEditData(id: string) {
     memo: post.memo,
     collectedBy: post.collectedBy,
     collectedAt: post.collectedAt,
+    isShop: post.isShop,
+    subtitle: post.subtitle,
+    purchaseUrl: post.purchaseUrl,
+    isAffiliate: post.isAffiliate,
     postTopics: post.postTopics,
     postTags: post.postTags,
     postImages: post.postImages.map((img) => ({

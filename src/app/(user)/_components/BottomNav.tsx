@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Search, Bookmark, Map, Camera, User } from "lucide-react";
+import { Search, ShoppingBag, Map, Camera, User } from "lucide-react";
 import { UserAvatar } from "@/components/ui/user-avatar";
 
 const TABS = [
   { label: "Discover",   icon: Search,   href: "/feed" },
-  { label: "Saved",      icon: Bookmark, href: "/saved" },
+  { label: "Shop",       icon: ShoppingBag, href: "/shop" },
   { label: "Home",       icon: Map,      href: "/discover" },
   { label: "recreeshot", icon: Camera,   href: "/recreeshot" },
   { label: "Profile",    icon: User,     href: "/profile" },

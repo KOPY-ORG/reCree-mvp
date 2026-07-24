@@ -68,7 +68,15 @@ export default async function SavedPage() {
   const posts =
     savedPostIds.length > 0
       ? await getPostsWithLabels(
-          { id: { in: savedPostIds }, status: "PUBLISHED" },
+          { id: { in: savedPostIds }, status: "PUBLISHED", isShop: false },
+          { take: savedPostIds.length }
+        )
+      : [];
+
+  const shopPosts =
+    savedPostIds.length > 0
+      ? await getPostsWithLabels(
+          { id: { in: savedPostIds }, status: "PUBLISHED", isShop: true },
           { take: savedPostIds.length }
         )
       : [];
@@ -164,6 +172,7 @@ export default async function SavedPage() {
   return (
     <SavedClient
       posts={posts}
+      shopPosts={shopPosts}
       recreeshots={recreeshots}
       tagGroupConfigs={tagGroupConfigs}
       savedEvents={savedEvents}

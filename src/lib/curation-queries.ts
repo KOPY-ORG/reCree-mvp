@@ -72,6 +72,7 @@ export async function getSectionData(sections: CuratedSection[]): Promise<Sectio
         const posts = await getPostsWithLabels({
           id: { in: section.postIds },
           status: "PUBLISHED",
+          isShop: false,
         });
         const map = new Map(posts.map((p) => [p.id, p]));
         return {
@@ -87,6 +88,7 @@ export async function getSectionData(sections: CuratedSection[]): Promise<Sectio
       const items = await getPostsWithLabels(
         {
           status: "PUBLISHED",
+          isShop: false,
           ...(section.filterTopicId
             ? { postTopics: { some: { topicId: section.filterTopicId } } }
             : {}),

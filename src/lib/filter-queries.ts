@@ -10,7 +10,7 @@ export async function getFilteredPosts(params: {
   tagIds?: string[];
   tagGroupName?: string;
 }) {
-  const AND: object[] = [{ status: "PUBLISHED" }];
+  const AND: object[] = [{ status: "PUBLISHED" }, { isShop: false }];
 
   // 하위 토픽 ID 미리 계산 (이후 정렬에서도 재사용)
   const expandedTopicIdSets: string[][] = [];

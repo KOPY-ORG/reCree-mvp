@@ -205,10 +205,14 @@ model Post {
   id             String     @id @default(uuid()) @db.Uuid
   titleKo        String
   titleEn        String
+  subtitle       String? // shop 포스트의 제품명 헤드라인
   slug           String     @unique
   bodyKo         String?
   bodyEn         String?
   status         PostStatus @default(DRAFT)
+  isShop         Boolean    @default(false) // shop 포스트 구분
+  purchaseUrl    String? // 외부 구매/제휴 링크
+  isAffiliate    Boolean    @default(false) // 제휴 안내 문구 표시 여부
   source         String?
   importNote     String? // 시트 원본 데이터 (JSON 문자열)
   memo           String? // 관리자 내부 메모

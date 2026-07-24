@@ -14,7 +14,7 @@ export async function fetchLatestFeed({
   take?: number;
 } = {}): Promise<{ posts: PostItem[]; nextCursor: string | null }> {
   const posts = await getPostsWithLabels(
-    { status: "PUBLISHED" },
+    { status: "PUBLISHED", isShop: false },
     {
       take,
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
@@ -40,6 +40,7 @@ export async function fetchFollowFeed({
   const posts = await getPostsWithLabels(
     {
       status: "PUBLISHED",
+      isShop: false,
       postTopics: { some: { topicId: { in: topicIds } } },
     },
     {

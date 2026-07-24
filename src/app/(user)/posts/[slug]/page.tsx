@@ -16,6 +16,7 @@ import type { SourcePlatform } from "@/types";
 import { PostReCreeshotSection } from "./_components/PostReCreeshotSection";
 import { getPostDetail } from "@/lib/post-detail-query";
 import { PostActionBar } from "./_components/PostActionBar";
+import { PurchaseButton } from "./_components/PurchaseButton";
 import { PostComments } from "./_components/PostComments";
 import { PostViewTracker } from "./_components/PostViewTracker";
 
@@ -138,6 +139,8 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
   } | null;
 
   const placeLabel = spotInsight?.place.nameEn ?? spotInsight?.place.nameKo;
+  const headline = placeLabel ?? (post.isShop && post.subtitle ? post.subtitle : null);
+  const storySubtitle = post.isShop ? "The full story behind this product" : "The full story behind this spot";
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Article",
@@ -210,12 +213,12 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
 
       {/* 제목 */}
       <div className="px-4 pb-2 space-y-1">
-        {spotInsight && (
+        {headline && (
           <p className="text-xl font-bold leading-tight">
-            {spotInsight.place.nameEn ?? spotInsight.place.nameKo}
+            {headline}
           </p>
         )}
-        <h1 className={spotInsight ? "text-sm text-muted-foreground leading-snug" : "text-xl font-bold leading-tight"}>
+        <h1 className={headline ? "text-sm text-muted-foreground leading-snug" : "text-xl font-bold leading-tight"}>
           {post.titleEn}
         </h1>
       </div>
@@ -227,6 +230,11 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
         initialLikeCount={post.likeCount}
         commentCount={post.commentCount}
       />
+
+      {/* 구매 버튼 (shop 포스트) */}
+      {post.isShop && post.purchaseUrl && (
+        <PurchaseButton purchaseUrl={post.purchaseUrl} isAffiliate={post.isAffiliate} />
+      )}
 
       {/* Spot Insight */}
       {spotInsight && (
@@ -305,20 +313,22 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
         />
       )}
 
-      {/* How others reCree'd + Tips */}
-      <PostReCreeshotSection
-        postId={post.id}
-        shots={reCreeshorts}
-        originalImageUrl={originalImages[0]?.url ?? null}
-        isLoggedIn={!!currentUser}
-      />
+      {/* How others reCree'd + Tips (shop 포스트는 숨김) */}
+      {!post.isShop && (
+        <PostReCreeshotSection
+          postId={post.id}
+          shots={reCreeshorts}
+          originalImageUrl={originalImages[0]?.url ?? null}
+          isLoggedIn={!!currentUser}
+        />
+      )}
 
       {/* 본문 */}
       {post.bodyEn && (
         <div className="mx-4 mt-3 rounded-2xl border border-secondary bg-white overflow-hidden">
           <div className="px-4 pt-4 pb-3">
             <p className="text-sm font-bold">Story</p>
-            <p className="text-xs text-muted-foreground mt-0.5">The full story behind this spot</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{storySubtitle}</p>
           </div>
           <div className="px-4 pb-4">
             <MarkdownContent source={post.bodyEn} />
