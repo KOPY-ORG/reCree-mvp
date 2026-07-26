@@ -48,6 +48,7 @@ export function ShopCard({
             postTags: post.postTags.filter(({ isVisible }) => isVisible),
           }}
           tagGroupMap={tagGroupMap}
+          variant="shop"
           className="flex flex-wrap gap-1 pt-0.5"
         />
       </div>
