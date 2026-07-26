@@ -89,6 +89,20 @@ export function useDiscoverFilters({
           }
       }
     }
+    // 상단 facet chip이 L0/L1(그룹) topic id도 라벨·색으로 해석하도록, 위 분기에서 등록되지 않은 그룹 노드만 추가 등록.
+    // (이미 있는 id는 덮어쓰지 않음 — 기존 칩 색 유지. root는 parent 없이 호출, l1은 parent: root)
+    for (const root of topicTree) {
+      if (!map.has(root.id)) {
+        const r = resolveTopicColors({ ...root });
+        map.set(root.id, { id: root.id, label: root.nameEn, bg: labelBackground({ text: "", ...r }), fg: r.textColorHex });
+      }
+      for (const l1 of root.children) {
+        if (!map.has(l1.id)) {
+          const r = resolveTopicColors({ ...l1, parent: root });
+          map.set(l1.id, { id: l1.id, label: l1.nameEn, bg: labelBackground({ text: "", ...r }), fg: r.textColorHex });
+        }
+      }
+    }
     return map;
   }, [topicTree]);
 
