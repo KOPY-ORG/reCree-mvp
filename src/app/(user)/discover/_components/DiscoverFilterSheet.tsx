@@ -11,8 +11,7 @@ import {
 } from "@/lib/post-labels";
 import type { Level0TopicDeep } from "@/lib/topic-queries";
 import type { TagGroupWithTags } from "@/lib/filter-queries";
-
-const KPOP_NAME = "K-POP";
+import { KPOP_NAME } from "@/lib/filter-params";
 
 type ChipInfo = { id: string; label: string; bg: string; fg: string };
 

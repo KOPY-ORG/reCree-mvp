@@ -15,7 +15,7 @@ export interface FilterLookups {
 }
 
 // ExploreMapView의 칩 레벨 결정 로직과 동일 (KPOP은 L2, 나머지는 L2 또는 L1)
-const KPOP_NAME = "K-POP";
+export const KPOP_NAME = "K-POP";
 
 function topicSlugToId(topicTree: Level0TopicDeep[], slug: string): string | null {
   for (const root of topicTree) {
