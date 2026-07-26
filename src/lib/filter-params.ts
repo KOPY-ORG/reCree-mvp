@@ -15,29 +15,10 @@ export interface FilterLookups {
 }
 
 // ExploreMapView의 칩 레벨 결정 로직과 동일 (KPOP은 L2, 나머지는 L2 또는 L1)
-const KPOP_NAME = "K-POP";
+export const KPOP_NAME = "K-POP";
 
-function topicSlugToId(topicTree: Level0TopicDeep[], slug: string): string | null {
-  for (const root of topicTree) {
-    const l1s = root.children;
-    if (l1s.length === 0) continue;
-    if (root.nameEn === KPOP_NAME) {
-      for (const l1 of l1s)
-        for (const l2 of l1.children)
-          if (l2.slug === slug) return l2.id;
-      continue;
-    }
-    const hasL2 = l1s.some((l1) => l1.children.length > 0);
-    if (!hasL2) {
-      for (const l1 of l1s)
-        if (l1.slug === slug) return l1.id;
-    } else {
-      for (const l1 of l1s)
-        for (const l2 of l1.children)
-          if (l2.slug === slug) return l2.id;
-    }
-  }
-  return null;
+export function topicSlugToId(topicTree: Level0TopicDeep[], slug: string): string | null {
+  return findTopicNodeBySlug(topicTree, slug)?.id ?? null;
 }
 
 // topicTree 각 레벨(L0~L3)이 공통으로 갖는 필드만 뽑은 구조적 타입 — 재귀 순회를 레벨 무관하게 공유하기 위함
@@ -65,6 +46,18 @@ function findTopicNode(nodes: readonly TopicTreeNode[], id: string): TopicTreeNo
 
 function topicIdToSlug(topicTree: Level0TopicDeep[], id: string): string | null {
   return findTopicNode(topicTree, id)?.slug ?? null;
+}
+
+// children을 타고 내려가며 slug가 일치하는 노드를 찾는다 (topicSlugToId 공용) — 전 레벨 slug @unique 이므로 레벨 분기 불필요
+function findTopicNodeBySlug(nodes: readonly TopicTreeNode[], slug: string): TopicTreeNode | null {
+  for (const node of nodes) {
+    if (node.slug === slug) return node;
+    if (node.children) {
+      const found = findTopicNodeBySlug(node.children, slug);
+      if (found) return found;
+    }
+  }
+  return null;
 }
 
 // 노드 자신의 colorHex가 null이 아니면(빈 문자열도 포함) 자기 색을 쓰고, null이면 부모(inherited)의 색을 물려받는다

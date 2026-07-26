@@ -2,7 +2,7 @@ import Link from "next/link";
 import { LogIn } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getPostsWithLabels } from "@/lib/post-queries";
+import { getPostsWithLabels, getShopPostsWithLabels } from "@/lib/post-queries";
 import type { EventCollectionMapMarker } from "@/lib/event-collection-queries";
 import { SavedClient } from "./_components/SavedClient";
 
@@ -75,7 +75,7 @@ export default async function SavedPage() {
 
   const shopPosts =
     savedPostIds.length > 0
-      ? await getPostsWithLabels(
+      ? await getShopPostsWithLabels(
           { id: { in: savedPostIds }, status: "PUBLISHED", isShop: true },
           { take: savedPostIds.length }
         )
