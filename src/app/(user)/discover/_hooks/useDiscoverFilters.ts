@@ -191,8 +191,21 @@ export function useDiscoverFilters({
   const removeAppliedTagGroup = (key: string) =>
     commitFilters({ topicIds: appliedTopicIds, tagIds: appliedTagIds, tagGroupKeys: appliedTagGroupKeys.filter((k) => k !== key), region: appliedRegion });
 
-  const toggleTopic = (id: string) =>
-    setStagedTopicIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  // 그룹(L0/L1) All 토글 — staged에 groupId가 있으면 그것만 제거, 없으면 하위 노드(descendantIds) 전부 제거 후 groupId 추가(collapse)
+  const toggleTopicGroup = (groupId: string, descendantIds: string[]) =>
+    setStagedTopicIds((prev) =>
+      prev.includes(groupId)
+        ? prev.filter((x) => x !== groupId)
+        : [...prev.filter((x) => !descendantIds.includes(x)), groupId]
+    );
+  // coveringGroupId가 주어지고 staged에 있으면 degrade(그룹 해제 + 방금 누른 id를 뺀 나머지 칩 개별 선택), 아니면 단순 토글
+  const toggleTopic = (id: string, coveringGroupId?: string, chipIds?: string[]) =>
+    setStagedTopicIds((prev) => {
+      if (coveringGroupId && chipIds && prev.includes(coveringGroupId)) {
+        return [...prev.filter((x) => x !== coveringGroupId), ...chipIds.filter((cid) => cid !== id)];
+      }
+      return prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+    });
   const toggleTag = (id: string) =>
     setStagedTagIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
   const toggleRegion = (slug: string) =>
@@ -226,6 +239,7 @@ export function useDiscoverFilters({
     removeAppliedTag,
     removeAppliedTagGroup,
     toggleTopic,
+    toggleTopicGroup,
     toggleTag,
     toggleRegion,
   };

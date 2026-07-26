@@ -2,6 +2,7 @@
 
 import { X, MapPin } from "lucide-react";
 import { LabelBadge } from "@/components/LabelBadge";
+import { AllBadge } from "@/components/AllBadge";
 import {
   resolveTopicColors,
   resolveTagColors,
@@ -24,7 +25,8 @@ interface Props {
   tagChipMap: Map<string, ChipInfo>;
   stagedTopicIds: string[];
   stagedTagIds: string[];
-  onToggleTopic: (id: string) => void;
+  onToggleTopic: (id: string, coveringGroupId?: string, chipIds?: string[]) => void;
+  onToggleTopicGroup: (groupId: string, descendantIds: string[]) => void;
   onToggleTag: (id: string) => void;
   onReset: () => void;
   onApply: () => void;
@@ -43,6 +45,7 @@ export function DiscoverFilterSheet({
   stagedTopicIds,
   stagedTagIds,
   onToggleTopic,
+  onToggleTopicGroup,
   onToggleTag,
   onReset,
   onApply,
@@ -165,16 +168,28 @@ export function DiscoverFilterSheet({
                 const allL2 = l1s.flatMap((l1) =>
                   l1.children.map((l2) => ({ l2, l1 }))
                 );
+                const chipIds = allL2.map(({ l2 }) => l2.id);
+                // 그룹 collapse용 하위 노드: L1 id + L2 id 전부 (중복 staged 방지)
+                const descendantIds = [...l1s.map((l1) => l1.id), ...chipIds];
+                const rootCovered = stagedTopicIds.includes(root.id);
                 return (
                   <section key={root.id}>
-                    <h3 className="text-sm font-bold mb-3">{root.nameEn}</h3>
+                    <div className="flex items-center gap-2 mb-3">
+                      <h3 className="text-sm font-bold">{root.nameEn}</h3>
+                      <AllBadge
+                        active={rootCovered}
+                        onClick={() => onToggleTopicGroup(root.id, descendantIds)}
+                        className="shrink-0"
+                      />
+                    </div>
                     <div className="flex flex-wrap gap-x-2 gap-y-2.5">
                       {allL2.map(({ l2, l1 }) => {
                         const resolved = resolveTopicColors({
                           ...l2,
                           parent: { ...l1, parent: root },
                         });
-                        const isSelected = stagedTopicIds.includes(l2.id);
+                        const covering = rootCovered ? { id: root.id, chipIds } : null;
+                        const isSelected = stagedTopicIds.includes(l2.id) || covering !== null;
                         return (
                           <LabelBadge
                             key={l2.id}
@@ -182,9 +197,9 @@ export function DiscoverFilterSheet({
                             text={l2.nameEn}
                             background={labelBackground({ text: "", ...resolved })}
                             color={resolved.textColorHex}
-                            className="shrink-0 transition-all active:opacity-70 !px-3 h-7 !font-semibold shadow-sm"
+                            className={`shrink-0 transition-all active:opacity-70 !px-3 h-7 !font-semibold shadow-sm${covering ? " opacity-60" : ""}`}
                             style={badgeRingStyle(resolved.colorHex, isSelected)}
-                            onClick={() => onToggleTopic(l2.id)}
+                            onClick={() => onToggleTopic(l2.id, covering?.id, covering?.chipIds)}
                           />
                         );
                       })}
@@ -197,13 +212,24 @@ export function DiscoverFilterSheet({
 
               // 분기 B: L2 없음 → L1 평탄 칩
               if (!hasL2) {
+                // 렌더되는 칩이 L1(leaf)이므로 chipIds = descendantIds = L1 id 전부
+                const chipIds = l1s.map((l1) => l1.id);
+                const rootCovered = stagedTopicIds.includes(root.id);
                 return (
                   <section key={root.id}>
-                    <h3 className="text-sm font-bold mb-3">{root.nameEn}</h3>
+                    <div className="flex items-center gap-2 mb-3">
+                      <h3 className="text-sm font-bold">{root.nameEn}</h3>
+                      <AllBadge
+                        active={rootCovered}
+                        onClick={() => onToggleTopicGroup(root.id, chipIds)}
+                        className="shrink-0"
+                      />
+                    </div>
                     <div className="flex flex-wrap gap-x-2 gap-y-2.5">
                       {l1s.map((l1) => {
                         const resolved = resolveTopicColors({ ...l1, parent: root });
-                        const isSelected = stagedTopicIds.includes(l1.id);
+                        const covering = rootCovered ? { id: root.id, chipIds } : null;
+                        const isSelected = stagedTopicIds.includes(l1.id) || covering !== null;
                         return (
                           <LabelBadge
                             key={l1.id}
@@ -211,9 +237,9 @@ export function DiscoverFilterSheet({
                             text={l1.nameEn}
                             background={labelBackground({ text: "", ...resolved })}
                             color={resolved.textColorHex}
-                            className="shrink-0 transition-all active:opacity-70 !px-3 h-7 !font-semibold shadow-sm"
+                            className={`shrink-0 transition-all active:opacity-70 !px-3 h-7 !font-semibold shadow-sm${covering ? " opacity-60" : ""}`}
                             style={badgeRingStyle(resolved.colorHex, isSelected)}
-                            onClick={() => onToggleTopic(l1.id)}
+                            onClick={() => onToggleTopic(l1.id, covering?.id, covering?.chipIds)}
                           />
                         );
                       })}
@@ -223,24 +249,50 @@ export function DiscoverFilterSheet({
               }
 
               // 분기 C: L1 소제목 + L2 칩 (K-CONTENT류)
+              // root All의 chipIds(degrade용)는 L2만, descendantIds(collapse용)는 L1+L2 전부
+              const allRenderedL2Ids = l1s.flatMap((l1) => l1.children.map((l2) => l2.id));
+              const rootDescendantIds = [...l1s.map((l1) => l1.id), ...allRenderedL2Ids];
+              const rootCovered = stagedTopicIds.includes(root.id);
               return (
                 <section key={root.id}>
-                  <h3 className="text-sm font-bold mb-3">{root.nameEn}</h3>
+                  <div className="flex items-center gap-2 mb-3">
+                    <h3 className="text-sm font-bold">{root.nameEn}</h3>
+                    <AllBadge
+                      active={rootCovered}
+                      onClick={() => onToggleTopicGroup(root.id, rootDescendantIds)}
+                      className="shrink-0"
+                    />
+                  </div>
                   <div className="space-y-4">
                     {l1s.map((l1) => {
                       if (l1.children.length === 0) return null;
+                      const l1ChipIds = l1.children.map((l2) => l2.id);
+                      const l1Covered = stagedTopicIds.includes(l1.id);
                       return (
                         <div key={l1.id}>
-                          <p className="text-xs font-semibold text-muted-foreground mb-2">
-                            {l1.nameEn}
-                          </p>
+                          <div className="flex items-center gap-2 mb-2">
+                            <p className="text-xs font-semibold text-muted-foreground">
+                              {l1.nameEn}
+                            </p>
+                            <AllBadge
+                              active={l1Covered}
+                              onClick={() => onToggleTopicGroup(l1.id, l1ChipIds)}
+                              className="shrink-0"
+                            />
+                          </div>
                           <div className="flex flex-wrap gap-x-2 gap-y-2.5">
                             {l1.children.map((l2) => {
                               const resolved = resolveTopicColors({
                                 ...l2,
                                 parent: { ...l1, parent: root },
                               });
-                              const isSelected = stagedTopicIds.includes(l2.id);
+                              // 넓은 쪽(root) 우선, 그다음 l1
+                              const covering = rootCovered
+                                ? { id: root.id, chipIds: allRenderedL2Ids }
+                                : l1Covered
+                                ? { id: l1.id, chipIds: l1ChipIds }
+                                : null;
+                              const isSelected = stagedTopicIds.includes(l2.id) || covering !== null;
                               return (
                                 <LabelBadge
                                   key={l2.id}
@@ -248,9 +300,9 @@ export function DiscoverFilterSheet({
                                   text={l2.nameEn}
                                   background={labelBackground({ text: "", ...resolved })}
                                   color={resolved.textColorHex}
-                                  className="shrink-0 transition-all active:opacity-70 !px-3 h-7 !font-semibold shadow-sm"
+                                  className={`shrink-0 transition-all active:opacity-70 !px-3 h-7 !font-semibold shadow-sm${covering ? " opacity-60" : ""}`}
                                   style={badgeRingStyle(resolved.colorHex, isSelected)}
-                                  onClick={() => onToggleTopic(l2.id)}
+                                  onClick={() => onToggleTopic(l2.id, covering?.id, covering?.chipIds)}
                                 />
                               );
                             })}

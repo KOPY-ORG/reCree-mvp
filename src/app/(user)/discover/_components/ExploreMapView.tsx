@@ -127,6 +127,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     removeAppliedTag,
     removeAppliedTagGroup,
     toggleTopic,
+    toggleTopicGroup,
     toggleTag,
     toggleRegion,
   } = useDiscoverFilters({
@@ -821,6 +822,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
         stagedTopicIds={stagedTopicIds}
         stagedTagIds={stagedTagIds}
         onToggleTopic={toggleTopic}
+        onToggleTopicGroup={toggleTopicGroup}
         onToggleTag={toggleTag}
         onReset={resetStaged}
         onApply={applyFilters}
