@@ -45,7 +45,15 @@ interface Props {
   savedEvents: SavedEventCardData[];
 }
 
-function SavedPostCard({ post, tagGroupMap }: { post: PostItem; tagGroupMap: TagGroupColorMap }) {
+function SavedPostCard({
+  post,
+  tagGroupMap,
+  badgeVariant = "list",
+}: {
+  post: PostItem;
+  tagGroupMap: TagGroupColorMap;
+  badgeVariant?: "list" | "shop";
+}) {
   const place = post.postPlaces[0]?.place;
   const placeLabel = place?.nameEn ?? place?.nameKo ?? null;
   const heading = placeLabel ?? (post.isShop && post.subtitle ? post.subtitle : null);
@@ -81,7 +89,7 @@ function SavedPostCard({ post, tagGroupMap }: { post: PostItem; tagGroupMap: Tag
           </p>
         )}
         <div className="mt-1.5">
-          <PostBadges post={post} tagGroupMap={tagGroupMap} variant="list" />
+          <PostBadges post={post} tagGroupMap={tagGroupMap} variant={badgeVariant} />
         </div>
       </div>
 
@@ -201,7 +209,7 @@ export function SavedClient({ posts, shopPosts, recreeshots, tagGroupConfigs, sa
             </div>
           ) : (
             shopPosts.map((post) => (
-              <SavedPostCard key={post.id} post={post} tagGroupMap={tagGroupMap} />
+              <SavedPostCard key={post.id} post={post} tagGroupMap={tagGroupMap} badgeVariant="shop" />
             ))
           )}
         </div>

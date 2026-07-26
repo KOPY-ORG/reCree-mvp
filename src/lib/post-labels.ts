@@ -138,6 +138,8 @@ export type LabelSlot = {
   displayLabel: string | null;
   colors: Omit<ResolvedLabel, "text" | "slug">;
   slug?: string;
+  /** 토픽 계층 레벨 — shop selector의 멤버 우선 선택용. 없으면 배열 순서 폴백 */
+  level?: number;
 };
 
 /** 슬롯 배열을 ResolvedLabel[]로 변환 (정렬 + displayLabel 결정 포함) */
@@ -192,5 +194,30 @@ export function selectListLabels(
       selected.push(slot);
     }
   }
+  return finalizeSlots(selected);
+}
+
+/**
+ * shop variant — 멤버 우선 토픽 1 + shop 카테고리 태그 1, 최대 2개.
+ * - 토픽: level 최댓값(=멤버)을 우선 선택. level 동률이면 배열 순서(displayOrder) 앞선 것.
+ *         level이 전부 undefined면 배열 첫 번째로 폴백(방어 코드).
+ * - 태그: group이 shopGroups(BEAUTY/ITEM)에 포함된 것만 후보 → 배열 순서 첫 번째.
+ *         없으면 태그 슬롯 없음(다른 그룹으로 대체하지 않음).
+ * shopGroups는 인자로 받는다 — lib → app(shop/_constants) 역방향 의존을 피하기 위함.
+ */
+export function selectShopLabels(
+  topicSlots: LabelSlot[],
+  tagSlots: LabelSlot[],
+  shopGroups: readonly string[],
+): ResolvedLabel[] {
+  const selected: LabelSlot[] = [];
+  if (topicSlots.length > 0) {
+    const member = topicSlots.reduce((best, s) =>
+      (s.level ?? -Infinity) > (best.level ?? -Infinity) ? s : best,
+    );
+    selected.push(member);
+  }
+  const shopTag = tagSlots.find((s) => shopGroups.includes(s.group));
+  if (shopTag) selected.push(shopTag);
   return finalizeSlots(selected);
 }

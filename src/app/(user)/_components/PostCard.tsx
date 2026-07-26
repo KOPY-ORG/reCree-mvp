@@ -8,24 +8,31 @@ import {
   K_MEDIA_GROUP,
   selectHomeLabels,
   selectListLabels,
+  selectShopLabels,
   type LabelSlot,
   type TagGroupColorMap,
   type ResolvedLabel,
 } from "@/lib/post-labels";
 import { LabelBadge } from "@/components/LabelBadge";
 import type { PostItem } from "@/lib/post-queries";
+import { SHOP_TAG_GROUPS } from "../shop/_constants";
 import { ScrapButton } from "./ScrapButton";
 
-/** PostBadges가 필요로 하는 최소 형태 — PostItem뿐 아니라 동일 shape의 ShopPostItem 등도 재사용 가능 */
+/**
+ * PostBadges가 필요로 하는 최소 형태 — PostItem뿐 아니라 동일 shape의 ShopPostItem 등도 재사용 가능.
+ * topic.level은 shop variant 전용(멤버 우선 선택)이며 optional — level 없는 post(PostItem)도 그대로 수용.
+ */
 export type LabelablePost = {
-  postTopics: PostItem["postTopics"];
+  postTopics: (Omit<PostItem["postTopics"][number], "topic"> & {
+    topic: PostItem["postTopics"][number]["topic"] & { level?: number };
+  })[];
   postTags: PostItem["postTags"];
 };
 
 function resolvePostLabels(
   post: LabelablePost,
   tagGroupMap: TagGroupColorMap,
-  variant: "home" | "list",
+  variant: "home" | "list" | "shop",
 ): ResolvedLabel[] {
   const topicSlots: LabelSlot[] = post.postTopics.map(({ topic }) => ({
     group: "TOPIC",
@@ -33,7 +40,18 @@ function resolvePostLabels(
     displayLabel: null,
     colors: resolveTopicColors(topic),
     slug: topic.slug,
+    level: topic.level,
   }));
+
+  // shop variant — 멤버 우선 토픽 1 + BEAUTY/ITEM 태그 1.
+  // 태그 슬롯 displayLabel은 null로 둬 그룹 표시명("Item") 치환을 막고 태그 본래 이름을 쓴다.
+  if (variant === "shop") {
+    const tagSlots: LabelSlot[] = post.postTags.map(({ tag }) => {
+      const gc = tagGroupMap.get(tag.group);
+      return { group: tag.group, name: tag.name, displayLabel: null, colors: resolveTagColors(tag, gc) };
+    });
+    return selectShopLabels(topicSlots, tagSlots, SHOP_TAG_GROUPS);
+  }
 
   const kmediaSlots: LabelSlot[] = post.postTags
     .filter(({ tag }) => tag.group === K_MEDIA_GROUP)
@@ -63,7 +81,7 @@ export function PostBadges({
 }: {
   post: LabelablePost;
   tagGroupMap: TagGroupColorMap;
-  variant?: "home" | "list";
+  variant?: "home" | "list" | "shop";
   pillFontSize?: string;
   className?: string;
 }) {
