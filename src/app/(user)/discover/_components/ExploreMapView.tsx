@@ -361,11 +361,19 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     return filteredPlaces.map((place) => {
       const matchedPosts = matchedPostsByPlaceId.get(place.id) ?? [];
 
-      // 적용된 topic 필터 중 이 place에 실제로 매칭되는 첫 topic을 우선 사용
-      const firstMatchTopicId = appliedTopicIds.find((id) =>
-        matchedPosts.some((post) => post.topics.some((t) => topicMatchesFilter(t, id)))
-      );
-      const filterGradient = firstMatchTopicId ? topicColorMap.get(firstMatchTopicId) : undefined;
+      // 적용된 topic 필터를 순서대로 보며 매칭되는 첫 토픽 노드 t를 찾는다.
+      // 순회 순서: appliedTopicIds(외부) → matchedPosts → post.topics ("필터 id 우선, 그 안에서 post 등장 순서").
+      // 그룹(L0/L1) 필터여도 t는 매칭된 실제 하위 토픽(L2/L3)이므로, 마커를 그룹 단색이 아닌 그 하위색으로 칠하게 된다.
+      let matchedTopicNode: MapPost["topics"][number] | undefined;
+      for (const id of appliedTopicIds) {
+        for (const post of matchedPosts) {
+          const t = post.topics.find((t) => topicMatchesFilter(t, id));
+          if (t) { matchedTopicNode = t; break; }
+        }
+        if (matchedTopicNode) break;
+      }
+      // 조회 key만 교체: 필터 id가 아니라 매칭 노드 t.id로 topicColorMap 조회 (판정 기준은 buildTopicColorMap 그대로 유지)
+      const filterGradient = matchedTopicNode ? topicColorMap.get(matchedTopicNode.id) : undefined;
 
       let markerColor: string | undefined;
       let markerGradient: ReturnType<typeof getTopicMarkerGradient>;
