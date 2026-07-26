@@ -4,8 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, LocateFixed, Maximize } from "lucide-react";
 import { useToast } from "../../_hooks/useToast";
 import { dedupeEventMarkers } from "@/lib/event-utils";
-import { EVENT_RED, getDDay, sortEventMarkers } from "@/lib/event-format";
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { EVENT_RED, sortEventMarkers } from "@/lib/event-format";
+import { useSearchParams, useRouter } from "next/navigation";
 import { buildTopicColorMap } from "@/lib/filter-params";
 import { postMatchesFilters, placeMatchesFilters, placeMatchScore } from "@/lib/discover-filter-utils";
 import { InteractiveMap, type FocusCameraHandle } from "@/components/maps/InteractiveMap";
@@ -75,7 +75,6 @@ interface Props {
 export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], tagGroups, topicTree, isLoggedIn, eventCollections = [], eventMapData = {}, sections, sectionData }: Props) {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const pathname = usePathname();
 
   const isSavedView = searchParams.get("saved") === "1";
   const selectedPlaceId = searchParams.get("place");
