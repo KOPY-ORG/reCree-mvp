@@ -2,7 +2,7 @@
 import type React from "react";
 
 /** K-MEDIA 태그 그룹 PK — 변경 시 DB TagGroupConfig.group과 동기화 */
-export const K_MEDIA_GROUP = "K_MEDIA";
+export const K_MEDIA_GROUP = "MEDIA";
 
 /** 라벨 렌더링 그룹 우선순위: 토픽(0) → K-MEDIA(1) → 나머지(2) */
 export const labelGroupOrder = (group: string): number =>
