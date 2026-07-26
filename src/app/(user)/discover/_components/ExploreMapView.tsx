@@ -6,8 +6,8 @@ import { useToast } from "../../_hooks/useToast";
 import { dedupeEventMarkers } from "@/lib/event-utils";
 import { EVENT_RED, getDDay, sortEventMarkers } from "@/lib/event-format";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { parseFilterParams, serializeFilterParams, buildTopicColorMap, KPOP_NAME } from "@/lib/filter-params";
-import { postMatchesFilters, placeMatchesFilters, placeMatchScore, findTopicIdBySlug } from "@/lib/discover-filter-utils";
+import { parseFilterParams, serializeFilterParams, buildTopicColorMap, KPOP_NAME, topicSlugToId } from "@/lib/filter-params";
+import { postMatchesFilters, placeMatchesFilters, placeMatchScore } from "@/lib/discover-filter-utils";
 import { InteractiveMap, type FocusCameraHandle } from "@/components/maps/InteractiveMap";
 import { PlaceBottomSheet } from "@/components/maps/PlaceBottomSheet";
 import { PlaceListSheet, getSheetHeight, type PlaceListSheetState } from "@/components/maps/PlaceListSheet";
@@ -346,7 +346,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     return map;
   }, [tagGroups]);
 
-  const btsTopicId = useMemo(() => findTopicIdBySlug(topicTree, "bts"), [topicTree]);
+  const btsTopicId = useMemo(() => topicSlugToId(topicTree, "bts"), [topicTree]);
   const btsChipInfo = useMemo(
     () => (btsTopicId ? (topicChipMap.get(btsTopicId) ?? null) : null),
     [btsTopicId, topicChipMap]
@@ -703,7 +703,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
           isEventMode
             ? `collection:${collectionSlug}`
             : isResultMode
-              ? `q:${query}|t:${[...appliedTopicIds].sort().join(",")}|g:${[...appliedTagIds].sort().join(",")}|r:${appliedRegion ?? ""}`
+              ? `q:${query}|t:${[...appliedTopicIds].sort().join(",")}|tg:${[...appliedTagIds].sort().join(",")}|gk:${[...appliedTagGroupKeys].sort().join(",")}|r:${appliedRegion ?? ""}`
               : isSavedView ? "saved" : "all"
         }
         highlightedIds={
