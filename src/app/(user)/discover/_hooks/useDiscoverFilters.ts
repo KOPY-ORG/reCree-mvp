@@ -206,8 +206,25 @@ export function useDiscoverFilters({
       }
       return prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
     });
-  const toggleTag = (id: string) =>
+  // 태그 그룹 All 토글 — stagedTagGroupKeys에 groupKey 있으면 그것만 제거, 없으면 memberTagIds를 stagedTagIds에서 제거 후 groupKey 추가(collapse)
+  const toggleTagGroup = (groupKey: string, memberTagIds: string[]) => {
+    if (stagedTagGroupKeys.includes(groupKey)) {
+      setStagedTagGroupKeys((prev) => prev.filter((k) => k !== groupKey));
+      return;
+    }
+    // 순서 고정: setStagedTagIds → setStagedTagGroupKeys
+    setStagedTagIds((prev) => prev.filter((x) => !memberTagIds.includes(x)));
+    setStagedTagGroupKeys((prev) => [...prev, groupKey]);
+  };
+  // coveringGroupKey가 주어지고 stagedTagGroupKeys에 있으면 degrade(그룹 해제 + 방금 누른 id를 뺀 나머지 멤버 태그 개별 선택), 아니면 단순 토글
+  const toggleTag = (id: string, coveringGroupKey?: string, memberTagIds?: string[]) => {
+    if (coveringGroupKey && memberTagIds && stagedTagGroupKeys.includes(coveringGroupKey)) {
+      setStagedTagGroupKeys((prev) => prev.filter((k) => k !== coveringGroupKey));
+      setStagedTagIds((prev) => [...prev, ...memberTagIds.filter((tid) => tid !== id)]);
+      return;
+    }
     setStagedTagIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  };
   const toggleRegion = (slug: string) =>
     setStagedRegion((prev) => prev === slug ? null : slug);
 
@@ -241,6 +258,7 @@ export function useDiscoverFilters({
     toggleTopic,
     toggleTopicGroup,
     toggleTag,
+    toggleTagGroup,
     toggleRegion,
   };
 }

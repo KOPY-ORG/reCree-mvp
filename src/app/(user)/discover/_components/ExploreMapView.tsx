@@ -104,6 +104,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     isFilterOpen,
     stagedTopicIds,
     stagedTagIds,
+    stagedTagGroupKeys,
     stagedRegion,
     appliedTopicIds,
     appliedTagIds,
@@ -129,6 +130,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     toggleTopic,
     toggleTopicGroup,
     toggleTag,
+    toggleTagGroup,
     toggleRegion,
   } = useDiscoverFilters({
     topicTree,
@@ -827,11 +829,14 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
         tagGroups={tagGroups}
         topicChipMap={topicChipMap}
         tagChipMap={tagChipMap}
+        tagGroupChipMap={tagGroupChipMap}
         stagedTopicIds={stagedTopicIds}
         stagedTagIds={stagedTagIds}
+        stagedTagGroupKeys={stagedTagGroupKeys}
         onToggleTopic={toggleTopic}
         onToggleTopicGroup={toggleTopicGroup}
         onToggleTag={toggleTag}
+        onToggleTagGroup={toggleTagGroup}
         onReset={resetStaged}
         onApply={applyFilters}
         regions={availableCities}

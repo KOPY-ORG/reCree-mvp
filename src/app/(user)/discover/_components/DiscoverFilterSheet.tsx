@@ -23,11 +23,14 @@ interface Props {
   tagGroups: TagGroupWithTags[];
   topicChipMap: Map<string, ChipInfo>;
   tagChipMap: Map<string, ChipInfo>;
+  tagGroupChipMap: Map<string, ChipInfo>;
   stagedTopicIds: string[];
   stagedTagIds: string[];
+  stagedTagGroupKeys: string[];
   onToggleTopic: (id: string, coveringGroupId?: string, chipIds?: string[]) => void;
   onToggleTopicGroup: (groupId: string, descendantIds: string[]) => void;
-  onToggleTag: (id: string) => void;
+  onToggleTag: (id: string, coveringGroupKey?: string, memberTagIds?: string[]) => void;
+  onToggleTagGroup: (groupKey: string, memberTagIds: string[]) => void;
   onReset: () => void;
   onApply: () => void;
   regions?: { slug: string; label: string }[];
@@ -42,18 +45,21 @@ export function DiscoverFilterSheet({
   tagGroups,
   topicChipMap,
   tagChipMap,
+  tagGroupChipMap,
   stagedTopicIds,
   stagedTagIds,
+  stagedTagGroupKeys,
   onToggleTopic,
   onToggleTopicGroup,
   onToggleTag,
+  onToggleTagGroup,
   onReset,
   onApply,
   regions = [],
   stagedRegion = null,
   onToggleRegion,
 }: Props) {
-  const totalSelected = stagedTopicIds.length + stagedTagIds.length + (stagedRegion != null ? 1 : 0);
+  const totalSelected = stagedTopicIds.length + stagedTagIds.length + stagedTagGroupKeys.length + (stagedRegion != null ? 1 : 0);
 
   return (
     <>
@@ -129,6 +135,24 @@ export function DiscoverFilterSheet({
                     color={chip.fg}
                     className="shrink-0 active:opacity-70 !px-3 h-7 !font-semibold shadow-sm"
                     onClick={() => onToggleTag(id)}
+                  >
+                    <X className="size-3" />
+                  </LabelBadge>
+                );
+              })}
+              {stagedTagGroupKeys.map((key) => {
+                const chip = tagGroupChipMap.get(key);
+                if (!chip) return null;
+                // 트레이에서는 degrade 없이 그냥 해제 (memberTagIds는 제거 분기에서 미사용이라 [])
+                return (
+                  <LabelBadge
+                    key={key}
+                    as="button"
+                    text={chip.label}
+                    background={chip.bg}
+                    color={chip.fg}
+                    className="shrink-0 active:opacity-70 !px-3 h-7 !font-semibold shadow-sm"
+                    onClick={() => onToggleTagGroup(key, [])}
                   >
                     <X className="size-3" />
                   </LabelBadge>
@@ -318,34 +342,45 @@ export function DiscoverFilterSheet({
             {/* ── 태그 섹션 ── */}
             {tagGroups
               .filter((group) => group.tags.length > 0)
-              .map((group) => (
-                <section key={group.group}>
-                  <h3 className="text-sm font-bold mb-3">
-                    {group.nameEn || group.group}
-                  </h3>
-                  <div className="flex flex-wrap gap-x-2 gap-y-2.5">
-                    {group.tags.map((tag) => {
-                      const resolved = resolveTagColors(tag, group);
-                      const isSelected = stagedTagIds.includes(tag.id);
-                      return (
-                        <LabelBadge
-                          key={tag.id}
-                          as="button"
-                          text={tag.name}
-                          background={labelBackground({ text: "", ...resolved })}
-                          color={tag.textColorHex ?? group.textColorHex ?? DEFAULT_TEXT}
-                          className="shrink-0 transition-all active:opacity-70 !px-3 h-7 !font-semibold shadow-sm"
-                          style={badgeRingStyle(
-                            tag.colorHex ?? group.colorHex ?? null,
-                            isSelected
-                          )}
-                          onClick={() => onToggleTag(tag.id)}
-                        />
-                      );
-                    })}
-                  </div>
-                </section>
-              ))}
+              .map((group) => {
+                const memberTagIds = group.tags.map((t) => t.id);
+                const covered = stagedTagGroupKeys.includes(group.group);
+                return (
+                  <section key={group.group}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <h3 className="text-sm font-bold">
+                        {group.nameEn || group.group}
+                      </h3>
+                      <AllBadge
+                        active={covered}
+                        onClick={() => onToggleTagGroup(group.group, memberTagIds)}
+                        className="shrink-0"
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-x-2 gap-y-2.5">
+                      {group.tags.map((tag) => {
+                        const resolved = resolveTagColors(tag, group);
+                        const isSelected = stagedTagIds.includes(tag.id) || covered;
+                        return (
+                          <LabelBadge
+                            key={tag.id}
+                            as="button"
+                            text={tag.name}
+                            background={labelBackground({ text: "", ...resolved })}
+                            color={tag.textColorHex ?? group.textColorHex ?? DEFAULT_TEXT}
+                            className={`shrink-0 transition-all active:opacity-70 !px-3 h-7 !font-semibold shadow-sm${covered ? " opacity-60" : ""}`}
+                            style={badgeRingStyle(
+                              tag.colorHex ?? group.colorHex ?? null,
+                              isSelected
+                            )}
+                            onClick={() => onToggleTag(tag.id, covered ? group.group : undefined, covered ? memberTagIds : undefined)}
+                          />
+                        );
+                      })}
+                    </div>
+                  </section>
+                );
+              })}
 
             {/* ── 지역 섹션 ── */}
             {regions.length > 0 && (
