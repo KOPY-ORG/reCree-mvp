@@ -107,51 +107,6 @@ export async function getPostsWithLabels(
 export type PostItem = Awaited<ReturnType<typeof getPostsWithLabels>>[number];
 
 /**
- * shop 포스트 목록.
- * postTopics: 홈 라벨 규칙(PostBadges) 계산용 — isVisible 필터 적용.
- * postTags: isVisible 필터 없이 전체 로드 — 그룹/태그 필터 매칭용(ShopClient)과
- * 라벨 표시용(ShopCard, isVisible만 골라 PostBadges에 전달) 겸용.
- */
-export async function getShopPosts() {
-  return prisma.post.findMany({
-    where: { status: "PUBLISHED", isShop: true },
-    orderBy: { createdAt: "desc" },
-    take: 100,
-    select: {
-      id: true,
-      slug: true,
-      titleEn: true,
-      subtitle: true,
-      postImages: {
-        where: { isThumbnail: true },
-        select: { url: true, focalX: true, focalY: true, zoom: true },
-        take: 1,
-      },
-      postTopics: shopPostTopicsSelect,
-      postTags: {
-        orderBy: { displayOrder: "asc" },
-        select: {
-          displayOrder: true,
-          isVisible: true,
-          tag: {
-            select: {
-              id: true,
-              name: true,
-              group: true,
-              colorHex: true,
-              colorHex2: true,
-              textColorHex: true,
-            },
-          },
-        },
-      },
-    },
-  });
-}
-
-export type ShopPostItem = Awaited<ReturnType<typeof getShopPosts>>[number];
-
-/**
  * shop 포스트 목록 + 라벨 (Saved shop 탭 전용).
  * getPostsWithLabels와 동일 shape(postPlaces·isShop 포함)이되 topic.level을 추가로 로드해
  * shop 라벨 규칙(멤버 우선)을 적용할 수 있게 한다.
@@ -202,6 +157,51 @@ export async function getShopPostsWithLabels(
 }
 
 export type ShopPostWithLabelsItem = Awaited<ReturnType<typeof getShopPostsWithLabels>>[number];
+
+/**
+ * shop 포스트 목록.
+ * postTopics: shop 라벨 규칙(멤버 우선) 계산용 — isVisible 필터 적용, level 포함.
+ * postTags: isVisible 필터 없이 전체 로드 — 그룹/태그 필터 매칭용(ShopClient)과
+ * 라벨 표시용(ShopCard, isVisible만 골라 PostBadges에 전달) 겸용.
+ */
+export async function getShopPosts() {
+  return prisma.post.findMany({
+    where: { status: "PUBLISHED", isShop: true },
+    orderBy: { createdAt: "desc" },
+    take: 100,
+    select: {
+      id: true,
+      slug: true,
+      titleEn: true,
+      subtitle: true,
+      postImages: {
+        where: { isThumbnail: true },
+        select: { url: true, focalX: true, focalY: true, zoom: true },
+        take: 1,
+      },
+      postTopics: shopPostTopicsSelect,
+      postTags: {
+        orderBy: { displayOrder: "asc" },
+        select: {
+          displayOrder: true,
+          isVisible: true,
+          tag: {
+            select: {
+              id: true,
+              name: true,
+              group: true,
+              colorHex: true,
+              colorHex2: true,
+              textColorHex: true,
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
+export type ShopPostItem = Awaited<ReturnType<typeof getShopPosts>>[number];
 
 export async function getSavedPostIds(userId: string | null): Promise<Set<string>> {
   if (!userId) return new Set();
