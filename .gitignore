@@ -50,3 +50,6 @@ recree_prod_backup_*.sql
 
 # tour api spike 결과 (일회성 측정 원본)
 prisma/scripts/tour-api-spike-result.json
+
+# tour api spike 2차 결과 (일회성 측정 원본)
+prisma/scripts/tour-api-spike-2-result.json
