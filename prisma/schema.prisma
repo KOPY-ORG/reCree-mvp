@@ -59,6 +59,7 @@ enum SaveTarget {
   POST
   RECREESHOT
   EVENT
+  COURSE
 }
 
 enum SectionType {
@@ -140,6 +141,7 @@ model User {
   reports         Report[]
   dailyActivities DailyActiveUser[]
   topicFollows    TopicFollow[]
+  courses         Course[]
 }
 
 model Topic {
@@ -166,6 +168,7 @@ model Topic {
   reCreeshotTopics ReCreeshotTopic[]
   curatedSections  CuratedSection[]  @relation("FilterTopic")
   followers        TopicFollow[]
+  courseTopics     CourseTopic[]
 }
 
 model Tag {
@@ -307,18 +310,27 @@ model PlaceImage {
 }
 
 model Area {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  nameKo    String
-  nameEn    String?
-  level     Int      @default(0) // 0=도시, 1=구역
-  parentId  String?  @db.Uuid
-  sortOrder Int      @default(0)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nameKo        String
+  nameEn        String?
+  level         Int      @default(0) // 0=도시, 1=구역
+  parentId      String?  @db.Uuid
+  latitude      Float?
+  longitude     Float?
+  radiusM       Int?
+  lDongRegnCd   String?
+  lDongSignguCd String?
+  sortOrder     Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
 
   parent   Area?   @relation("AreaHierarchy", fields: [parentId], references: [id])
   children Area[]  @relation("AreaHierarchy")
   places   Place[]
+
+  @@index([parentId])
+  @@index([level, isActive])
 }
 
 model Place {
@@ -356,6 +368,7 @@ model Place {
   reCreeshots ReCreeshot[]
   placeImages PlaceImage[]
   eventPlaces EventPlace[]
+  courseItems CourseItem[]
 }
 
 model ReCreeshot {
@@ -372,9 +385,9 @@ model ReCreeshot {
   locationLng       Float?
   matchScore        Float?
   showBadge         Boolean          @default(false)
-  templateId        String?          // "vertical-full" | "vertical-frame" | "horizontal-full" | "horizontal-frame"
-  referenceLabel    String?          // 원본 사진 아래 아티스트명
-  shotLabel         String?          // 재현 사진 아래 레이블 (기본 "ME")
+  templateId        String? // "vertical-full" | "vertical-frame" | "horizontal-full" | "horizontal-frame"
+  referenceLabel    String? // 원본 사진 아래 아티스트명
+  shotLabel         String? // 재현 사진 아래 레이블 (기본 "ME")
   status            ReCreeshotStatus @default(ACTIVE)
   saveCount         Int              @default(0)
   likeCount         Int              @default(0)
@@ -761,8 +774,8 @@ model EventPlace {
 model Sticker {
   id        String   @id @default(uuid()) @db.Uuid
   name      String
-  imageUrl  String   // R2 CDN URL (PNG / SVG / WEBP)
-  mimeType  String   // "image/png" | "image/svg+xml" | "image/webp"
+  imageUrl  String // R2 CDN URL (PNG / SVG / WEBP)
+  mimeType  String // "image/png" | "image/svg+xml" | "image/webp"
   isActive  Boolean  @default(true)
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
@@ -773,6 +786,72 @@ model Feedback {
   id        String   @id @default(uuid()) @db.Uuid
   content   String
   email     String?
-  source    String   // "feed" | "discover" | 기타 진입점 식별자
+  source    String // "feed" | "discover" | 기타 진입점 식별자
   createdAt DateTime @default(now())
+}
+
+// ─── 코스 모델 ────────────────────────────────────────────────────────────────
+
+model Course {
+  id            String   @id @default(uuid()) @db.Uuid
+  title         String
+  description   String?
+  authorId      String   @db.Uuid
+  isPublic      Boolean  @default(false)
+  copyCount     Int      @default(0)
+  copiedFromId  String?  @db.Uuid
+  coverImageUrl String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  author User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  days   CourseDay[]
+  topics CourseTopic[]
+
+  @@index([authorId])
+  @@index([isPublic, createdAt])
+}
+
+model CourseDay {
+  id        String  @id @default(uuid()) @db.Uuid
+  courseId  String  @db.Uuid
+  dayNumber Int
+  title     String?
+
+  course Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  items  CourseItem[]
+
+  @@unique([courseId, dayNumber])
+  @@index([courseId])
+}
+
+model CourseItem {
+  id        String @id @default(uuid()) @db.Uuid
+  dayId     String @db.Uuid
+  sortOrder Int    @default(0)
+
+  placeId   String? @db.Uuid
+  nameEn    String
+  nameKo    String?
+  address   String?
+  latitude  Float?
+  longitude Float?
+  imageUrl  String?
+  note      String?
+
+  day   CourseDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  place Place?    @relation(fields: [placeId], references: [id])
+
+  @@index([dayId, sortOrder])
+}
+
+model CourseTopic {
+  courseId String @db.Uuid
+  topicId  String @db.Uuid
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  topic  Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@id([courseId, topicId])
+  @@index([topicId])
 }
