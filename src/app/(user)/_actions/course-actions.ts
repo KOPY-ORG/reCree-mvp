@@ -598,3 +598,113 @@ export async function reorderCourseItems(
     return { error: "server_error" };
   }
 }
+
+// ─── copyCourse ──────────────────────────────────────────────────────────────
+
+/**
+ * 코스 복사. 소유자 검증이 아니라 공개 여부를 검증한다 — 남의 공개 코스를 복사하는 기능이다.
+ * 복사 직후 원본과 완전히 끊어진다. 이후 원본이 바뀌어도 복사본은 그대로다.
+ */
+export async function copyCourse(sourceId: string): Promise<{ id?: string; error?: string }> {
+  const parsedId = courseIdSchema.safeParse(sourceId);
+  if (!parsedId.success) return { error: "invalid_input" };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "unauthenticated" };
+
+  try {
+    const source = await prisma.course.findUnique({
+      where: { id: parsedId.data },
+      select: {
+        title: true,
+        description: true,
+        coverImageUrl: true,
+        isPublic: true,
+        authorId: true,
+        days: {
+          orderBy: { dayNumber: "asc" },
+          select: {
+            dayNumber: true,
+            title: true,
+            items: {
+              orderBy: { sortOrder: "asc" },
+              select: {
+                sortOrder: true,
+                placeId: true,
+                nameEn: true,
+                nameKo: true,
+                address: true,
+                latitude: true,
+                longitude: true,
+                imageUrl: true,
+                note: true,
+              },
+            },
+          },
+        },
+        topics: { select: { topicId: true } },
+      },
+    });
+
+    if (!source) return { error: "not_found" };
+    // 내 비공개 코스는 복사할 수 있다
+    if (!source.isPublic && source.authorId !== user.id) return { error: "forbidden" };
+
+    const created = await prisma.$transaction(
+      async (tx) => {
+        const copy = await tx.course.create({
+          data: {
+            title: source.title,
+            description: source.description,
+            coverImageUrl: source.coverImageUrl,
+            authorId: user.id,
+            isPublic: false, // 복사본은 항상 비공개로 시작
+            copyCount: 0, // 원본 값을 가져오지 않는다
+            copiedFromId: parsedId.data,
+          },
+          select: { id: true },
+        });
+
+        // 3단 중첩이라 Day를 하나씩 만들어 id를 받고 아이템을 createMany 한다
+        // (event-actions.ts:324 의 perk/bodyBlock 패턴)
+        for (const day of source.days) {
+          const newDay = await tx.courseDay.create({
+            data: { courseId: copy.id, dayNumber: day.dayNumber, title: day.title },
+            select: { id: true },
+          });
+          // 아이템 0개인 Day도 그대로 복사한다 — 빈 Day는 정상 상태다
+          if (day.items.length > 0) {
+            await tx.courseItem.createMany({
+              data: day.items.map((item) => ({ dayId: newDay.id, ...item })),
+            });
+          }
+        }
+
+        if (source.topics.length > 0) {
+          await tx.courseTopic.createMany({
+            data: source.topics.map((t) => ({ courseId: copy.id, topicId: t.topicId })),
+          });
+        }
+
+        // 증가만 있고 감소는 없다 — 복사 후 원본과 끊어지므로 되돌릴 일이 없다
+        await tx.course.update({
+          where: { id: parsedId.data },
+          data: { copyCount: { increment: 1 } },
+        });
+
+        return copy;
+      },
+      { timeout: 15000 }
+    );
+
+    revalidateCoursePaths(created.id);
+    revalidateCoursePaths(parsedId.data); // 원본도 — copyCount가 바뀌었다
+    return { id: created.id };
+  } catch (e) {
+    console.error("[copyCourse] server_error", e);
+    return { error: "server_error" };
+  }
+}
