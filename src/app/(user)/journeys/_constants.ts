@@ -21,3 +21,12 @@ export const MAP_BG = "#EDEBE6";
 /** 아이템 출처 칩 — placeId 있음(앱 장소) / 없음(관광 데이터) */
 export const SPOT_CHIP = { bg: "#F4FFD0", fg: "#4A5E06", label: "reCree spot" };
 export const TOURISM_CHIP = { bg: "#F2F1EC", fg: "#8E8E8B", label: "Tourism data" };
+
+/**
+ * 스켈레톤 톤 — 시안(journey list :486, post detail :770)이 블록마다
+ * 조금씩 옅은 회색을 겹쳐 쓴다. 아래로 갈수록 밝다.
+ * 펄스는 Tailwind animate-pulse 를 쓴다 (shop/loading.tsx 선례).
+ */
+export const SKELETON_1 = "#EFEEE9";
+export const SKELETON_2 = "#F3F2EE";
+export const SKELETON_3 = "#F6F5F1";
