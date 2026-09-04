@@ -101,6 +101,8 @@ export type CourseDetail = {
   title: string;
   description: string | null;
   authorId: string;
+  /** 작성자 표시명. User.nickname이 nullable이라 여기도 null 가능 */
+  authorName: string | null;
   isPublic: boolean;
   copyCount: number;
   copiedFromId: string | null;
@@ -194,6 +196,7 @@ export async function getCourseDetail(id: string): Promise<CourseDetail | null> 
       title: true,
       description: true,
       authorId: true,
+      author: { select: { nickname: true } },
       isPublic: true,
       copyCount: true,
       copiedFromId: true,
@@ -235,6 +238,7 @@ export async function getCourseDetail(id: string): Promise<CourseDetail | null> 
     title: course.title,
     description: course.description,
     authorId: course.authorId,
+    authorName: course.author.nickname,
     isPublic: course.isPublic,
     copyCount: course.copyCount,
     copiedFromId: course.copiedFromId,
