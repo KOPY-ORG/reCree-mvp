@@ -370,3 +370,231 @@ export async function removeCourseDay(dayId: string): Promise<{ error?: string }
     return { error: "server_error" };
   }
 }
+
+// ─── 아이템 입력 스키마 ──────────────────────────────────────────────────────
+// 두 갈래다. TourAPI 관광지는 Place가 아니므로 placeId가 없다 (Nearby Attractions 경로).
+
+const addItemSchema = z.discriminatedUnion("source", [
+  z.object({
+    source: z.literal("place"),
+    placeId: z.string().uuid(),
+  }),
+  z.object({
+    source: z.literal("external"),
+    nameEn: z.string().trim().min(1).max(200),
+    nameKo: z.string().trim().max(200).optional(),
+    address: z.string().trim().max(300).optional(),
+    latitude: z.number().min(-90).max(90).optional(),
+    longitude: z.number().min(-180).max(180).optional(),
+    imageUrl: z.string().url().optional(),
+  }),
+]);
+
+type AddItemInput = z.infer<typeof addItemSchema>;
+
+/** CourseItem에 저장할 스냅샷. Place는 나중에 바뀔 수 있으므로 값을 복사해 둔다. */
+type ItemSnapshot = {
+  placeId: string | null;
+  nameEn: string;
+  nameKo: string | null;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  imageUrl: string | null;
+};
+
+// ─── addCourseItem ───────────────────────────────────────────────────────────
+
+/** Day 맨 뒤에 아이템 추가. Place에서 오면 스냅샷을 뜨고 placeId로 원본을 추적한다. */
+export async function addCourseItem(
+  dayId: string,
+  input: AddItemInput
+): Promise<{ error?: string }> {
+  const parsedDayId = dayIdSchema.safeParse(dayId);
+  if (!parsedDayId.success) return { error: "invalid_input" };
+
+  const parsed = addItemSchema.safeParse(input);
+  if (!parsed.success) return { error: "invalid_input" };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "unauthenticated" };
+
+  try {
+    const owner = await assertDayOwner(parsedDayId.data, user.id);
+    if ("error" in owner) return owner;
+    const { courseId } = owner;
+
+    let snapshot: ItemSnapshot;
+
+    if (parsed.data.source === "place") {
+      const place = await prisma.place.findUnique({
+        where: { id: parsed.data.placeId },
+        select: {
+          nameEn: true,
+          nameKo: true,
+          addressEn: true,
+          addressKo: true,
+          latitude: true,
+          longitude: true,
+          imageUrl: true,
+          // Place.imageUrl은 fallback이고 대표 이미지는 PlaceImage에 있다 (map-queries와 동일)
+          placeImages: { orderBy: { sortOrder: "asc" }, take: 1, select: { url: true } },
+        },
+      });
+      if (!place) return { error: "not_found" };
+
+      snapshot = {
+        placeId: parsed.data.placeId,
+        // Place.nameEn은 nullable인데 CourseItem.nameEn은 NOT NULL — Ko 폴백이 필수다
+        nameEn: place.nameEn?.trim() || place.nameKo,
+        nameKo: place.nameKo,
+        address: place.addressEn?.trim() || place.addressKo,
+        latitude: place.latitude,
+        longitude: place.longitude,
+        imageUrl: place.placeImages[0]?.url ?? place.imageUrl,
+      };
+    } else {
+      snapshot = {
+        placeId: null,
+        nameEn: parsed.data.nameEn,
+        nameKo: parsed.data.nameKo || null,
+        address: parsed.data.address || null,
+        latitude: parsed.data.latitude ?? null,
+        longitude: parsed.data.longitude ?? null,
+        imageUrl: parsed.data.imageUrl || null,
+      };
+    }
+
+    const result: { error?: string } = await prisma.$transaction(async (tx) => {
+      const count = await tx.courseItem.count({ where: { dayId: parsedDayId.data } });
+      if (count >= MAX_ITEMS_PER_DAY) return { error: "invalid_input" };
+
+      // 같은 Day에 같은 장소는 막고, 다른 Day는 허용한다 (이틀 연속 방문이 정상 시나리오).
+      // external은 식별자가 없어 중복 검사를 하지 않는다.
+      if (snapshot.placeId !== null) {
+        const duplicate = await tx.courseItem.findFirst({
+          where: { dayId: parsedDayId.data, placeId: snapshot.placeId },
+          select: { id: true },
+        });
+        if (duplicate) return { error: "invalid_input" };
+      }
+
+      const last = await tx.courseItem.findFirst({
+        where: { dayId: parsedDayId.data },
+        orderBy: { sortOrder: "desc" },
+        select: { sortOrder: true },
+      });
+      // 아이템이 없으면 last가 null — 0부터 시작한다
+      const sortOrder = last === null ? 0 : last.sortOrder + 1;
+
+      await tx.courseItem.create({
+        data: { dayId: parsedDayId.data, sortOrder, ...snapshot },
+      });
+      await tx.course.update({
+        where: { id: courseId },
+        data: { updatedAt: new Date() },
+      });
+      return {};
+    });
+
+    if (result.error) return result;
+
+    revalidateCoursePaths(courseId);
+    return {};
+  } catch (e) {
+    console.error("[addCourseItem] server_error", e);
+    return { error: "server_error" };
+  }
+}
+
+// ─── removeCourseItem ────────────────────────────────────────────────────────
+
+/**
+ * 아이템 삭제. sortOrder에 구멍이 남지만 재정렬하지 않는다 —
+ * unique가 없어 orderBy가 정상 동작하고, reorderCourseItems가 0부터 다시 매긴다.
+ */
+export async function removeCourseItem(itemId: string): Promise<{ error?: string }> {
+  const parsedId = itemIdSchema.safeParse(itemId);
+  if (!parsedId.success) return { error: "invalid_input" };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "unauthenticated" };
+
+  try {
+    const owner = await assertItemOwner(parsedId.data, user.id);
+    if ("error" in owner) return owner;
+    const { courseId } = owner;
+
+    await prisma.$transaction([
+      prisma.courseItem.delete({ where: { id: parsedId.data } }),
+      prisma.course.update({ where: { id: courseId }, data: { updatedAt: new Date() } }),
+    ]);
+
+    revalidateCoursePaths(courseId);
+    return {};
+  } catch (e) {
+    console.error("[removeCourseItem] server_error", e);
+    return { error: "server_error" };
+  }
+}
+
+// ─── reorderCourseItems ──────────────────────────────────────────────────────
+
+/** Day 안의 아이템 순서를 통째로 다시 매긴다. sortOrder에 unique가 없어 음수 경유가 필요 없다. */
+export async function reorderCourseItems(
+  dayId: string,
+  orderedIds: string[]
+): Promise<{ error?: string }> {
+  const parsedDayId = dayIdSchema.safeParse(dayId);
+  if (!parsedDayId.success) return { error: "invalid_input" };
+
+  const parsedIds = z.array(itemIdSchema).safeParse(orderedIds);
+  if (!parsedIds.success) return { error: "invalid_input" };
+
+  // 정렬은 집합이 정확히 일치해야 의미가 있다 — 중복은 제거가 아니라 거부한다
+  if (new Set(parsedIds.data).size !== parsedIds.data.length) {
+    return { error: "invalid_input" };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "unauthenticated" };
+
+  try {
+    const owner = await assertDayOwner(parsedDayId.data, user.id);
+    if ("error" in owner) return owner;
+    const { courseId } = owner;
+
+    if (parsedIds.data.length === 0) return {};
+
+    // 다른 Day의 아이템이 섞여 들어오는 것을 막는다 — 집합이 정확히 일치해야 한다
+    const items = await prisma.courseItem.findMany({
+      where: { dayId: parsedDayId.data },
+      select: { id: true },
+    });
+    if (items.length !== parsedIds.data.length) return { error: "invalid_input" };
+    const owned = new Set(items.map((item) => item.id));
+    if (parsedIds.data.some((id) => !owned.has(id))) return { error: "invalid_input" };
+
+    await prisma.$transaction([
+      ...parsedIds.data.map((id, index) =>
+        prisma.courseItem.update({ where: { id }, data: { sortOrder: index } })
+      ),
+      prisma.course.update({ where: { id: courseId }, data: { updatedAt: new Date() } }),
+    ]);
+
+    revalidateCoursePaths(courseId);
+    return {};
+  } catch (e) {
+    console.error("[reorderCourseItems] server_error", e);
+    return { error: "server_error" };
+  }
+}
