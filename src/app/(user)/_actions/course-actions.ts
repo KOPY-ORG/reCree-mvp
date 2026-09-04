@@ -18,8 +18,8 @@ const itemIdSchema = z.string().uuid();
 
 const titleSchema = z.string().trim().min(1).max(100);
 const descriptionSchema = z.string().trim().max(500).optional();
-const noteSchema = z.string().trim().max(200).optional();
 
+const isPublicSchema = z.boolean();
 const topicIdsSchema = z.array(z.string().uuid());
 
 // ─── 소유자 검증 헬퍼 ────────────────────────────────────────────────────────
@@ -168,6 +168,13 @@ export async function updateCourse(
     description = parsed.data || null;
   }
 
+  let isPublic: boolean | undefined;
+  if (input.isPublic !== undefined) {
+    const parsed = isPublicSchema.safeParse(input.isPublic);
+    if (!parsed.success) return { error: "invalid_input" };
+    isPublic = parsed.data;
+  }
+
   let topicIds: string[] | undefined;
   if (input.topicIds !== undefined) {
     const parsed = topicIdsSchema.safeParse(input.topicIds);
@@ -202,7 +209,7 @@ export async function updateCourse(
         data: {
           ...(title !== undefined ? { title } : {}),
           ...(description !== undefined ? { description } : {}),
-          ...(input.isPublic !== undefined ? { isPublic: input.isPublic } : {}),
+          ...(isPublic !== undefined ? { isPublic } : {}),
           updatedAt: new Date(),
         },
       });
@@ -341,6 +348,8 @@ export async function removeCourseDay(dayId: string): Promise<{ error?: string }
       // @@unique([courseId, dayNumber]) 때문에 순차 대입은 중간 상태에서 충돌한다.
       // (1,2,3에서 2를 지우고 3→2로 내리면 아직 남아있는 값과 겹쳐 P2002)
       // 전부 음수로 밀어 양수 구간을 비운 뒤 1..n으로 되돌린다. Day는 최대 7개다.
+      // 정확성 조건이 아니라 최적화다 — 맨 뒤 Day를 지우면 남은 번호가 이미 1..n이라
+      // update 14회를 통째로 건너뛴다.
       const needsRenumber = remaining.some((d, i) => d.dayNumber !== i + 1);
       if (needsRenumber) {
         for (let i = 0; i < remaining.length; i++) {
@@ -361,7 +370,9 @@ export async function removeCourseDay(dayId: string): Promise<{ error?: string }
         where: { id: courseId },
         data: { updatedAt: new Date() },
       });
-    });
+      // 최대 17회 왕복(delete 1 + findMany 1 + update 14 + update 1)이다.
+      // pooler 지연을 감안하면 기본 5초가 빠듯하다 — Day 7개에서 맨 앞을 지우는 경우가 최악이다.
+    }, { timeout: 15000 });
 
     revalidateCoursePaths(courseId);
     return {};
@@ -575,21 +586,34 @@ export async function reorderCourseItems(
 
     if (parsedIds.data.length === 0) return {};
 
-    // 다른 Day의 아이템이 섞여 들어오는 것을 막는다 — 집합이 정확히 일치해야 한다
-    const items = await prisma.courseItem.findMany({
-      where: { dayId: parsedDayId.data },
-      select: { id: true },
-    });
-    if (items.length !== parsedIds.data.length) return { error: "invalid_input" };
-    const owned = new Set(items.map((item) => item.id));
-    if (parsedIds.data.some((id) => !owned.has(id))) return { error: "invalid_input" };
+    // 집합 조회와 update를 같은 트랜잭션에 둔다. 사이가 벌어지면 그 틈에
+    // 아이템이 추가된 경우 새 아이템이 옛 sortOrder를 유지한 채 재정렬에서 빠져
+    // 조용히 어긋나고, 삭제된 경우 update가 P2025로 터진다.
+    const result: { error?: string } = await prisma.$transaction(async (tx) => {
+      const items = await tx.courseItem.findMany({
+        where: { dayId: parsedDayId.data },
+        select: { id: true },
+      });
 
-    await prisma.$transaction([
-      ...parsedIds.data.map((id, index) =>
-        prisma.courseItem.update({ where: { id }, data: { sortOrder: index } })
-      ),
-      prisma.course.update({ where: { id: courseId }, data: { updatedAt: new Date() } }),
-    ]);
+      // 다른 Day의 아이템이 섞여 들어오는 것을 막는다 — 집합이 정확히 일치해야 한다
+      if (items.length !== parsedIds.data.length) return { error: "invalid_input" };
+      const owned = new Set(items.map((item) => item.id));
+      if (parsedIds.data.some((id) => !owned.has(id))) return { error: "invalid_input" };
+
+      for (let index = 0; index < parsedIds.data.length; index++) {
+        await tx.courseItem.update({
+          where: { id: parsedIds.data[index] },
+          data: { sortOrder: index },
+        });
+      }
+      await tx.course.update({
+        where: { id: courseId },
+        data: { updatedAt: new Date() },
+      });
+      return {};
+    });
+
+    if (result.error) return result;
 
     revalidateCoursePaths(courseId);
     return {};
@@ -689,7 +713,14 @@ export async function copyCourse(sourceId: string): Promise<{ id?: string; error
           });
         }
 
-        // 증가만 있고 감소는 없다 — 복사 후 원본과 끊어지므로 되돌릴 일이 없다
+        // 증가만 있고 감소는 없다 — 복사 후 원본과 끊어지므로 되돌릴 일이 없다.
+        //
+        // 이 update는 @updatedAt 때문에 원본의 updatedAt도 함께 밀어 올린다.
+        // 개념상으로는 올리지 않는 게 맞다 — copyCount는 남이 올린 값이지 작성자의 편집이 아니다.
+        // 끄려면 raw SQL밖에 없는데 코드베이스에 선례가 0건이고,
+        // scrap-actions.ts의 saveCount 증가가 이미 Post.updatedAt에 같은 부작용을 낸다.
+        // 영향은 작성자 본인의 getMyCourses(updatedAt desc) 정렬뿐이고
+        // getPublicCourses는 createdAt desc라 무관하다. 그래서 그대로 둔다.
         await tx.course.update({
           where: { id: parsedId.data },
           data: { copyCount: { increment: 1 } },
