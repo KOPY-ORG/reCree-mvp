@@ -195,13 +195,15 @@ export async function updateCourse(
     }
 
     await prisma.$transaction(async (tx) => {
-      // topicIds만 바뀌어도 updatedAt을 올린다 — getMyCourses가 updatedAt으로 정렬한다
+      // topicIds만 바뀌어도 updatedAt을 올린다 — getMyCourses가 updatedAt으로 정렬한다.
+      // 빈 data({})는 Prisma가 쿼리를 내보내지 않아 @updatedAt이 동작하지 않으므로 직접 넣는다.
       await tx.course.update({
         where: { id: parsedId.data },
         data: {
           ...(title !== undefined ? { title } : {}),
           ...(description !== undefined ? { description } : {}),
           ...(input.isPublic !== undefined ? { isPublic: input.isPublic } : {}),
+          updatedAt: new Date(),
         },
       });
 
@@ -251,6 +253,120 @@ export async function deleteCourse(courseId: string): Promise<{ error?: string }
     return {};
   } catch (e) {
     console.error("[deleteCourse] server_error", e);
+    return { error: "server_error" };
+  }
+}
+
+// ─── addCourseDay ────────────────────────────────────────────────────────────
+
+/** Day 추가. dayNumber는 트랜잭션 안에서 max+1로 계산해 경쟁 상태를 완화한다. */
+export async function addCourseDay(courseId: string): Promise<{ error?: string }> {
+  const parsedId = courseIdSchema.safeParse(courseId);
+  if (!parsedId.success) return { error: "invalid_input" };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "unauthenticated" };
+
+  try {
+    const owner = await assertCourseOwner(parsedId.data, user.id);
+    if ("error" in owner) return owner;
+
+    const result: { error?: string } = await prisma.$transaction(async (tx) => {
+      const count = await tx.courseDay.count({ where: { courseId: parsedId.data } });
+      if (count >= MAX_DAYS) return { error: "invalid_input" };
+
+      const last = await tx.courseDay.findFirst({
+        where: { courseId: parsedId.data },
+        orderBy: { dayNumber: "desc" },
+        select: { dayNumber: true },
+      });
+
+      await tx.courseDay.create({
+        data: { courseId: parsedId.data, dayNumber: (last?.dayNumber ?? 0) + 1 },
+      });
+
+      // Day를 추가했는데 목록 순서가 안 바뀌면 편집이 반영되지 않은 것처럼 보인다.
+      // 빈 data({})는 쿼리 자체가 나가지 않아 @updatedAt이 안 걸린다 — 직접 넣는다.
+      await tx.course.update({
+        where: { id: parsedId.data },
+        data: { updatedAt: new Date() },
+      });
+      return {};
+    });
+
+    if (result.error) return result;
+
+    revalidateCoursePaths(parsedId.data);
+    return {};
+  } catch (e) {
+    console.error("[addCourseDay] server_error", e);
+    return { error: "server_error" };
+  }
+}
+
+// ─── removeCourseDay ─────────────────────────────────────────────────────────
+
+/**
+ * Day 삭제 후 남은 Day를 1..n으로 재번호한다.
+ * 마지막 Day를 지워 Day 0개가 되는 것도 허용한다 — 편집기 빈 상태가 설계에 있다.
+ */
+export async function removeCourseDay(dayId: string): Promise<{ error?: string }> {
+  const parsedId = dayIdSchema.safeParse(dayId);
+  if (!parsedId.success) return { error: "invalid_input" };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "unauthenticated" };
+
+  try {
+    const owner = await assertDayOwner(parsedId.data, user.id);
+    if ("error" in owner) return owner;
+    const { courseId } = owner;
+
+    await prisma.$transaction(async (tx) => {
+      // CourseItem은 onDelete: Cascade로 함께 삭제된다
+      await tx.courseDay.delete({ where: { id: parsedId.data } });
+
+      const remaining = await tx.courseDay.findMany({
+        where: { courseId },
+        orderBy: { dayNumber: "asc" },
+        select: { id: true, dayNumber: true },
+      });
+
+      // @@unique([courseId, dayNumber]) 때문에 순차 대입은 중간 상태에서 충돌한다.
+      // (1,2,3에서 2를 지우고 3→2로 내리면 아직 남아있는 값과 겹쳐 P2002)
+      // 전부 음수로 밀어 양수 구간을 비운 뒤 1..n으로 되돌린다. Day는 최대 7개다.
+      const needsRenumber = remaining.some((d, i) => d.dayNumber !== i + 1);
+      if (needsRenumber) {
+        for (let i = 0; i < remaining.length; i++) {
+          await tx.courseDay.update({
+            where: { id: remaining[i].id },
+            data: { dayNumber: -(i + 1) },
+          });
+        }
+        for (let i = 0; i < remaining.length; i++) {
+          await tx.courseDay.update({
+            where: { id: remaining[i].id },
+            data: { dayNumber: i + 1 },
+          });
+        }
+      }
+
+      await tx.course.update({
+        where: { id: courseId },
+        data: { updatedAt: new Date() },
+      });
+    });
+
+    revalidateCoursePaths(courseId);
+    return {};
+  } catch (e) {
+    console.error("[removeCourseDay] server_error", e);
     return { error: "server_error" };
   }
 }
