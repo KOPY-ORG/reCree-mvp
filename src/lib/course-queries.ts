@@ -41,6 +41,7 @@ const courseListSelect = {
   title: true,
   description: true,
   authorId: true,
+  author: { select: { nickname: true } },
   isPublic: true,
   copyCount: true,
   coverImageUrl: true,
@@ -82,6 +83,8 @@ export type CourseListItem = {
   title: string;
   description: string | null;
   authorId: string;
+  /** 작성자 표시명. User.nickname이 nullable이라 여기도 null 가능 — 표기 폴백은 화면에서 정한다 */
+  authorName: string | null;
   isPublic: boolean;
   copyCount: number;
   coverImageUrl: string | null;
@@ -135,6 +138,7 @@ function toListItem(row: RawCourseListRow): CourseListItem {
     title: row.title,
     description: row.description,
     authorId: row.authorId,
+    authorName: row.author.nickname,
     isPublic: row.isPublic,
     copyCount: row.copyCount,
     coverImageUrl: row.coverImageUrl,
