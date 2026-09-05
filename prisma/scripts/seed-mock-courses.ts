@@ -10,6 +10,10 @@
  * ★ 작성자가 지금 로그인한 계정과 다르면 /journeys 의 "My Journeys" 섹션과
  *   Private 배지를 눈으로 볼 수 없다. 그 둘을 확인하려면 --author 로 본인 계정을 지정해라.
  *
+ * 코스는 여러 계정에 나눠 만든다 — --author 계정이 5개(내 코스), 나머지 4개는 다른 계정이
+ * 가진 공개 코스다. 남의 공개 코스에서만 "Make it mine"(CopyCourseButton) 이 뜨기 때문에
+ * 전부 한 사람 소유면 그 버튼을 볼 수 없다.
+ *
  * 목 코스는 title 이 "[MOCK] " 로 시작한다. --clean 은 그 접두사를 가진 Course 만 지우고,
  * Day / Item / CourseTopic 은 onDelete: Cascade 로 함께 사라진다.
  * 기존 User / Topic / Place 는 읽기만 한다 — 만들지도 고치지도 지우지도 않는다.
@@ -65,6 +69,19 @@ const MANUAL = {
   cheomseongdae: { nameEn: "Cheomseongdae Observatory", address: "839-1 Inwang-dong, Gyeongju", latitude: 35.8348, longitude: 129.2249 },
   daereungwon: { nameEn: "Daereungwon Tomb Complex", address: "9 Gyerim-ro, Gyeongju", latitude: 35.829, longitude: 129.2125 },
   gyeongjuMuseum: { nameEn: "Gyeongju National Museum", address: "186 Iljeong-ro, Gyeongju", latitude: 35.829, longitude: 129.2277 },
+  // 부산 — 연결 가능한 Place 가 이 근처에 거의 없어 대부분 직접 채운다
+  haeundae: { nameEn: "Haeundae Beach", address: "264 Haeundaehaebyeon-ro, Haeundae-gu, Busan", latitude: 35.1587, longitude: 129.1604 },
+  dongbaekseom: { nameEn: "Dongbaekseom Island", address: "U-dong, Haeundae-gu, Busan", latitude: 35.1533, longitude: 129.1519 },
+  gwangalli: { nameEn: "Gwangalli Beach", address: "219 Gwanganhaebyeon-ro, Suyeong-gu, Busan", latitude: 35.1532, longitude: 129.1187 },
+  cheongsapo: { nameEn: "Cheongsapo Daritdol Observatory", address: "116-20 Cheongsapo-ro, Haeundae-gu, Busan", latitude: 35.161, longitude: 129.1968 },
+  // 강릉
+  anmok: { nameEn: "Anmok Coffee Street", address: "Changhae-ro, Gangneung", latitude: 37.7735, longitude: 128.947 },
+  gyeongpo: { nameEn: "Gyeongpo Beach", address: "Anhyeon-dong, Gangneung", latitude: 37.7955, longitude: 128.9096 },
+  ojukheon: { nameEn: "Ojukheon House", address: "24 Yulgok-ro 3139beon-gil, Gangneung", latitude: 37.7791, longitude: 128.8779 },
+  // 서울 야경 / 홍대
+  namsan: { nameEn: "Namsan Seoul Tower", address: "105 Namsangongwon-gil, Yongsan-gu, Seoul", latitude: 37.5512, longitude: 126.9882 },
+  banpo: { nameEn: "Banpo Bridge Moonlight Rainbow Fountain", address: "Sinbanpo-ro 11-gil, Seocho-gu, Seoul", latitude: 37.5126, longitude: 126.9959 },
+  mangwonMarket: { nameEn: "Mangwon Market", address: "14 Poeun-ro 8-gil, Mapo-gu, Seoul", latitude: 37.5556, longitude: 126.9024 },
 } as const;
 
 type ManualItem = (typeof MANUAL)[keyof typeof MANUAL];
@@ -72,12 +89,25 @@ type ManualItem = (typeof MANUAL)[keyof typeof MANUAL];
 /** Day 한 칸 — "place" 는 실제 Place 에서 채우고, 객체면 직접 값을 넣는다 */
 type Slot = "place" | ManualItem;
 
+/**
+ * 소유자.
+ *   "me"        --author 로 지정한 계정 (없으면 가장 먼저 만들어진 User)
+ *   "anonymous" nickname 이 null 인 계정 — 카드에 "Anonymous" 로 뜨는지 확인용
+ *   "@park"     그 nickname 을 가진 계정
+ */
+type OwnerSpec = "me" | "anonymous" | `@${string}`;
+
 type CourseSpec = {
   title: string;
+  owner: OwnerSpec;
   isPublic: boolean;
   topicCount: number;
   /** Place 를 고를 기준점 */
   anchor: Coords;
+  /** 앵커에서 이 거리 안의 Place 만 연결한다. 지방 코스가 수도권 Place 를 물어오는 것을 막는다 */
+  maxSpreadKm?: number;
+  /** 이미 복사된 코스의 표시 확인용. 지금 이 값을 그리는 UI 는 없다 */
+  copyCount?: number;
   days: { title: string | null; slots: Slot[] }[];
 };
 
@@ -85,10 +115,16 @@ const SEOUL_CENTER = { latitude: 37.5796, longitude: 126.977 };
 const HONGDAE = { latitude: 37.5535, longitude: 126.9226 };
 const SEONGSU = { latitude: 37.5445, longitude: 127.0559 };
 const GYEONGJU = { latitude: 35.8348, longitude: 129.2249 };
+const BUSAN = { latitude: 35.1587, longitude: 129.1604 };
+const GANGNEUNG = { latitude: 37.7952, longitude: 128.8961 };
+
+/** 지방 코스의 Place 연결 반경. 이 밖이면 아예 연결하지 않는다 */
+const REGIONAL_SPREAD_KM = 15;
 
 const SPECS: CourseSpec[] = [
   {
     title: `${MOCK_PREFIX}Seoul BTS Pilgrimage`,
+    owner: "me",
     isPublic: true,
     topicCount: 1,
     anchor: SEOUL_CENTER,
@@ -100,6 +136,7 @@ const SPECS: CourseSpec[] = [
   },
   {
     title: `${MOCK_PREFIX}Hongdae Cafe Hop`,
+    owner: "me",
     isPublic: true,
     topicCount: 2, // 그라데이션 확인용
     anchor: HONGDAE,
@@ -109,6 +146,7 @@ const SPECS: CourseSpec[] = [
   },
   {
     title: `${MOCK_PREFIX}Gyeongju Day Trip`,
+    owner: "me",
     isPublic: true,
     topicCount: 0, // 중립색 확인용
     anchor: GYEONGJU,
@@ -119,6 +157,7 @@ const SPECS: CourseSpec[] = [
   },
   {
     title: `${MOCK_PREFIX}My Secret Route`,
+    owner: "me",
     isPublic: false, // Private 배지 확인용
     topicCount: 1,
     anchor: SEONGSU,
@@ -129,10 +168,58 @@ const SPECS: CourseSpec[] = [
   },
   {
     title: `${MOCK_PREFIX}Empty Journey`,
+    owner: "me",
     isPublic: true,
     topicCount: 0,
     anchor: SEOUL_CENTER,
     days: [{ title: null, slots: [] }], // 완전 빈 상태 확인용
+  },
+
+  // ── 여기부터는 남의 공개 코스 — "Make it mine" 버튼 확인용 ────────────────
+  {
+    title: `${MOCK_PREFIX}Busan Coastal Run`,
+    owner: "@park",
+    isPublic: true,
+    topicCount: 1,
+    anchor: BUSAN,
+    maxSpreadKm: REGIONAL_SPREAD_KM,
+    copyCount: 3, // 이미 복사된 코스
+    days: [
+      { title: "Haeundae side", slots: ["place", MANUAL.haeundae, MANUAL.dongbaekseom] },
+      { title: null, slots: [MANUAL.gwangalli, MANUAL.cheongsapo] },
+    ],
+  },
+  {
+    title: `${MOCK_PREFIX}Seoul Night Walk`,
+    owner: "@swimmer",
+    isPublic: true,
+    topicCount: 2, // 그라데이션 커버
+    anchor: SEOUL_CENTER,
+    days: [
+      { title: "After dark", slots: ["place", MANUAL.namsan, "place", MANUAL.banpo] },
+    ],
+  },
+  {
+    title: `${MOCK_PREFIX}Gangneung Sea & Coffee`,
+    owner: "@vasipo099",
+    isPublic: true,
+    topicCount: 0, // 중립 커버
+    anchor: GANGNEUNG,
+    maxSpreadKm: REGIONAL_SPREAD_KM,
+    days: [
+      { title: "Coast", slots: ["place", MANUAL.anmok] },
+      { title: "Inland", slots: ["place", MANUAL.gyeongpo, MANUAL.ojukheon] },
+    ],
+  },
+  {
+    title: `${MOCK_PREFIX}Quiet Hongdae Corners`,
+    owner: "anonymous", // 카드에 "Anonymous" 로 뜨는지 확인용
+    isPublic: true,
+    topicCount: 1,
+    anchor: HONGDAE,
+    days: [
+      { title: null, slots: ["place", MANUAL.mangwonMarket, "place"] },
+    ],
   },
 ];
 
@@ -181,9 +268,44 @@ async function seed() {
     process.exit(1);
   }
   console.log(
-    `작성자: ${author.nickname ?? "(닉네임 없음)"}${authorName ? " (--author 지정)" : " (가장 먼저 만들어진 User)"}`,
+    `내 코스 작성자: ${author.nickname ?? "(닉네임 없음)"}${authorName ? " (--author 지정)" : " (가장 먼저 만들어진 User)"}`,
   );
   console.log("  이 계정으로 로그인해야 My Journeys 섹션과 Private 배지가 보인다.");
+
+  // 나머지 코스는 다른 계정 소유다. 없는 계정을 만나면 조용히 author 로 떨어뜨리지 않는다 —
+  // 그러면 전부 내 코스가 되어 "Make it mine" 을 확인하려던 목적이 사라진다.
+  // 위 가드로 non-null 이지만 클로저 안에서는 좁힘이 유지되지 않아 따로 잡아둔다
+  const me = author;
+  const ownerCache = new Map<OwnerSpec, { id: string; nickname: string | null }>();
+  ownerCache.set("me", me);
+
+  async function resolveOwner(spec: OwnerSpec) {
+    const cached = ownerCache.get(spec);
+    if (cached) return cached;
+
+    const user =
+      spec === "anonymous"
+        ? await prisma.user.findFirst({ where: { nickname: null }, select: { id: true, nickname: true } })
+        : await prisma.user.findFirst({
+            where: { nickname: spec.slice(1) },
+            select: { id: true, nickname: true },
+          });
+
+    if (!user) {
+      console.error(
+        spec === "anonymous"
+          ? "nickname 이 null 인 User 가 없다. \"Anonymous\" 표기를 확인할 코스를 만들 수 없어 중단한다."
+          : `nickname 이 "${spec.slice(1)}" 인 User 가 없다. 중단한다.`,
+      );
+      process.exit(1);
+    }
+    if (user.id === me.id) {
+      console.error(`${spec} 가 --author 와 같은 계정이다. 남의 코스가 안 되므로 중단한다.`);
+      process.exit(1);
+    }
+    ownerCache.set(spec, user);
+    return user;
+  }
 
   // level 2 · isActive 중 앞에서부터. 색이 있는 것을 앞세운다 —
   // 2개짜리 코스가 그라데이션 확인용이라 colorHex 가 null 이면 회색으로만 보인다.
@@ -229,9 +351,10 @@ async function seed() {
    * (앵커를 수동 좌표에 맞춰 놨기 때문).
    */
   const MIN_GAP_KM = 0.5;
-  const MAX_SPREAD_KM = 10;
+  /** 앵커에서 이 거리 안의 Place 만 쓴다. spec.maxSpreadKm 로 코스별로 좁힐 수 있다 */
+  const DEFAULT_SPREAD_KM = 25;
 
-  function takeNearby(anchor: Coords, taken: Coords[]) {
+  function takeNearby(anchor: Coords, taken: Coords[], maxSpreadKm: number) {
     const farEnough = (c: Coords) => taken.every((t) => distanceKm(c, t) >= MIN_GAP_KM);
 
     const ranked = placePool
@@ -240,8 +363,9 @@ async function seed() {
       .filter(({ coords }) => farEnough(coords))
       .sort((a, b) => distanceKm(anchor, a.coords) - distanceKm(anchor, b.coords));
 
-    // 앵커 근처를 우선하되, 다 떨어지면 거리 제한을 푼다
-    const picked = ranked.find(({ coords }) => distanceKm(anchor, coords) <= MAX_SPREAD_KM) ?? ranked[0];
+    // 반경 밖으로는 절대 나가지 않는다. 예전엔 다 떨어지면 제일 가까운 것을 그냥 집었는데,
+    // 그러면 부산·강릉 코스가 수도권 Place 를 물어와 지도가 전국으로 벌어진다.
+    const picked = ranked.find(({ coords }) => distanceKm(anchor, coords) <= maxSpreadKm);
     if (picked) {
       used.add(picked.p.id);
       taken.push(picked.coords);
@@ -252,7 +376,10 @@ async function seed() {
   const report: {
     id: string;
     title: string;
+    ownerName: string;
+    isMine: boolean;
     isPublic: boolean;
+    copyCount: number;
     days: number;
     items: number;
     topics: number;
@@ -262,13 +389,15 @@ async function seed() {
 
   for (const spec of SPECS) {
     const topicIds = topics.slice(0, spec.topicCount).map((t) => t.id);
+    const owner = await resolveOwner(spec.owner);
 
     const course = await prisma.course.create({
       data: {
         title: spec.title,
         description: null,
-        authorId: author.id,
+        authorId: owner.id,
         isPublic: spec.isPublic,
+        copyCount: spec.copyCount ?? 0,
         topics: { create: topicIds.map((topicId) => ({ topicId })) },
       },
       select: { id: true },
@@ -291,7 +420,7 @@ async function seed() {
 
       for (const [slotIndex, slot] of day.slots.entries()) {
         if (slot === "place") {
-          const place = takeNearby(spec.anchor, takenCoords);
+          const place = takeNearby(spec.anchor, takenCoords, spec.maxSpreadKm ?? DEFAULT_SPREAD_KM);
           if (!place) {
             console.warn(`  ⚠ 남은 Place 가 없어 "${spec.title}" Day ${dayIndex + 1} 한 칸을 건너뛴다`);
             continue;
@@ -331,7 +460,11 @@ async function seed() {
     report.push({
       id: course.id,
       title: spec.title,
+      // CourseCard 는 nickname 이 null 이면 "Anonymous" 로 그린다
+      ownerName: owner.nickname ?? "Anonymous",
+      isMine: owner.id === me.id,
       isPublic: spec.isPublic,
+      copyCount: spec.copyCount ?? 0,
       days: spec.days.length,
       items: linked + manual,
       topics: topicIds.length,
@@ -342,12 +475,23 @@ async function seed() {
 
   // ─── 보고 ───────────────────────────────────────────────────────────────────
 
+  console.log("계정별 코스 수\n");
+  const byOwner = new Map<string, number>();
+  for (const r of report) byOwner.set(r.ownerName, (byOwner.get(r.ownerName) ?? 0) + 1);
+  for (const [name, count] of byOwner) {
+    const mine = report.find((r) => r.ownerName === name)?.isMine;
+    console.log(`  ${name.padEnd(12)} ${count}개${mine ? "   ← 내 코스 (Make it mine 안 뜸)" : ""}`);
+  }
+  console.log("");
+
   console.log("생성한 코스\n");
   for (const r of report) {
     console.log(`  ${r.title}`);
     console.log(`    id       ${r.id}`);
+    console.log(`    owner    ${r.ownerName}${r.isMine ? " (나)" : ""}`);
     console.log(
-      `    ${r.isPublic ? "public " : "private"}  Day ${r.days} · 아이템 ${r.items} · Topic ${r.topics}`,
+      `    ${r.isPublic ? "public " : "private"}  Day ${r.days} · 아이템 ${r.items} · Topic ${r.topics}` +
+        (r.copyCount > 0 ? ` · copyCount ${r.copyCount}` : ""),
     );
     console.log(`    아이템    placeId 연결 ${r.linked} / null ${r.manual}`);
     console.log("");
@@ -367,8 +511,12 @@ async function seed() {
 
   console.log("확인용 URL");
   console.log(`  ${BASE_URL}/journeys`);
+  console.log(`  ${BASE_URL}/profile`);
   for (const r of report) {
-    console.log(`  ${BASE_URL}/journeys/${r.id}   ${r.title.replace(MOCK_PREFIX, "")}`);
+    const mark = r.isMine ? "내 코스" : "Make it mine";
+    console.log(
+      `  ${BASE_URL}/journeys/${r.id}   ${r.title.replace(MOCK_PREFIX, "").padEnd(24)} ${mark}`,
+    );
   }
 }
 
