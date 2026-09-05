@@ -1,15 +1,62 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useId, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, ChevronLeft, Loader2 } from "lucide-react";
+import { Check, ChevronLeft, Loader2, Plus, Trash2 } from "lucide-react";
 import { showError } from "@/lib/toast";
-import { createCourse, updateCourse } from "@/app/(user)/_actions/course-actions";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  addCourseDay,
+  createCourse,
+  removeCourseDay,
+  updateCourse,
+} from "@/app/(user)/_actions/course-actions";
 import type { CourseDetail } from "@/lib/course-queries";
 import { coverBackground, NEUTRAL_COVER } from "./course-cover";
-import { CONTROL_LINE, FIELD_LINE, INK, LINE, MUTED, PAPER, SUB } from "../_constants";
+import {
+  CONTROL_LINE,
+  DANGER,
+  DANGER_BG,
+  FIELD_LINE,
+  INK,
+  LINE,
+  MUTED,
+  PAPER,
+  SUB,
+} from "../_constants";
+
+// ─── 상수 ────────────────────────────────────────────────────────────────────
+
+/**
+ * course-actions.ts:11 의 MAX_DAYS 와 같은 값.
+ * "use server" 파일은 async 함수 외에는 export 할 수 없어 여기 둔다.
+ * 서버가 여전히 상한을 강제하므로(invalid_input) 이 값은 UI 표시용이다.
+ */
+const MAX_DAYS = 7;
+
+/**
+ * 아직 서버에 없는 Day 의 id 접두사.
+ * 하이드레이션이 어긋나지 않도록 randomUUID 가 아니라 순번으로 만든다.
+ */
+const LOCAL_DAY_PREFIX = "local-";
+
+function isLocalDay(dayId: string) {
+  return dayId.startsWith(LOCAL_DAY_PREFIX);
+}
 
 // ─── 타입 ────────────────────────────────────────────────────────────────────
+
+export type EditorDay = {
+  id: string;
+  dayNumber: number;
+  title: string | null;
+  items: {
+    id: string;
+    placeId: string | null;
+    nameEn: string;
+    address: string | null;
+  }[];
+};
 
 /**
  * 편집기 초기값. getCourseDetail 결과를 edit/page.tsx 가 이 모양으로 펴서 넘긴다
@@ -20,17 +67,7 @@ export type CourseEditorInitialData = {
   isPublic: boolean;
   /** 아이템 썸네일 색을 상세 화면과 같은 규칙으로 뽑기 위해 필요하다 */
   topics: CourseDetail["topics"];
-  days: {
-    id: string;
-    dayNumber: number;
-    title: string | null;
-    items: {
-      id: string;
-      placeId: string | null;
-      nameEn: string;
-      address: string | null;
-    }[];
-  }[];
+  days: EditorDay[];
 };
 
 interface CourseEditorProps {
@@ -50,14 +87,27 @@ function courseErrorMessage(error?: string): string {
   return "Something went wrong. Try again.";
 }
 
+/** 로컬 Day 목록을 1..n 으로 다시 매긴다 — removeCourseDay 의 서버 재번호와 같은 규칙 */
+function renumber(days: EditorDay[]): EditorDay[] {
+  return days.map((day, i) => (day.dayNumber === i + 1 ? day : { ...day, dayNumber: i + 1 }));
+}
+
 // ─── CourseEditor ────────────────────────────────────────────────────────────
 
 /**
- * 코스 편집기. 저장 버튼에 모아 보내지 않고 변경 시점마다 해당 액션을 바로 호출한다
- * (course-actions 에 전체 상태를 받는 액션이 없다).
+ * 코스 편집기. 화면은 하나지만 저장 시점이 두 갈래다.
  *
- * create 모드는 화면 진입만으로는 아무것도 만들지 않는다. 제목을 처음 blur 할 때
- * createCourse 를 부르고 /journeys/{id}/edit 로 replace 해 edit 모드로 갈아탄다.
+ *   draft (courseId 없음)  — 아직 코스가 없다. 제목·공개여부·Day 를 전부 로컬에서 만진다.
+ *                            서버를 한 번도 부르지 않으므로 깜빡임이 없다.
+ *                            Done 을 눌러야 비로소 코스가 생긴다.
+ *   saved (courseId 있음)  — 이미 있는 코스다. 변경할 때마다 해당 액션을 바로 호출한다.
+ *
+ * 이렇게 나눈 이유:
+ * - 제목을 코스 생성의 트리거로 쓰면 "이름부터 지어야 아무것도 못 하는" 화면이 된다.
+ *   토글도 Day 추가도 막히고, 이름을 짓는 순간 라우트가 갈리면서 화면이 통째로 다시 그려진다.
+ * - Course.title 이 NOT NULL 이라(schema.prisma:797) 이름 없는 코스를 미리 만들어 둘 수도 없다.
+ * - 그래서 "코스가 생기기 전"을 화면에서 지우는 대신 로컬 초안으로 다룬다.
+ *   Done 하나가 유일한 커밋 지점이 되고, "제목이 있어야 Done" 이라는 규칙이 두 갈래에서 같아진다.
  */
 export function CourseEditor({
   mode,
@@ -65,23 +115,75 @@ export function CourseEditor({
   initialData,
 }: CourseEditorProps) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const titleHintId = useId();
+
+  // pending 을 용도별로 나눈다. 하나로 묶으면 어느 컨트롤을 눌러도 화면의 disabled 요소가
+  // 전부 함께 흐려져(각각 transition-opacity) 화면 전체가 깜빡이는 것처럼 보인다.
+  const [titlePending, startTitleTransition] = useTransition();
+  const [visibilityPending, startVisibilityTransition] = useTransition();
+  const [isDayPending, startDayTransition] = useTransition();
+
+  /** 저장이 하나라도 돌고 있으면 화면을 뜨면 안 된다 — Done 버튼만 이걸 본다 */
+  const isBusy = titlePending || visibilityPending || isDayPending;
 
   const [title, setTitle] = useState(initialData?.title ?? "");
   const [isPublic, setIsPublic] = useState(initialData?.isPublic ?? false);
   const [courseId, setCourseId] = useState<string | undefined>(initialCourseId);
 
-  // 제목 입력 blur 와 ✓ 클릭이 같은 tick 에 겹칠 수 있다(✓ 를 누르면 입력이 먼저 blur 된다).
-  // 그때 state 는 아직 갱신 전이므로 최신값을 ref 로도 들고 있는다.
+  /**
+   * Day 목록은 화면이 소유한다. 서버 결과를 그대로 렌더하면 액션이 끝날 때까지 아무 반응이
+   * 없다가 트리가 통째로 갈린다 — 그게 지금 깜빡임의 절반이다.
+   *
+   * 초안은 Day 1 로 시작한다. createCourse 가 Day 1 을 함께 만들기 때문에(course-actions:118)
+   * 눈에 보이는 것과 실제로 만들어지는 것이 일치한다.
+   */
+  const [days, setDays] = useState<EditorDay[]>(
+    () =>
+      initialData?.days ?? [
+        { id: `${LOCAL_DAY_PREFIX}1`, dayNumber: 1, title: null, items: [] },
+      ],
+  );
+  const localDayCounter = useRef(1);
+
+  /**
+   * 서버가 새 Day 목록을 내려주면 채택한다. effect 가 아니라 렌더 중 비교다
+   * (React 의 "props 가 바뀔 때 state 조정" 패턴 — 이 저장소는 set-state-in-effect 가 lint 에러다).
+   * 낙관적으로 넣어 둔 local Day 가 여기서 진짜 id·번호를 가진 Day 로 바뀐다.
+   */
+  const serverDays = initialData?.days;
+  const [lastServerDays, setLastServerDays] = useState(serverDays);
+  if (serverDays !== undefined && serverDays !== lastServerDays) {
+    setLastServerDays(serverDays);
+    setDays(serverDays);
+  }
+
+  // 겹쳐 눌러도 서버 왕복은 한 번이고 둘 다 같은 결과를 받는다.
+  // 이 가드가 없으면 입력 blur 와 Done 클릭이 같은 저장을 두 번 보낸다.
+  const titleCommitRef = useRef<Promise<boolean> | null>(null);
   const courseIdRef = useRef(initialCourseId);
   const savedTitleRef = useRef(initialData?.title ?? "");
-  // 진행 중인 제목 저장. 겹쳐 호출돼도 서버 왕복은 한 번이고 둘 다 같은 결과를 받는다.
-  // 이 가드가 없으면 blur 와 ✓ 가 createCourse 를 두 번 불러 코스가 두 개 생긴다.
-  const titleCommitRef = useRef<Promise<string | undefined> | null>(null);
+  const dayMutatingRef = useRef(false);
 
-  const days = initialData?.days ?? [];
+  // 삭제 확인 대기 중인 Day. null 이면 모달이 닫혀 있다.
+  const [pendingDeleteDayId, setPendingDeleteDayId] = useState<string | null>(null);
+
+  // ── 파생값 ─────────────────────────────────────────────────────────────────
+
+  /** 아직 서버에 코스가 없는 상태 */
+  const isDraft = courseId === undefined;
   const itemCount = days.reduce((sum, day) => sum + day.items.length, 0);
   const cover = initialData ? coverBackground(initialData.topics) : NEUTRAL_COVER;
+  const atMaxDays = days.length >= MAX_DAYS;
+  const pendingDeleteDay = days.find((day) => day.id === pendingDeleteDayId) ?? null;
+
+  /**
+   * Done 의 유일한 조건 — 제목이 있어야 한다. 두 갈래에서 규칙이 같다.
+   *   draft — 제목이 있어야 코스를 만들 수 있다 (titleSchema.min(1))
+   *   saved — 제목이 없으면 저장할 수 없는 상태다
+   * 나머지(토글·Day)는 제목과 무관하게 언제든 만질 수 있다.
+   */
+  const trimmedTitle = title.trim();
+  const canFinish = trimmedTitle.length > 0;
 
   // ── 이탈 ───────────────────────────────────────────────────────────────────
 
@@ -91,50 +193,36 @@ export function CourseEditor({
     else router.push("/journeys");
   }
 
-  // ── 제목 저장 ──────────────────────────────────────────────────────────────
+  // ── 제목 ───────────────────────────────────────────────────────────────────
 
   /**
-   * 제목을 서버에 반영하고 코스 id 를 돌려준다. 저장할 게 없으면 현재 id 를 그대로 준다.
-   * 실패하면 토스트를 띄우고 undefined 를 준다 — 호출부는 화면에 남는다.
+   * 이미 있는 코스의 제목을 저장한다. 저장할 게 없으면 true 를 그대로 돌려준다.
+   * 초안일 때는 아무것도 하지 않는다 — 제목은 Done 에서 코스와 함께 만들어진다.
    */
-  function commitTitle(): Promise<string | undefined> {
+  function commitTitle(): Promise<boolean> {
     if (titleCommitRef.current) return titleCommitRef.current;
 
-    const trimmed = title.trim();
     const id = courseIdRef.current;
+    if (!id) return Promise.resolve(true);
 
-    if (!trimmed) {
-      // 이미 있는 코스의 제목을 비운 것은 저장할 수 없다 — 조용히 넘기지 않고 알린다.
-      // create 모드에서 제목이 비어 있는 것은 정상이다(아직 만들지 않은 상태).
-      if (id) showError("Journey title can't be empty.");
-      return Promise.resolve(undefined);
-    }
-    if (id && trimmed === savedTitleRef.current) return Promise.resolve(id);
+    // 빈 제목은 서버에 보내지 않는다. titleSchema 가 min(1) 이라 결과가 invalid_input 인 것을
+    // 이미 알고 있다. 안내는 입력란 아래 인라인 메시지가 상시로 한다.
+    // 이전 값으로 되돌리지도 않는다 — 방금 지운 편집이 무시된 것처럼 보이고 다시 쓰려던 흐름이 끊긴다.
+    if (!trimmedTitle) return Promise.resolve(false);
+    if (trimmedTitle === savedTitleRef.current) return Promise.resolve(true);
 
     const commit = (async () => {
       try {
-        if (id) {
-          const result = await updateCourse(id, { title: trimmed });
-          if (result.error) {
-            showError(courseErrorMessage(result.error));
-            return undefined;
-          }
-          savedTitleRef.current = trimmed;
-          return id;
-        }
-
-        const result = await createCourse({ title: trimmed });
-        if (result.error || !result.id) {
+        const result = await updateCourse(id, { title: trimmedTitle });
+        if (result.error) {
           showError(courseErrorMessage(result.error));
-          return undefined;
+          return false;
         }
-        savedTitleRef.current = trimmed;
-        courseIdRef.current = result.id;
-        setCourseId(result.id);
-        return result.id;
+        savedTitleRef.current = trimmedTitle;
+        return true;
       } catch {
         showError("Something went wrong. Try again.");
-        return undefined;
+        return false;
       } finally {
         titleCommitRef.current = null;
       }
@@ -145,23 +233,23 @@ export function CourseEditor({
   }
 
   function handleTitleBlur() {
-    startTransition(async () => {
-      const id = await commitTitle();
-      // 방금 만들어진 코스면 편집 주소로 갈아탄다.
-      // replace 여야 뒤로가기가 /journeys/new 로 돌아오지 않는다.
-      if (id && !initialCourseId) router.replace(`/journeys/${id}/edit`);
+    if (isDraft) return; // 초안의 제목은 로컬에만 있다
+    startTitleTransition(async () => {
+      await commitTitle();
     });
   }
 
   // ── 공개 여부 ──────────────────────────────────────────────────────────────
 
   function handleToggleVisibility() {
-    const id = courseIdRef.current;
-    if (!id) return;
-
     const next = !isPublic;
-    setIsPublic(next); // 토글은 즉시 움직이고 실패하면 되돌린다
-    startTransition(async () => {
+    setIsPublic(next); // 토글은 언제나 즉시 움직인다
+
+    // 초안이면 여기서 끝이다. Done 에서 코스를 만들 때 함께 반영된다.
+    if (!courseIdRef.current) return;
+
+    const id = courseIdRef.current;
+    startVisibilityTransition(async () => {
       try {
         const result = await updateCourse(id, { isPublic: next });
         if (result.error) {
@@ -175,28 +263,142 @@ export function CourseEditor({
     });
   }
 
+  // ── Day 추가·삭제 ──────────────────────────────────────────────────────────
+
+  function nextLocalDay(current: EditorDay[]): EditorDay {
+    localDayCounter.current += 1;
+    return {
+      id: `${LOCAL_DAY_PREFIX}${localDayCounter.current}`,
+      dayNumber: current.length + 1,
+      title: null,
+      items: [],
+    };
+  }
+
+  function handleAddDay() {
+    if (atMaxDays) return;
+
+    // 화면은 먼저 움직인다. 서버 응답을 기다리는 동안 아무 일도 안 일어난 것처럼 보이면 안 된다.
+    setDays((prev) => [...prev, nextLocalDay(prev)]);
+
+    const id = courseIdRef.current;
+    if (!id) return; // 초안 — Done 에서 한꺼번에 만든다
+
+    if (dayMutatingRef.current) return;
+    dayMutatingRef.current = true;
+
+    startDayTransition(async () => {
+      try {
+        const result = await addCourseDay(id);
+        if (result.error) {
+          // 서버가 거부했으면 방금 넣은 것을 뺀다
+          setDays((prev) => renumber(prev.filter((day) => !isLocalDay(day.id))));
+          showError(courseErrorMessage(result.error));
+        }
+        // 성공하면 액션의 revalidateCoursePaths 가 새 props 를 실어 오고,
+        // 위쪽 렌더 중 비교가 local Day 를 진짜 Day 로 바꾼다. router.refresh() 는 중복이다.
+      } catch {
+        setDays((prev) => renumber(prev.filter((day) => !isLocalDay(day.id))));
+        showError("Something went wrong. Try again.");
+      } finally {
+        dayMutatingRef.current = false;
+      }
+    });
+  }
+
+  /** PostComments.executeDelete 와 같은 순서 — 모달을 먼저 닫고 실행한다 */
+  function handleConfirmDeleteDay() {
+    const dayId = pendingDeleteDayId;
+    if (!dayId) return;
+    setPendingDeleteDayId(null);
+
+    const removed = days;
+    setDays((prev) => renumber(prev.filter((day) => day.id !== dayId)));
+
+    // 서버에 없는 Day 는 지우는 것도 로컬로 끝난다
+    if (isLocalDay(dayId) || !courseIdRef.current) return;
+
+    if (dayMutatingRef.current) return;
+    dayMutatingRef.current = true;
+
+    startDayTransition(async () => {
+      try {
+        const result = await removeCourseDay(dayId);
+        if (result.error) {
+          setDays(removed);
+          showError(courseErrorMessage(result.error));
+        }
+      } catch {
+        setDays(removed);
+        showError("Something went wrong. Try again.");
+      } finally {
+        dayMutatingRef.current = false;
+      }
+    });
+  }
+
   // ── 완료 ───────────────────────────────────────────────────────────────────
 
   /**
-   * 저장은 이미 끝나 있으므로 여기서 다시 저장하지 않는다.
-   * 다만 제목을 입력하다 blur 없이 눌렀을 수 있어 commitTitle 을 한 번 통과시킨다.
+   * 초안을 실제 코스로 만든다. Done 을 눌렀을 때만 실행되는 유일한 커밋 지점이다.
+   *
+   * createCourse 가 Day 1 을 함께 만들므로 나머지 Day 만 추가한다.
+   * 중간에 실패해도 코스는 이미 존재하므로 상세 화면으로 보낸다 — 거기가 진실이다.
+   * 편집기에 붙잡아 두면 로컬 Day 와 서버 Day 가 어긋난 채로 남는다.
    */
+  async function materializeDraft(): Promise<void> {
+    const created = await createCourse({ title: trimmedTitle });
+    if (created.error || !created.id) {
+      showError(courseErrorMessage(created.error));
+      return;
+    }
+
+    const id = created.id;
+    courseIdRef.current = id;
+    // 상세 화면으로 넘어가기 전 짧은 구간이지만, 이 사이에 토글을 누르면 이미 존재하는
+    // 코스다 — state 도 ref 와 같은 사실을 보게 맞춘다.
+    setCourseId(id);
+    savedTitleRef.current = trimmedTitle;
+
+    // 화면에 Day 가 하나도 없어도 createCourse 가 만든 Day 1 은 남는다.
+    // 새 코스에서 Day 를 전부 지우는 경우라 흔치 않고, 빈 Day 하나는 정상 상태다.
+    for (let i = 1; i < days.length; i++) {
+      const result = await addCourseDay(id);
+      if (result.error) {
+        showError(courseErrorMessage(result.error));
+        break;
+      }
+    }
+
+    // createCourse 는 항상 비공개로 만든다 — 공개로 켜 두었으면 여기서 반영한다
+    if (isPublic) {
+      const result = await updateCourse(id, { isPublic: true });
+      if (result.error) showError(courseErrorMessage(result.error));
+    }
+
+    router.push(`/journeys/${id}`);
+  }
+
   function handleDone() {
-    startTransition(async () => {
-      const id = await commitTitle();
-      if (!id) {
-        // 제목을 한 번도 쓰지 않았으면 아무것도 만들지 않고 나간다.
-        // 저장 실패였다면 commitTitle 이 이미 토스트를 띄웠으니 화면에 남는다.
-        if (!courseIdRef.current) leaveEditor();
+    if (!canFinish) return;
+
+    startTitleTransition(async () => {
+      if (!courseIdRef.current) {
+        await materializeDraft();
         return;
       }
-      router.push(`/journeys/${id}`);
+      // 이미 있는 코스 — 제목을 입력하다 blur 없이 눌렀을 수 있어 한 번 통과시킨다
+      const ok = await commitTitle();
+      if (!ok) return;
+      router.push(`/journeys/${courseIdRef.current}`);
     });
   }
 
   // ── 렌더 ───────────────────────────────────────────────────────────────────
 
   const placeLabel = `${itemCount} ${itemCount === 1 ? "place" : "places"}`;
+  /** 이미 있는 코스의 제목을 비운 것은 잘못된 상태다. 초안의 빈 제목은 아직 안 지은 것뿐이다. */
+  const titleInvalid = !canFinish && !isDraft;
 
   return (
     <div className="flex min-h-full flex-col">
@@ -219,10 +421,12 @@ export function CourseEditor({
           <button
             type="button"
             onClick={handleDone}
-            disabled={isPending}
-            className="flex h-11 flex-none items-center gap-1.5 rounded-full bg-brand pl-3.5 pr-4 text-sm font-semibold text-black transition-opacity disabled:opacity-50"
+            // 제목이 없으면 끝낼 수 없다 — 두 갈래에서 같은 규칙이다.
+            // 저장이 도는 중에도 막는다. 나가는 길은 ← 가 따로 있다.
+            disabled={!canFinish || isBusy}
+            className="flex h-11 flex-none items-center gap-1.5 rounded-full bg-brand pl-3.5 pr-4 text-sm font-semibold text-black transition-opacity disabled:opacity-40"
           >
-            {isPending ? (
+            {titlePending ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
               <Check className="size-4" strokeWidth={2.6} />
@@ -246,13 +450,31 @@ export function CourseEditor({
           maxLength={100}
           enterKeyHint="done"
           aria-label="Journey title"
+          aria-invalid={titleInvalid}
+          aria-describedby={canFinish ? undefined : titleHintId}
           className="w-full border-b-2 bg-transparent pb-3 text-[22px] font-bold leading-[1.2] tracking-[-0.02em] outline-none placeholder:font-bold placeholder:text-muted-foreground/50"
-          style={{ color: INK, borderBottomColor: FIELD_LINE }}
+          style={{ color: INK, borderBottomColor: titleInvalid ? DANGER : FIELD_LINE }}
         />
 
-        <p className="mt-3.5 text-[12.5px] font-medium leading-none" style={{ color: SUB }}>
-          {placeLabel}
-        </p>
+        {/* Done 을 막았으면 왜 막혔는지 여기서 말한다. 메타 줄과 같은 자리·같은 크기라
+            문구만 갈리고 레이아웃이 밀리지 않는다.
+            초안의 빈 제목은 오류가 아니라 다음에 할 일이다 — 색과 문구를 나눈다. */}
+        {canFinish ? (
+          <p className="mt-3.5 text-[12.5px] font-medium leading-none" style={{ color: SUB }}>
+            {placeLabel}
+          </p>
+        ) : (
+          <p
+            id={titleHintId}
+            role={titleInvalid ? "alert" : undefined}
+            className="mt-3.5 text-[12.5px] font-medium leading-none"
+            style={{ color: titleInvalid ? DANGER : SUB }}
+          >
+            {titleInvalid
+              ? "Journey title can't be empty."
+              : "Name it when you're ready — everything else works now."}
+          </p>
+        )}
 
         {/* 카드 전체가 토글이다 — 시안의 46×26 스위치만으로는 터치 타깃이 부족하다.
             shadcn Switch 는 <button> 을 렌더해 이 행 안에 중첩할 수 없어 표시만 직접 그린다. */}
@@ -261,7 +483,7 @@ export function CourseEditor({
           role="switch"
           aria-checked={isPublic}
           onClick={handleToggleVisibility}
-          disabled={!courseId || isPending}
+          disabled={visibilityPending}
           className="mt-[18px] flex w-full items-center gap-3 rounded-[14px] px-4 py-3.5 text-left transition-opacity disabled:opacity-60"
           style={{ background: PAPER }}
         >
@@ -273,9 +495,7 @@ export function CourseEditor({
               className="mt-1.5 block text-[11px] font-medium leading-[1.3]"
               style={{ color: SUB }}
             >
-              {courseId
-                ? "Public journeys can be found and copied by other fans."
-                : "Name your journey first to change this."}
+              Public journeys can be found and copied by other fans.
             </span>
           </span>
 
@@ -292,24 +512,25 @@ export function CourseEditor({
         </button>
       </div>
 
-      {/* ── Day · 아이템 (읽기 전용 — 편집은 2/5, 3/5) ───────────────────── */}
+      {/* ── Day · 아이템 (아이템 편집은 3/5, 장소 추가는 4/5) ─────────────── */}
       {days.length === 0 ? (
         <div className="px-[18px] pt-6">
-          <div className="rounded-[14px] px-[18px] py-[22px] text-center" style={{ background: PAPER }}>
+          <div
+            className="rounded-[14px] px-[18px] py-[22px] text-center"
+            style={{ background: PAPER }}
+          >
             <p className="text-[12.5px] font-medium leading-[1.3]" style={{ color: INK }}>
-              {courseId ? "No days yet" : "Start with a name"}
+              No days yet
             </p>
             <p className="mt-1.5 text-[11px] font-medium leading-[1.45]" style={{ color: MUTED }}>
-              {courseId
-                ? "Every day you add shows up here."
-                : "Your journey is saved as soon as you name it. Days and places come next."}
+              Add a day to start planning.
             </p>
           </div>
         </div>
       ) : (
         days.map((day) => (
           <section key={day.id} className="px-[18px] pt-6">
-            <div className="flex items-center gap-2.5">
+            <div className="flex min-h-11 items-center gap-2.5">
               <h2 className="text-[15px] font-bold leading-none" style={{ color: INK }}>
                 Day {day.dayNumber}
                 {day.title ? ` · ${day.title}` : ""}
@@ -317,6 +538,27 @@ export function CourseEditor({
               <span className="text-[10.5px] font-semibold leading-none" style={{ color: SUB }}>
                 {day.items.length} {day.items.length === 1 ? "place" : "places"}
               </span>
+
+              <div className="flex-1" />
+
+              {/* 시안은 28px 필이지만 터치 타깃 44px 을 맞춰 세로만 키웠다.
+                  가로 여백까지 늘리면 Day 헤더에서 삭제가 제일 눈에 띈다. */}
+              <button
+                type="button"
+                onClick={() => setPendingDeleteDayId(day.id)}
+                disabled={isDayPending}
+                aria-label={`Delete Day ${day.dayNumber}`}
+                className="flex h-11 flex-none items-center gap-1.5 rounded-[14px] px-2.5 transition-opacity disabled:opacity-50"
+                style={{ background: DANGER_BG }}
+              >
+                <Trash2 className="size-3.5" style={{ color: DANGER }} />
+                <span
+                  className="text-[10.5px] font-semibold leading-none"
+                  style={{ color: DANGER }}
+                >
+                  Delete day
+                </span>
+              </button>
             </div>
 
             {day.items.length === 0 ? (
@@ -371,7 +613,52 @@ export function CourseEditor({
         ))
       )}
 
+      {/* ── Day 추가 ─────────────────────────────────────────────────────── */}
+      <div className="px-[18px] pt-6">
+        <button
+          type="button"
+          onClick={handleAddDay}
+          disabled={atMaxDays || isDayPending}
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-[24px] transition-opacity disabled:opacity-40"
+          style={{ background: INK }}
+        >
+          {isDayPending ? (
+            <Loader2 className="size-[15px] animate-spin text-white" />
+          ) : (
+            <Plus className="size-[15px]" style={{ color: "var(--brand)" }} strokeWidth={2.6} />
+          )}
+          <span className="text-[13.5px] font-semibold leading-none text-white">Add a day</span>
+        </button>
+
+        {/* 상한은 days.length 로 이미 알 수 있다 — 눌러 보게 하고 토스트로 알리는 대신
+            막아 두고 이유를 붙인다. 서버의 invalid_input 은 다른 탭에서 늘어난 경우의 대비다. */}
+        {atMaxDays && (
+          <p
+            className="mt-2.5 text-center text-[11px] font-medium leading-none"
+            style={{ color: MUTED }}
+          >
+            A journey can have up to {MAX_DAYS} days.
+          </p>
+        )}
+      </div>
+
       <div className="h-10" />
+
+      <ConfirmDialog
+        open={pendingDeleteDay !== null}
+        title={pendingDeleteDay ? `Delete Day ${pendingDeleteDay.dayNumber}?` : ""}
+        description={
+          pendingDeleteDay && pendingDeleteDay.items.length > 0
+            ? `${pendingDeleteDay.items.length} ${
+                pendingDeleteDay.items.length === 1 ? "place" : "places"
+              } in this day will be removed too. This can't be undone.`
+            : "This can't be undone."
+        }
+        confirmLabel="Delete"
+        destructive
+        onConfirm={handleConfirmDeleteDay}
+        onCancel={() => setPendingDeleteDayId(null)}
+      />
     </div>
   );
 }
