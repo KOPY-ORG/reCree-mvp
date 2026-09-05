@@ -111,6 +111,15 @@ interface CourseEditorProps {
   mode: "create" | "edit";
   courseId?: string;
   initialData?: CourseEditorInitialData;
+  /**
+   * 아이템이 하나도 없을 때 Nearby Attractions 가 쓸 기준 좌표.
+   * 맵에서 "Create a journey here" 로 들어온 경우에만 들어온다.
+   *
+   * Course 에는 지역 필드가 없어 "이 동네에서 시작" 을 코스 자체에 저장할 방법이 없다.
+   * 실제로 물려줄 수 있는 것은 이 좌표 하나뿐이고, 첫 장소를 담는 순간
+   * 그 아이템 좌표가 기준점을 넘겨받는다.
+   */
+  initialAnchor?: { lat: number; lng: number; label: string };
 }
 
 // ─── 에러 문구 ───────────────────────────────────────────────────────────────
@@ -261,6 +270,7 @@ export function CourseEditor({
   mode,
   courseId: initialCourseId,
   initialData,
+  initialAnchor,
 }: CourseEditorProps) {
   const router = useRouter();
   const titleHintId = useId();
@@ -556,12 +566,13 @@ export function CourseEditor({
 
   /**
    * Nearby Attractions 의 기준 좌표.
-   * 그 Day 의 마지막 아이템 → 없으면 앞 Day 들을 거슬러 올라간다. 아무 데도 없으면 null 이고,
-   * 그때는 시트가 탭을 비활성화하는 대신 왜 비었는지 안내한다.
+   * 그 Day 의 마지막 아이템 → 없으면 앞 Day 들을 거슬러 올라간다.
+   * 그래도 없으면 진입할 때 받은 좌표(맵에서 들어온 경우)를 쓰고, 그것도 없으면 null 이다.
+   * null 이면 시트가 탭을 비활성화하는 대신 왜 비었는지 안내한다.
    */
   function anchorForDay(dayId: string): { lat: number; lng: number; label: string } | null {
     const dayIndex = days.findIndex((day) => day.id === dayId);
-    if (dayIndex < 0) return null;
+    if (dayIndex < 0) return initialAnchor ?? null;
 
     for (let i = dayIndex; i >= 0; i--) {
       const items = days[i].items;
@@ -572,7 +583,8 @@ export function CourseEditor({
         }
       }
     }
-    return null;
+    // 아직 아무것도 안 담았다 — 들어온 자리를 기준으로 둘러본다
+    return initialAnchor ?? null;
   }
 
   /**

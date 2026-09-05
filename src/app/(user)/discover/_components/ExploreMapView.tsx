@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, LocateFixed, Maximize } from "lucide-react";
+import Link from "next/link";
+import { Loader2, LocateFixed, Maximize, Route } from "lucide-react";
 import { useToast } from "../../_hooks/useToast";
 import { dedupeEventMarkers } from "@/lib/event-utils";
 import { EVENT_RED, sortEventMarkers } from "@/lib/event-format";
@@ -464,6 +465,24 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     );
   }, [filteredPlaces]);
 
+  /**
+   * "Create a journey here" 의 기준점.
+   *
+   * 맵 카메라 중심이 아니라 목록 맨 위 장소를 쓴다 — 그 카드가 사용자가 지금 보고 있는
+   * 것이고, InteractiveMap 에 getCenter 를 새로 뚫지 않아도 된다.
+   * 목록이 비면 기준점이 없고 CTA 도 그릴 필요가 없다 (그 분기는 빈 상태가 따로 받는다).
+   */
+  const journeyAnchor = useMemo(() => {
+    const place = allVisiblePosts[0]?.place;
+    if (!place) return null;
+    const params = new URLSearchParams({
+      lat: String(place.latitude),
+      lng: String(place.longitude),
+      near: place.nameEn,
+    });
+    return { href: `/journeys/new?${params.toString()}`, label: place.nameEn };
+  }, [allVisiblePosts]);
+
   // ── 이벤트 모드 파생 (계속) ──────────────────────────────────────────────────
 
   const events: EventCollectionMapMarker[] = useMemo(
@@ -730,6 +749,27 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
             </div>
           ) : (
             <div className="px-4 pt-2 pb-4 space-y-2">
+              {/* 코스 편집기 진입점. 지금 목록에 떠 있는 첫 장소를 기준점으로 넘긴다.
+                  Course 에 지역 필드가 없어 "이 동네" 자체는 넘길 수 없다 —
+                  넘길 수 있는 건 좌표뿐이고, 그건 Nearby Attractions 기준점으로만 쓰인다. */}
+              {isLoggedIn && journeyAnchor && (
+                <Link
+                  href={journeyAnchor.href}
+                  className="flex items-center gap-2.5 rounded-2xl bg-muted px-3.5 py-3 active:opacity-70 transition-opacity"
+                >
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand">
+                    <Route className="size-4 text-black" strokeWidth={2.4} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-foreground">
+                      Create a journey here
+                    </span>
+                    <span className="block truncate text-xs text-muted-foreground">
+                      Start planning around {journeyAnchor.label}
+                    </span>
+                  </span>
+                </Link>
+              )}
               {allVisiblePosts.map(({ post, place }) => (
                 <PlaceListSheetCard
                   key={post.id}
