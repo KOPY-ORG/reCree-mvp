@@ -2,13 +2,31 @@
 
 import { useId, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, ChevronLeft, Loader2, Plus, Trash2 } from "lucide-react";
+import {
+  closestCenter,
+  DndContext,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Check, ChevronLeft, GripVertical, Loader2, Plus, Trash2, X } from "lucide-react";
 import { showError } from "@/lib/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   addCourseDay,
   createCourse,
   removeCourseDay,
+  removeCourseItem,
+  reorderCourseItems,
   updateCourse,
 } from "@/app/(user)/_actions/course-actions";
 import type { CourseDetail } from "@/lib/course-queries";
@@ -39,9 +57,15 @@ const MAX_DAYS = 7;
  * 하이드레이션이 어긋나지 않도록 randomUUID 가 아니라 순번으로 만든다.
  */
 const LOCAL_DAY_PREFIX = "local-";
+/** 아직 서버에 없는 아이템의 id 접두사 (초안에서 담은 장소 — 4/5 에서 채워진다) */
+const LOCAL_ITEM_PREFIX = "local-item-";
 
 function isLocalDay(dayId: string) {
   return dayId.startsWith(LOCAL_DAY_PREFIX);
+}
+
+function isLocalItem(itemId: string) {
+  return itemId.startsWith(LOCAL_ITEM_PREFIX);
 }
 
 // ─── 타입 ────────────────────────────────────────────────────────────────────
@@ -92,6 +116,98 @@ function renumber(days: EditorDay[]): EditorDay[] {
   return days.map((day, i) => (day.dayNumber === i + 1 ? day : { ...day, dayNumber: i + 1 }));
 }
 
+// ─── SortableItemRow ─────────────────────────────────────────────────────────
+
+/**
+ * 아이템 한 줄. 드래그는 전용 핸들에서만 시작한다.
+ *
+ * 행 전체를 드래그 영역으로 만들면 모바일에서 세로 스크롤과 같은 제스처가 되어 부딪힌다.
+ * 핸들에만 listeners 를 붙이고 그 밖은 손대지 않으면 충돌이 원천적으로 안 생긴다
+ * (SortableTagList 도 핸들 방식이지만 그쪽은 어드민이라 PointerSensor 만 쓴다).
+ *
+ * 순번은 sortOrder 가 아니라 배열 인덱스로 그린다 — 드래그 직후 바로 맞아야 한다.
+ */
+function SortableItemRow({
+  item,
+  index,
+  cover,
+  onRemove,
+}: {
+  item: EditorDay["items"][number];
+  index: number;
+  cover: string;
+  onRemove: (itemId: string) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className="relative flex items-center gap-2.5 py-2"
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        borderBottom: `1px solid ${LINE}`,
+        // 끌고 있는 줄이 다른 줄 위로 올라오고, 놓을 자리는 원래 줄이 흐리게 남는다
+        opacity: isDragging ? 0.45 : 1,
+        background: isDragging ? PAPER : undefined,
+        zIndex: isDragging ? 1 : undefined,
+      }}
+    >
+      <span
+        className="flex size-6 flex-none items-center justify-center rounded-full text-[11px] font-semibold leading-none text-white"
+        style={{ background: INK }}
+      >
+        {index + 1}
+      </span>
+
+      <span
+        aria-hidden
+        className="size-11 flex-none rounded-xl"
+        style={{ background: item.placeId ? cover : NEUTRAL_COVER }}
+      />
+
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[13px] font-medium leading-[1.3]" style={{ color: INK }}>
+          {item.nameEn}
+        </p>
+        {item.address && (
+          <p
+            className="mt-[5px] truncate text-[11px] font-medium leading-[1.2]"
+            style={{ color: SUB }}
+          >
+            {item.address}
+          </p>
+        )}
+      </div>
+
+      {/* 드래그 핸들 — 44×44, touch-action: none. 여기 밖은 그냥 스크롤이다. */}
+      <button
+        type="button"
+        {...listeners}
+        {...attributes}
+        aria-label={`Reorder ${item.nameEn}`}
+        className="flex size-11 flex-none touch-none cursor-grab items-center justify-center rounded-full active:cursor-grabbing"
+      >
+        <GripVertical className="size-4" style={{ color: SUB }} />
+      </button>
+
+      {/* 삭제 — 확인 모달 없이 바로 지운다. Day 와 달리 하나씩이라 되돌리기 쉽고,
+          여러 개를 지울 때 매번 모달을 거치면 번거롭다. */}
+      <button
+        type="button"
+        onClick={() => onRemove(item.id)}
+        aria-label={`Remove ${item.nameEn}`}
+        className="flex size-11 flex-none items-center justify-center rounded-full transition-colors active:bg-muted"
+      >
+        <X className="size-4" style={{ color: INK }} strokeWidth={2.4} />
+      </button>
+    </div>
+  );
+}
+
 // ─── CourseEditor ────────────────────────────────────────────────────────────
 
 /**
@@ -116,15 +232,30 @@ export function CourseEditor({
 }: CourseEditorProps) {
   const router = useRouter();
   const titleHintId = useId();
+  const dndId = useId();
 
   // pending 을 용도별로 나눈다. 하나로 묶으면 어느 컨트롤을 눌러도 화면의 disabled 요소가
   // 전부 함께 흐려져(각각 transition-opacity) 화면 전체가 깜빡이는 것처럼 보인다.
   const [titlePending, startTitleTransition] = useTransition();
   const [visibilityPending, startVisibilityTransition] = useTransition();
   const [isDayPending, startDayTransition] = useTransition();
+  // 아이템 삭제·정렬은 어떤 컨트롤도 흐리게 하지 않는다. 지운 줄은 그 자리에서 사라지고
+  // 옮긴 줄은 그 자리에 있는 것이 곧 피드백이라, pending 을 disabled 에 연결하지 않는다.
+  // 그래도 저장 중 이탈은 막아야 해서 트랜지션 자체는 따로 둔다.
+  const [itemPending, startItemTransition] = useTransition();
 
   /** 저장이 하나라도 돌고 있으면 화면을 뜨면 안 된다 — Done 버튼만 이걸 본다 */
-  const isBusy = titlePending || visibilityPending || isDayPending;
+  const isBusy = titlePending || visibilityPending || isDayPending || itemPending;
+
+  /**
+   * 터치와 마우스를 모두 등록한다.
+   * 코드베이스의 dnd-kit 사용처 11개는 전부 어드민이라 PointerSensor 만 쓰는데,
+   * 모바일에서는 드래그와 스크롤이 같은 제스처라 그것만으로는 부딪힌다.
+   */
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 0, tolerance: 5 } }),
+  );
 
   const [title, setTitle] = useState(initialData?.title ?? "");
   const [isPublic, setIsPublic] = useState(initialData?.isPublic ?? false);
@@ -337,6 +468,88 @@ export function CourseEditor({
     });
   }
 
+  // ── 아이템 삭제·정렬 ───────────────────────────────────────────────────────
+
+  /** 한 Day 의 아이템 목록만 갈아 끼운다 */
+  function setDayItems(dayId: string, items: EditorDay["items"]) {
+    setDays((prev) => prev.map((day) => (day.id === dayId ? { ...day, items } : day)));
+  }
+
+  /**
+   * 아이템 삭제. 확인 모달을 띄우지 않는다 — Day 와 달리 하나씩이고 다시 담기 쉽다.
+   *
+   * 줄을 먼저 없애므로 "지우는 중" 표시가 따로 필요 없다. 그래서 다른 줄이 흐려질 일도 없다.
+   * 실패하면 원래 목록을 되돌리고 토스트를 띄운다.
+   */
+  function handleRemoveItem(dayId: string, itemId: string) {
+    const previous = days.find((day) => day.id === dayId)?.items;
+    if (!previous) return;
+
+    setDayItems(
+      dayId,
+      previous.filter((item) => item.id !== itemId),
+    );
+
+    // 초안이거나 아직 서버에 없는 아이템이면 로컬에서 끝난다
+    if (isLocalItem(itemId) || !courseIdRef.current) return;
+
+    startItemTransition(async () => {
+      try {
+        const result = await removeCourseItem(itemId);
+        if (result.error) {
+          setDayItems(dayId, previous);
+          showError(courseErrorMessage(result.error));
+        }
+      } catch {
+        setDayItems(dayId, previous);
+        showError("Something went wrong. Try again.");
+      }
+    });
+  }
+
+  /**
+   * 드래그 정렬. Day 안에서만 움직인다 (Day 간 이동은 지우고 다시 담는다).
+   *
+   * SortableTagList 는 정렬 저장 실패를 무시하지만 여기서는 되돌린다 —
+   * 사용자가 직접 짠 순서라 조용히 어긋나면 안 된다.
+   */
+  function handleDragEnd(dayId: string, event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const previous = days.find((day) => day.id === dayId)?.items;
+    if (!previous) return;
+
+    const oldIndex = previous.findIndex((item) => item.id === active.id);
+    const newIndex = previous.findIndex((item) => item.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+
+    const next = arrayMove(previous, oldIndex, newIndex);
+    setDayItems(dayId, next);
+
+    // 초안이거나, 아직 서버에 없는 아이템이 섞여 있으면 저장하지 않는다.
+    // reorderCourseItems 는 Day 의 아이템 집합이 정확히 일치해야 받아준다(course-actions:589).
+    if (!courseIdRef.current || isLocalDay(dayId) || next.some((item) => isLocalItem(item.id))) {
+      return;
+    }
+
+    startItemTransition(async () => {
+      try {
+        const result = await reorderCourseItems(
+          dayId,
+          next.map((item) => item.id),
+        );
+        if (result.error) {
+          setDayItems(dayId, previous);
+          showError(courseErrorMessage(result.error));
+        }
+      } catch {
+        setDayItems(dayId, previous);
+        showError("Something went wrong. Try again.");
+      }
+    });
+  }
+
   // ── 완료 ───────────────────────────────────────────────────────────────────
 
   /**
@@ -375,6 +588,12 @@ export function CourseEditor({
       const result = await updateCourse(id, { isPublic: true });
       if (result.error) showError(courseErrorMessage(result.error));
     }
+
+    // TODO(4/5): 초안에 담아 둔 아이템을 addCourseItem 으로 푼다.
+    // 지금은 넣을 방법이 없다 — addCourseItem 은 dayId 를 받는데 addCourseDay 가 만든 Day 의
+    // id 를 돌려주지 않아 방금 만든 Day 를 가리킬 수 없다. 아이템을 담는 UI 자체가 4/5 라
+    // 이 구간은 아직 도달하지 않는다. 4/5 에서 addCourseDay 가 { id } 를 반환하도록 하거나
+    // 생성 후 Day 목록을 한 번 읽어 와야 한다.
 
     router.push(`/journeys/${id}`);
   }
@@ -574,40 +793,31 @@ export function CourseEditor({
                 </p>
               </div>
             ) : (
-              day.items.map((item, i) => (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-3 py-3"
-                  style={{ borderBottom: `1px solid ${LINE}` }}
+              // Day 마다 DndContext 를 따로 둔다 — Day 간 이동은 지원하지 않는다.
+              // id 를 고정하지 않으면 SSR/CSR 이 다른 값을 만들어 하이드레이션이 어긋난다.
+              <DndContext
+                id={`${dndId}-${day.id}`}
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={(event) => handleDragEnd(day.id, event)}
+              >
+                <SortableContext
+                  items={day.items.map((item) => item.id)}
+                  strategy={verticalListSortingStrategy}
                 >
-                  <div
-                    className="flex size-6 flex-none items-center justify-center rounded-full text-[11px] font-semibold leading-none text-white"
-                    style={{ background: INK }}
-                  >
-                    {i + 1}
+                  <div className="mt-1">
+                    {day.items.map((item, i) => (
+                      <SortableItemRow
+                        key={item.id}
+                        item={item}
+                        index={i}
+                        cover={cover}
+                        onRemove={(itemId) => handleRemoveItem(day.id, itemId)}
+                      />
+                    ))}
                   </div>
-                  <div
-                    className="size-14 flex-none rounded-xl"
-                    style={{ background: item.placeId ? cover : NEUTRAL_COVER }}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p
-                      className="truncate text-[13px] font-medium leading-[1.3]"
-                      style={{ color: INK }}
-                    >
-                      {item.nameEn}
-                    </p>
-                    {item.address && (
-                      <p
-                        className="mt-[5px] truncate text-[11px] font-medium leading-[1.2]"
-                        style={{ color: SUB }}
-                      >
-                        {item.address}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))
+                </SortableContext>
+              </DndContext>
             )}
           </section>
         ))
