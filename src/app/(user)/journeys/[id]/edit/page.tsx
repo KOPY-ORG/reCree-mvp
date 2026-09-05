@@ -35,6 +35,10 @@ export default async function EditJourneyPage({ params }: Props) {
         nameEn: item.nameEn,
         // CourseItem 스냅샷의 주소가 비어 있으면 원본 Place 로 폴백한다 ([id]/page.tsx:257 과 같은 순서)
         address: item.address ?? item.place?.addressEn ?? item.place?.addressKo ?? null,
+        // 좌표도 같은 순서로 폴백한다 — Nearby Attractions 의 기준점을 여기서 찾는다
+        latitude: item.latitude ?? item.place?.latitude ?? null,
+        longitude: item.longitude ?? item.place?.longitude ?? null,
+        imageUrl: item.imageUrl ?? null,
       })),
     })),
   };

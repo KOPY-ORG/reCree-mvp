@@ -3,6 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { getSavedMapPlaces } from "@/lib/map-queries";
+import { getNearbyAttractions } from "@/lib/tour-api/queries";
+import type { Attraction } from "@/lib/tour-api/types";
 import { z } from "zod";
 
 // ─── 상수 ────────────────────────────────────────────────────────────────────
@@ -94,11 +97,14 @@ function revalidateCoursePaths(courseId?: string) {
 
 // ─── createCourse ────────────────────────────────────────────────────────────
 
-/** 새 코스 생성. 빈 코스로 시작하지 않도록 Day 1을 함께 만든다. */
+/**
+ * 새 코스 생성. 빈 코스로 시작하지 않도록 Day 1을 함께 만든다.
+ * 그 Day 1의 id도 함께 돌려준다 — 편집기가 로컬 초안을 풀 때 이 Day에 아이템을 바로 넣는다.
+ */
 export async function createCourse(input: {
   title: string;
   description?: string;
-}): Promise<{ id?: string; error?: string }> {
+}): Promise<{ id?: string; dayId?: string; error?: string }> {
   const parsedTitle = titleSchema.safeParse(input.title);
   if (!parsedTitle.success) return { error: "invalid_input" };
 
@@ -122,14 +128,15 @@ export async function createCourse(input: {
         },
         select: { id: true },
       });
-      await tx.courseDay.create({
+      const day = await tx.courseDay.create({
         data: { courseId: created.id, dayNumber: 1 },
+        select: { id: true },
       });
-      return created;
+      return { id: created.id, dayId: day.id };
     });
 
     revalidateCoursePaths(course.id);
-    return { id: course.id };
+    return { id: course.id, dayId: course.dayId };
   } catch (e) {
     console.error("[createCourse] server_error", e);
     return { error: "server_error" };
@@ -266,8 +273,11 @@ export async function deleteCourse(courseId: string): Promise<{ error?: string }
 
 // ─── addCourseDay ────────────────────────────────────────────────────────────
 
-/** Day 추가. dayNumber는 트랜잭션 안에서 max+1로 계산해 경쟁 상태를 완화한다. */
-export async function addCourseDay(courseId: string): Promise<{ error?: string }> {
+/**
+ * Day 추가. dayNumber는 트랜잭션 안에서 max+1로 계산해 경쟁 상태를 완화한다.
+ * 만들어진 Day의 id를 돌려준다 — 호출한 쪽이 그 Day에 곧바로 아이템을 넣을 수 있어야 한다.
+ */
+export async function addCourseDay(courseId: string): Promise<{ id?: string; error?: string }> {
   const parsedId = courseIdSchema.safeParse(courseId);
   if (!parsedId.success) return { error: "invalid_input" };
 
@@ -281,7 +291,7 @@ export async function addCourseDay(courseId: string): Promise<{ error?: string }
     const owner = await assertCourseOwner(parsedId.data, user.id);
     if ("error" in owner) return owner;
 
-    const result: { error?: string } = await prisma.$transaction(async (tx) => {
+    const result: { id?: string; error?: string } = await prisma.$transaction(async (tx) => {
       const count = await tx.courseDay.count({ where: { courseId: parsedId.data } });
       if (count >= MAX_DAYS) return { error: "invalid_input" };
 
@@ -291,8 +301,9 @@ export async function addCourseDay(courseId: string): Promise<{ error?: string }
         select: { dayNumber: true },
       });
 
-      await tx.courseDay.create({
+      const created = await tx.courseDay.create({
         data: { courseId: parsedId.data, dayNumber: (last?.dayNumber ?? 0) + 1 },
+        select: { id: true },
       });
 
       // Day를 추가했는데 목록 순서가 안 바뀌면 편집이 반영되지 않은 것처럼 보인다.
@@ -301,13 +312,13 @@ export async function addCourseDay(courseId: string): Promise<{ error?: string }
         where: { id: parsedId.data },
         data: { updatedAt: new Date() },
       });
-      return {};
+      return { id: created.id };
     });
 
     if (result.error) return result;
 
     revalidateCoursePaths(parsedId.data);
-    return {};
+    return { id: result.id };
   } catch (e) {
     console.error("[addCourseDay] server_error", e);
     return { error: "server_error" };
@@ -738,4 +749,88 @@ export async function copyCourse(sourceId: string): Promise<{ id?: string; error
     console.error("[copyCourse] server_error", e);
     return { error: "server_error" };
   }
+}
+
+// ─── 편집기 장소 후보 조회 ───────────────────────────────────────────────────
+// 아래 둘은 변경이 아니라 조회다. 장소 추가 시트가 클라이언트 컴포넌트라
+// 서버 쿼리를 직접 부를 수 없어 액션으로 감싼다 (recreeshot-actions의 searchPlaces와 같은 형태).
+
+/** 시트 한 줄에 필요한 만큼만. Place에서 온 것은 id가 곧 placeId다. */
+export type CoursePlaceOption = {
+  id: string;
+  nameEn: string;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  imageUrl: string | null;
+};
+
+/** Nearby Attractions 반경 */
+const NEARBY_RADIUS_M = 5000;
+
+/**
+ * 내가 저장한 장소.
+ *
+ * Save.targetType에 PLACE가 없다 — 사용자는 포스트를 저장하지 장소를 저장하지 않는다.
+ * 그래서 저장한 포스트에 연결된 장소를 역으로 끌어온다.
+ * userId는 인자로 받지 않는다. 남의 저장 목록을 조회당하지 않도록 세션에서만 얻는다.
+ */
+export async function getSavedCoursePlaces(): Promise<CoursePlaceOption[]> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  try {
+    const places = await getSavedMapPlaces(user.id);
+    // MapPlace는 posts 배열까지 달고 있다 — 시트에 필요한 필드만 남겨 보낸다
+    return places.map((place) => ({
+      id: place.id,
+      nameEn: place.nameEn,
+      address: place.addressEn ?? place.addressKo,
+      latitude: place.latitude,
+      longitude: place.longitude,
+      imageUrl: place.placeImages.find((img) => img.isThumbnail)?.url
+        ?? place.placeImages[0]?.url
+        ?? place.imageUrl,
+    }));
+  } catch (e) {
+    console.error("[getSavedCoursePlaces] server_error", e);
+    return [];
+  }
+}
+
+/**
+ * 좌표 주변 관광지 (출처: ⓒ한국관광공사).
+ *
+ * 실패하면 null이다 — 시트의 그 탭만 비고 나머지 탭과 편집기는 그대로 산다.
+ * TourAPI 응답은 DB에 저장하지 않는다. 요청 수명 안에서만 사는 DTO다.
+ */
+export async function getNearbyCourseAttractions(input: {
+  lat: number;
+  lng: number;
+}): Promise<Attraction[] | null> {
+  const parsed = z
+    .object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) })
+    .safeParse(input);
+  if (!parsed.success) return null;
+
+  const result = await getNearbyAttractions({
+    lat: parsed.data.lat,
+    lng: parsed.data.lng,
+    radiusM: NEARBY_RADIUS_M,
+    lang: "en",
+  });
+  if (!result) return null;
+
+  // 좌표 없는 항목은 코스에 넣어도 지도에 못 찍는다 — 목록에서 뺀다
+  return result.items
+    .filter((item) => item.lat !== null && item.lng !== null)
+    .map((item) => ({
+      ...item,
+      // TourAPI는 이미지를 http로 돌려주는 경우가 있다. https 페이지에서 mixed content로
+      // 차단되고, 그대로 CourseItem에 저장되면 코스 상세에서도 계속 깨진다.
+      imageUrl: item.imageUrl?.replace(/^http:\/\//, "https://") ?? null,
+    }));
 }

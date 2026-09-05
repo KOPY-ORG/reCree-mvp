@@ -23,6 +23,7 @@ import { showError } from "@/lib/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   addCourseDay,
+  addCourseItem,
   createCourse,
   removeCourseDay,
   removeCourseItem,
@@ -31,6 +32,7 @@ import {
 } from "@/app/(user)/_actions/course-actions";
 import type { CourseDetail } from "@/lib/course-queries";
 import { coverBackground, NEUTRAL_COVER } from "./course-cover";
+import { PlaceAddSheet, type PickedPlace } from "./PlaceAddSheet";
 import {
   CONTROL_LINE,
   DANGER,
@@ -52,12 +54,15 @@ import {
  */
 const MAX_DAYS = 7;
 
+/** course-actions.ts:12 의 MAX_ITEMS_PER_DAY 와 같은 값. 위와 같은 이유로 여기 둔다. */
+const MAX_ITEMS_PER_DAY = 20;
+
 /**
  * 아직 서버에 없는 Day 의 id 접두사.
  * 하이드레이션이 어긋나지 않도록 randomUUID 가 아니라 순번으로 만든다.
  */
 const LOCAL_DAY_PREFIX = "local-";
-/** 아직 서버에 없는 아이템의 id 접두사 (초안에서 담은 장소 — 4/5 에서 채워진다) */
+/** 아직 서버에 없는 아이템의 id 접두사 (초안에서 담았거나 저장이 아직 안 끝난 장소) */
 const LOCAL_ITEM_PREFIX = "local-item-";
 
 function isLocalDay(dayId: string) {
@@ -74,11 +79,19 @@ export type EditorDay = {
   id: string;
   dayNumber: number;
   title: string | null;
+  /**
+   * 좌표·이미지까지 들고 있는 이유는 두 가지다.
+   * - 좌표: Nearby Attractions 의 기준점을 이 목록에서 찾는다
+   * - 둘 다: 초안 아이템은 Done 을 누를 때 addCourseItem 으로 풀어야 해서 원본 값이 필요하다
+   */
   items: {
     id: string;
     placeId: string | null;
     nameEn: string;
     address: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    imageUrl: string | null;
   }[];
 };
 
@@ -109,6 +122,25 @@ function courseErrorMessage(error?: string): string {
   if (error === "forbidden") return "You can only edit your own journeys.";
   if (error === "invalid_input") return "Check the title and try again.";
   return "Something went wrong. Try again.";
+}
+
+/**
+ * 고른 장소 → addCourseItem 입력. placeId 유무가 곧 두 갈래다.
+ * external 쪽 필드는 전부 optional 이라 값이 없으면 아예 빼서 보낸다
+ * (imageUrl 은 z.string().url() 이라 빈 문자열이나 상대 경로가 들어가면 아이템 전체가 거부된다).
+ */
+function toAddItemInput(picked: PickedPlace) {
+  if (picked.placeId) return { source: "place" as const, placeId: picked.placeId };
+  return {
+    source: "external" as const,
+    nameEn: picked.nameEn,
+    ...(picked.address ? { address: picked.address } : {}),
+    ...(picked.latitude !== null ? { latitude: picked.latitude } : {}),
+    ...(picked.longitude !== null ? { longitude: picked.longitude } : {}),
+    ...(picked.imageUrl && /^https?:\/\//.test(picked.imageUrl)
+      ? { imageUrl: picked.imageUrl }
+      : {}),
+  };
 }
 
 /** 로컬 Day 목록을 1..n 으로 다시 매긴다 — removeCourseDay 의 서버 재번호와 같은 규칙 */
@@ -275,6 +307,7 @@ export function CourseEditor({
       ],
   );
   const localDayCounter = useRef(1);
+  const localItemCounter = useRef(0);
 
   /**
    * 서버가 새 Day 목록을 내려주면 채택한다. effect 가 아니라 렌더 중 비교다
@@ -298,6 +331,11 @@ export function CourseEditor({
   // 삭제 확인 대기 중인 Day. null 이면 모달이 닫혀 있다.
   const [pendingDeleteDayId, setPendingDeleteDayId] = useState<string | null>(null);
 
+  // 장소 추가 시트가 열린 Day. 번호를 따로 들고 있는 이유는 닫히는 애니메이션 동안에도
+  // 시트 제목("Add to Day 3")이 그대로 남아야 하기 때문이다 — id 만 지우고 번호는 둔다.
+  const [sheetDayId, setSheetDayId] = useState<string | null>(null);
+  const [sheetDayNumber, setSheetDayNumber] = useState(1);
+
   // ── 파생값 ─────────────────────────────────────────────────────────────────
 
   /** 아직 서버에 코스가 없는 상태 */
@@ -306,6 +344,7 @@ export function CourseEditor({
   const cover = initialData ? coverBackground(initialData.topics) : NEUTRAL_COVER;
   const atMaxDays = days.length >= MAX_DAYS;
   const pendingDeleteDay = days.find((day) => day.id === pendingDeleteDayId) ?? null;
+  const sheetDay = days.find((day) => day.id === sheetDayId) ?? null;
 
   /**
    * Done 의 유일한 조건 — 제목이 있어야 한다. 두 갈래에서 규칙이 같다.
@@ -410,7 +449,8 @@ export function CourseEditor({
     if (atMaxDays) return;
 
     // 화면은 먼저 움직인다. 서버 응답을 기다리는 동안 아무 일도 안 일어난 것처럼 보이면 안 된다.
-    setDays((prev) => [...prev, nextLocalDay(prev)]);
+    const added = nextLocalDay(days);
+    setDays((prev) => [...prev, { ...added, dayNumber: prev.length + 1 }]);
 
     const id = courseIdRef.current;
     if (!id) return; // 초안 — Done 에서 한꺼번에 만든다
@@ -421,15 +461,22 @@ export function CourseEditor({
     startDayTransition(async () => {
       try {
         const result = await addCourseDay(id);
-        if (result.error) {
-          // 서버가 거부했으면 방금 넣은 것을 뺀다
-          setDays((prev) => renumber(prev.filter((day) => !isLocalDay(day.id))));
+        if (result.error || !result.id) {
+          // 서버가 거부했으면 방금 넣은 것만 뺀다
+          setDays((prev) => renumber(prev.filter((day) => day.id !== added.id)));
           showError(courseErrorMessage(result.error));
+          return;
         }
-        // 성공하면 액션의 revalidateCoursePaths 가 새 props 를 실어 오고,
-        // 위쪽 렌더 중 비교가 local Day 를 진짜 Day 로 바꾼다. router.refresh() 는 중복이다.
+        // 진짜 id 로 바로 갈아 끼운다. revalidate 가 도착하기 전에도 이 Day 에
+        // 장소를 담을 수 있어야 한다 — addCourseItem 은 진짜 dayId 를 받는다.
+        const realId = result.id;
+        setDays((prev) =>
+          prev.map((day) => (day.id === added.id ? { ...day, id: realId } : day)),
+        );
+        // 나머지는 액션의 revalidateCoursePaths 가 새 props 를 실어 오고,
+        // 위쪽 렌더 중 비교가 목록을 서버 진실로 맞춘다. router.refresh() 는 중복이다.
       } catch {
-        setDays((prev) => renumber(prev.filter((day) => !isLocalDay(day.id))));
+        setDays((prev) => renumber(prev.filter((day) => day.id !== added.id)));
         showError("Something went wrong. Try again.");
       } finally {
         dayMutatingRef.current = false;
@@ -508,6 +555,70 @@ export function CourseEditor({
   }
 
   /**
+   * Nearby Attractions 의 기준 좌표.
+   * 그 Day 의 마지막 아이템 → 없으면 앞 Day 들을 거슬러 올라간다. 아무 데도 없으면 null 이고,
+   * 그때는 시트가 탭을 비활성화하는 대신 왜 비었는지 안내한다.
+   */
+  function anchorForDay(dayId: string): { lat: number; lng: number; label: string } | null {
+    const dayIndex = days.findIndex((day) => day.id === dayId);
+    if (dayIndex < 0) return null;
+
+    for (let i = dayIndex; i >= 0; i--) {
+      const items = days[i].items;
+      for (let j = items.length - 1; j >= 0; j--) {
+        const item = items[j];
+        if (item.latitude !== null && item.longitude !== null) {
+          return { lat: item.latitude, lng: item.longitude, label: item.nameEn };
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * 시트에서 고른 장소를 Day 맨 뒤에 담는다. 삭제와 대칭이다 — 줄을 먼저 그리고 서버로 보낸다.
+   *
+   *   draft — 로컬 배열에만 쌓인다. Done 에서 materializeDraft 가 한꺼번에 푼다.
+   *   saved — 바로 addCourseItem. 실패하면 방금 넣은 줄만 뺀다.
+   */
+  function handlePickPlace(dayId: string, picked: PickedPlace) {
+    const day = days.find((d) => d.id === dayId);
+    if (!day) return;
+    if (day.items.length >= MAX_ITEMS_PER_DAY) return;
+    // 같은 Day 중복은 서버도 막는다(invalid_input). 여기서 먼저 막는 이유는 왕복을 아끼려는 게 아니라
+    // 그 에러가 "Check the title and try again" 으로 번역돼 엉뚱한 안내가 나가기 때문이다.
+    if (picked.placeId && day.items.some((item) => item.placeId === picked.placeId)) return;
+
+    localItemCounter.current += 1;
+    const localId = `${LOCAL_ITEM_PREFIX}${localItemCounter.current}`;
+    setDayItems(dayId, [...day.items, { id: localId, ...picked }]);
+
+    // 초안이거나 Day 가 아직 서버에 없으면 로컬에서 끝난다
+    if (!courseIdRef.current || isLocalDay(dayId)) return;
+
+    /** 방금 넣은 줄만 뺀다 — 그 사이 다른 줄이 들어왔을 수 있어 목록 전체를 되돌리지 않는다 */
+    const revert = () =>
+      setDays((prev) =>
+        prev.map((d) =>
+          d.id === dayId ? { ...d, items: d.items.filter((item) => item.id !== localId) } : d,
+        ),
+      );
+
+    startItemTransition(async () => {
+      try {
+        const result = await addCourseItem(dayId, toAddItemInput(picked));
+        if (result.error) {
+          revert();
+          showError(courseErrorMessage(result.error));
+        }
+      } catch {
+        revert();
+        showError("Something went wrong. Try again.");
+      }
+    });
+  }
+
+  /**
    * 드래그 정렬. Day 안에서만 움직인다 (Day 간 이동은 지우고 다시 담는다).
    *
    * SortableTagList 는 정렬 저장 실패를 무시하지만 여기서는 되돌린다 —
@@ -555,7 +666,11 @@ export function CourseEditor({
   /**
    * 초안을 실제 코스로 만든다. Done 을 눌렀을 때만 실행되는 유일한 커밋 지점이다.
    *
-   * createCourse 가 Day 1 을 함께 만들므로 나머지 Day 만 추가한다.
+   *   createCourse       코스 + Day 1 (둘의 id 를 함께 받는다)
+   *   addCourseDay × N   Day 2..n — 각각의 id 를 받아 아이템을 걸 자리로 쓴다
+   *   addCourseItem × M  Day 별로 화면에 보이는 순서 그대로. sortOrder 는 서버가 맨 뒤에 붙인다
+   *   updateCourse       공개로 켜 두었으면 마지막에 반영
+   *
    * 중간에 실패해도 코스는 이미 존재하므로 상세 화면으로 보낸다 — 거기가 진실이다.
    * 편집기에 붙잡아 두면 로컬 Day 와 서버 Day 가 어긋난 채로 남는다.
    */
@@ -573,27 +688,40 @@ export function CourseEditor({
     setCourseId(id);
     savedTitleRef.current = trimmedTitle;
 
-    // 화면에 Day 가 하나도 없어도 createCourse 가 만든 Day 1 은 남는다.
-    // 새 코스에서 Day 를 전부 지우는 경우라 흔치 않고, 빈 Day 하나는 정상 상태다.
-    for (let i = 1; i < days.length; i++) {
+    // 화면의 Day 1 은 createCourse 가 만든 Day 다. 나머지만 새로 만들고 id 를 모은다.
+    // 화면에 Day 가 하나도 없어도 그 Day 1 은 남는다 — 빈 Day 하나는 정상 상태다.
+    const dayIds: string[] = created.dayId ? [created.dayId] : [];
+    let failed = !created.dayId;
+
+    for (let i = 1; !failed && i < days.length; i++) {
       const result = await addCourseDay(id);
-      if (result.error) {
+      if (result.error || !result.id) {
         showError(courseErrorMessage(result.error));
+        failed = true;
         break;
+      }
+      dayIds.push(result.id);
+    }
+
+    // Day 를 다 만든 뒤에 아이템을 넣는다. 하나라도 실패하면 거기서 멈춘다 —
+    // 이어서 넣으면 순서가 어긋난 채로 절반만 남는다.
+    for (let i = 0; !failed && i < dayIds.length; i++) {
+      for (const item of days[i]?.items ?? []) {
+        const result = await addCourseItem(dayIds[i], toAddItemInput(item));
+        if (result.error) {
+          showError(courseErrorMessage(result.error));
+          failed = true;
+          break;
+        }
       }
     }
 
-    // createCourse 는 항상 비공개로 만든다 — 공개로 켜 두었으면 여기서 반영한다
+    // createCourse 는 항상 비공개로 만든다 — 공개로 켜 두었으면 여기서 반영한다.
+    // 앞이 실패해도 이건 시도한다. 사용자가 명시적으로 켠 값이고 코스는 이미 있다.
     if (isPublic) {
       const result = await updateCourse(id, { isPublic: true });
       if (result.error) showError(courseErrorMessage(result.error));
     }
-
-    // TODO(4/5): 초안에 담아 둔 아이템을 addCourseItem 으로 푼다.
-    // 지금은 넣을 방법이 없다 — addCourseItem 은 dayId 를 받는데 addCourseDay 가 만든 Day 의
-    // id 를 돌려주지 않아 방금 만든 Day 를 가리킬 수 없다. 아이템을 담는 UI 자체가 4/5 라
-    // 이 구간은 아직 도달하지 않는다. 4/5 에서 addCourseDay 가 { id } 를 반환하도록 하거나
-    // 생성 후 Day 목록을 한 번 읽어 와야 한다.
 
     router.push(`/journeys/${id}`);
   }
@@ -731,7 +859,7 @@ export function CourseEditor({
         </button>
       </div>
 
-      {/* ── Day · 아이템 (아이템 편집은 3/5, 장소 추가는 4/5) ─────────────── */}
+      {/* ── Day · 아이템 ─────────────────────────────────────────────────── */}
       {days.length === 0 ? (
         <div className="px-[18px] pt-6">
           <div
@@ -747,7 +875,12 @@ export function CourseEditor({
           </div>
         </div>
       ) : (
-        days.map((day) => (
+        days.map((day) => {
+          const dayFull = day.items.length >= MAX_ITEMS_PER_DAY;
+          // 저장된 코스인데 Day 가 아직 서버에 없는 짧은 구간 — addCourseItem 이 받을 dayId 가 없다.
+          // addCourseDay 응답이 오면 진짜 id 로 바뀌면서 바로 풀린다.
+          const dayUnsaved = !isDraft && isLocalDay(day.id);
+          return (
           <section key={day.id} className="px-[18px] pt-6">
             <div className="flex min-h-11 items-center gap-2.5">
               <h2 className="text-[15px] font-bold leading-none" style={{ color: INK }}>
@@ -819,8 +952,37 @@ export function CourseEditor({
                 </SortableContext>
               </DndContext>
             )}
+
+            {/* 장소 추가. Day 마다 따로 둔다 — 어느 날에 담는지가 버튼 위치로 드러나야
+                시트에서 Day 를 다시 고르게 하지 않는다. */}
+            <button
+              type="button"
+              onClick={() => {
+                setSheetDayNumber(day.dayNumber);
+                setSheetDayId(day.id);
+              }}
+              disabled={dayFull || dayUnsaved}
+              className="mt-2.5 flex h-11 w-full items-center justify-center gap-1.5 rounded-[14px] transition-opacity disabled:opacity-40"
+              style={{ background: PAPER }}
+            >
+              <Plus className="size-[15px]" style={{ color: INK }} strokeWidth={2.6} />
+              <span className="text-[12.5px] font-semibold leading-none" style={{ color: INK }}>
+                Add a place
+              </span>
+            </button>
+
+            {/* Day 추가 상한과 같은 방식 — 눌러 보게 하고 토스트로 알리는 대신 막고 이유를 붙인다 */}
+            {dayFull && (
+              <p
+                className="mt-2 text-center text-[11px] font-medium leading-none"
+                style={{ color: MUTED }}
+              >
+                A day can have up to {MAX_ITEMS_PER_DAY} places.
+              </p>
+            )}
           </section>
-        ))
+          );
+        })
       )}
 
       {/* ── Day 추가 ─────────────────────────────────────────────────────── */}
@@ -868,6 +1030,26 @@ export function CourseEditor({
         destructive
         onConfirm={handleConfirmDeleteDay}
         onCancel={() => setPendingDeleteDayId(null)}
+      />
+
+      <PlaceAddSheet
+        open={sheetDay !== null}
+        onOpenChange={(next) => {
+          if (!next) setSheetDayId(null);
+        }}
+        dayNumber={sheetDayNumber}
+        existingPlaceIds={
+          sheetDay
+            ? sheetDay.items
+                .map((item) => item.placeId)
+                .filter((placeId): placeId is string => placeId !== null)
+            : []
+        }
+        anchor={sheetDay ? anchorForDay(sheetDay.id) : null}
+        remainingSlots={sheetDay ? MAX_ITEMS_PER_DAY - sheetDay.items.length : 0}
+        onPick={(picked) => {
+          if (sheetDay) handlePickPlace(sheetDay.id, picked);
+        }}
       />
     </div>
   );
