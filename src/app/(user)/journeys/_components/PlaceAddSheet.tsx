@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { Check, Loader2, MapPin, Plus, Search, X } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { isExternalImage } from "@/lib/image";
 import { getPopularPlaces, searchPlaces } from "@/app/(user)/_actions/recreeshot-actions";
 import {
   getNearbyCourseAttractions,
@@ -120,13 +122,15 @@ function PlaceRow({
       className="flex w-full items-center gap-3 rounded-[14px] px-2 py-2 text-left transition-colors active:bg-muted disabled:active:bg-transparent"
     >
       {row.imageUrl ? (
-        /* next/image 를 쓰지 않는다 — 관광 데이터 이미지 호스트가 next.config 의
-           remotePatterns 에 없고, 44px 목록 썸네일이라 최적화 이득도 없다. */
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        /* unoptimized 판정은 StickerPanel.tsx:594 와 같다 — 등록되지 않은 호스트를
+           next/image 에 그대로 넘기면 이미지 하나가 아니라 시트 전체가 죽는다.
+           (Place.placeImages 에 search.pstatic.net 이 실제로 한 건 있다) */
+        <Image
           src={row.imageUrl}
           alt=""
-          loading="lazy"
+          width={44}
+          height={44}
+          unoptimized={isExternalImage(row.imageUrl)}
           className="size-11 flex-none rounded-xl object-cover"
           style={{ background: CHIP_BG }}
         />
