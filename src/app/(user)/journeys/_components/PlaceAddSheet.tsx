@@ -24,10 +24,19 @@ const SEARCH_DEBOUNCE_MS = 400;
  */
 const TOUR_API_ATTRIBUTION = "출처: ⓒ한국관광공사";
 
+/**
+ * 라벨은 360px 한 줄에 세 개가 다 들어가는 길이로 짧게 쓴다.
+ * 12.5px SemiBold 실측 폭 — Search 43 / Saved places 82 / Nearby 44.
+ * px-4 두 쪽(32) + gap-1.5 두 개(12)를 더해도 277px 이라 360px 의 328px 안에 들어간다.
+ *
+ * "Saved" 만 쓰면 무엇이 저장된 건지 흐려져서 places 를 남긴다.
+ * "Nearby" 는 반경 기준이라는 뜻이 살아 있고, 관광 데이터라는 것은
+ * 패널 머리말("Around ...")과 출처 표기가 말해준다.
+ */
 const TABS = [
-  { id: "search", label: "Search places" },
-  { id: "saved", label: "Saved Places" },
-  { id: "nearby", label: "Nearby Attractions" },
+  { id: "search", label: "Search" },
+  { id: "saved", label: "Saved places" },
+  { id: "nearby", label: "Nearby" },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -367,7 +376,7 @@ export function PlaceAddSheet({
         return (
           <Message
             title="No places found"
-            body="Try a different spelling, or look under Nearby Attractions."
+            body="Try a different spelling, or look under Nearby."
           />
         );
       }
@@ -475,8 +484,10 @@ export function PlaceAddSheet({
           </button>
         </div>
 
-        {/* 탭 — 가로 스크롤. 390px 에서 세 개가 한 줄에 다 들어가지 않는다 */}
-        <div className="flex flex-none gap-1.5 overflow-x-auto px-4 pb-3 pt-1 [scrollbar-width:none]">
+        {/* 탭 — 가로 스크롤을 쓰지 않는다. 스크롤바를 숨긴 스크롤러는 잘린 탭을
+            밀 수 있다는 단서를 주지 못해서, 셋이 항상 한 줄에 들어가는 라벨을 쓰고
+            넘칠 때는 감추는 대신 wrap 시킨다. 잘린 채 숨는 상태가 생기지 않는다. */}
+        <div className="flex flex-none flex-wrap gap-1.5 px-4 pb-3 pt-1">
           {TABS.map((t) => (
             <button
               key={t.id}
