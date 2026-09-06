@@ -3,7 +3,7 @@ import { Plus } from "lucide-react";
 
 export function NewReCreeshotFab() {
   return (
-    <div className="fixed bottom-[72px] inset-x-0 z-50 h-10 pointer-events-none">
+    <div className="fixed bottom-[var(--bottom-nav-space)] inset-x-0 z-50 h-10 pointer-events-none">
       <div className="max-w-[540px] mx-auto h-full relative">
         <Link
           href="/recreeshot/new"

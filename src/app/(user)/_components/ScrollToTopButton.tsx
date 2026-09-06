@@ -3,15 +3,20 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { ArrowUp } from "lucide-react";
+import { isBottomNavHidden } from "@/lib/bottom-nav";
 
 /**
- * /recreeshot 은 같은 자리(bottom-72 · right-2 · size-10)에 New recreeshot FAB 가
- * 상주한다 (NewReCreeshotFab.tsx:6,12). 스크롤이 600px 을 넘으면 정확히 겹친다.
- * FAB 가 그 화면의 주 액션이라 자리를 비켜주지 않고, 이 버튼을 한 칸 위로 쌓는다.
- * 72(FAB 자리) + 40(FAB 높이) + 12(간격) = 124.
+ * 기본은 탭바 바로 위 칸이다.
+ *
+ * /recreeshot 은 그 칸에 New recreeshot FAB 가 상주한다 (NewReCreeshotFab.tsx:6,12).
+ * FAB 가 그 화면의 주 액션이라 자리를 비켜주지 않고, 이 버튼을 한 칸 위로 쌓는다 —
+ * FAB 높이 40 + 간격 12 = 52.
+ *
+ * 탭바가 숨는 화면에서는 비켜줄 대상이 없으니 화면 가장자리 여백만 남긴다.
  */
-const STACKED_BOTTOM = "bottom-[124px]";
-const DEFAULT_BOTTOM = "bottom-[72px]";
+const DEFAULT_BOTTOM = "var(--bottom-nav-space)";
+const STACKED_BOTTOM = "calc(var(--bottom-nav-space) + 52px)";
+const NO_NAV_BOTTOM = "var(--bottom-nav-bottom)";
 const FAB_ROUTES = ["/recreeshot"];
 
 interface Props {
@@ -22,7 +27,11 @@ interface Props {
 export function ScrollToTopButton({ scrollRef }: Props = {}) {
   const [visible, setVisible] = useState(false);
   const pathname = usePathname();
-  const bottomClass = FAB_ROUTES.includes(pathname) ? STACKED_BOTTOM : DEFAULT_BOTTOM;
+  const bottom = isBottomNavHidden(pathname)
+    ? NO_NAV_BOTTOM
+    : FAB_ROUTES.includes(pathname)
+      ? STACKED_BOTTOM
+      : DEFAULT_BOTTOM;
 
   useEffect(() => {
     let rafId = 0;
@@ -68,7 +77,7 @@ export function ScrollToTopButton({ scrollRef }: Props = {}) {
   }
 
   return (
-    <div className={`fixed ${bottomClass} inset-x-0 z-50 h-10 pointer-events-none`}>
+    <div className="fixed inset-x-0 z-50 h-10 pointer-events-none" style={{ bottom }}>
       <div className="max-w-[540px] mx-auto h-full relative">
         <button
           type="button"

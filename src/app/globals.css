@@ -66,6 +66,13 @@
 :root {
   --radius: 0.625rem;
 
+  /* 플로팅 탭바 기하. 숫자 짝은 src/lib/bottom-nav.ts 다 */
+  --bottom-nav-inset: 16px;
+  --bottom-nav-pill-h: 60px;
+  --bottom-nav-gap: 12px;
+  --bottom-nav-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--bottom-nav-inset));
+  --bottom-nav-space: calc(var(--bottom-nav-bottom) + var(--bottom-nav-pill-h) + var(--bottom-nav-gap));
+
   /* ── Raw Palette ────────────────── */
   --palette-brand:      #C8FF09;
   --palette-brand-sub:  #D0FF6C;

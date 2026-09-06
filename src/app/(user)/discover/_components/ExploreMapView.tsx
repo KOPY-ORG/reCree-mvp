@@ -608,8 +608,9 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   const fabSheetH = getSheetHeight(effectiveSheetState, 80, needsTopReserve ? 96 : 64);
 
   return (
-    // bottomnav(h-16=64px) — ExploreHeader 제거됨
-    <div className="relative h-[calc(100dvh-64px)] overflow-hidden">
+    // 지도는 100dvh 전체를 쓴다 — 탭바가 그 위에 떠야 반투명·blur 가 의미를 갖는다.
+    // 안쪽의 시트·FAB·카드는 각자 var(--bottom-nav-space) 만큼 올라간다.
+    <div className="relative h-[100dvh] overflow-hidden">
       <InteractiveMap
         ref={mapRef}
         places={isEventMode ? visibleEventMarkers : filteredMarkerPlaces}
@@ -807,7 +808,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
           className={`absolute right-3 z-[45] flex flex-col gap-3 ${
             effectiveSheetState === "full" ? "opacity-0 pointer-events-none" : "opacity-100"
           }`}
-          style={{ bottom: `calc(${fabSheetH} + 12px)`, transition: "bottom 300ms ease, opacity 300ms ease" }}
+          style={{ bottom: `calc(var(--bottom-nav-space) + ${fabSheetH} + 12px)`, transition: "bottom 300ms ease, opacity 300ms ease" }}
         >
           {/* 현위치 버튼 */}
           <button
@@ -855,7 +856,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
 
       {/* 토스트 */}
       {toast && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 rounded-full bg-black/50 text-white text-sm whitespace-nowrap shadow-lg pointer-events-none">
+        <div className="fixed bottom-[var(--bottom-nav-space)] left-1/2 -translate-x-1/2 z-[100] px-4 py-2 rounded-full bg-black/50 text-white text-sm whitespace-nowrap shadow-lg pointer-events-none">
           {toast.message}
         </div>
       )}

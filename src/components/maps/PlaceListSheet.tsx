@@ -2,21 +2,25 @@
 
 import { useRef, useState, useEffect } from "react";
 import { useSheetDrag } from "@/app/(user)/_hooks/useSheetDrag";
+import { BOTTOM_NAV_SPACE } from "@/lib/bottom-nav";
 
 export type PlaceListSheetState = "hidden" | "tab-only" | "half" | "full";
 
 const DRAGGABLE_STATES = ["tab-only", "half", "full"] as const;
 type DraggableState = (typeof DRAGGABLE_STATES)[number];
 
-const BOTTOM_NAV_H = 64;
 // searchbar(60px) + facet 칩(~27px) + pb-2(8px) + 1px buffer
 const FULL_TOP_WITH_FACETS = 96;
 
+/**
+ * 시트는 탭바 위에 앉는다 (bottom = var(--bottom-nav-space)).
+ * 그래서 남는 세로 공간도 100dvh 에서 같은 값을 뺀 만큼이다.
+ */
 export function getSheetHeight(state: PlaceListSheetState, tabOnlyH: number, fullTop: number): string {
   if (state === "hidden") return "0px";
   if (state === "tab-only") return `${tabOnlyH}px`;
-  if (state === "half") return `calc((100dvh - ${BOTTOM_NAV_H}px) * 0.5)`;
-  return `calc(100dvh - ${BOTTOM_NAV_H}px - ${fullTop}px)`;
+  if (state === "half") return `calc((100dvh - var(--bottom-nav-space)) * 0.5)`;
+  return `calc(100dvh - var(--bottom-nav-space) - ${fullTop}px)`;
 }
 
 interface Props {
@@ -53,11 +57,13 @@ export function PlaceListSheet({ state, onStateChange, topOffset = 24, hasActive
 
   const fullTop = hasActiveFacets ? FULL_TOP_WITH_FACETS : topOffset;
 
+  // 스냅 임계값은 safe-area 를 뺀 근사를 쓴다. 실제로 그려지는 높이는 위 CSS 변수라
+  // 기기에서 정확하고, 여기 몇십 px 차이는 "어느 상태로 붙일지" 판정만 바꾼다.
   function getSnapHeights() {
     return [
       tabOnlyH,
-      Math.round((window.innerHeight - BOTTOM_NAV_H) * 0.5),
-      window.innerHeight - BOTTOM_NAV_H - fullTop,
+      Math.round((window.innerHeight - BOTTOM_NAV_SPACE) * 0.5),
+      window.innerHeight - BOTTOM_NAV_SPACE - fullTop,
     ];
   }
 
@@ -75,9 +81,11 @@ export function PlaceListSheet({ state, onStateChange, topOffset = 24, hasActive
   };
 
   return (
+    // 지도는 100dvh 전체를 쓰고 탭바가 그 위에 뜬다. 시트는 탭바 위에 앉는다 —
+    // bottom-0 이면 tab-only(80px) 상태가 통째로 탭바에 가린다.
     <div
       ref={sheetRef}
-      className="absolute inset-x-0 bottom-0 z-40 bg-white rounded-t-[2rem] flex flex-col shadow-[0_-8px_40px_rgba(0,0,0,0.18)] overflow-hidden"
+      className="absolute inset-x-0 bottom-[var(--bottom-nav-space)] z-40 bg-white rounded-t-[2rem] flex flex-col shadow-[0_-8px_40px_rgba(0,0,0,0.18)] overflow-hidden"
       style={sheetStyle}
     >
       {/* 드래그 핸들 */}
