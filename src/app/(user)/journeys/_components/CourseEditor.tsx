@@ -25,6 +25,7 @@ import {
   addCourseDay,
   addCourseItem,
   createCourse,
+  deleteCourse,
   removeCourseDay,
   removeCourseItem,
   reorderCourseItems,
@@ -106,6 +107,17 @@ export type CourseEditorInitialData = {
   topics: CourseDetail["topics"];
   days: EditorDay[];
 };
+
+/**
+ * 확인 모달의 종류. 셋 다 같은 ConfirmDialog 로 그리고 문구만 바꾼다.
+ *   deleteDay     Day 하나 삭제
+ *   emptyExit     장소 0개인 코스에서 나가려 할 때 — 나가는 길은 삭제뿐이다
+ *   deleteCourse  편집기의 Delete journey
+ */
+type PendingDialog =
+  | { kind: "deleteDay"; dayId: string }
+  | { kind: "emptyExit" }
+  | { kind: "deleteCourse" };
 
 interface CourseEditorProps {
   mode: "create" | "edit";
@@ -285,9 +297,10 @@ export function CourseEditor({
   // 옮긴 줄은 그 자리에 있는 것이 곧 피드백이라, pending 을 disabled 에 연결하지 않는다.
   // 그래도 저장 중 이탈은 막아야 해서 트랜지션 자체는 따로 둔다.
   const [itemPending, startItemTransition] = useTransition();
+  const [deletePending, startDeleteTransition] = useTransition();
 
   /** 저장이 하나라도 돌고 있으면 화면을 뜨면 안 된다 — Done 버튼만 이걸 본다 */
-  const isBusy = titlePending || visibilityPending || isDayPending || itemPending;
+  const isBusy = titlePending || visibilityPending || isDayPending || itemPending || deletePending;
 
   /**
    * 터치와 마우스를 모두 등록한다.
@@ -338,8 +351,11 @@ export function CourseEditor({
   const savedTitleRef = useRef(initialData?.title ?? "");
   const dayMutatingRef = useRef(false);
 
-  // 삭제 확인 대기 중인 Day. null 이면 모달이 닫혀 있다.
-  const [pendingDeleteDayId, setPendingDeleteDayId] = useState<string | null>(null);
+  /**
+   * 확인 모달은 하나뿐이다. 같은 화면에 생김새가 다른 확인창이 여럿이면
+   * 무엇을 지우는 건지 헷갈린다 — 종류만 바꾸고 문구를 갈아 끼운다.
+   */
+  const [dialog, setDialog] = useState<PendingDialog | null>(null);
 
   // 장소 추가 시트가 열린 Day. 번호를 따로 들고 있는 이유는 닫히는 애니메이션 동안에도
   // 시트 제목("Add to Day 3")이 그대로 남아야 하기 때문이다 — id 만 지우고 번호는 둔다.
@@ -353,24 +369,45 @@ export function CourseEditor({
   const itemCount = days.reduce((sum, day) => sum + day.items.length, 0);
   const cover = initialData ? coverBackground(initialData.topics) : NEUTRAL_COVER;
   const atMaxDays = days.length >= MAX_DAYS;
-  const pendingDeleteDay = days.find((day) => day.id === pendingDeleteDayId) ?? null;
+  const pendingDeleteDay =
+    dialog?.kind === "deleteDay" ? (days.find((day) => day.id === dialog.dayId) ?? null) : null;
   const sheetDay = days.find((day) => day.id === sheetDayId) ?? null;
 
-  /**
-   * Done 의 유일한 조건 — 제목이 있어야 한다. 두 갈래에서 규칙이 같다.
-   *   draft — 제목이 있어야 코스를 만들 수 있다 (titleSchema.min(1))
-   *   saved — 제목이 없으면 저장할 수 없는 상태다
-   * 나머지(토글·Day)는 제목과 무관하게 언제든 만질 수 있다.
-   */
   const trimmedTitle = title.trim();
-  const canFinish = trimmedTitle.length > 0;
+  const hasTitle = trimmedTitle.length > 0;
+  const hasPlaces = itemCount > 0;
+
+  /**
+   * Done 을 누를 수 있는 조건.
+   *   draft — 제목과 장소가 둘 다 있어야 한다. 장소 0개인 코스는 아무 정보도 없어
+   *           애초에 만들지 않는다. 아직 서버에 아무것도 없으므로 뒤로가기가 곧 취소다.
+   *   saved — 제목만 본다. 이미 있는 코스라 장소를 전부 갈아엎는 중일 수 있어
+   *           편집을 막지 않고, 나갈 때만 잡는다(savedButEmpty).
+   * 나머지(토글·Day)는 언제든 만질 수 있다.
+   */
+  const canFinish = hasTitle && (!isDraft || hasPlaces);
+
+  /** 이미 있는 코스인데 장소가 0개다 — 이대로 나가면 빈 여정이 남는다 */
+  const savedButEmpty = !isDraft && !hasPlaces;
 
   // ── 이탈 ───────────────────────────────────────────────────────────────────
 
   /** CourseBackButton 과 같은 판단 — 히스토리가 없으면 목록으로 */
-  function leaveEditor() {
+  function exitEditor() {
     if (window.history.length > 1) router.back();
     else router.push("/journeys");
+  }
+
+  /**
+   * 나가려는 시도. 빈 여정이면 나가는 길을 삭제 하나로 좁힌다.
+   * 마지막 장소를 지우는 순간에 묻지 않는 이유 — 전부 지우고 새로 담는 편집이 흔하다.
+   */
+  function leaveEditor() {
+    if (savedButEmpty) {
+      setDialog({ kind: "emptyExit" });
+      return;
+    }
+    exitEditor();
   }
 
   // ── 제목 ───────────────────────────────────────────────────────────────────
@@ -495,10 +532,8 @@ export function CourseEditor({
   }
 
   /** PostComments.executeDelete 와 같은 순서 — 모달을 먼저 닫고 실행한다 */
-  function handleConfirmDeleteDay() {
-    const dayId = pendingDeleteDayId;
-    if (!dayId) return;
-    setPendingDeleteDayId(null);
+  function handleConfirmDeleteDay(dayId: string) {
+    setDialog(null);
 
     const removed = days;
     setDays((prev) => renumber(prev.filter((day) => day.id !== dayId)));
@@ -673,6 +708,33 @@ export function CourseEditor({
     });
   }
 
+  // ── 코스 삭제 ─────────────────────────────────────────────────────────────
+
+  /**
+   * 코스를 지우고 목록으로 나간다. 초안에는 지울 게 없어 이 경로가 아예 없다.
+   * deleteCourse 가 Save 행을 함께 지운다 — Save 에는 FK 가 없어 cascade 되지 않는다
+   * (course-actions.ts:252).
+   */
+  function handleDeleteCourse() {
+    const id = courseIdRef.current;
+    if (!id) return;
+    setDialog(null);
+
+    startDeleteTransition(async () => {
+      try {
+        const result = await deleteCourse(id);
+        if (result.error) {
+          showError(courseErrorMessage(result.error));
+          return;
+        }
+        // 방금 지운 코스의 상세로 돌아가면 안 된다 — 뒤로가기가 아니라 목록으로 보낸다
+        router.push("/journeys");
+      } catch {
+        showError("Something went wrong. Try again.");
+      }
+    });
+  }
+
   // ── 완료 ───────────────────────────────────────────────────────────────────
 
   /**
@@ -741,6 +803,12 @@ export function CourseEditor({
   function handleDone() {
     if (!canFinish) return;
 
+    // 빈 여정은 Done 으로도 못 나간다. 뒤로가기와 같은 모달로 잡는다.
+    if (savedButEmpty) {
+      setDialog({ kind: "emptyExit" });
+      return;
+    }
+
     startTitleTransition(async () => {
       if (!courseIdRef.current) {
         await materializeDraft();
@@ -756,8 +824,26 @@ export function CourseEditor({
   // ── 렌더 ───────────────────────────────────────────────────────────────────
 
   const placeLabel = `${itemCount} ${itemCount === 1 ? "place" : "places"}`;
+  const dayLabel = `${days.length} ${days.length === 1 ? "day" : "days"}`;
   /** 이미 있는 코스의 제목을 비운 것은 잘못된 상태다. 초안의 빈 제목은 아직 안 지은 것뿐이다. */
-  const titleInvalid = !canFinish && !isDraft;
+  const titleInvalid = !hasTitle && !isDraft;
+
+  /**
+   * 메타 줄 문구. 한 자리에 하나만 띄운다.
+   *
+   * 초안에서 제목과 장소가 둘 다 비는 것이 시작 상태라 흔하다. 한 번에 하나씩 알리면
+   * 제목을 채운 뒤에야 "장소도 필요하다"를 처음 보게 되어 같은 문턱을 두 번 겪는다.
+   * 그래서 남은 것을 한 문장으로 합쳐 처음부터 전부 보여주고, 채울수록 문장이 줄어든다.
+   */
+  const metaText = titleInvalid
+    ? "Journey title can't be empty."
+    : isDraft && !canFinish
+      ? !hasTitle && !hasPlaces
+        ? "Name it and add a place to finish."
+        : !hasTitle
+          ? "Name it to finish."
+          : "Add a place to finish."
+      : placeLabel;
 
   return (
     <div className="flex min-h-full flex-col">
@@ -810,30 +896,22 @@ export function CourseEditor({
           enterKeyHint="done"
           aria-label="Journey title"
           aria-invalid={titleInvalid}
-          aria-describedby={canFinish ? undefined : titleHintId}
+          aria-describedby={hasTitle ? undefined : titleHintId}
           className="w-full border-b-2 bg-transparent pb-3 text-[22px] font-bold leading-[1.2] tracking-[-0.02em] outline-none placeholder:font-bold placeholder:text-muted-foreground/50"
           style={{ color: INK, borderBottomColor: titleInvalid ? DANGER : FIELD_LINE }}
         />
 
         {/* Done 을 막았으면 왜 막혔는지 여기서 말한다. 메타 줄과 같은 자리·같은 크기라
             문구만 갈리고 레이아웃이 밀리지 않는다.
-            초안의 빈 제목은 오류가 아니라 다음에 할 일이다 — 색과 문구를 나눈다. */}
-        {canFinish ? (
-          <p className="mt-3.5 text-[12.5px] font-medium leading-none" style={{ color: SUB }}>
-            {placeLabel}
-          </p>
-        ) : (
-          <p
-            id={titleHintId}
-            role={titleInvalid ? "alert" : undefined}
-            className="mt-3.5 text-[12.5px] font-medium leading-none"
-            style={{ color: titleInvalid ? DANGER : SUB }}
-          >
-            {titleInvalid
-              ? "Journey title can't be empty."
-              : "Name it when you're ready — everything else works now."}
-          </p>
-        )}
+            초안의 빈 제목은 오류가 아니라 다음에 할 일이다 — 색으로 나눈다. */}
+        <p
+          id={titleHintId}
+          role={titleInvalid ? "alert" : undefined}
+          className="mt-3.5 text-[12.5px] font-medium leading-none"
+          style={{ color: titleInvalid ? DANGER : SUB }}
+        >
+          {metaText}
+        </p>
 
         {/* 카드 전체가 토글이다 — 시안의 46×26 스위치만으로는 터치 타깃이 부족하다.
             shadcn Switch 는 <button> 을 렌더해 이 행 안에 중첩할 수 없어 표시만 직접 그린다. */}
@@ -909,7 +987,7 @@ export function CourseEditor({
                   가로 여백까지 늘리면 Day 헤더에서 삭제가 제일 눈에 띈다. */}
               <button
                 type="button"
-                onClick={() => setPendingDeleteDayId(day.id)}
+                onClick={() => setDialog({ kind: "deleteDay", dayId: day.id })}
                 disabled={isDayPending}
                 aria-label={`Delete Day ${day.dayNumber}`}
                 className="flex h-11 flex-none items-center gap-1.5 rounded-[14px] px-2.5 transition-opacity disabled:opacity-50"
@@ -1026,23 +1104,75 @@ export function CourseEditor({
         )}
       </div>
 
+      {/* 코스 삭제 — 초안에는 지울 게 없어 없다.
+          Add a day 와 한 칸 띄우고 배경 없이 둔다. 파괴적 액션이 화면에서 제일 눈에
+          띄면 안 된다 — Day 삭제(칩)보다도 약하게, 목록 맨 끝에 놓는다. */}
+      {!isDraft && (
+        <div className="px-[18px] pt-7">
+          <button
+            type="button"
+            onClick={() => setDialog({ kind: "deleteCourse" })}
+            disabled={deletePending}
+            className="flex h-11 w-full items-center justify-center gap-1.5 rounded-[14px] transition-opacity disabled:opacity-50"
+          >
+            {deletePending ? (
+              <Loader2 className="size-3.5 animate-spin" style={{ color: DANGER }} />
+            ) : (
+              <Trash2 className="size-3.5" style={{ color: DANGER }} />
+            )}
+            <span className="text-[12.5px] font-semibold leading-none" style={{ color: DANGER }}>
+              Delete journey
+            </span>
+          </button>
+        </div>
+      )}
+
       <div className="h-10" />
 
-      <ConfirmDialog
-        open={pendingDeleteDay !== null}
-        title={pendingDeleteDay ? `Delete Day ${pendingDeleteDay.dayNumber}?` : ""}
-        description={
-          pendingDeleteDay && pendingDeleteDay.items.length > 0
-            ? `${pendingDeleteDay.items.length} ${
-                pendingDeleteDay.items.length === 1 ? "place" : "places"
-              } in this day will be removed too. This can't be undone.`
-            : "This can't be undone."
-        }
-        confirmLabel="Delete"
-        destructive
-        onConfirm={handleConfirmDeleteDay}
-        onCancel={() => setPendingDeleteDayId(null)}
-      />
+      {dialog?.kind === "deleteDay" && pendingDeleteDay && (
+        <ConfirmDialog
+          open
+          title={`Delete Day ${pendingDeleteDay.dayNumber}?`}
+          description={
+            pendingDeleteDay.items.length > 0
+              ? `${pendingDeleteDay.items.length} ${
+                  pendingDeleteDay.items.length === 1 ? "place" : "places"
+                } in this day will be removed too. This can't be undone.`
+              : "This can't be undone."
+          }
+          confirmLabel="Delete"
+          destructive
+          onConfirm={() => handleConfirmDeleteDay(pendingDeleteDay.id)}
+          onCancel={() => setDialog(null)}
+        />
+      )}
+
+      {/* 빈 여정으로 나가려 할 때. 취소가 곧 "계속 편집" 이라 오버레이·Esc 로 닫아도
+          편집기에 남는다 — 실수로 지울 길이 없다. */}
+      {dialog?.kind === "emptyExit" && (
+        <ConfirmDialog
+          open
+          title="This journey has no places"
+          description="There's nothing to show without a stop. Delete it, or keep editing and add one."
+          confirmLabel="Delete journey"
+          cancelLabel="Keep editing"
+          destructive
+          onConfirm={handleDeleteCourse}
+          onCancel={() => setDialog(null)}
+        />
+      )}
+
+      {dialog?.kind === "deleteCourse" && (
+        <ConfirmDialog
+          open
+          title="Delete this journey?"
+          description={`${dayLabel} and ${placeLabel} will be gone. This can't be undone.`}
+          confirmLabel="Delete"
+          destructive
+          onConfirm={handleDeleteCourse}
+          onCancel={() => setDialog(null)}
+        />
+      )}
 
       <PlaceAddSheet
         open={sheetDay !== null}
