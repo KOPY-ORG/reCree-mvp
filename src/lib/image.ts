@@ -110,7 +110,10 @@ export function isExternalImage(src: string): boolean {
       hostname === "img.youtube.com" ||
       hostname === "i.ytimg.com" ||
       hostname === "lh3.googleusercontent.com" ||
-      hostname === "picsum.photos"
+      hostname === "picsum.photos" ||
+      // 한국관광공사 원본은 940px대로 커서 44px 썸네일에도 그대로 내려온다.
+      // next.config.ts 의 remotePatterns 에 등록돼 있어 최적화를 태울 수 있다.
+      hostname === "tong.visitkorea.or.kr"
     );
   } catch {
     return true;

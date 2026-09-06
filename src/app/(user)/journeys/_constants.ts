@@ -18,6 +18,15 @@ export const LINE = "#F0F0EB";
 /** 미니맵 자리표시 배경 */
 export const MAP_BG = "#EDEBE6";
 
+/** 편집기 제목 입력 밑줄 (시안 editor :641) */
+export const FIELD_LINE = "#EEEEE9";
+/** 편집기 토글 off 트랙 · 빈 Day 점선 테두리 (시안 editor :649, :666) */
+export const CONTROL_LINE = "#E2E2DC";
+/** 삭제 액션 — CLAUDE.md 의 event/red (시안 editor :660) */
+export const DANGER = "#F01941";
+/** 삭제 버튼 배경 (시안 editor :659) */
+export const DANGER_BG = "#FDF0F3";
+
 /** 아이템 출처 칩 — placeId 있음(앱 장소) / 없음(관광 데이터) */
 export const SPOT_CHIP = { bg: "#F4FFD0", fg: "#4A5E06", label: "reCree spot" };
 export const TOURISM_CHIP = { bg: "#F2F1EC", fg: "#8E8E8B", label: "Tourism data" };
