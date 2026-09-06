@@ -78,6 +78,9 @@ const MANUAL = {
   anmok: { nameEn: "Anmok Coffee Street", address: "Changhae-ro, Gangneung", latitude: 37.7735, longitude: 128.947 },
   gyeongpo: { nameEn: "Gyeongpo Beach", address: "Anhyeon-dong, Gangneung", latitude: 37.7955, longitude: 128.9096 },
   ojukheon: { nameEn: "Ojukheon House", address: "24 Yulgok-ro 3139beon-gil, Gangneung", latitude: 37.7791, longitude: 128.8779 },
+  // 용산 — HYBE 사옥 주변
+  hybe: { nameEn: "HYBE Headquarters", address: "42 Ichon-ro, Yongsan-gu, Seoul", latitude: 37.5259, longitude: 126.9636 },
+  yongsanPark: { nameEn: "Yongsan Family Park", address: "1-1 Seobinggo-ro, Yongsan-gu, Seoul", latitude: 37.523, longitude: 126.974 },
   // 서울 야경 / 홍대
   namsan: { nameEn: "Namsan Seoul Tower", address: "105 Namsangongwon-gil, Yongsan-gu, Seoul", latitude: 37.5512, longitude: 126.9882 },
   banpo: { nameEn: "Banpo Bridge Moonlight Rainbow Fountain", address: "Sinbanpo-ro 11-gil, Seocho-gu, Seoul", latitude: 37.5126, longitude: 126.9959 },
@@ -101,7 +104,8 @@ type CourseSpec = {
   title: string;
   owner: OwnerSpec;
   isPublic: boolean;
-  topicCount: number;
+  /** 붙일 L2 Topic 의 nameEn. 커버 색이 여기서 나오므로 순서가 그라데이션 순서다 */
+  topicNames: string[];
   /** Place 를 고를 기준점 */
   anchor: Coords;
   /** 앵커에서 이 거리 안의 Place 만 연결한다. 지방 코스가 수도권 Place 를 물어오는 것을 막는다 */
@@ -112,10 +116,7 @@ type CourseSpec = {
 };
 
 const SEOUL_CENTER = { latitude: 37.5796, longitude: 126.977 };
-const HONGDAE = { latitude: 37.5535, longitude: 126.9226 };
-const SEONGSU = { latitude: 37.5445, longitude: 127.0559 };
-const GYEONGJU = { latitude: 35.8348, longitude: 129.2249 };
-const BUSAN = { latitude: 35.1587, longitude: 129.1604 };
+const YONGSAN = { latitude: 37.5259, longitude: 126.9636 };
 const GANGNEUNG = { latitude: 37.7952, longitude: 128.8961 };
 
 /** 지방 코스의 Place 연결 반경. 이 밖이면 아예 연결하지 않는다 */
@@ -123,102 +124,37 @@ const REGIONAL_SPREAD_KM = 15;
 
 const SPECS: CourseSpec[] = [
   {
-    title: `${MOCK_PREFIX}Seoul BTS Pilgrimage`,
+    title: `${MOCK_PREFIX}BTS Seoul Pilgrimage`,
     owner: "me",
     isPublic: true,
-    topicCount: 1,
+    topicNames: ["BTS"],
     anchor: SEOUL_CENTER,
     days: [
       { title: "Palace and old town", slots: ["place", MANUAL.gyeongbokgung, "place"] },
       { title: null, slots: ["place", MANUAL.bukchon] },
-      { title: null, slots: [] }, // 빈 Day 확인용
     ],
   },
   {
-    title: `${MOCK_PREFIX}Hongdae Cafe Hop`,
-    owner: "me",
+    // Topic 2개 — 커버가 두 색을 잇는 그라데이션이 된다 (course-cover.ts:29)
+    title: `${MOCK_PREFIX}BTS × TXT Hybe Route`,
+    owner: "@park", // 남의 공개 코스 — "Make it mine" 확인용
     isPublic: true,
-    topicCount: 2, // 그라데이션 확인용
-    anchor: HONGDAE,
+    topicNames: ["BTS", "TXT"],
+    anchor: YONGSAN,
     days: [
-      { title: "Cafe crawl", slots: ["place", "place", MANUAL.yeonnam, MANUAL.hongdaePlayground] },
-    ],
-  },
-  {
-    title: `${MOCK_PREFIX}Gyeongju Day Trip`,
-    owner: "me",
-    isPublic: true,
-    topicCount: 0, // 중립색 확인용
-    anchor: GYEONGJU,
-    // 경주엔 연결할 Place 가 없다 — 전부 직접 채워 지도가 서울까지 벌어지지 않게 한다
-    days: [
-      { title: null, slots: [MANUAL.cheomseongdae, MANUAL.daereungwon, MANUAL.gyeongjuMuseum] },
-    ],
-  },
-  {
-    title: `${MOCK_PREFIX}My Secret Route`,
-    owner: "me",
-    isPublic: false, // Private 배지 확인용
-    topicCount: 1,
-    anchor: SEONGSU,
-    days: [
-      { title: null, slots: ["place", MANUAL.seongsu] },
-      { title: "Second day", slots: ["place", "place"] },
-    ],
-  },
-  {
-    title: `${MOCK_PREFIX}Empty Journey`,
-    owner: "me",
-    isPublic: true,
-    topicCount: 0,
-    anchor: SEOUL_CENTER,
-    days: [{ title: null, slots: [] }], // 완전 빈 상태 확인용
-  },
-
-  // ── 여기부터는 남의 공개 코스 — "Make it mine" 버튼 확인용 ────────────────
-  {
-    title: `${MOCK_PREFIX}Busan Coastal Run`,
-    owner: "@park",
-    isPublic: true,
-    topicCount: 1,
-    anchor: BUSAN,
-    maxSpreadKm: REGIONAL_SPREAD_KM,
-    copyCount: 3, // 이미 복사된 코스
-    days: [
-      { title: "Haeundae side", slots: ["place", MANUAL.haeundae, MANUAL.dongbaekseom] },
-      { title: null, slots: [MANUAL.gwangalli, MANUAL.cheongsapo] },
-    ],
-  },
-  {
-    title: `${MOCK_PREFIX}Seoul Night Walk`,
-    owner: "@swimmer",
-    isPublic: true,
-    topicCount: 2, // 그라데이션 커버
-    anchor: SEOUL_CENTER,
-    days: [
-      { title: "After dark", slots: ["place", MANUAL.namsan, "place", MANUAL.banpo] },
+      { title: "Around HYBE", slots: ["place", MANUAL.hybe, "place", MANUAL.yongsanPark] },
     ],
   },
   {
     title: `${MOCK_PREFIX}Gangneung Sea & Coffee`,
-    owner: "@vasipo099",
+    owner: "@swimmer", // 남의 공개 코스 — "Make it mine" 확인용
     isPublic: true,
-    topicCount: 0, // 중립 커버
+    topicNames: [], // Topic 없음 — 중립 커버 확인용
     anchor: GANGNEUNG,
     maxSpreadKm: REGIONAL_SPREAD_KM,
     days: [
       { title: "Coast", slots: ["place", MANUAL.anmok] },
       { title: "Inland", slots: ["place", MANUAL.gyeongpo, MANUAL.ojukheon] },
-    ],
-  },
-  {
-    title: `${MOCK_PREFIX}Quiet Hongdae Corners`,
-    owner: "anonymous", // 카드에 "Anonymous" 로 뜨는지 확인용
-    isPublic: true,
-    topicCount: 1,
-    anchor: HONGDAE,
-    days: [
-      { title: null, slots: ["place", MANUAL.mangwonMarket, "place"] },
     ],
   },
 ];
@@ -307,20 +243,34 @@ async function seed() {
     return user;
   }
 
-  // level 2 · isActive 중 앞에서부터. 색이 있는 것을 앞세운다 —
-  // 2개짜리 코스가 그라데이션 확인용이라 colorHex 가 null 이면 회색으로만 보인다.
+  // 코스 라벨은 L2 Topic 만 쓴다 (updateCourse 와 같은 조건).
+  // 이름으로 집는다 — sortOrder 앞에서부터 자르면 커버 색이 데이터 순서에 휘둘린다.
   const topicPool = await prisma.topic.findMany({
     where: { level: 2, isActive: true },
-    orderBy: { sortOrder: "asc" },
-    take: 8,
     select: { id: true, nameEn: true, colorHex: true },
   });
-  const topics = [...topicPool].sort((a, b) => (a.colorHex ? 0 : 1) - (b.colorHex ? 0 : 1));
-  console.log(
-    topics.length > 0
-      ? `Topic: ${topics.slice(0, 3).map((t) => `${t.nameEn}${t.colorHex ? "" : "(색없음)"}`).join(", ")}`
-      : "Topic: 없음 — Topic 없이 만든다",
-  );
+  const topicByName = new Map(topicPool.map((t) => [t.nameEn, t]));
+
+  const wanted = [...new Set(SPECS.flatMap((spec) => spec.topicNames))];
+  const missing = wanted.filter((name) => !topicByName.has(name));
+  if (missing.length > 0) {
+    console.error(`level 2 · isActive 인 Topic 중 다음이 없다: ${missing.join(", ")}`);
+    console.error("SPECS 의 topicNames 를 고치거나 Topic 을 먼저 만들어라.");
+    process.exit(1);
+  }
+  console.log("Topic");
+  for (const name of wanted) {
+    const t = topicByName.get(name)!;
+    console.log(`  ${name.padEnd(6)} ${t.colorHex ?? "(colorHex 없음 — 기본색으로 떨어진다)"}`);
+  }
+  // 2색 그라데이션은 두 색이 서로 달라야 보인다
+  for (const spec of SPECS.filter((sp) => sp.topicNames.length > 1)) {
+    const colors = spec.topicNames.map((n) => topicByName.get(n)!.colorHex);
+    if (new Set(colors).size < colors.length || colors.some((c) => !c)) {
+      console.warn(`  ⚠ "${spec.title}" 의 Topic 색이 같거나 비어 그라데이션이 안 보인다: ${colors.join(" / ")}`);
+    }
+  }
+  console.log("");
 
   // 발행 포스트가 붙은 Place 우선 — 상세 화면에서 /discover?place= 링크가 걸린다
   const placePool = await prisma.place.findMany({
@@ -378,6 +328,7 @@ async function seed() {
     title: string;
     ownerName: string;
     isMine: boolean;
+    topicLabel: string;
     isPublic: boolean;
     copyCount: number;
     days: number;
@@ -388,7 +339,7 @@ async function seed() {
   }[] = [];
 
   for (const spec of SPECS) {
-    const topicIds = topics.slice(0, spec.topicCount).map((t) => t.id);
+    const topicIds = spec.topicNames.map((name) => topicByName.get(name)!.id);
     const owner = await resolveOwner(spec.owner);
 
     const course = await prisma.course.create({
@@ -463,6 +414,10 @@ async function seed() {
       // CourseCard 는 nickname 이 null 이면 "Anonymous" 로 그린다
       ownerName: owner.nickname ?? "Anonymous",
       isMine: owner.id === me.id,
+      topicLabel:
+        spec.topicNames.length > 0
+          ? spec.topicNames.map((n) => `${n} ${topicByName.get(n)!.colorHex ?? "(색없음)"}`).join(" + ")
+          : "없음 (중립 커버)",
       isPublic: spec.isPublic,
       copyCount: spec.copyCount ?? 0,
       days: spec.days.length,
@@ -493,6 +448,7 @@ async function seed() {
       `    ${r.isPublic ? "public " : "private"}  Day ${r.days} · 아이템 ${r.items} · Topic ${r.topics}` +
         (r.copyCount > 0 ? ` · copyCount ${r.copyCount}` : ""),
     );
+    console.log(`    Topic    ${r.topicLabel}`);
     console.log(`    아이템    placeId 연결 ${r.linked} / null ${r.manual}`);
     console.log("");
   }
