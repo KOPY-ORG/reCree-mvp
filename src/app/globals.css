@@ -78,7 +78,7 @@
 .nav-rise { animation: nav-rise 320ms var(--nav-enter); }
 
 /* 라임 칸이 옮겨온 자리에 앉는다. 하루에 수십 번 보므로 튐을 아주 작게 둔다 —
-   60×48 판이 크게 튀면 팝업처럼 보이고 금방 거슬린다. */
+   48 원이 크게 튀면 팝업처럼 보이고 금방 거슬린다. */
 @keyframes nav-pop {
   0%   { transform: scale(.9); opacity: 0; }
   60%  { transform: scale(1.03); opacity: 1; }

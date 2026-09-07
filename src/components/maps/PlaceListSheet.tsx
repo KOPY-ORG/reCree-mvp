@@ -130,7 +130,7 @@ export function PlaceListSheet({ state, onStateChange, topOffset = 24, hasActive
       )}
 
       {/* 콘텐츠 — 시트가 바닥까지 내려가므로 마지막 줄이 탭바에 가리지 않게 여기서 비운다.
-          탭바가 물러난 상태(half·full)에서는 --sheet-scroll-pb 가 알아서 줄어든다 */}
+          탭바가 물러난 상태(full)에서는 --sheet-scroll-pb 가 알아서 줄어든다 */}
       <div
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto"

@@ -10,6 +10,8 @@ import {
   BOTTOM_NAV_ICON_ERODE,
   BOTTOM_NAV_ICON_FILTER,
   BOTTOM_NAV_ITEM,
+  BOTTOM_NAV_ITEM_GAP,
+  BOTTOM_NAV_PAD,
 } from "@/lib/bottom-nav";
 
 /**
@@ -102,12 +104,19 @@ function NavItem({
   );
 }
 
-/** 알약 하나. 여백 4 + 테두리 1 이라 48 짜리 칸이 들어가면 높이가 58 이 된다 */
+/**
+ * 알약 하나. 여백 4 + 테두리 1 이라 48 짜리 칸이 들어가면 높이가 58 이 된다.
+ *
+ * 여백과 간격은 Tailwind 유틸리티(p-1 · gap-0.5) 대신 상수를 인라인으로 쓴다.
+ * 임의값 클래스로는 연결할 수 없다 — 템플릿 문자열로 조립한 클래스 이름은
+ * Tailwind 가 스캔하지 못해 유틸리티가 아예 생성되지 않는다.
+ * 리터럴로 두면 상수를 고쳐도 화면이 안 바뀌는 이중 관리가 된다.
+ */
 function Pill({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className="pointer-events-auto flex items-center gap-0.5 rounded-full p-1"
-      style={SURFACE}
+      className="pointer-events-auto flex items-center rounded-full"
+      style={{ ...SURFACE, gap: BOTTOM_NAV_ITEM_GAP, padding: BOTTOM_NAV_PAD }}
     >
       {children}
     </div>
