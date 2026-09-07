@@ -4,7 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CameraIcon, HomeIcon, MapIcon, ShopIcon, UserIcon, type IconProps } from "@/components/icons";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { BOTTOM_NAV_AVATAR, BOTTOM_NAV_ICON, BOTTOM_NAV_ITEM } from "@/lib/bottom-nav";
+import {
+  BOTTOM_NAV_AVATAR,
+  BOTTOM_NAV_ICON,
+  BOTTOM_NAV_ICON_ERODE,
+  BOTTOM_NAV_ICON_FILTER,
+  BOTTOM_NAV_ITEM,
+} from "@/lib/bottom-nav";
 
 /**
  * 좌우로 갈라진 플로팅 알약 두 개. 가운데를 비워 콘텐츠가 보이고, 그 자리로 탭도 통과한다.
@@ -89,7 +95,7 @@ function NavItem({
         <Icon
           size={BOTTOM_NAV_ICON}
           className="relative transition-colors duration-200"
-          style={{ color: active ? ACTIVE : MUTED }}
+          style={{ color: active ? ACTIVE : MUTED, filter: `url(#${BOTTOM_NAV_ICON_FILTER})` }}
         />
       )}
     </Link>
@@ -135,6 +141,14 @@ export function BottomNav({ isLoggedIn, profileImageUrl }: Props) {
       className="nav-tuckable pointer-events-none fixed inset-x-0 z-40"
       style={{ bottom: "var(--bottom-nav-bottom)" }}
     >
+      {/* 아이콘 획을 깎는 필터. 아바타에는 걸지 않는다 — 사진은 깎을 획이 없다.
+          한 번만 정의하고 다섯 아이콘이 id 로 참조한다. */}
+      <svg aria-hidden className="absolute size-0" focusable="false">
+        <filter id={BOTTOM_NAV_ICON_FILTER} x="-20%" y="-20%" width="140%" height="140%">
+          <feMorphology operator="erode" radius={BOTTOM_NAV_ICON_ERODE} />
+        </filter>
+      </svg>
+
       <nav
         aria-label="Main"
         className="nav-rise mx-auto flex max-w-[540px] items-center justify-between px-5"

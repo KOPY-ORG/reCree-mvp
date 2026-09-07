@@ -11,6 +11,20 @@
 export const BOTTOM_NAV_ICON = 24;
 
 /**
+ * 아이콘 획을 얼마나 깎을지 (viewBox 단위).
+ *
+ * 가이드 SVG 는 다섯 중 넷이 선이 아니라 면이라 획 굵기 2.0 이 도형에 박혀 있다 —
+ * stroke-width 로는 못 바꾸고, 크기를 줄이면 굵기와 함께 아이콘도 작아진다.
+ * 그래서 렌더된 모양을 feMorphology 로 사방 0.25 씩 깎는다.
+ * 획은 양쪽에서 깎이므로 2.0 → 1.5 가 되고, 바깥 실루엣은 0.25(24 중 1%)만 준다.
+ * 크기는 그대로 두고 굵기만 내리는 유일한 방법이다.
+ */
+export const BOTTOM_NAV_ICON_ERODE = 0.25;
+
+/** 위 필터의 DOM id. BottomNav 가 한 번만 정의하고 다섯 아이콘이 참조한다 */
+export const BOTTOM_NAV_ICON_FILTER = "nav-icon-thin";
+
+/**
  * 프로필 아바타 지름. 아이콘보다 크다.
  *
  * 선으로 그린 아이콘은 24 상자 안에서 팔다리가 끝까지 뻗어 그만큼 커 보이는데,
