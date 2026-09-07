@@ -86,7 +86,7 @@ export function DiscoverSearchBar({
                 const q = query.trim();
                 if (q) onSelectTerm(q);
               }}
-              className="self-stretch shrink-0 px-4 flex items-center bg-brand-sub disabled:opacity-50"
+              className="self-stretch shrink-0 px-4 flex items-center bg-brand disabled:opacity-50"
             >
               <Search className="w-4 h-4" />
             </button>

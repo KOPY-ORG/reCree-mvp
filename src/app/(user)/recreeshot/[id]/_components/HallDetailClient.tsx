@@ -97,7 +97,7 @@ export function HallDetailClient({
           <Bookmark
             className="size-5"
             strokeWidth={1.5}
-            style={saved ? { fill: "#C8FF09", stroke: "#C8FF09" } : undefined}
+            style={saved ? { fill: "#D3FD52", stroke: "#D3FD52" } : undefined}
           />
         </button>
       </div>

@@ -240,7 +240,7 @@ export function ReCreeshotEditor({
                   style={{
                     top: badgeTop,
                     right: badgeRight,
-                    background: "linear-gradient(to right, #C8FF09, white 150%)",
+                    background: "linear-gradient(to right, #D3FD52, white 150%)",
                     boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
                   }}
                 >
@@ -278,7 +278,7 @@ export function ReCreeshotEditor({
                 </span>
                 <span
                   className="relative shrink-0 rounded-full transition-colors"
-                  style={{ width: 34, height: 19, background: showMatchScore ? "#C8FF09" : "rgba(255,255,255,.26)" }}
+                  style={{ width: 34, height: 19, background: showMatchScore ? "#D3FD52" : "rgba(255,255,255,.26)" }}
                 >
                   <span
                     className="absolute w-[15px] h-[15px] rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,.3)] transition-[left]"

@@ -17,7 +17,7 @@ export function NewReCreeshotFab() {
             transition-all duration-200
             outline-none
           "
-          style={{ background: "linear-gradient(135deg, rgba(216,255,120,0.92) 0%, rgba(200,255,9,0.92) 100%)" }}
+          style={{ background: "linear-gradient(135deg, rgba(216,255,120,0.92) 0%, rgba(211,253,82,0.92) 100%)" }}
         >
           <Plus size={20} color="#000000" strokeWidth={2.0} />
         </Link>

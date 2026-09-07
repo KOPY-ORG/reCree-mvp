@@ -166,7 +166,7 @@ function ScannedPhoto({ url, delay }: { url: string | null; delay: string }) {
       )}
       {/* 스캔 라인 */}
       <div
-        className="absolute inset-x-0 h-0.5 bg-brand shadow-[0_0_8px_2px_#C8FF09]"
+        className="absolute inset-x-0 h-0.5 bg-brand shadow-[0_0_8px_2px_#D3FD52]"
         style={{
           animation: "scanline 1.6s linear infinite",
           animationDelay: delay,

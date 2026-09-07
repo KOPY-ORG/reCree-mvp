@@ -87,13 +87,13 @@ export function TextColorPicker({
         </button>
         <button
           type="button"
-          onClick={() => onChange("#C8FF09")}
+          onClick={() => onChange("#D3FD52")}
           className={`flex-1 py-1.5 rounded text-xs font-semibold border transition-all ${
-            value === "#C8FF09"
-              ? "ring-2 ring-[#C8FF09]/50 border-[#C8FF09]"
+            value === "#D3FD52"
+              ? "ring-2 ring-[#D3FD52]/50 border-[#D3FD52]"
               : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
           }`}
-          style={value === "#C8FF09" ? { background: "#C8FF09", color: "#000000" } : {}}
+          style={value === "#D3FD52" ? { background: "#D3FD52", color: "#000000" } : {}}
         >
           메인
         </button>

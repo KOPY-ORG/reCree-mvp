@@ -31,7 +31,7 @@ export function TagGroupConfigDialog({ open, mode, groupConfig, onClose, onCreat
   const [nameEn, setNameEn] = useState("");
   const [displayLabel, setDisplayLabel] = useState("");
   const [isGradient, setIsGradient] = useState(false);
-  const [colorHex, setColorHex] = useState("#C8FF09");
+  const [colorHex, setColorHex] = useState("#D3FD52");
   const [colorHex2, setColorHex2] = useState("#ffffff");
   const [gradientDir, setGradientDir] = useState<"to bottom" | "to right">("to bottom");
   const [gradientStop, setGradientStop] = useState(150);
@@ -53,7 +53,7 @@ export function TagGroupConfigDialog({ open, mode, groupConfig, onClose, onCreat
         setNameEn("");
         setDisplayLabel("");
         setIsGradient(false);
-        setColorHex("#C8FF09");
+        setColorHex("#D3FD52");
         setColorHex2("#ffffff");
         setGradientDir("to bottom");
         setGradientStop(150);

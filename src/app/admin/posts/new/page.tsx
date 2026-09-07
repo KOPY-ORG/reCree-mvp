@@ -51,7 +51,7 @@ export default async function NewPostPage() {
   const configMap = new Map(tagGroupConfigs.map((c) => [c.group, c]));
   const allTags = allTagsRaw.map((tag) => ({
     ...tag,
-    effectiveColorHex: tag.colorHex ?? configMap.get(tag.group)?.colorHex ?? "#C6FD09",
+    effectiveColorHex: tag.colorHex ?? configMap.get(tag.group)?.colorHex ?? "#D3FD52",
     effectiveColorHex2: tag.colorHex2 ?? configMap.get(tag.group)?.colorHex2 ?? null,
     effectiveGradientDir: configMap.get(tag.group)?.gradientDir ?? "to bottom",
     effectiveGradientStop: configMap.get(tag.group)?.gradientStop ?? 150,
