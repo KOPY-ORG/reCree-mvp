@@ -29,6 +29,16 @@ const RIGHT_TABS = [
  */
 const ICON_CLASS = "size-[22px]";
 
+/**
+ * 모션은 탭을 누른 결과만 보여준다 — 활성이 어디로 옮겨갔는지.
+ * 그 밖에는 움직이지 않는다. 셋 다 prefers-reduced-motion 에서 꺼진다.
+ * 곡선은 끝에서 살짝 넘겼다 돌아오는 스프링이다.
+ */
+// 실제 정의는 globals.css 에 있다. prefers-reduced-motion 도 거기서 함께 끈다.
+const POP_ANIM = "nav-pop";
+const RING_ANIM = "nav-ring";
+const RISE_ANIM = "nav-rise";
+
 interface Props {
   isLoggedIn: boolean;
   profileImageUrl: string | null;
@@ -61,21 +71,30 @@ export function BottomNav({ isLoggedIn, profileImageUrl }: Props) {
         href={href}
         aria-label={label}
         aria-current={active ? "page" : undefined}
-        className="flex size-12 flex-none items-center justify-center rounded-full transition-transform active:scale-95"
-        style={active && !showAvatar ? { background: "var(--brand)" } : undefined}
+        className="relative flex size-12 flex-none items-center justify-center rounded-full transition-transform active:scale-95"
       >
+        {/* 라임 원을 배경이 아니라 별도 요소로 둔다. 활성이 될 때만 마운트되므로
+            애니메이션이 "그때 한 번" 재생된다 — 배경색이면 다시 재생할 방법이 없다. */}
+        {active && !showAvatar && (
+          <span
+            aria-hidden
+            className={`absolute inset-0 rounded-full ${POP_ANIM}`}
+            style={{ background: "var(--brand)" }}
+          />
+        )}
+
         {showAvatar ? (
           // 링은 ring-* 유틸리티 대신 box-shadow 로 직접 그린다. Tailwind 링 변수를 타면
           // 여기서 투명하게 계산되는데, 링은 Profile 활성 표시의 전부라 사라지면 안 된다.
           <span
-            className="flex rounded-full"
+            className={`relative flex rounded-full ${active ? RING_ANIM : ""}`}
             style={active ? { boxShadow: "0 0 0 3px var(--brand)" } : undefined}
           >
             <UserAvatar imageUrl={profileImageUrl} size={28} />
           </span>
         ) : (
           <Icon
-            className={ICON_CLASS}
+            className={`relative ${ICON_CLASS} transition-colors duration-200`}
             style={{ color: active ? "var(--brand-foreground)" : "var(--palette-gray-900)" }}
             strokeWidth={1.9}
           />
@@ -92,7 +111,7 @@ export function BottomNav({ isLoggedIn, profileImageUrl }: Props) {
     >
       <nav
         aria-label="Main"
-        className="mx-auto flex max-w-[540px] items-center justify-between px-4"
+        className={`mx-auto flex max-w-[540px] items-center justify-between px-4 ${RISE_ANIM}`}
       >
         <Pill>{LEFT_TABS.map(renderTab)}</Pill>
         <Pill>{RIGHT_TABS.map(renderTab)}</Pill>

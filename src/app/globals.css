@@ -63,6 +63,37 @@
   --radius-4xl: calc(var(--radius) + 16px);
 }
 
+/* 탭바 모션. 탭을 누른 결과(무엇이 활성이 됐는지)만 보여준다.
+   animation 선언을 @keyframes 와 같은 파일에 둔다 — Tailwind 의 animate-[...] 유틸리티로
+   쓰면 dev 에서 keyframes 가 "참조 없음"으로 지워진다(유틸리티가 다른 단계에서 생성됨). */
+.nav-pop  { animation: nav-pop 260ms cubic-bezier(.34, 1.56, .64, 1); }
+.nav-ring { animation: nav-ring 260ms cubic-bezier(.34, 1.56, .64, 1); }
+.nav-rise { animation: nav-rise 320ms ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-pop, .nav-ring, .nav-rise { animation: none; }
+}
+
+/* 활성 라임 원이 눌린 자리에서 살짝 튀며 자리를 잡는다 */
+@keyframes nav-pop {
+  0%   { transform: scale(.4); opacity: 0; }
+  60%  { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* 아바타는 원 대신 링이라 같은 리듬을 반지름으로 바꿔 쓴다 */
+@keyframes nav-ring {
+  0%   { box-shadow: 0 0 0 0 var(--brand); }
+  60%  { box-shadow: 0 0 0 4px var(--brand); }
+  100% { box-shadow: 0 0 0 3px var(--brand); }
+}
+
+/* 탭바가 처음 붙을 때 · 숨김 화면에서 돌아올 때 한 번. 그 외에는 움직이지 않는다 */
+@keyframes nav-rise {
+  from { transform: translateY(14px); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+
 :root {
   --radius: 0.625rem;
 

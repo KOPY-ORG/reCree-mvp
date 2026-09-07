@@ -808,7 +808,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
           className={`absolute right-3 z-[45] flex flex-col gap-3 ${
             effectiveSheetState === "full" ? "opacity-0 pointer-events-none" : "opacity-100"
           }`}
-          style={{ bottom: `calc(var(--bottom-nav-space) + ${fabSheetH} + 12px)`, transition: "bottom 300ms ease, opacity 300ms ease" }}
+          style={{ bottom: `calc(${fabSheetH} + 12px)`, transition: "bottom 300ms ease, opacity 300ms ease" }}
         >
           {/* 현위치 버튼 */}
           <button
