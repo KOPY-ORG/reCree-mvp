@@ -164,6 +164,11 @@
 @layer base {
   html {
     font-size: 100%; /* 16px base — text-sm = 14px */
+    /* 스크롤바 자리를 항상 비워둔다. 스크롤이 생기고 없어질 때마다 뷰포트 폭이
+       20px 바뀌고, mx-auto 로 가운데 맞춘 것들(탭바·헤더·앱 컬럼·토스트)이
+       그 절반인 10px 씩 좌우로 튀었다. /feed(스크롤 있음) ↔ /discover(overflow-hidden)
+       가 대표적인 경우다. 오버레이 스크롤바를 쓰는 모바일에는 영향이 없다. */
+    scrollbar-gutter: stable;
   }
   * {
     @apply border-border outline-ring/50;
