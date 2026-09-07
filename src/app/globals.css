@@ -22,7 +22,6 @@
 
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
-  --color-brand-sub: var(--brand-sub);
   --color-brand-sub2: var(--brand-sub2);
   --color-brand-sub3: var(--brand-sub3);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -63,16 +62,85 @@
   --radius-4xl: calc(var(--radius) + 16px);
 }
 
+/* ── 탭바 모션 ────────────────────────────────────────────────────────────────
+   하루에 수십 번 보는 동작이라 "무엇이 바뀌었는지"만 말하고 끝낸다.
+   들어오는 것은 감속(ease-out), 나가는 것은 가속(ease-in) 곡선에 더 짧은 시간.
+   animation 선언을 @keyframes 와 같은 파일에 둔다 — Tailwind 의 animate-[...] 유틸리티로
+   쓰면 dev 에서 keyframes 가 "참조 없음"으로 지워진다(유틸리티가 다른 단계에서 생성됨). */
+
+:root {
+  --nav-enter: cubic-bezier(0, 0, 0.2, 1);
+  --nav-exit:  cubic-bezier(0.4, 0, 1, 1);
+  --nav-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.nav-pop  { animation: nav-pop 260ms var(--nav-spring); }
+.nav-rise { animation: nav-rise 320ms var(--nav-enter); }
+
+/* 라임 칸이 옮겨온 자리에 앉는다. 하루에 수십 번 보므로 튐을 아주 작게 둔다 —
+   48 원이 크게 튀면 팝업처럼 보이고 금방 거슬린다. */
+@keyframes nav-pop {
+  0%   { transform: scale(.9); opacity: 0; }
+  60%  { transform: scale(1.03); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* 탭바가 처음 붙을 때 · 숨김 화면에서 돌아올 때 한 번. 그 외에는 움직이지 않는다 */
+@keyframes nav-rise {
+  from { transform: translateY(14px); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+
+/* 탭바가 물러나면 시트 리스트의 하단 여백도 같이 줄어든다.
+   안 그러면 탭바가 없는데 90px 이 비어 있는 채로 리스트가 끝난다. */
+html[data-nav-tucked] {
+  --sheet-scroll-pb: var(--bottom-nav-bottom);
+}
+
+/* 지도 시트가 화면을 덮으면 탭바가 물러난다 (setBottomNavTucked → <html data-nav-tucked>).
+   페이드에 아래로 20px 을 더한다 — 화면 가장자리와의 거리(--bottom-nav-inset)만큼이라
+   "가라앉는다"로 읽힌다. 완전히 밀어내면 이동의 뒷부분이 이미 투명해 보이지 않는다.
+   visibility 는 포커스 순서와 접근성 트리에서도 빼려고 넣었다. 나갈 때만 지연을 준다. */
+.nav-tuckable {
+  transition:
+    opacity 220ms var(--nav-enter),
+    transform 220ms var(--nav-enter),
+    visibility 0s;
+}
+
+html[data-nav-tucked] .nav-tuckable {
+  opacity: 0;
+  transform: translateY(var(--bottom-nav-inset));
+  visibility: hidden;
+  transition:
+    opacity 160ms var(--nav-exit),
+    transform 160ms var(--nav-exit),
+    visibility 0s 160ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-pop, .nav-rise { animation: none; }
+  .nav-tuckable { transition: none; }
+}
+
 :root {
   --radius: 0.625rem;
 
+  /* 플로팅 탭바 기하. 숫자 짝은 src/lib/bottom-nav.ts 다 */
+  --bottom-nav-inset: 20px;
+  --bottom-nav-pill-h: 58px;
+  --bottom-nav-gap: 12px;
+  --bottom-nav-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--bottom-nav-inset));
+  --bottom-nav-space: calc(var(--bottom-nav-bottom) + var(--bottom-nav-pill-h) + var(--bottom-nav-gap));
+  --sheet-scroll-pb: var(--bottom-nav-space);
+
   /* ── Raw Palette ────────────────── */
-  --palette-brand:      #C8FF09;
-  --palette-brand-sub:  #D0FF6C;
+  --palette-brand:      #D3FD52;
   --palette-brand-sub2: #E7FFB3;
   --palette-brand-sub3: #F9FFE3;
   --palette-black:      #000000;
   --palette-gray-900:   #3F3D3D;
+  --palette-gray-800:   #636363;
   --palette-gray-700:   #737373;
   --palette-gray-400:   #BABABA;
   --palette-gray-100:   #F3F3F3;
@@ -80,7 +148,6 @@
 
   /* ── Brand ──────────────────────── */
   --brand:              var(--palette-brand);
-  --brand-sub:          var(--palette-brand-sub);
   --brand-sub2:         var(--palette-brand-sub2);
   --brand-sub3:         var(--palette-brand-sub3);
   --brand-foreground:   var(--palette-black);
@@ -126,6 +193,11 @@
 @layer base {
   html {
     font-size: 100%; /* 16px base — text-sm = 14px */
+    /* 스크롤바 자리를 항상 비워둔다. 스크롤이 생기고 없어질 때마다 뷰포트 폭이
+       20px 바뀌고, mx-auto 로 가운데 맞춘 것들(탭바·헤더·앱 컬럼·토스트)이
+       그 절반인 10px 씩 좌우로 튀었다. /feed(스크롤 있음) ↔ /discover(overflow-hidden)
+       가 대표적인 경우다. 오버레이 스크롤바를 쓰는 모바일에는 영향이 없다. */
+    scrollbar-gutter: stable;
   }
   * {
     @apply border-border outline-ring/50;

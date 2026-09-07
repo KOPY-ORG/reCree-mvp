@@ -4,6 +4,7 @@ import { useCallback, useEffect, useImperativeHandle, forwardRef } from "react";
 import { APIProvider, Map, AdvancedMarker, useMap } from "@vis.gl/react-google-maps";
 import { PlaceMarker } from "./PlaceMarker";
 import type { MarkerGradient } from "@/lib/map-utils";
+import { BOTTOM_NAV_SPACE } from "@/lib/bottom-nav";
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 const MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID ?? "DEMO_MAP_ID";
@@ -51,7 +52,7 @@ function MapContent({
   boundsKey,
   onMarkerClick,
   onMapClick,
-  bottomOffset = 64,
+  bottomOffset = BOTTOM_NAV_SPACE,
   userLocation,
   cameraRef,
 }: Omit<Props, "className"> & { cameraRef: React.Ref<FocusCameraHandle> }) {
@@ -175,7 +176,7 @@ function MapContent({
       {places.map((place) => {
         const isSelected = selectedPlaceId === place.id || (focusedPlaceIds?.has(place.id) ?? false);
         const isHighlighted = highlightedIds?.has(place.id) ?? false;
-        const color = place.markerColor ?? "#C8FF09";
+        const color = place.markerColor ?? "#D3FD52";
         return (
           <AdvancedMarker
             key={place.id}
@@ -203,7 +204,7 @@ function MapContent({
 }
 
 export const InteractiveMap = forwardRef<FocusCameraHandle, Props>(function InteractiveMap(
-  { places, selectedPlaceId, focusedPlaceIds, highlightedIds, boundsKey, onMarkerClick, onMapClick, className, bottomOffset = 64, userLocation },
+  { places, selectedPlaceId, focusedPlaceIds, highlightedIds, boundsKey, onMarkerClick, onMapClick, className, bottomOffset = BOTTOM_NAV_SPACE, userLocation },
   ref
 ) {
   if (!API_KEY) {

@@ -116,7 +116,7 @@ export default async function CourseDetailPage({ params, searchParams }: Props) 
               {isMine && !course.isPublic && (
                 <span
                   className="rounded-md px-2 py-[5px] text-[9.5px] font-semibold leading-none"
-                  style={{ background: "#C8FF09", color: INK }}
+                  style={{ background: "#D3FD52", color: INK }}
                 >
                   Private
                 </span>
@@ -293,9 +293,9 @@ export default async function CourseDetailPage({ params, searchParams }: Props) 
 
       {/* ── 하단 CTA ─────────────────────────────────────────────────────
           내 코스는 배너 우상단 Edit 으로 간다 (시안과 동일).
-          BottomNav(h-16) 위에 떠 있도록 bottom-16. */}
+          플로팅 탭바 위에 떠 있도록 var(--bottom-nav-space). */}
       {!isMine && (
-        <div className="sticky bottom-16 z-30 mt-6">
+        <div className="sticky bottom-[var(--bottom-nav-space)] z-30 mt-6">
           <CopyCourseButton
             courseId={course.id}
             isLoggedIn={!!currentUser}

@@ -9,7 +9,7 @@ const COLORS = [
   "#e0f2e9",
   "#e3f2fd",
   "#f3e8ff",
-  "#C8FF09",
+  "#D3FD52",
   "#e8e8e8",
   "#111111",
 ];

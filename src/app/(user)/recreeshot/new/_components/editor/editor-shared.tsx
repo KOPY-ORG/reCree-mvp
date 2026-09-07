@@ -46,7 +46,7 @@ export function StepNextButton({ label, onClick, disabled }: {
           width: "100%",
           padding: "14px 0",
           borderRadius: 9999,
-          background: disabled ? "#e5e5e5" : "#C6FD09",
+          background: disabled ? "#e5e5e5" : "#D3FD52",
           border: "none",
           fontWeight: 700,
           fontSize: 16,

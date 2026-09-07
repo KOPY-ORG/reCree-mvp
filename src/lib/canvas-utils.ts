@@ -40,7 +40,7 @@ export function drawReCreeshotBadge(
   const badgeX = W - badgeW - W * 0.03;
   const badgeY = W * 0.03;
   const grad = ctx.createLinearGradient(badgeX, 0, badgeX + badgeW * 1.5, 0);
-  grad.addColorStop(0, "#C8FF09");
+  grad.addColorStop(0, "#D3FD52");
   grad.addColorStop(1, "#ffffff");
   ctx.save();
   ctx.shadowColor = "rgba(0,0,0,0.15)";

@@ -28,11 +28,11 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
   return (
     <>
       {toast && (
-        <div className="fixed bottom-2 left-1/2 -translate-x-1/2 z-[200] px-4 py-2 rounded-full bg-black/50 text-white text-sm whitespace-nowrap shadow-lg pointer-events-none">
+        <div className="fixed bottom-[var(--bottom-nav-space)] left-1/2 -translate-x-1/2 z-[200] px-4 py-2 rounded-full bg-black/50 text-white text-sm whitespace-nowrap shadow-lg pointer-events-none">
           {toast.message}
         </div>
       )}
-      <div className="absolute inset-x-4 bottom-4 z-50 bg-white rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.15)] overflow-hidden max-h-[50%]">
+      <div className="absolute inset-x-4 bottom-[var(--bottom-nav-space)] z-50 bg-white rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.15)] overflow-hidden max-h-[50%]">
 
         {/* 헤더 */}
         <div className="px-5 pt-4 pb-2">

@@ -24,10 +24,19 @@ const SEARCH_DEBOUNCE_MS = 400;
  */
 const TOUR_API_ATTRIBUTION = "출처: ⓒ한국관광공사";
 
+/**
+ * 라벨은 360px 한 줄에 세 개가 다 들어가는 길이로 짧게 쓴다.
+ * 12.5px SemiBold 실측 폭 — Search 43 / Saved places 82 / Nearby 44.
+ * px-4 두 쪽(32) + gap-1.5 두 개(12)를 더해도 277px 이라 360px 의 328px 안에 들어간다.
+ *
+ * "Saved" 만 쓰면 무엇이 저장된 건지 흐려져서 places 를 남긴다.
+ * "Nearby" 는 반경 기준이라는 뜻이 살아 있고, 관광 데이터라는 것은
+ * 패널 머리말("Around ...")과 출처 표기가 말해준다.
+ */
 const TABS = [
-  { id: "search", label: "Search places" },
-  { id: "saved", label: "Saved Places" },
-  { id: "nearby", label: "Nearby Attractions" },
+  { id: "search", label: "Search" },
+  { id: "saved", label: "Saved places" },
+  { id: "nearby", label: "Nearby" },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -194,7 +203,16 @@ function Loading() {
   );
 }
 
-function Message({ title, body }: { title: string; body?: string }) {
+function Message({
+  title,
+  body,
+  action,
+}: {
+  title: string;
+  body?: string;
+  /** 막다른 상태에서 사용자가 할 수 있는 한 가지. 없으면 버튼도 없다 */
+  action?: { label: string; onClick: () => void };
+}) {
   return (
     <Centered>
       <p className="text-[13px] font-medium leading-[1.3]" style={{ color: INK }}>
@@ -204,6 +222,16 @@ function Message({ title, body }: { title: string; body?: string }) {
         <p className="text-[11.5px] font-medium leading-[1.45]" style={{ color: MUTED }}>
           {body}
         </p>
+      )}
+      {action && (
+        <button
+          type="button"
+          onClick={action.onClick}
+          className="mt-1 h-11 rounded-full px-5 text-[12.5px] font-semibold transition-colors active:opacity-70"
+          style={{ background: CHIP_BG, color: INK }}
+        >
+          {action.label}
+        </button>
       )}
     </Centered>
   );
@@ -244,6 +272,8 @@ export function PlaceAddSheet({
   // 실패해도 이 탭만 비고 시트와 편집기는 그대로 산다.
   const [nearby, setNearby] = useState<Row[] | "failed" | null>(null);
   const nearbyKeyRef = useRef<string | null>(null);
+  /** 재시도 카운터. 기준점이 그대로라 이 값이 바뀌어야 아래 effect 가 다시 돈다 */
+  const [nearbyAttempt, setNearbyAttempt] = useState(0);
 
   /** 이 시트를 연 동안 담은 관광 데이터. Place 와 달리 서버가 중복을 못 막는다 */
   const [addedExternal, setAddedExternal] = useState<string[]>([]);
@@ -305,7 +335,17 @@ export function PlaceAddSheet({
     return () => {
       alive = false;
     };
-  }, [open, tab, anchor, anchorKey]);
+  }, [open, tab, anchor, anchorKey, nearbyAttempt]);
+
+  /**
+   * 실패한 Nearby 탭에서 사용자가 할 수 있는 유일한 행동.
+   * 기준점 가드를 풀고 로딩으로 되돌린 뒤 effect 를 한 번 더 돌린다.
+   */
+  function retryNearby() {
+    nearbyKeyRef.current = null;
+    setNearby(null);
+    setNearbyAttempt((n) => n + 1);
+  }
 
   // 검색 디바운스. 검색어가 비면 아무것도 부르지 않고 인기 장소를 그대로 보여준다.
   useEffect(() => {
@@ -367,7 +407,7 @@ export function PlaceAddSheet({
         return (
           <Message
             title="No places found"
-            body="Try a different spelling, or look under Nearby Attractions."
+            body="Try a different spelling, or look under Nearby."
           />
         );
       }
@@ -419,6 +459,7 @@ export function PlaceAddSheet({
         <Message
           title="Couldn't load attractions"
           body="The tourism service isn't responding. The other tabs still work."
+          action={{ label: "Try again", onClick: retryNearby }}
         />
       );
     }
@@ -475,8 +516,10 @@ export function PlaceAddSheet({
           </button>
         </div>
 
-        {/* 탭 — 가로 스크롤. 390px 에서 세 개가 한 줄에 다 들어가지 않는다 */}
-        <div className="flex flex-none gap-1.5 overflow-x-auto px-4 pb-3 pt-1 [scrollbar-width:none]">
+        {/* 탭 — 가로 스크롤을 쓰지 않는다. 스크롤바를 숨긴 스크롤러는 잘린 탭을
+            밀 수 있다는 단서를 주지 못해서, 셋이 항상 한 줄에 들어가는 라벨을 쓰고
+            넘칠 때는 감추는 대신 wrap 시킨다. 잘린 채 숨는 상태가 생기지 않는다. */}
+        <div className="flex flex-none flex-wrap gap-1.5 px-4 pb-3 pt-1">
           {TABS.map((t) => (
             <button
               key={t.id}

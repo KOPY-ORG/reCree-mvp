@@ -132,7 +132,7 @@ export default async function CategoriesPage({
     sortOrder: c.sortOrder,
   }));
 
-  const DEFAULT_GROUP_COLOR = { colorHex: "#C8FF09", colorHex2: null as string | null, gradientDir: "to bottom", gradientStop: 150, textColorHex: "#000000" };
+  const DEFAULT_GROUP_COLOR = { colorHex: "#D3FD52", colorHex2: null as string | null, gradientDir: "to bottom", gradientStop: 150, textColorHex: "#000000" };
 
   const totalTopicCount = rawTopics.length;
   const totalTagCount = rawTags.length;

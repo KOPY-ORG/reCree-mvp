@@ -10,7 +10,12 @@ const ENG_BASE = "http://apis.data.go.kr/B551011/EngService2";
 const MOBILE_OS = "ETC";
 const MOBILE_APP = "recree";
 
-const REQUEST_TIMEOUT_MS = 15_000;
+/**
+ * 스파이크 실측(prisma/scripts/tour-api-spike-2-result.json): p50 103ms · p95 260ms · max 277ms.
+ * p95 의 15배로 잡는다 — 포털이 열 배 느려져도 통과하고, 죽어 있을 때는 4초에 끊는다.
+ * searchFestival2 는 최대 3페이지를 순차 호출하므로 최악이 이 값의 3배(12초)다.
+ */
+const REQUEST_TIMEOUT_MS = 4_000;
 
 export type CallResult = {
   ok: boolean;

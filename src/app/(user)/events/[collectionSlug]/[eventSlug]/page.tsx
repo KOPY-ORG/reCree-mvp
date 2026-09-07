@@ -350,7 +350,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
                 <span
                   className="inline-flex items-center rounded-full"
                   style={{
-                    background: "#C8FF09",
+                    background: "#D3FD52",
                     color: "#16171A",
                     height: 27,
                     paddingInline: 11,
@@ -500,7 +500,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
               {event.entryType === "WALK_IN" && (
                 <span
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-extrabold"
-                  style={{ background: "#C8FF09", color: "#16210A", fontSize: 12.5 }}
+                  style={{ background: "#D3FD52", color: "#16210A", fontSize: 12.5 }}
                 >
                   ✓ No booking
                 </span>
@@ -621,7 +621,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
                               className="flex flex-1 items-center justify-center gap-1.5 px-3 py-2 rounded-[10px] font-bold"
                               style={{
                                 background: "#F0FAE8",
-                                border: "1px solid #C8FF09",
+                                border: "1px solid #D3FD52",
                                 color: "#2A4A00",
                                 fontSize: 12.5,
                               }}

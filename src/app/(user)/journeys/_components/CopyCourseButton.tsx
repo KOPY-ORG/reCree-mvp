@@ -65,7 +65,7 @@ export function CopyCourseButton({
         className="flex h-[54px] w-full items-center justify-center gap-[9px] rounded-[27px] transition-opacity disabled:opacity-60"
         style={{ background: INK }}
       >
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#C8FF09" strokeWidth="2.2">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#D3FD52" strokeWidth="2.2">
           <rect x="8" y="8" width="12" height="12" rx="3" />
           <path d="M16 5H6.5A2.5 2.5 0 004 7.5V16" />
         </svg>
