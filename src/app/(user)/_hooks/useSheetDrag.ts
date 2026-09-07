@@ -8,6 +8,8 @@ interface UseSheetDragOptions<S extends string> {
   getSnapHeights: () => number[];
   currentState: S;
   onStateChange: (state: S) => void;
+  /** 드래그 중 매 프레임의 시트 높이. 놓기 전에 반응해야 하는 것(탭바 퇴장)에 쓴다 */
+  onDragMove?: (height: number) => void;
 }
 
 /**
@@ -20,6 +22,7 @@ export function useSheetDrag<S extends string>({
   getSnapHeights,
   currentState,
   onStateChange,
+  onDragMove,
 }: UseSheetDragOptions<S>) {
   const [isDragging, setIsDragging] = useState(false);
 
@@ -54,7 +57,9 @@ export function useSheetDrag<S extends string>({
     const snapHeights = getSnapHeights();
     const minH = snapHeights[0];
     const maxH = snapHeights[snapHeights.length - 1];
-    sheetRef.current.style.height = `${Math.max(minH, Math.min(newH, maxH))}px`;
+    const h = Math.max(minH, Math.min(newH, maxH));
+    sheetRef.current.style.height = `${h}px`;
+    onDragMove?.(h);
 
     const dt = e.timeStamp - lastPointerTime.current;
     if (dt > 0) velocityY.current = (e.clientY - lastPointerY.current) / dt;

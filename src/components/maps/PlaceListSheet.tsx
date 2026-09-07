@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect } from "react";
 import { useSheetDrag } from "@/app/(user)/_hooks/useSheetDrag";
-import { BOTTOM_NAV_SPACE } from "@/lib/bottom-nav";
+import { BOTTOM_NAV_SPACE, setBottomNavTucked } from "@/lib/bottom-nav";
 
 export type PlaceListSheetState = "hidden" | "tab-only" | "half" | "full";
 
@@ -70,12 +70,33 @@ export function PlaceListSheet({ state, onStateChange, topOffset = 24, hasActive
     ];
   }
 
+  // 시트를 끝까지(full) 올렸을 때만 탭바가 물러난다. 그때는 시트가 화면 전체를
+  // 대신하므로 알약 두 개가 리스트 위에 얹힌 군더더기가 된다.
+  // half 는 지도와 리스트를 같이 보는 상태라 탭바가 그대로 있어야 한다.
+  //
+  // 드래그를 손가락 위치에 비례해 따라가게 하지 않는다 — 탭바는 시트의 일부가 아니라
+  // 뒤에 있는 화면의 것이라, 붙어 움직이면 시트에 매달린 것처럼 보인다.
+  // 대신 임계를 넘는 순간 한 번에 바뀌되 놓기 전에 바뀐다. 임계는 스냅이 쓰는
+  // 경계(half 와 full 의 중간)와 같아서, 드래그 중에 본 결과가 놓았을 때 그대로 남는다.
+  function tuckForHeight(h: number) {
+    const [, halfH, fullH] = getSnapHeights();
+    setBottomNavTucked(h >= (halfH + fullH) / 2);
+  }
+
+  useEffect(() => {
+    setBottomNavTucked(state === "full");
+  }, [state]);
+
+  // 지도를 떠날 때 탭바를 반드시 되돌린다 — 속성은 <html> 에 있어서 화면이 바뀌어도 남는다
+  useEffect(() => () => setBottomNavTucked(false), []);
+
   const { isDragging, dragHandlers } = useSheetDrag<DraggableState>({
     sheetRef,
     stateOrder: DRAGGABLE_STATES,
     getSnapHeights,
     currentState: state === "hidden" ? "tab-only" : state,
     onStateChange,
+    onDragMove: tuckForHeight,
   });
 
   const sheetStyle: React.CSSProperties = {
@@ -108,11 +129,12 @@ export function PlaceListSheet({ state, onStateChange, topOffset = 24, hasActive
         <div ref={headerRef} className="shrink-0">{header}</div>
       )}
 
-      {/* 콘텐츠 — 시트가 바닥까지 내려가므로 마지막 줄이 탭바에 가리지 않게 여기서 비운다 */}
+      {/* 콘텐츠 — 시트가 바닥까지 내려가므로 마지막 줄이 탭바에 가리지 않게 여기서 비운다.
+          탭바가 물러난 상태(half·full)에서는 --sheet-scroll-pb 가 알아서 줄어든다 */}
       <div
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto"
-        style={{ paddingBottom: "var(--bottom-nav-space)" }}
+        style={{ paddingBottom: "var(--sheet-scroll-pb)" }}
       >
         {children}
         {/* 콘텐츠 끝 드래그 spacer */}

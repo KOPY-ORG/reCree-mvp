@@ -1,24 +1,42 @@
-// ─── 플로팅 탭바 기하 ─────────────────────────────────────────────────────────
+// ─── 플로팅 탭바 기하 (Figma Bottom_Tap_ver01) ────────────────────────────────
 // 탭바가 sticky flex 항목에서 오버레이로 바뀌면서 "탭바가 먹는 높이"를 알아야 하는 곳이
 // 아홉 군데로 늘었다 (지도 높이 · 시트 높이와 스냅 · FAB · 맨위로 · sticky CTA · 토스트).
-// 전에는 같은 숫자 64 를 세 파일이 따로 적고 있었고 그게 어긋남의 원인이었다.
 // 값은 여기 한 곳에만 둔다.
 //
 // CSS 짝은 globals.css 의 --bottom-nav-* 변수다. 둘 중 무엇을 쓸지는 이렇게 나눈다.
 //   className 문자열 · style 값  → var(--bottom-nav-space)  (safe-area 포함, 정확)
 //   JS 계산 (지도 패딩 · 스냅)    → 아래 숫자                (safe-area 제외, 근사)
 
-/** 아이콘 버튼 한 변. 44 가 최소선이고 48 은 Material 권장선이다 */
-export const BOTTOM_NAV_BUTTON = 48;
+/** 아이콘 한 변. 가이드 SVG 가 24 그리드에 그려져 있어 원래 크기다 */
+export const BOTTOM_NAV_ICON = 24;
 
-/** 알약 안쪽 여백 */
-export const BOTTOM_NAV_PADDING = 6;
+/**
+ * 프로필 아바타 지름. 아이콘보다 크다.
+ *
+ * 선으로 그린 아이콘은 24 상자 안에서 팔다리가 끝까지 뻗어 그만큼 커 보이는데,
+ * 사진은 원 안에 갇힌 덩어리라 같은 24 여도 작은 점으로 읽힌다.
+ * 32 면 옆 아이콘들과 시각적 무게가 맞고, 활성일 때 라임이 8px 링으로 남는다.
+ */
+export const BOTTOM_NAV_AVATAR = 32;
 
-/** 알약 높이 */
-export const BOTTOM_NAV_PILL_H = BOTTOM_NAV_BUTTON + BOTTOM_NAV_PADDING * 2; // 60
+/**
+ * 칸 한 변. 라벨이 없어 정사각이고, 활성 표시는 이 칸을 채우는 라임 원이 된다.
+ * 알약 안쪽 여백 5(=4+테두리 1)를 빼면 알약 높이가 58 이 되고,
+ * 칸의 반지름 24 는 알약 모서리 29 와 정확히 동심원이 된다.
+ */
+export const BOTTOM_NAV_ITEM = 48;
+
+/** 칸 사이. 인접한 두 칸의 원이 붙지 않을 만큼만 */
+export const BOTTOM_NAV_ITEM_GAP = 2;
+
+/** 알약 안쪽 여백 (테두리 1px 은 별도) */
+export const BOTTOM_NAV_PAD = 4;
+
+/** 알약 높이. 48 + 4·2 + 테두리 1·2 */
+export const BOTTOM_NAV_PILL_H = BOTTOM_NAV_ITEM + BOTTOM_NAV_PAD * 2 + 2; // 58
 
 /** 화면 가장자리에서 탭바까지. 좌·우·아래가 같아야 "떠 있는 물체"로 읽힌다 */
-export const BOTTOM_NAV_INSET = 16;
+export const BOTTOM_NAV_INSET = 20;
 
 /** 탭바와 콘텐츠 사이 최소 간격 */
 export const BOTTOM_NAV_GAP = 12;
@@ -29,9 +47,8 @@ export const BOTTOM_NAV_GAP = 12;
  * env(safe-area-inset-bottom) 은 빠져 있다 — CSS 에서만 더할 수 있기 때문이다.
  * 그래서 이 숫자는 지도 카메라 패딩이나 시트 드래그 스냅 임계처럼
  * 몇십 px 오차가 눈에 보이지 않는 계산에만 쓴다.
- * 실제로 그려지는 높이는 전부 CSS 변수를 쓰므로 기기에서 정확하다.
  */
-export const BOTTOM_NAV_SPACE = BOTTOM_NAV_INSET + BOTTOM_NAV_PILL_H + BOTTOM_NAV_GAP; // 88
+export const BOTTOM_NAV_SPACE = BOTTOM_NAV_INSET + BOTTOM_NAV_PILL_H + BOTTOM_NAV_GAP; // 90
 
 /**
  * 탭바를 숨기는 화면.
@@ -59,4 +76,16 @@ export function isBottomNavHidden(pathname: string): boolean {
  */
 export function isFullBleedScreen(pathname: string): boolean {
   return pathname === "/discover";
+}
+
+/**
+ * 탭바를 잠깐 치운다. 경로로는 알 수 없는 상태 — 지도 시트를 끝까지 올렸을 때다.
+ *
+ * React state 로 올리지 않고 <html> 속성으로 둔다. 탭바는 레이아웃의 형제라
+ * state 를 태우려면 provider 로 (user) 트리 전체를 감싸야 하는데, 그러면 시트를
+ * 드래그하는 동안 지도까지 리렌더된다. 여기서 필요한 건 표시 여부 하나뿐이고
+ * 그건 CSS 가 혼자 처리할 수 있다 — globals.css 의 [data-nav-tucked] 를 보라.
+ */
+export function setBottomNavTucked(tucked: boolean): void {
+  document.documentElement.toggleAttribute("data-nav-tucked", tucked);
 }

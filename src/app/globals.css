@@ -62,29 +62,27 @@
   --radius-4xl: calc(var(--radius) + 16px);
 }
 
-/* 탭바 모션. 탭을 누른 결과(무엇이 활성이 됐는지)만 보여준다.
+/* ── 탭바 모션 ────────────────────────────────────────────────────────────────
+   하루에 수십 번 보는 동작이라 "무엇이 바뀌었는지"만 말하고 끝낸다.
+   들어오는 것은 감속(ease-out), 나가는 것은 가속(ease-in) 곡선에 더 짧은 시간.
    animation 선언을 @keyframes 와 같은 파일에 둔다 — Tailwind 의 animate-[...] 유틸리티로
    쓰면 dev 에서 keyframes 가 "참조 없음"으로 지워진다(유틸리티가 다른 단계에서 생성됨). */
-.nav-pop  { animation: nav-pop 260ms cubic-bezier(.34, 1.56, .64, 1); }
-.nav-ring { animation: nav-ring 260ms cubic-bezier(.34, 1.56, .64, 1); }
-.nav-rise { animation: nav-rise 320ms ease-out; }
 
-@media (prefers-reduced-motion: reduce) {
-  .nav-pop, .nav-ring, .nav-rise { animation: none; }
+:root {
+  --nav-enter: cubic-bezier(0, 0, 0.2, 1);
+  --nav-exit:  cubic-bezier(0.4, 0, 1, 1);
+  --nav-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* 활성 라임 원이 눌린 자리에서 살짝 튀며 자리를 잡는다 */
+.nav-pop  { animation: nav-pop 260ms var(--nav-spring); }
+.nav-rise { animation: nav-rise 320ms var(--nav-enter); }
+
+/* 라임 칸이 옮겨온 자리에 앉는다. 하루에 수십 번 보므로 튐을 아주 작게 둔다 —
+   60×48 판이 크게 튀면 팝업처럼 보이고 금방 거슬린다. */
 @keyframes nav-pop {
-  0%   { transform: scale(.4); opacity: 0; }
-  60%  { transform: scale(1.08); opacity: 1; }
+  0%   { transform: scale(.9); opacity: 0; }
+  60%  { transform: scale(1.03); opacity: 1; }
   100% { transform: scale(1); opacity: 1; }
-}
-
-/* 아바타는 원 대신 링이라 같은 리듬을 반지름으로 바꿔 쓴다 */
-@keyframes nav-ring {
-  0%   { box-shadow: 0 0 0 0 var(--brand); }
-  60%  { box-shadow: 0 0 0 4px var(--brand); }
-  100% { box-shadow: 0 0 0 3px var(--brand); }
 }
 
 /* 탭바가 처음 붙을 때 · 숨김 화면에서 돌아올 때 한 번. 그 외에는 움직이지 않는다 */
@@ -93,15 +91,48 @@
   to   { transform: none; opacity: 1; }
 }
 
+/* 탭바가 물러나면 시트 리스트의 하단 여백도 같이 줄어든다.
+   안 그러면 탭바가 없는데 90px 이 비어 있는 채로 리스트가 끝난다. */
+html[data-nav-tucked] {
+  --sheet-scroll-pb: var(--bottom-nav-bottom);
+}
+
+/* 지도 시트가 화면을 덮으면 탭바가 물러난다 (setBottomNavTucked → <html data-nav-tucked>).
+   페이드에 아래로 20px 을 더한다 — 화면 가장자리와의 거리(--bottom-nav-inset)만큼이라
+   "가라앉는다"로 읽힌다. 완전히 밀어내면 이동의 뒷부분이 이미 투명해 보이지 않는다.
+   visibility 는 포커스 순서와 접근성 트리에서도 빼려고 넣었다. 나갈 때만 지연을 준다. */
+.nav-tuckable {
+  transition:
+    opacity 220ms var(--nav-enter),
+    transform 220ms var(--nav-enter),
+    visibility 0s;
+}
+
+html[data-nav-tucked] .nav-tuckable {
+  opacity: 0;
+  transform: translateY(var(--bottom-nav-inset));
+  visibility: hidden;
+  transition:
+    opacity 160ms var(--nav-exit),
+    transform 160ms var(--nav-exit),
+    visibility 0s 160ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-pop, .nav-rise { animation: none; }
+  .nav-tuckable { transition: none; }
+}
+
 :root {
   --radius: 0.625rem;
 
   /* 플로팅 탭바 기하. 숫자 짝은 src/lib/bottom-nav.ts 다 */
-  --bottom-nav-inset: 16px;
-  --bottom-nav-pill-h: 60px;
+  --bottom-nav-inset: 20px;
+  --bottom-nav-pill-h: 58px;
   --bottom-nav-gap: 12px;
   --bottom-nav-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--bottom-nav-inset));
   --bottom-nav-space: calc(var(--bottom-nav-bottom) + var(--bottom-nav-pill-h) + var(--bottom-nav-gap));
+  --sheet-scroll-pb: var(--bottom-nav-space);
 
   /* ── Raw Palette ────────────────── */
   --palette-brand:      #D3FD52;
@@ -109,6 +140,7 @@
   --palette-brand-sub3: #F9FFE3;
   --palette-black:      #000000;
   --palette-gray-900:   #3F3D3D;
+  --palette-gray-800:   #636363;
   --palette-gray-700:   #737373;
   --palette-gray-400:   #BABABA;
   --palette-gray-100:   #F3F3F3;
