@@ -7,22 +7,17 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { isExternalImage } from "@/lib/image";
 import { getPopularPlaces, searchPlaces } from "@/app/(user)/_actions/recreeshot-actions";
 import {
-  getNearbyCourseAttractions,
   getSavedCoursePlaces,
   type CoursePlaceOption,
 } from "@/app/(user)/_actions/course-actions";
+import { fetchNearbyAttractions } from "@/app/(user)/_actions/tour-actions";
+import { TOUR_API_ATTRIBUTION } from "@/lib/tour-api/attribution";
 import { CHIP_BG, INK, LINE, MUTED, PAPER, SUB } from "../_constants";
 
 // ─── 상수 ────────────────────────────────────────────────────────────────────
 
 /** StickerPanel.tsx:207 이 같은 searchPlaces 에 쓰는 값 */
 const SEARCH_DEBOUNCE_MS = 400;
-
-/**
- * 한국관광공사 출처 표기. 텍스트만 쓴다 — 로고 이미지는 쓸 수 없다.
- * UI 문구는 영어로 쓰지만 이 표기만은 규정된 한글 문구를 그대로 둔다.
- */
-const TOUR_API_ATTRIBUTION = "출처: ⓒ한국관광공사";
 
 /**
  * 라벨은 360px 한 줄에 세 개가 다 들어가는 길이로 짧게 쓴다.
@@ -336,7 +331,7 @@ export function PlaceAddSheet({
     nearbyKeyRef.current = anchorKey;
 
     let alive = true;
-    getNearbyCourseAttractions({ lat: anchor.lat, lng: anchor.lng }).then((items) => {
+    fetchNearbyAttractions({ lat: anchor.lat, lng: anchor.lng }).then((items) => {
       if (!alive) return;
       if (items === null) {
         setNearby("failed");
