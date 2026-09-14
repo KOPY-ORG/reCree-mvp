@@ -18,6 +18,7 @@ import Image from "next/image";
 import { MapPin } from "lucide-react";
 import { isExternalImage } from "@/lib/image";
 import { TOUR_API_ATTRIBUTION } from "@/lib/tour-api/attribution";
+import { attractionCategoryLabel } from "@/lib/tour-api/category";
 import { placeRegionOf } from "@/lib/tour-api/regions";
 import {
   fetchRegionAttractions,
@@ -115,6 +116,8 @@ function festivalAsAttraction(festival: Festival): Attraction {
     imageUrl: festival.imageUrl,
     distanceM: null,
     contentTypeId: "15",
+    // 축제 목록(searchFestival2)은 cat2 를 주지 않는다. contentTypeId 15 가 Festival 로 읽힌다
+    cat2: null,
   };
 }
 
@@ -148,15 +151,17 @@ function CardImage({ url, children }: { url: string | null; children?: React.Rea
 }
 
 /**
- * 아랫줄이 국문명이다.
+ * 아랫줄이 분류다.
  *
- * C-3b 는 같은 자리에 거리를 넣고 국문명을 뺐다. 훑어보는 자리에서 읽을 수 없는 글자는
- * 잡음이고 거리는 "여기 온 김에" 갈지를 바로 정해 준다는 이유였다. 여기서는 그 거리가
- * 없다 — areaBasedList2 는 dist 를 주지 않는다. 좌표 기준점 자체가 없으니 만들 수도 없다.
+ * 포스트 Nearby 는 같은 자리에 거리를 그린다. 거기는 기준점이 있는 목록
+ * (locationBasedList2)이라 dist 가 오기 때문이고, 여기는 지역 목록(areaBasedList2)이라
+ * dist 가 없다. 부르는 API 가 다르니 부제도 다른 것이 맞다 — 두 카드를 합치지 않는 이유다.
  *
- * 남은 후보는 국문명과 주소인데, 주소는 영문 응답에만 있고 국문 응답 항목은 null 이라
- * 한 줄에서 어떤 카드는 주소가 있고 어떤 카드는 없다. 국문명은 두 경로 다 대체로 찬다.
- * 줄을 비우는 것보다 낫고, 현지에서 이름을 대야 할 때 유일하게 쓰이는 글자다.
+ * 국문명을 쓰다가 바꿨다. 한 지점이 일반 항목과 사후면세점 항목으로 두 번 실리는 경우가
+ * 있어(실측 "10꼬르소꼬모 청담점" 2건) 아랫줄이 글자까지 똑같이 겹쳤다. 읽을 수 없는
+ * 글자가 겹쳐 있는 것은 훑는 자리에서 잡음일 뿐이다.
+ *
+ * 표는 tour-api/category 가 갖는다. 코드 체계를 아는 것은 관광 모듈의 일이다.
  */
 function AttractionCard({
   item,
@@ -165,6 +170,8 @@ function AttractionCard({
   item: Attraction;
   onSelect: (item: Attraction, trigger: HTMLElement) => void;
 }) {
+  const category = attractionCategoryLabel(item);
+
   return (
     <button
       type="button"
@@ -174,9 +181,9 @@ function AttractionCard({
       <CardImage url={item.imageUrl} />
       <div className={`mt-2 ${TEXT_H}`}>
         <p className="line-clamp-2 text-[13px] font-semibold leading-[1.3]">{item.title}</p>
-        {item.titleKo && (
+        {category && (
           <p className="mt-[3px] truncate text-[11.5px] font-medium leading-[1.25] text-muted-foreground">
-            {item.titleKo}
+            {category}
           </p>
         )}
       </div>
@@ -189,7 +196,7 @@ function AttractionCard({
  *
  *   사진 위 뱃지  상태. 진행중은 브랜드색, 예정은 검정 — 한 줄을 훑으며 "지금 하는 것"만
  *                 골라내는 것이 축제를 보는 유일한 방식이다. 글줄에 섞으면 세어야 한다
- *   아랫줄        기간. 관광지의 국문명 자리다
+ *   아랫줄        기간. 관광지 카드의 분류 자리다
  *
  * 뱃지와 아랫줄을 합쳐 한 줄로 쓰지 않는다. 카드 폭이 140px 이라
  * "Now on · Sep 12 – 21" 은 잘린다.

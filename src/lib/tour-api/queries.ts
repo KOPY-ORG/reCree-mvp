@@ -108,6 +108,7 @@ function toAttraction(item: TourItem, lang: TourLang): Attraction | null {
     imageUrl: toImageUrl(item),
     distanceM: Number.isFinite(distNum) ? Math.round(distNum) : null,
     contentTypeId: pickField(item, ["contenttypeid"]),
+    cat2: pickField(item, ["cat2"]),
   };
 }
 
