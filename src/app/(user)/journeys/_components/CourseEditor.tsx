@@ -92,6 +92,8 @@ export type EditorDay = {
     /** 관광 데이터의 국문 이름. 초안 아이템이 Done 에서 풀릴 때까지 들고 있어야 한다 */
     nameKo: string | null;
     address: string | null;
+    /** 영문 주소가 없는 관광 데이터의 국문 주소. 저장할 때 address 대신 들어간다 */
+    addressKo: string | null;
     latitude: number | null;
     longitude: number | null;
     imageUrl: string | null;
@@ -158,7 +160,10 @@ function toAddItemInput(picked: PickedPlace) {
     source: "external" as const,
     nameEn: picked.nameEn,
     ...(picked.nameKo ? { nameKo: picked.nameKo } : {}),
-    ...(picked.address ? { address: picked.address } : {}),
+    // Place 갈래의 addressEn || addressKo 와 같은 폴백이다 — 스냅샷에는 주소가 남아야 한다
+    ...(picked.address || picked.addressKo
+      ? { address: picked.address ?? picked.addressKo! }
+      : {}),
     ...(picked.latitude !== null ? { latitude: picked.latitude } : {}),
     ...(picked.longitude !== null ? { longitude: picked.longitude } : {}),
     ...(picked.imageUrl && /^https?:\/\//.test(picked.imageUrl)

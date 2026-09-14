@@ -90,6 +90,7 @@ function toAttraction(item: TourItem): Attraction | null {
     // 언어에 상관없이 원문을 그대로 담아 둔다. 언어별 처리는 아래 두 함수가 한다
     titleKo: null,
     address: toAddress(item),
+    addressKo: null,
     lat: toCoord(pickField(item, ["mapy"])),
     lng: toCoord(pickField(item, ["mapx"])),
     imageUrl: toImageUrl(item),
@@ -100,12 +101,12 @@ function toAttraction(item: TourItem): Attraction | null {
 
 // ─── 국문 보강 ────────────────────────────────────────────────────────────────
 
-/** title / titleKo / address 를 갖는 것이면 관광지든 축제든 아래 두 함수를 그대로 쓴다 */
+/** 아래 두 함수는 이 네 칸만 보므로 관광지든 축제든 그대로 쓴다 */
 type Bilingual = {
-  contentId: string;
   title: string;
   titleKo: string | null;
   address: string | null;
+  addressKo: string | null;
 };
 
 /** 영문 응답 — "영문 (한글)" 을 쪼개기만 한다. 번역 호출이 없다 */
@@ -117,31 +118,27 @@ function splitEnglish<T extends Bilingual>(items: T[]): T[] {
 }
 
 /**
- * 국문 응답 — 번역해서 영문을 채운다. titleKo 가 원문, title 이 번역 결과다.
- * 영문 경로와 필드 의미가 같아진다.
+ * 국문 응답 — 제목만 번역해 영문을 채운다. titleKo 가 원문, title 이 번역 결과다.
+ * 영문 경로와 필드 의미가 같아진다. 번역이 실패한 항목은 title 에 국문이 그대로 남는다.
  *
- * 번역이 실패한 항목은 title 에 국문이 그대로 남는다. 호출 횟수는 항목 수와 무관하다 —
- * 제목·주소를 전부 한 맵에 담아 한 번에 보낸다.
+ * 주소는 번역하지 않고 addressKo 로 옮긴다. 두 가지 이유다.
+ *   품질 — 실측에서 같은 응답 안에 "Jeonnam-Gwangju Special Metropolitan City" 와
+ *          "Jeonnam Gwangju Tonghap Teukbyeolsi" 가 섞였고, 장소명이 주소 끝에 붙은 건도 있었다.
+ *   쓸모 — 국문 주소는 택시 기사에게 보여주거나 지도앱에 붙여넣으면 그대로 통한다.
+ *          기계가 로마자로 옮긴 주소는 그 두 가지가 다 안 된다.
+ * 화면은 address 만 그리므로 이 항목들에는 주소 줄이 생기지 않는다. 값은 저장용으로 남는다.
  */
 async function fillFromKorean<T extends Bilingual>(items: T[]): Promise<T[]> {
   if (items.length === 0) return items;
 
-  const values: Record<string, string> = {};
-  for (const item of items) {
-    values[`${item.contentId}:title`] = item.title;
-    if (item.address) values[`${item.contentId}:address`] = item.address;
-  }
-
-  const translated = await translateKoToEn(values);
+  const translated = await translateKoToEn(items.map((item) => item.title));
 
   return items.map((item) => ({
     ...item,
     titleKo: item.title,
-    title: translated[`${item.contentId}:title`] ?? item.title,
-    address:
-      item.address === null
-        ? null
-        : translated[`${item.contentId}:address`] ?? item.address,
+    title: translated[item.title] ?? item.title,
+    address: null,
+    addressKo: item.address,
   }));
 }
 
@@ -273,10 +270,13 @@ export async function getFestivals({
   regnCd,
   signguCd,
   upcomingDays = DEFAULT_UPCOMING_DAYS,
+  limit = DEFAULT_LIMIT,
 }: {
   regnCd: string;
   signguCd?: string;
   upcomingDays?: number;
+  /** 화면에 올릴 개수. 이 수만큼만 번역한다 — 번역 비용이 곧 개수다 */
+  limit?: number;
 }): Promise<TourResult<Festival> | null> {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -334,6 +334,7 @@ export async function getFestivals({
       // 국문 원문이다. 바로 아래 fillFromKorean 이 title 을 번역으로 바꾸고 여기에 원문을 옮긴다
       titleKo: null,
       address: toAddress(item),
+      addressKo: null,
       lat: toCoord(pickField(item, ["mapy"])),
       lng: toCoord(pickField(item, ["mapx"])),
       imageUrl: toImageUrl(item),
@@ -351,9 +352,14 @@ export async function getFestivals({
     return a.startDate.localeCompare(b.startDate);
   });
 
-  // API의 totalCount는 lookback 범위 전체(끝난 축제 포함) 건수라 필터 결과와 맞지 않는다
-  // 번역은 걸러낸 뒤에 한다 — 버릴 축제를 번역할 이유가 없다
-  return { items: await fillFromKorean(items), totalCount: items.length };
+  // 자르는 것은 정렬 뒤다 — 진행중이 먼저고 그다음이 임박순이라 앞에서 자르면 가장 볼 만한 것만 남는다.
+  // 번역도 자른 뒤에 한다. 서울은 45건이 잡히는데 버릴 25건까지 번역하면
+  // 지연도 하루 할당량도 그만큼 헛으로 나간다.
+  const shown = items.slice(0, limit);
+
+  // API의 totalCount는 lookback 범위 전체(끝난 축제 포함) 건수라 필터 결과와 맞지 않는다.
+  // 자르기 전 건수를 돌려준다 — "몇 건 중 몇 건을 보여주는지" 는 호출부가 알아야 한다
+  return { items: await fillFromKorean(shown), totalCount: items.length };
 }
 
 /** 법정동 코드 목록. regnCd 없으면 시도, 있으면 그 시도의 시군구 */

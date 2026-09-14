@@ -55,7 +55,10 @@ export type PickedPlace = {
    * 코스에 담는 순간 스냅샷이 떠지고 나중에는 채울 방법이 없어서 여기서 같이 올려 보낸다.
    */
   nameKo: string | null;
+  /** 영문 주소. 화면에 그리는 값이다 — 국문뿐인 항목은 null 이라 주소 줄이 생기지 않는다 */
   address: string | null;
+  /** 국문 주소. 화면에는 안 쓰고 저장할 때 address 가 없으면 대신 들어간다 */
+  addressKo: string | null;
   latitude: number | null;
   longitude: number | null;
   imageUrl: string | null;
@@ -99,6 +102,7 @@ function placeToRow(place: {
     // 우리 Place 는 addCourseItem 이 서버에서 Place.nameKo 를 직접 읽는다. 올려 보낼 필요가 없다
     nameKo: null,
     address: place.addressEn?.trim() || place.city,
+    addressKo: null,
     latitude: place.latitude,
     longitude: place.longitude,
     imageUrl: place.imageUrl,
@@ -112,6 +116,7 @@ function savedToRow(place: CoursePlaceOption): Row {
     nameEn: place.nameEn,
     nameKo: null,
     address: place.address,
+    addressKo: null,
     latitude: place.latitude,
     longitude: place.longitude,
     imageUrl: place.imageUrl,
@@ -344,6 +349,7 @@ export function PlaceAddSheet({
           nameEn: item.title,
           nameKo: item.titleKo,
           address: item.address,
+          addressKo: item.addressKo,
           latitude: item.lat,
           longitude: item.lng,
           imageUrl: item.imageUrl,
