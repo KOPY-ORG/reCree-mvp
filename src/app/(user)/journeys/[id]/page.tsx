@@ -1,9 +1,12 @@
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { MapPin } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { getCourseDetail } from "@/lib/course-queries";
-import { coverBackground, NEUTRAL_COVER, pinColors } from "../_components/course-cover";
+import { isExternalImage } from "@/lib/image";
+import { coverBackground, pinColors } from "../_components/course-cover";
 import { CourseBackButton } from "../_components/CourseBackButton";
 import { CourseMiniMap } from "../_components/CourseMiniMap";
 import { CopyCourseButton } from "../_components/CopyCourseButton";
@@ -250,10 +253,26 @@ export default async function CourseDetailPage({ params, searchParams }: Props) 
                   >
                     {i + 1}
                   </div>
-                  <div
-                    className="size-14 flex-none rounded-xl"
-                    style={{ background: item.placeId ? cover : NEUTRAL_COVER }}
-                  />
+                  {/* 편집기 행(CourseEditor.tsx:227)과 같은 규칙 — 행은 장소 사진, 커버만 Topic 색 */}
+                  {item.imageUrl ? (
+                    <Image
+                      src={item.imageUrl}
+                      alt=""
+                      width={56}
+                      height={56}
+                      unoptimized={isExternalImage(item.imageUrl)}
+                      className="size-14 flex-none rounded-xl object-cover"
+                      style={{ background: CHIP_BG }}
+                    />
+                  ) : (
+                    <div
+                      aria-hidden
+                      className="flex size-14 flex-none items-center justify-center rounded-xl"
+                      style={{ background: CHIP_BG }}
+                    >
+                      <MapPin className="size-5" style={{ color: SUB }} />
+                    </div>
+                  )}
                   <div className="min-w-0 flex-1">
                     <p
                       className="truncate text-[13px] font-medium leading-[1.3]"
