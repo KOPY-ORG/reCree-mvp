@@ -358,9 +358,22 @@ export async function getFestivals({
     });
   }
 
-  // ongoing 먼저, 그다음 startDate 오름차순
+  // ongoing 먼저. 그 안의 순서는 "곧 끝나는 것"이다.
+  //
+  // startDate 오름차순이었는데, 그러면 1월 1일에 시작한 연중 상설이 맨 앞을 차지한다.
+  // 실측 서울은 진행중 19건이 거의 전부 상설(왕궁수문장 교대의식 · DDP 건축투어 등)이라
+  // 12칸을 그것들이 다 먹고, upcomingDays 를 늘려도 화면이 그대로였다.
+  // 놓치면 안 되는 것은 곧 끝나는 것이고, 상설은 언제 가도 되므로 뒤로 가도 손해가 없다.
+  //
+  // 끝나는 날이 같으면 늦게 시작한 것을 앞에 둔다 — 서울은 12월 31일에 끝나는 것이
+  // 여럿이라 이 갈림이 실제로 순서를 정한다. 같은 날 끝난다면 짧게 하는 쪽이 행사에 가깝다.
+  //
+  // upcoming 은 그대로 startDate 오름차순이다. 아직 시작도 안 한 것에서는 임박한 것이 먼저다.
   items.sort((a, b) => {
     if (a.status !== b.status) return a.status === "ongoing" ? -1 : 1;
+    if (a.status === "ongoing") {
+      return a.daysUntilEnd - b.daysUntilEnd || b.startDate.localeCompare(a.startDate);
+    }
     return a.startDate.localeCompare(b.startDate);
   });
 
@@ -420,11 +433,29 @@ function cleanText(v: unknown): string | null {
   return s === "" ? null : s;
 }
 
+/** 본문에 섞인 주소. 닫는 괄호·따옴표·꺾쇠는 주소의 일부가 아니라 그 앞에서 끊는다 */
+const BARE_URL = /https?:\/\/[^\s<>"'()[\]]+/gi;
+
 /**
  * homepage 에서 주소만 뽑는다.
  *
- * 실측 형태는 셋이다 — 단일 <a>, <br> 로 이은 복수 <a>(홈페이지+인스타그램), 빈 문자열.
- * 태그 없는 순수 URL 은 표본에 없었지만 폴백을 둔다.
+ * 관광지와 축제가 형태가 다르다. 값이 있는 54건(관광지 · 축제 · Nearby) 실측:
+ *
+ *   <a href> 를 쓴 것          18건   관광지 쪽. href 를 그대로 쓴다
+ *   태그 없이 맨 URL 만         24건   축제 쪽. "공식 홈페이지 https://…" 처럼 라벨이 앞에 붙는다
+ *   프로토콜 없는 주소만        12건   "www.ssfshop.com" · "adidas.co.kr". 아래 참고
+ *   URL 두 개 이상              8건   전부 \n 으로 이어진다 (<br> 로 온 것은 0건이었다)
+ *
+ * 예전 폴백은 태그를 걷은 문자열 "전체"가 URL 일 때만 인정해서(^…$), 라벨이 한 글자라도
+ * 앞에 붙으면 통째로 버렸다. 축제는 그 라벨이 거의 항상 붙어 있어 절반이 빈손으로 돌아왔다.
+ * 이제 본문 어디에 있든 긁는다.
+ *
+ * <a> 가 있으면 href 만 쓰고 본문은 보지 않는다. 앵커 글자가 주소를 그대로 적어 둔 경우가
+ * 많은데 잘려 있을 때가 있어서, 둘을 섞으면 깨진 주소가 한 줄 더 생긴다.
+ *
+ * 프로토콜 없는 주소는 뽑지 않는다. 한글 본문에서 "낱말.낱말" 을 주소로 오인할 여지가 있고,
+ * 12건 중 11건이 면세점·브랜드샵이라 얻는 것에 비해 위험이 크다.
+ *
  * 태그를 화면에 그대로 내보내지 않는다. target·rel 은 우리가 붙인다.
  */
 function parseHomepageUrls(v: unknown): string[] {
@@ -436,10 +467,17 @@ function parseHomepageUrls(v: unknown): string[] {
     if (/^https?:\/\//i.test(u)) urls.push(u);
   }
 
-  // <a> 가 하나도 없으면 태그를 걷어낸 본문이 URL 인지 본다
+  // <a> 가 하나도 없으면 태그를 걷어낸 본문에서 주소를 긁는다.
+  // cleanText 가 <br> 을 \n 으로 바꾸고 줄바꿈을 남기므로 여러 개도 그대로 갈린다.
   if (urls.length === 0) {
     const bare = cleanText(v);
-    if (bare && /^https?:\/\/\S+$/i.test(bare)) urls.push(bare);
+    if (bare) {
+      for (const m of bare.matchAll(BARE_URL)) {
+        // 문장 끝에 붙은 마침표·쉼표는 주소가 아니다
+        const u = m[0].replace(/[.,;:!?]+$/, "");
+        if (u.length > "https://".length) urls.push(u);
+      }
+    }
   }
 
   // 같은 주소를 두 번 그리지 않는다. 셋이면 충분하다

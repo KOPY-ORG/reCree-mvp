@@ -111,6 +111,24 @@ export async function fetchRegionAttractions(input: {
  */
 const FESTIVAL_LIMIT = 12;
 
+/**
+ * 며칠 앞까지의 축제를 올릴지.
+ *
+ * queries 의 기본값 30 을 쓰지 않는다. 해외 팬은 방한을 두세 달 전부터 짚어 보는데
+ * 30일은 "지금 갈 수 있는 것"만 남겨 지방이 사실상 비었다 — 강릉이 0건이었다.
+ *
+ * 60일로 늘렸을 때 실측 (2026-09-14 기준, 필터 통과 건수):
+ *   서울 40→45 · 부산 9→16 · 경주 4→4 · 강릉 0→1
+ * 화면에 뜨는 카드로는 부산 9→12장, 강릉 0→1장이다 (강릉은 섹션이 처음 생긴다).
+ * 서울은 12칸을 진행중이 다 먹고 있어 변화가 없다 — 그건 정렬 문제다(아래 주석 참고).
+ *
+ * 수집 쪽은 건드릴 필요가 없다. upcomingDays 는 받아 온 뒤 거르는 값이라 API 호출이
+ * 달라지지 않는다. FESTIVAL_MAX_PAGES(3) × FESTIVAL_ROWS(100) = 300 이 상한인데
+ * 60일에서 필터를 통과한 최대가 서울 45건이라 여유가 크고, lookback 180일은 진행중
+ * 판정에만 쓰여 예정 축제와 무관하다.
+ */
+const FESTIVAL_UPCOMING_DAYS = 60;
+
 /** 지역 축제 (출처: ⓒ한국관광공사). 표에 없는 지역이거나 실패하면 null */
 export async function fetchRegionFestivals(input: {
   regionKey: string;
@@ -124,6 +142,7 @@ export async function fetchRegionFestivals(input: {
   const result = await getFestivals({
     regnCd: region.lDongRegnCd,
     signguCd: region.lDongSignguCd,
+    upcomingDays: FESTIVAL_UPCOMING_DAYS,
     limit: FESTIVAL_LIMIT,
   });
   if (!result) return null;
