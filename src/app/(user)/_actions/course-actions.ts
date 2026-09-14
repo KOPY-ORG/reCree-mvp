@@ -4,8 +4,6 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { getSavedMapPlaces } from "@/lib/map-queries";
-import { getNearbyAttractions } from "@/lib/tour-api/queries";
-import type { Attraction } from "@/lib/tour-api/types";
 import { z } from "zod";
 
 // ─── 상수 ────────────────────────────────────────────────────────────────────
@@ -752,8 +750,11 @@ export async function copyCourse(sourceId: string): Promise<{ id?: string; error
 }
 
 // ─── 편집기 장소 후보 조회 ───────────────────────────────────────────────────
-// 아래 둘은 변경이 아니라 조회다. 장소 추가 시트가 클라이언트 컴포넌트라
+// 아래는 변경이 아니라 조회다. 장소 추가 시트가 클라이언트 컴포넌트라
 // 서버 쿼리를 직접 부를 수 없어 액션으로 감싼다 (recreeshot-actions의 searchPlaces와 같은 형태).
+//
+// 시트의 Nearby 탭이 쓰는 관광지 조회는 _actions/tour-actions.ts 에 있다 —
+// 관광 데이터를 뗄 때 이 파일을 열지 않아도 되게 분리해 두었다.
 
 /** 시트 한 줄에 필요한 만큼만. Place에서 온 것은 id가 곧 placeId다. */
 export type CoursePlaceOption = {
@@ -764,9 +765,6 @@ export type CoursePlaceOption = {
   longitude: number | null;
   imageUrl: string | null;
 };
-
-/** Nearby Attractions 반경 */
-const NEARBY_RADIUS_M = 5000;
 
 /**
  * 내가 저장한 장소.
@@ -799,38 +797,4 @@ export async function getSavedCoursePlaces(): Promise<CoursePlaceOption[]> {
     console.error("[getSavedCoursePlaces] server_error", e);
     return [];
   }
-}
-
-/**
- * 좌표 주변 관광지 (출처: ⓒ한국관광공사).
- *
- * 실패하면 null이다 — 시트의 그 탭만 비고 나머지 탭과 편집기는 그대로 산다.
- * TourAPI 응답은 DB에 저장하지 않는다. 요청 수명 안에서만 사는 DTO다.
- */
-export async function getNearbyCourseAttractions(input: {
-  lat: number;
-  lng: number;
-}): Promise<Attraction[] | null> {
-  const parsed = z
-    .object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) })
-    .safeParse(input);
-  if (!parsed.success) return null;
-
-  // 언어를 고르지 않는다 — 영문을 먼저 부르고 모자라면 국문을 번역해 덧대는 것은 queries 안쪽 일이다
-  const result = await getNearbyAttractions({
-    lat: parsed.data.lat,
-    lng: parsed.data.lng,
-    radiusM: NEARBY_RADIUS_M,
-  });
-  if (!result) return null;
-
-  // 좌표 없는 항목은 코스에 넣어도 지도에 못 찍는다 — 목록에서 뺀다
-  return result.items
-    .filter((item) => item.lat !== null && item.lng !== null)
-    .map((item) => ({
-      ...item,
-      // TourAPI는 이미지를 http로 돌려주는 경우가 있다. https 페이지에서 mixed content로
-      // 차단되고, 그대로 CourseItem에 저장되면 코스 상세에서도 계속 깨진다.
-      imageUrl: item.imageUrl?.replace(/^http:\/\//, "https://") ?? null,
-    }));
 }

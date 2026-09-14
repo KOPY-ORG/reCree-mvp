@@ -4,8 +4,18 @@
 
 import { callTourApi, pickField } from "./client";
 import { koreanKey, splitBilingualTitle } from "./title";
+import { detailFieldsFor } from "./detail-fields";
 import { translateKoToEn } from "./translate";
-import type { Attraction, Festival, LdongCode, TourItem, TourLang, TourResult } from "./types";
+import type {
+  Attraction,
+  AttractionEssentials,
+  AttractionIntroRow,
+  Festival,
+  LdongCode,
+  TourItem,
+  TourLang,
+  TourResult,
+} from "./types";
 
 /** ldongCode2 응답 필드명 후보. 실측상 areaCode2와 같은 code/name으로 내려오나 문서와 다를 수 있다 */
 const LDONG_CODE_KEYS = ["code", "lDongRegnCd", "lDongSignguCd", "ldongRegnCd", "ldongSignguCd"];
@@ -76,7 +86,8 @@ function ldongParams(regnCd: string, signguCd?: string): Record<string, string> 
   return p;
 }
 
-function toAttraction(item: TourItem): Attraction | null {
+/** lang 은 부른 서비스 그대로다. 상세 조회가 이 값으로 어느 서비스에 물을지 정한다 */
+function toAttraction(item: TourItem, lang: TourLang): Attraction | null {
   const contentId = pickField(item, ["contentid"]);
   const title = pickField(item, ["title"]);
   if (!contentId || !title) return null;
@@ -86,6 +97,7 @@ function toAttraction(item: TourItem): Attraction | null {
 
   return {
     contentId,
+    lang,
     title,
     // 언어에 상관없이 원문을 그대로 담아 둔다. 언어별 처리는 아래 두 함수가 한다
     titleKo: null,
@@ -221,7 +233,7 @@ export async function getNearbyAttractions({
     if (!res.ok) return null;
 
     return {
-      items: res.items.map(toAttraction).filter((a): a is Attraction => a !== null),
+      items: res.items.map((i) => toAttraction(i, lang)).filter((a): a is Attraction => a !== null),
       totalCount: res.totalCount,
     };
   }, limit);
@@ -246,7 +258,7 @@ export async function getAreaAttractions({
     if (!res.ok) return null;
 
     return {
-      items: res.items.map(toAttraction).filter((a): a is Attraction => a !== null),
+      items: res.items.map((i) => toAttraction(i, lang)).filter((a): a is Attraction => a !== null),
       totalCount: res.totalCount,
     };
   }, limit);
@@ -385,4 +397,147 @@ export async function getLdongCodes({
   }
 
   return { items, totalCount: res.totalCount };
+}
+
+// ─── 상세 ─────────────────────────────────────────────────────────────────────
+// 세 엔드포인트를 세 함수로 나눈다. 화면이 도착하는 대로 채우기 위해서다 —
+// 하나로 묶으면 가장 느린 것(번역)이 나머지를 붙잡는다.
+//
+// 어느 것도 캐싱하지 않는다. TourAPI 응답은 실시간 호출이 요강이다.
+// 캐싱되는 것은 translateKoToEn 안의 번역 결과뿐이고, 그건 공공데이터가 아니라 파생물이다.
+
+/** 응답에 <br> 과 <a> 가 섞여 온다(영문 intro 실측 35~45%). 태그를 걷고 빈 값은 null 로 */
+function cleanText(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const s = v
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  return s === "" ? null : s;
+}
+
+/**
+ * homepage 에서 주소만 뽑는다.
+ *
+ * 실측 형태는 셋이다 — 단일 <a>, <br> 로 이은 복수 <a>(홈페이지+인스타그램), 빈 문자열.
+ * 태그 없는 순수 URL 은 표본에 없었지만 폴백을 둔다.
+ * 태그를 화면에 그대로 내보내지 않는다. target·rel 은 우리가 붙인다.
+ */
+function parseHomepageUrls(v: unknown): string[] {
+  if (typeof v !== "string" || v.trim() === "") return [];
+
+  const urls: string[] = [];
+  for (const m of v.matchAll(/href\s*=\s*["']([^"']+)["']/gi)) {
+    const u = m[1].trim();
+    if (/^https?:\/\//i.test(u)) urls.push(u);
+  }
+
+  // <a> 가 하나도 없으면 태그를 걷어낸 본문이 URL 인지 본다
+  if (urls.length === 0) {
+    const bare = cleanText(v);
+    if (bare && /^https?:\/\/\S+$/i.test(bare)) urls.push(bare);
+  }
+
+  // 같은 주소를 두 번 그리지 않는다. 셋이면 충분하다
+  return [...new Set(urls)].slice(0, 3);
+}
+
+/** 상세 조회 공통 — 항목 하나를 꺼낸다. 실패·0건이면 null */
+async function detailItem(
+  lang: TourLang,
+  endpoint: string,
+  params: Record<string, string | number>
+): Promise<TourItem | null> {
+  const res = await callTourApi(lang, endpoint, { contentId: params.contentId, ...params });
+  if (!res.ok || res.items.length === 0) return null;
+  return res.items[0];
+}
+
+/**
+ * detailCommon2 — 개요 · 주소 · 홈페이지.
+ *
+ * 국문 경로면 개요를 번역한다. 주소는 번역하지 않는다 — fillFromKorean 과 같은 이유다.
+ * 번역이 실패하면 국문 원문이 그대로 남는다. 비어 있는 것보다 낫다.
+ */
+export async function getAttractionEssentials({
+  contentId,
+  lang,
+}: {
+  contentId: string;
+  lang: TourLang;
+}): Promise<AttractionEssentials | null> {
+  const item = await detailItem(lang, "detailCommon2", { contentId });
+  if (item === null) return null;
+
+  let overview = cleanText(item.overview);
+  if (overview !== null && lang === "ko") {
+    const translated = await translateKoToEn([overview]);
+    overview = translated[overview] ?? overview;
+  }
+
+  return {
+    overview,
+    address: toAddress(item),
+    homepageUrls: parseHomepageUrls(item.homepage),
+  };
+}
+
+/** detailImage2 — 갤러리. 사진에는 언어가 없지만 contentId 가 갈려 부른 쪽 서비스로 물어야 한다 */
+export async function getAttractionImages({
+  contentId,
+  lang,
+}: {
+  contentId: string;
+  lang: TourLang;
+}): Promise<string[] | null> {
+  const res = await callTourApi(lang, "detailImage2", {
+    contentId,
+    imageYN: "Y",
+    numOfRows: 30,
+  });
+  if (!res.ok) return null;
+
+  const urls: string[] = [];
+  for (const item of res.items) {
+    const url = pickField(item, ["originimgurl", "smallimageurl"]);
+    if (url) urls.push(url);
+  }
+  return [...new Set(urls)];
+}
+
+/**
+ * detailIntro2 — 영업시간 · 휴무 · 주차 등. 타입별 필드명 분기는 detail-fields 가 갖는다.
+ *
+ * 라벨까지 붙여 내보낸다. 화면이 contentTypeId 를 다시 해석할 일이 없다.
+ * 값이 빈 줄은 여기서 지운다 — "—" 를 그리지 않기 때문에 화면에 갈 필요가 없다.
+ * 국문 경로면 값만 번역한다. 라벨은 우리가 쓴 영어다.
+ */
+export async function getAttractionIntro({
+  contentId,
+  contentTypeId,
+  lang,
+}: {
+  contentId: string;
+  contentTypeId: string | null;
+  lang: TourLang;
+}): Promise<AttractionIntroRow[] | null> {
+  const fields = detailFieldsFor(contentTypeId);
+  if (fields.length === 0 || !contentTypeId) return [];
+
+  const item = await detailItem(lang, "detailIntro2", { contentId, contentTypeId });
+  if (item === null) return null;
+
+  const rows: AttractionIntroRow[] = [];
+  for (const field of fields) {
+    const value = cleanText(item[field.key]);
+    if (value !== null) rows.push({ label: field.label, value });
+  }
+  if (rows.length === 0 || lang === "en") return rows;
+
+  const translated = await translateKoToEn(rows.map((r) => r.value));
+  return rows.map((r) => ({ label: r.label, value: translated[r.value] ?? r.value }));
 }

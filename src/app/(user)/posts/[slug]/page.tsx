@@ -19,6 +19,7 @@ import { PostActionBar } from "./_components/PostActionBar";
 import { PurchaseButton } from "./_components/PurchaseButton";
 import { PostComments } from "./_components/PostComments";
 import { PostViewTracker } from "./_components/PostViewTracker";
+import { NearbyAttractionsSection } from "./_components/NearbyAttractionsSection";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -352,6 +353,21 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
           Source: {post.source}
         </p>
       )}
+
+      {/* Nearby Attractions (시안 :885) — 실패 · 0건 · 좌표 없음 · shop 일 때 사라지는
+          유일한 블록이라 꼬리에 둔다. 없어져도 위로 붙는 것이 댓글 하나뿐이고,
+          Story → Sources → Credits 로 이어지는 본문이 중간에 끊기지 않는다.
+          좌표 없는 Place 는 실측 0건이지만 latitude 가 nullable 이라 방어는 남긴다 */}
+      {!post.isShop &&
+        spotInsight &&
+        spotInsight.place.latitude !== null &&
+        spotInsight.place.longitude !== null && (
+          <NearbyAttractionsSection
+            lat={Number(spotInsight.place.latitude)}
+            lng={Number(spotInsight.place.longitude)}
+            placeLabel={spotInsight.place.nameEn ?? spotInsight.place.nameKo}
+          />
+        )}
 
       {/* 댓글 섹션 */}
       <PostComments
