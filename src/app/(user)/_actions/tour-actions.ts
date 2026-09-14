@@ -10,8 +10,17 @@
 // 지금은 이 파일과 부르는 줄만 지우면 관광 데이터가 통째로 빠진다.
 
 import { z } from "zod";
-import { getNearbyAttractions } from "@/lib/tour-api/queries";
-import type { Attraction } from "@/lib/tour-api/types";
+import {
+  getAttractionEssentials,
+  getAttractionImages,
+  getAttractionIntro,
+  getNearbyAttractions,
+} from "@/lib/tour-api/queries";
+import type {
+  Attraction,
+  AttractionEssentials,
+  AttractionIntroRow,
+} from "@/lib/tour-api/types";
 
 /** Nearby Attractions 반경 */
 const NEARBY_RADIUS_M = 5000;
@@ -54,4 +63,57 @@ export async function fetchNearbyAttractions(input: {
       // 차단되고, 그대로 CourseItem에 저장되면 코스 상세에서도 계속 깨진다.
       imageUrl: item.imageUrl?.replace(/^http:\/\//, "https://") ?? null,
     }));
+}
+
+// ─── 관광지 상세 ──────────────────────────────────────────────────────────────
+// 셋으로 나눈 이유는 도착 시각이 다르기 때문이다. 하나로 묶으면 가장 느린 것
+// (국문 경로의 번역, 최대 5초)이 나머지를 붙잡는다. 화면은 오는 대로 채운다.
+//
+// 어느 것도 캐싱하지 않는다. TourAPI 응답은 실시간 호출이 요강이다.
+//
+// lang 은 목록이 준 Attraction.lang 을 그대로 돌려 받는다. EN/KO 는 contentId 공간이
+// 분리돼 상대 서비스에 물으면 0건이라(세 엔드포인트 전부 실측 0/3) 추측해서는 안 된다.
+
+/** TourAPI contentId 는 숫자 문자열이다. 클라이언트 입력이라 형태를 막아 둔다 */
+const detailInput = z.object({
+  contentId: z.string().regex(/^\d{1,12}$/),
+  lang: z.enum(["ko", "en"]),
+});
+
+/** 빠름 — 개요 · 주소 · 홈페이지. 국문 경로면 개요 번역이 붙는다 */
+export async function fetchAttractionEssentials(input: {
+  contentId: string;
+  lang: "ko" | "en";
+}): Promise<AttractionEssentials | null> {
+  const parsed = detailInput.safeParse(input);
+  if (!parsed.success) return null;
+  return getAttractionEssentials(parsed.data);
+}
+
+/** 중간 — 갤러리 */
+export async function fetchAttractionImages(input: {
+  contentId: string;
+  lang: "ko" | "en";
+}): Promise<string[] | null> {
+  const parsed = detailInput.safeParse(input);
+  if (!parsed.success) return null;
+
+  const urls = await getAttractionImages(parsed.data);
+  if (urls === null) return null;
+
+  // 목록 이미지와 같은 처리다. API 가 http 로 주는데 https 페이지에서 mixed content 로 막힌다
+  return urls.map((u) => u.replace(/^http:\/\//, "https://"));
+}
+
+/** 느림 — 영업시간 · 휴무 · 주차 · 전화. 국문 경로면 값 번역이 붙는다 */
+export async function fetchAttractionIntro(input: {
+  contentId: string;
+  contentTypeId: string | null;
+  lang: "ko" | "en";
+}): Promise<AttractionIntroRow[] | null> {
+  const parsed = detailInput
+    .extend({ contentTypeId: z.string().regex(/^\d{1,4}$/).nullable() })
+    .safeParse(input);
+  if (!parsed.success) return null;
+  return getAttractionIntro(parsed.data);
 }

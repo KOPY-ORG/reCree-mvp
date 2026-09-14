@@ -41,6 +41,14 @@ export type TourResult<T> = { items: T[]; totalCount: number | null };
  */
 export type Attraction = {
   contentId: string;
+  /**
+   * 이 항목이 어느 서비스에서 왔는지.
+   *
+   * 상세 조회(detailCommon2 등)가 이 값을 필요로 한다. EN/KO 는 contentId 공간이
+   * 분리돼 있어 상대 서비스에 물으면 0건이다 — 세 엔드포인트 전부 실측 0/3 이다.
+   * 추론하지 않고 만들 때 박아 둔다.
+   */
+  lang: TourLang;
   title: string;
   /** 형태가 "영문 (한글)" 이 아니면 null */
   titleKo: string | null;
@@ -77,3 +85,19 @@ export type Festival = {
 };
 
 export type LdongCode = { code: string; name: string };
+
+// ─── 상세 ─────────────────────────────────────────────────────────────────────
+// 세 엔드포인트를 세 액션으로 나눠 부른다. 화면이 도착하는 대로 채우기 위해서다.
+// 어느 것도 캐싱하지 않는다 — TourAPI 응답은 실시간 호출이 요강이다.
+
+/** detailCommon2. 값이 없는 칸은 null 이다 — API 는 빈 문자열로 주지만 여기서 정리한다 */
+export type AttractionEssentials = {
+  /** 태그를 걷어낸 본문. 국문 경로면 번역된 것이다 */
+  overview: string | null;
+  address: string | null;
+  /** homepage 의 <a href> 에서 뽑은 것. 태그를 그대로 내보내지 않는다 */
+  homepageUrls: string[];
+};
+
+/** detailIntro2. 라벨까지 붙여 내보낸다 — 타입별 필드명 분기를 화면이 알 필요가 없다 */
+export type AttractionIntroRow = { label: string; value: string };

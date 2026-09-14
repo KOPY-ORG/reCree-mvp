@@ -16,6 +16,8 @@ import { isExternalImage } from "@/lib/image";
 import { TOUR_API_ATTRIBUTION } from "@/lib/tour-api/attribution";
 import { fetchNearbyAttractions } from "@/app/(user)/_actions/tour-actions";
 import type { Attraction } from "@/lib/tour-api/types";
+import { AttractionDetailSheet } from "./AttractionDetailSheet";
+import { formatDistance } from "./attraction-distance";
 
 interface Props {
   lat: number;
@@ -36,9 +38,21 @@ const TEXT_H = "h-[52px]";
 /** 리크리샷 카드(PostReCreeshotSection.tsx:58)와 같은 폭 — 한 화면의 가로 줄 둘이 같은 리듬으로 움직인다 */
 const CARD_W = "w-[140px]";
 
-function AttractionCard({ item }: { item: Attraction }) {
+function AttractionCard({
+  item,
+  onSelect,
+}: {
+  item: Attraction;
+  onSelect: (item: Attraction, trigger: HTMLElement) => void;
+}) {
+  const distance = formatDistance(item.distanceM);
+
   return (
-    <div className={`${CARD_W} flex-none`}>
+    <button
+      type="button"
+      onClick={(e) => onSelect(item, e.currentTarget)}
+      className={`${CARD_W} flex-none text-left transition-opacity active:opacity-70`}
+    >
       {item.imageUrl ? (
         /* unoptimized 판정은 PlaceAddSheet.tsx:145 와 같다 — 등록되지 않은 호스트를
            next/image 에 그대로 넘기면 이미지 하나가 아니라 페이지가 죽는다 */
@@ -61,16 +75,16 @@ function AttractionCard({ item }: { item: Attraction }) {
 
       <div className={`mt-2 ${TEXT_H}`}>
         <p className="line-clamp-2 text-[13px] font-semibold leading-[1.3]">{item.title}</p>
-        {/* 거리(distanceM)가 아니라 국문명이다. 거리 표기는 쓰지 않기로 했고,
-            국문명은 해외 팬이 표지판을 읽거나 기사에게 보여줄 수 있는 값이다.
-            영문이 주고 국문이 확인용이라는 순서는 시트와 같게 둔다 */}
-        {item.titleKo && (
+        {/* 국문명이 아니라 거리다. 훑어보는 자리에서는 읽을 수 없는 글자가 잡음이고,
+            거리는 "여기 온 김에" 갈지 말지를 바로 정해 준다.
+            국문명은 읽고 행동하는 자리 — 시트와 편집기 Nearby 탭 — 에 남는다 */}
+        {distance && (
           <p className="mt-[3px] truncate text-[11.5px] font-medium leading-[1.25] text-muted-foreground">
-            {item.titleKo}
+            {distance}
           </p>
         )}
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -91,6 +105,13 @@ export function NearbyAttractionsSection({ lat, lng, placeLabel }: Props) {
   const [items, setItems] = useState<Attraction[] | "failed" | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [started, setStarted] = useState(false);
+  /**
+   * 시트는 섹션에 하나만 둔다 — 카드마다 두면 Dialog 가 스무 개 마운트된다.
+   * 누른 카드를 함께 들고 있는 것은 닫을 때 포커스를 그 자리로 돌려주기 위해서다.
+   */
+  const [selected, setSelected] = useState<{ item: Attraction; trigger: HTMLElement } | null>(
+    null,
+  );
   const sectionRef = useRef<HTMLElement>(null);
 
   /**
@@ -170,13 +191,25 @@ export function NearbyAttractionsSection({ lat, lng, placeLabel }: Props) {
           <div className="flex gap-2.5 overflow-x-auto px-4 pb-1 scrollbar-hide">
             {items === null
               ? [0, 1, 2].map((i) => <SkeletonCard key={i} />)
-              : items.map((item) => <AttractionCard key={item.contentId} item={item} />)}
+              : items.map((item) => (
+                  <AttractionCard
+                    key={item.contentId}
+                    item={item}
+                    onSelect={(picked, trigger) => setSelected({ item: picked, trigger })}
+                  />
+                ))}
           </div>
 
           {/* 목록 아래에 한 번. 시안 :756 과 시트 :608 이 같은 자리에 둔다 */}
           <p className="px-4 pt-2.5 text-[10.5px] font-medium text-muted-foreground">
             {TOUR_API_ATTRIBUTION}
           </p>
+
+          <AttractionDetailSheet
+            item={selected?.item ?? null}
+            trigger={selected?.trigger ?? null}
+            onClose={() => setSelected(null)}
+          />
         </>
       )}
     </section>
