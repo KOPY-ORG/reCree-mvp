@@ -50,6 +50,11 @@ type TabId = (typeof TABS)[number]["id"];
 export type PickedPlace = {
   placeId: string | null;
   nameEn: string;
+  /**
+   * 국문 이름. 관광 데이터에만 있다 — 우리 Place 는 addCourseItem 이 서버에서 직접 읽는다.
+   * 코스에 담는 순간 스냅샷이 떠지고 나중에는 채울 방법이 없어서 여기서 같이 올려 보낸다.
+   */
+  nameKo: string | null;
   address: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -91,6 +96,8 @@ function placeToRow(place: {
     placeId: place.id,
     // Place.nameEn 은 nullable 인데 CourseItem.nameEn 은 NOT NULL — addCourseItem 과 같은 폴백이다
     nameEn: place.nameEn?.trim() || place.nameKo,
+    // 우리 Place 는 addCourseItem 이 서버에서 Place.nameKo 를 직접 읽는다. 올려 보낼 필요가 없다
+    nameKo: null,
     address: place.addressEn?.trim() || place.city,
     latitude: place.latitude,
     longitude: place.longitude,
@@ -103,6 +110,7 @@ function savedToRow(place: CoursePlaceOption): Row {
     key: place.id,
     placeId: place.id,
     nameEn: place.nameEn,
+    nameKo: null,
     address: place.address,
     latitude: place.latitude,
     longitude: place.longitude,
@@ -160,6 +168,15 @@ function PlaceRow({
         >
           {row.nameEn}
         </span>
+        {/* 국문은 영문 아래에 한 단계 작게. 영문이 주고 국문은 확인용이라 순서를 바꾸지 않는다 */}
+        {row.nameKo && (
+          <span
+            className="mt-[3px] block truncate text-[11.5px] font-medium leading-[1.25]"
+            style={{ color: added ? SUB : MUTED }}
+          >
+            {row.nameKo}
+          </span>
+        )}
         {row.address && (
           <span
             className="mt-[5px] block truncate text-[11px] font-medium leading-[1.2]"
@@ -325,6 +342,7 @@ export function PlaceAddSheet({
           key: item.contentId,
           placeId: null,
           nameEn: item.title,
+          nameKo: item.titleKo,
           address: item.address,
           latitude: item.lat,
           longitude: item.lng,

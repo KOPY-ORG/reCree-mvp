@@ -89,6 +89,8 @@ export type EditorDay = {
     id: string;
     placeId: string | null;
     nameEn: string;
+    /** 관광 데이터의 국문 이름. 초안 아이템이 Done 에서 풀릴 때까지 들고 있어야 한다 */
+    nameKo: string | null;
     address: string | null;
     latitude: number | null;
     longitude: number | null;
@@ -155,6 +157,7 @@ function toAddItemInput(picked: PickedPlace) {
   return {
     source: "external" as const,
     nameEn: picked.nameEn,
+    ...(picked.nameKo ? { nameKo: picked.nameKo } : {}),
     ...(picked.address ? { address: picked.address } : {}),
     ...(picked.latitude !== null ? { latitude: picked.latitude } : {}),
     ...(picked.longitude !== null ? { longitude: picked.longitude } : {}),
