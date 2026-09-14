@@ -81,6 +81,26 @@ export async function fetchNearbyAttractions(input: {
 // 좌표 없는 항목을 걸러내지 않는다. 이 둘은 코스에 담기는 목록이 아니라 읽는 목록이라
 // 지도에 못 찍는 것도 카드로는 멀쩡하다.
 
+/**
+ * 화면에 올리는 관광지 수.
+ *
+ * 기본값(20)이 너무 얕다. 이 줄 말고 지역 관광지를 볼 수 있는 화면이 없어서
+ * 가로 스크롤이 목록 전부인데, 스무 장은 몇 번 밀면 끝난다.
+ *
+ * "전부" 는 답이 아니다 — 영문만 서울 4,971건이고 목록이 제목 오름차순이라
+ * 뒤로 갈수록 좋아지지도 않는다. 끝에 닿을 사람이 없는 길이를 만드는 것은
+ * 많이 보여주는 것이 아니다. 100장이면 가로로 14,000px 라 폰에서 서른 번 넘게 밀어야 한다.
+ *
+ * 50 으로 한 이유는 셋이다.
+ *   비용   호출은 그대로 한 번이다. 실측 응답시간이 20건 165ms · 50건 166ms · 100건 215ms 라
+ *          50 까지는 늘어난 것이 눈에 띄지 않는다
+ *   번역   영문이 얇은 지역에 국문 보강이 붙으면 번역량이 이 수에 비례한다.
+ *          하루 20회짜리 예산(translate.ts)에서 100 은 위험하고 50 은 감당된다
+ *   깊이   네 지역 영문 재고가 각각 4,971 · 1,129 · 102 · 113 이라
+ *          50 은 네 지역 모두 가득 찬다. 100 은 경주가 못 채워 줄 길이가 지역마다 들쭉날쭉해진다
+ */
+const ATTRACTION_LIMIT = 50;
+
 /** 지역 관광지 (출처: ⓒ한국관광공사). 표에 없는 지역이거나 실패하면 null */
 export async function fetchRegionAttractions(input: {
   regionKey: string;
@@ -91,11 +111,10 @@ export async function fetchRegionAttractions(input: {
   const region = placeRegionOf(parsed.data.regionKey);
   if (region === null) return null;
 
-  // limit 을 넘기지 않는다 — queries 의 DEFAULT_LIMIT(20)이 KO_BACKFILL_THRESHOLD(10)의
-  // 두 배라, 영문이 얇은 지역에서도 국문 덧대기가 임계를 넘는다
   const result = await getAreaAttractions({
     regnCd: region.lDongRegnCd,
     signguCd: region.lDongSignguCd,
+    limit: ATTRACTION_LIMIT,
   });
   if (!result) return null;
 
@@ -105,11 +124,19 @@ export async function fetchRegionAttractions(input: {
 /**
  * 화면에 올리는 축제 수.
  *
- * 기본값(20)을 쓰지 않는다. getFestivals 는 자른 뒤 남은 것만 번역하므로 이 수가 곧
- * 번역 비용이다 — 서울은 32건이 잡히는데 가로 한 줄에서 열두 장 너머까지 미는 사람은 없다.
- * 정렬이 진행중 먼저 · 임박순이라 앞 열둘이 가장 볼 만한 것들이다.
+ * 관광지와 같은 수를 쓰지 않는다. 두 줄의 비용 구조가 다르기 때문이다 —
+ * 관광지는 영문 그대로 나가 번역이 0회지만, 축제는 국문 단일 소스라 자른 뒤 남은 전부를
+ * 번역한다. 이 수가 곧 Gemini 호출량이다.
+ *
+ * 20 은 translate.ts 의 CHUNK_SIZE 와 같은 수다. 그 경계에 맞춰 두면 지역 하나가
+ * 캐시를 빗나가도 언제나 호출 1회다. 50 으로 올리면 서울(필터 통과 45건)만 3회를 쓰는데,
+ * 실측 할당량이 하루 20회라 네 지역을 한 바퀴 도는 것만으로 예산이 흔들린다.
+ *
+ * 잘려 나가는 쪽이 아깝지 않다는 것도 확인했다. 필터 통과 수가 서울 45 · 부산 16 ·
+ * 경주 4 · 강릉 1 이라 서울 말고는 20 에서 잘리지 않고, 정렬이 "곧 끝나는 것 먼저" 라
+ * 서울의 스물한 번째부터는 12월 31일에 끝나는 상설 전시들이다.
  */
-const FESTIVAL_LIMIT = 12;
+const FESTIVAL_LIMIT = 20;
 
 /**
  * 며칠 앞까지의 축제를 올릴지.

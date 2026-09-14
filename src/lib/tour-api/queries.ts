@@ -240,6 +240,36 @@ export async function getNearbyAttractions({
   }, limit);
 }
 
+/**
+ * 지역 목록에서 빼는 콘텐츠 타입 — 축제/공연/행사.
+ *
+ * 같은 지역의 축제는 바로 아래 getFestivals 가 날짜와 진행 상태까지 붙여 따로 낸다.
+ * 한 항목이 두 줄에 동시에 서면 줄을 나눈 이유가 없어진다.
+ *
+ * 그냥 겹치는 정도가 아니라 위쪽이 틀린 값을 낸다. areaBasedList2 는 기간을 보지 않아
+ * 이미 끝난 행사를 상설 장소와 같은 모양으로 돌려주는데, 관광지 카드에는 날짜 자리가
+ * 없어 끝났다는 사실이 어디에도 드러나지 않는다 (서울 영문 축제 40건 표본 —
+ * 이미 끝남 23 · 유효 8 · 기간 필드가 아예 빈 것 9).
+ *
+ * 두 코드를 함께 적는다. detail-fields 와 같은 이유로 서비스마다 번호가 갈린다 —
+ * KorService2 는 15, EngService2 는 85 다. 지금 네 지역은 영문이 임계를 넘겨
+ * 실제로 걸러지는 것은 전부 85 쪽이지만, 국문 보강이 붙는 지역이 생기면 15 가 온다.
+ *
+ * cat2 로 거르지 않는다. 축제 항목의 cat2 는 A0207 · A0208 이거나 빈값인데
+ * (실측 서울 300건 — A0207 은 전부 contentTypeId 15 와 함께 왔고, 역은 성립하지 않았다)
+ * contentTypeId 가 그 셋을 모두 덮는 상위 집합이다. 좁은 쪽을 더 볼 필요가 없다.
+ */
+const FESTIVAL_CONTENT_TYPES = new Set(["15", "85"]);
+
+/**
+ * 축제를 걸러낸 뒤에도 limit 을 채우려면 그만큼 더 받아 둬야 한다.
+ *
+ * 실측 비중이 1.6~2.7% (서울 78/4,971 · 부산 20/1,129 · 경주 2/102 · 강릉 3/113)라
+ * 100건을 받아도 섞이는 것이 최대 3건이었다. 10 이면 세 배 여유다.
+ * 더 받는 비용은 사실상 없다 — 한 번의 호출로 1,000건까지 오고, 100건 응답이 215ms다.
+ */
+const AREA_FILTER_HEADROOM = 10;
+
 /** 법정동 코드 기준 관광지. getNearbyAttractions 와 같은 이유로 lang 을 받지 않는다 */
 export async function getAreaAttractions({
   regnCd,
@@ -253,15 +283,19 @@ export async function getAreaAttractions({
   return withKoreanBackfill(async (lang) => {
     const res = await callTourApi(lang, "areaBasedList2", {
       ...ldongParams(regnCd, signguCd),
-      numOfRows: limit,
+      numOfRows: limit + AREA_FILTER_HEADROOM,
       arrange: "A",
     });
     if (!res.ok) return null;
 
-    return {
-      items: res.items.map((i) => toAttraction(i, lang)).filter((a): a is Attraction => a !== null),
-      totalCount: res.totalCount,
-    };
+    const items = res.items
+      .map((i) => toAttraction(i, lang))
+      .filter((a): a is Attraction => a !== null && !FESTIVAL_CONTENT_TYPES.has(a.contentTypeId ?? ""))
+      .slice(0, limit);
+
+    // totalCount 는 API 가 준 것을 그대로 둔다 — 축제를 뺀 수가 아니지만,
+    // 이 값을 읽는 쪽이 없고 "지역에 몇 건이 있는지" 라는 뜻은 그대로다
+    return { items, totalCount: res.totalCount };
   }, limit);
 }
 
