@@ -26,10 +26,26 @@ export type TourItem = {
 
 export type TourResult<T> = { items: T[]; totalCount: number | null };
 
+/**
+ * title 과 titleKo 의 의미는 어느 언어로 받아 왔든 같다.
+ *   title    화면에 띄우는 영문. 영문 응답이면 괄호 앞을 떼어낸 것, 국문 응답이면 번역 결과다
+ *   titleKo  국문. 영문 응답이면 괄호 안을 떼어낸 것, 국문 응답이면 원문 그대로다
+ * 번역이 실패하면 title 에 국문이 그대로 남는다 — 비어 있는 것보다 낫다.
+ *
+ * 주소는 제목과 달리 병기하지 않는다. 언어별로 아예 다른 칸에 담는다.
+ *   address    영문 주소. 영문 응답에만 있다. 국문 응답으로 온 항목은 null 이다
+ *   addressKo  국문 주소. 국문 응답에만 있다
+ * 번역하지 않기 때문에 둘 중 하나만 찬다. 화면은 address 만 그리므로
+ * 국문 경로 항목에는 주소 줄이 아예 생기지 않는다 — 한 목록 안에서 주소 언어가 섞이지 않는다.
+ * 저장할 때는 Place 갈래와 같은 규칙으로 `address ?? addressKo` 폴백을 쓴다.
+ */
 export type Attraction = {
   contentId: string;
   title: string;
+  /** 형태가 "영문 (한글)" 이 아니면 null */
+  titleKo: string | null;
   address: string | null;
+  addressKo: string | null;
   lat: number | null;
   lng: number | null;
   imageUrl: string | null;
@@ -38,10 +54,16 @@ export type Attraction = {
   contentTypeId: string | null;
 };
 
+/**
+ * title / titleKo / address / addressKo 의 의미는 Attraction 과 같다.
+ * 축제는 국문 단일 소스라 titleKo 가 항상 원문이고 address 는 항상 null 이다.
+ */
 export type Festival = {
   contentId: string;
   title: string;
+  titleKo: string | null;
   address: string | null;
+  addressKo: string | null;
   lat: number | null;
   lng: number | null;
   imageUrl: string | null;

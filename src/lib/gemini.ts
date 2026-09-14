@@ -12,6 +12,30 @@ async function urlToInlineData(url: string): Promise<{
   return { inlineData: { data: base64, mimeType } };
 }
 
+/**
+ * 503(과부하) 재시도: 최대 3회, 지수 백오프. 503 외 에러는 즉시 전파한다.
+ *
+ * calculateMatchScore 안에 있던 것을 그대로 꺼냈다. TourAPI 국문 보강의 일괄 번역이
+ * 같은 과부하를 맞는데, 거기서는 한 건이 아니라 목록 전체의 영문이 한꺼번에 날아간다.
+ * 같은 정책을 두 벌 쓰지 않으려고 함수로 뺐다.
+ */
+export async function retryOn503<T>(call: () => Promise<T>): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) {
+      await new Promise((r) => setTimeout(r, 1500 * attempt));
+    }
+    try {
+      return await call();
+    } catch (e) {
+      lastError = e;
+      const msg = e instanceof Error ? e.message : String(e);
+      if (!msg.includes("503")) throw e; // 503 외 에러는 즉시 전파
+    }
+  }
+  throw lastError;
+}
+
 export async function calculateMatchScore(
   referenceUrl: string,
   recreationUrl: string
@@ -36,25 +60,14 @@ JSON만 반환: {"score": <number>}`,
     recData,
   ];
 
-  // 503(과부하) 재시도: 최대 3회, 지수 백오프
-  let lastError: unknown;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    if (attempt > 0) {
-      await new Promise((r) => setTimeout(r, 1500 * attempt));
-    }
-    try {
-      const result = await model.generateContent(prompt);
-      const text = result.response.text().trim();
-      const match =
-        text.match(/\{"score"\s*:\s*(\d+(?:\.\d+)?)\}/) ??
-        text.match(/"score"\s*:\s*(\d+(?:\.\d+)?)/);
-      if (!match?.[1]) return 0;
-      return Math.min(100, Math.max(0, parseFloat(match[1])));
-    } catch (e) {
-      lastError = e;
-      const msg = e instanceof Error ? e.message : String(e);
-      if (!msg.includes("503")) throw e; // 503 외 에러는 즉시 전파
-    }
-  }
-  throw lastError;
+  const text = await retryOn503(async () => {
+    const result = await model.generateContent(prompt);
+    return result.response.text().trim();
+  });
+
+  const match =
+    text.match(/\{"score"\s*:\s*(\d+(?:\.\d+)?)\}/) ??
+    text.match(/"score"\s*:\s*(\d+(?:\.\d+)?)/);
+  if (!match?.[1]) return 0;
+  return Math.min(100, Math.max(0, parseFloat(match[1])));
 }

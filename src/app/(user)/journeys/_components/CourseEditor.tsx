@@ -18,7 +18,9 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Check, ChevronLeft, GripVertical, Loader2, Plus, Trash2, X } from "lucide-react";
+import Image from "next/image";
+import { Check, ChevronLeft, GripVertical, Loader2, MapPin, Plus, Trash2, X } from "lucide-react";
+import { isExternalImage } from "@/lib/image";
 import { showError } from "@/lib/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
@@ -32,9 +34,9 @@ import {
   updateCourse,
 } from "@/app/(user)/_actions/course-actions";
 import type { CourseDetail } from "@/lib/course-queries";
-import { coverBackground, NEUTRAL_COVER } from "./course-cover";
 import { PlaceAddSheet, type PickedPlace } from "./PlaceAddSheet";
 import {
+  CHIP_BG,
   CONTROL_LINE,
   DANGER,
   DANGER_BG,
@@ -89,7 +91,11 @@ export type EditorDay = {
     id: string;
     placeId: string | null;
     nameEn: string;
+    /** 관광 데이터의 국문 이름. 초안 아이템이 Done 에서 풀릴 때까지 들고 있어야 한다 */
+    nameKo: string | null;
     address: string | null;
+    /** 영문 주소가 없는 관광 데이터의 국문 주소. 저장할 때 address 대신 들어간다 */
+    addressKo: string | null;
     latitude: number | null;
     longitude: number | null;
     imageUrl: string | null;
@@ -155,7 +161,11 @@ function toAddItemInput(picked: PickedPlace) {
   return {
     source: "external" as const,
     nameEn: picked.nameEn,
-    ...(picked.address ? { address: picked.address } : {}),
+    ...(picked.nameKo ? { nameKo: picked.nameKo } : {}),
+    // Place 갈래의 addressEn || addressKo 와 같은 폴백이다 — 스냅샷에는 주소가 남아야 한다
+    ...(picked.address || picked.addressKo
+      ? { address: picked.address ?? picked.addressKo! }
+      : {}),
     ...(picked.latitude !== null ? { latitude: picked.latitude } : {}),
     ...(picked.longitude !== null ? { longitude: picked.longitude } : {}),
     ...(picked.imageUrl && /^https?:\/\//.test(picked.imageUrl)
@@ -183,12 +193,10 @@ function renumber(days: EditorDay[]): EditorDay[] {
 function SortableItemRow({
   item,
   index,
-  cover,
   onRemove,
 }: {
   item: EditorDay["items"][number];
   index: number;
-  cover: string;
   onRemove: (itemId: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -216,11 +224,28 @@ function SortableItemRow({
         {index + 1}
       </span>
 
-      <span
-        aria-hidden
-        className="size-11 flex-none rounded-xl"
-        style={{ background: item.placeId ? cover : NEUTRAL_COVER }}
-      />
+      {/* 썸네일은 그 장소의 사진이다 — 코스 커버(Topic 색)와 역할이 다르다.
+          unoptimized 판정과 사진 없을 때의 자리는 PlaceAddSheet.tsx:146 과 같게 둔다.
+          시트에서 보고 고른 그림이 담은 뒤에도 그대로 남는다. */}
+      {item.imageUrl ? (
+        <Image
+          src={item.imageUrl}
+          alt=""
+          width={44}
+          height={44}
+          unoptimized={isExternalImage(item.imageUrl)}
+          className="size-11 flex-none rounded-xl object-cover"
+          style={{ background: CHIP_BG }}
+        />
+      ) : (
+        <span
+          aria-hidden
+          className="flex size-11 flex-none items-center justify-center rounded-xl"
+          style={{ background: CHIP_BG }}
+        >
+          <MapPin className="size-4" style={{ color: SUB }} />
+        </span>
+      )}
 
       <div className="min-w-0 flex-1">
         <p className="truncate text-[13px] font-medium leading-[1.3]" style={{ color: INK }}>
@@ -367,7 +392,6 @@ export function CourseEditor({
   /** 아직 서버에 코스가 없는 상태 */
   const isDraft = courseId === undefined;
   const itemCount = days.reduce((sum, day) => sum + day.items.length, 0);
-  const cover = initialData ? coverBackground(initialData.topics) : NEUTRAL_COVER;
   const atMaxDays = days.length >= MAX_DAYS;
   const pendingDeleteDay =
     dialog?.kind === "deleteDay" ? (days.find((day) => day.id === dialog.dayId) ?? null) : null;
@@ -1034,7 +1058,6 @@ export function CourseEditor({
                         key={item.id}
                         item={item}
                         index={i}
-                        cover={cover}
                         onRemove={(itemId) => handleRemoveItem(day.id, itemId)}
                       />
                     ))}

@@ -1,15 +1,22 @@
 // 코스 커버·핀 색 — 목록 카드와 상세 배너가 같은 규칙을 쓰도록 한 곳에 둔다.
+//
+// 여기의 색은 "코스 전체"를 대표하는 자리에만 쓴다. 아이템 한 줄의 썸네일은 여기 해당하지 않는다 —
+// 그 줄은 장소 하나를 가리키므로 그 장소의 사진을 쓴다
+// (CourseEditor.tsx:227 · [id]/page.tsx:253, 없으면 장소 아이콘).
 import { DEFAULT_COLOR, DEFAULT_TEXT, labelBackground, resolveTopicColors } from "@/lib/post-labels";
 import type { CourseListItem } from "@/lib/course-queries";
 
 /** CourseListItem·CourseDetail 이 같은 CourseTopicLabel[] 을 쓴다 */
 type CourseTopics = CourseListItem["topics"];
 
-/** Topic이 하나도 없을 때 — DEFAULT_COLOR에서 background/light로 떨어지는 중립 그라데이션 */
+/** 커버에 Topic이 하나도 없을 때 — DEFAULT_COLOR에서 background/light로 떨어지는 중립 그라데이션 */
 export const NEUTRAL_COVER = `linear-gradient(to bottom, ${DEFAULT_COLOR}, #F3F3F3)`;
 
 /**
  * 커버 배경 — 사진이 아니라 Topic 색에서만 만든다.
+ *
+ * 코스에는 장소가 여럿이라 그중 하나의 사진을 골라 대표로 세울 근거가 없다. 그래서 색이다.
+ * 반대로 아이템 행은 장소가 하나라 고를 것이 없고, 사진이 곧 그 장소다 — 그쪽은 사진을 쓴다.
  *
  * Topic 1개  labelBackground와 같은 규칙. colorHex2가 null이면 단색, gradientDir/gradientStop 반영
  * Topic 2개+ 각 Topic의 colorHex를 순서대로 이어 붙인다. 방향은 첫 Topic의 gradientDir

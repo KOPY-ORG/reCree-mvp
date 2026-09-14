@@ -33,8 +33,11 @@ export default async function EditJourneyPage({ params }: Props) {
         id: item.id,
         placeId: item.placeId,
         nameEn: item.nameEn,
+        nameKo: item.nameKo,
         // CourseItem 스냅샷의 주소가 비어 있으면 원본 Place 로 폴백한다 ([id]/page.tsx:257 과 같은 순서)
         address: item.address ?? item.place?.addressEn ?? item.place?.addressKo ?? null,
+        // 저장 시점에 이미 한 칸으로 합쳐졌다 — 다시 나눌 것이 없다
+        addressKo: null,
         // 좌표도 같은 순서로 폴백한다 — Nearby Attractions 의 기준점을 여기서 찾는다
         latitude: item.latitude ?? item.place?.latitude ?? null,
         longitude: item.longitude ?? item.place?.longitude ?? null,

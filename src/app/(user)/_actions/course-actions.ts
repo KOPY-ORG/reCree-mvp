@@ -816,11 +816,11 @@ export async function getNearbyCourseAttractions(input: {
     .safeParse(input);
   if (!parsed.success) return null;
 
+  // 언어를 고르지 않는다 — 영문을 먼저 부르고 모자라면 국문을 번역해 덧대는 것은 queries 안쪽 일이다
   const result = await getNearbyAttractions({
     lat: parsed.data.lat,
     lng: parsed.data.lng,
     radiusM: NEARBY_RADIUS_M,
-    lang: "en",
   });
   if (!result) return null;
 
