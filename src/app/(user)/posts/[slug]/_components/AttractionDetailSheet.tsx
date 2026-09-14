@@ -152,6 +152,7 @@ function Overview({ text }: { text: string }) {
 export function AttractionDetailSheet({
   item,
   trigger,
+  meta,
   onClose,
 }: {
   /** null 이면 닫힌 상태 */
@@ -163,6 +164,14 @@ export function AttractionDetailSheet({
    * 주지 않는 경우가 있어서, 그때는 BODY 를 붙잡고 문서 맨 앞으로 튕긴다.
    */
   trigger: HTMLElement | null;
+  /**
+   * 거리 자리에 대신 놓을 한 줄. 축제가 쓴다 — "Now on · Sep 12 – 21".
+   *
+   * 시트가 Festival 타입을 알게 하지 않으려고 문자열로 받는다. 날짜·상태를 어떻게
+   * 읽히게 쓸지는 목록을 가진 쪽의 판단이고, 여기는 그 한 줄을 놓을 자리만 안다.
+   * 지역 목록(areaBasedList2 · searchFestival2)은 dist 를 주지 않아 거리와 겹치지 않는다.
+   */
+  meta?: string;
   onClose: () => void;
 }) {
   const [essentials, setEssentials] = useState<Loadable<AttractionEssentials>>(null);
@@ -302,6 +311,10 @@ export function AttractionDetailSheet({
 
           {distance && (
             <p className="px-4 pt-3 text-xs text-muted-foreground">{distance} from here</p>
+          )}
+
+          {meta && (
+            <p className="px-4 pt-3 text-[13px] font-semibold text-foreground">{meta}</p>
           )}
 
           {essentialsFailed ? (

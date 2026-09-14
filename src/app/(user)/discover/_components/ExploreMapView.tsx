@@ -22,6 +22,7 @@ import { DiscoverSheetHeader } from "./DiscoverSheetHeader";
 import { EventSheetHeader } from "./EventSheetHeader";
 import { EventPeekCarousel } from "./EventPeekCarousel";
 import { HotTabStub } from "./HotTabStub";
+import { RegionTourSections } from "./RegionTourSections";
 import { ScrollToTopButton } from "../../_components/ScrollToTopButton";
 import { useRecentSearches } from "../_hooks/useRecentSearches";
 import { useDiscoverViewState } from "../_hooks/useDiscoverViewState";
@@ -796,6 +797,17 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
             tagGroupMap={tagGroupMap}
             savedPostIdsSet={savedPostIdsSet}
           />
+        )}
+
+        {/* 지역 관광 데이터 — 자체 섹션 전부 뒤, 시트 맨 아래다 (시안 :1889-1892).
+            reCree 가 본체이고 관광 데이터는 그 주변 맥락이라는 것이 순서로 표현된 것이라
+            위로 올리지 않는다.
+
+            지역을 고르지 않았으면 그리지 않는다. 지역이 정해지면 hasFilters 가 서서
+            시트는 이미 결과 목록 쪽으로 넘어가 있다 — 이 줄이 Hot 탭에 뜨는 일은 없다.
+            이벤트 모드는 컬렉션이 화면을 통째로 쓰는 상태라 제외한다. */}
+        {!isEventMode && appliedRegion && (
+          <RegionTourSections key={appliedRegion} regionKey={appliedRegion} />
         )}
       </PlaceListSheet>
 

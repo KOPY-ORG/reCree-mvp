@@ -11,19 +11,31 @@
 
 import { z } from "zod";
 import {
+  getAreaAttractions,
   getAttractionEssentials,
   getAttractionImages,
   getAttractionIntro,
+  getFestivals,
   getNearbyAttractions,
 } from "@/lib/tour-api/queries";
+import { placeRegionOf } from "@/lib/tour-api/regions";
 import type {
   Attraction,
   AttractionEssentials,
   AttractionIntroRow,
+  Festival,
 } from "@/lib/tour-api/types";
 
 /** Nearby Attractions 반경 */
 const NEARBY_RADIUS_M = 5000;
+
+/**
+ * TourAPI 는 이미지를 http 로 돌려주는 경우가 있다. https 페이지에서 mixed content 로
+ * 차단되고, 그대로 CourseItem 에 저장되면 코스 상세에서도 계속 깨진다.
+ */
+function toHttps(url: string | null | undefined): string | null {
+  return url?.replace(/^http:\/\//, "https://") ?? null;
+}
 
 /**
  * 좌표 주변 관광지 (출처: ⓒ한국관광공사).
@@ -57,12 +69,112 @@ export async function fetchNearbyAttractions(input: {
   // 좌표 없는 항목은 코스에 넣어도 지도에 못 찍는다 — 목록에서 뺀다
   return result.items
     .filter((item) => item.lat !== null && item.lng !== null)
-    .map((item) => ({
-      ...item,
-      // TourAPI는 이미지를 http로 돌려주는 경우가 있다. https 페이지에서 mixed content로
-      // 차단되고, 그대로 CourseItem에 저장되면 코스 상세에서도 계속 깨진다.
-      imageUrl: item.imageUrl?.replace(/^http:\/\//, "https://") ?? null,
-    }));
+    .map((item) => ({ ...item, imageUrl: toHttps(item.imageUrl) }));
+}
+
+// ─── 지역 단위 관광 데이터 ────────────────────────────────────────────────────
+// 맵 시트의 "Attractions in {도시}" · "Festivals in {도시}" 두 줄이 쓴다.
+//
+// 좌표가 아니라 지역 키를 받는다. 부르는 쪽은 지금 고른 지역 slug 만 알면 되고,
+// 그 slug 가 어떤 법정동 코드인지는 tour-api/regions 안쪽 일이다 — 화면이 코드를 모른다.
+//
+// 좌표 없는 항목을 걸러내지 않는다. 이 둘은 코스에 담기는 목록이 아니라 읽는 목록이라
+// 지도에 못 찍는 것도 카드로는 멀쩡하다.
+
+/**
+ * 화면에 올리는 관광지 수.
+ *
+ * 기본값(20)이 너무 얕다. 이 줄 말고 지역 관광지를 볼 수 있는 화면이 없어서
+ * 가로 스크롤이 목록 전부인데, 스무 장은 몇 번 밀면 끝난다.
+ *
+ * "전부" 는 답이 아니다 — 영문만 서울 4,971건이고 목록이 제목 오름차순이라
+ * 뒤로 갈수록 좋아지지도 않는다. 끝에 닿을 사람이 없는 길이를 만드는 것은
+ * 많이 보여주는 것이 아니다. 100장이면 가로로 14,000px 라 폰에서 서른 번 넘게 밀어야 한다.
+ *
+ * 50 으로 한 이유는 셋이다.
+ *   비용   호출은 그대로 한 번이다. 실측 응답시간이 20건 165ms · 50건 166ms · 100건 215ms 라
+ *          50 까지는 늘어난 것이 눈에 띄지 않는다
+ *   번역   영문이 얇은 지역에 국문 보강이 붙으면 번역량이 이 수에 비례한다.
+ *          하루 20회짜리 예산(translate.ts)에서 100 은 위험하고 50 은 감당된다
+ *   깊이   네 지역 영문 재고가 각각 4,971 · 1,129 · 102 · 113 이라
+ *          50 은 네 지역 모두 가득 찬다. 100 은 경주가 못 채워 줄 길이가 지역마다 들쭉날쭉해진다
+ */
+const ATTRACTION_LIMIT = 50;
+
+/** 지역 관광지 (출처: ⓒ한국관광공사). 표에 없는 지역이거나 실패하면 null */
+export async function fetchRegionAttractions(input: {
+  regionKey: string;
+}): Promise<Attraction[] | null> {
+  const parsed = z.object({ regionKey: z.string().min(1).max(40) }).safeParse(input);
+  if (!parsed.success) return null;
+
+  const region = placeRegionOf(parsed.data.regionKey);
+  if (region === null) return null;
+
+  const result = await getAreaAttractions({
+    regnCd: region.lDongRegnCd,
+    signguCd: region.lDongSignguCd,
+    limit: ATTRACTION_LIMIT,
+  });
+  if (!result) return null;
+
+  return result.items.map((item) => ({ ...item, imageUrl: toHttps(item.imageUrl) }));
+}
+
+/**
+ * 화면에 올리는 축제 수.
+ *
+ * 관광지와 같은 수를 쓰지 않는다. 두 줄의 비용 구조가 다르기 때문이다 —
+ * 관광지는 영문 그대로 나가 번역이 0회지만, 축제는 국문 단일 소스라 자른 뒤 남은 전부를
+ * 번역한다. 이 수가 곧 Gemini 호출량이다.
+ *
+ * 20 은 translate.ts 의 CHUNK_SIZE 와 같은 수다. 그 경계에 맞춰 두면 지역 하나가
+ * 캐시를 빗나가도 언제나 호출 1회다. 50 으로 올리면 서울(필터 통과 45건)만 3회를 쓰는데,
+ * 실측 할당량이 하루 20회라 네 지역을 한 바퀴 도는 것만으로 예산이 흔들린다.
+ *
+ * 잘려 나가는 쪽이 아깝지 않다는 것도 확인했다. 필터 통과 수가 서울 45 · 부산 16 ·
+ * 경주 4 · 강릉 1 이라 서울 말고는 20 에서 잘리지 않고, 정렬이 "곧 끝나는 것 먼저" 라
+ * 서울의 스물한 번째부터는 12월 31일에 끝나는 상설 전시들이다.
+ */
+const FESTIVAL_LIMIT = 20;
+
+/**
+ * 며칠 앞까지의 축제를 올릴지.
+ *
+ * queries 의 기본값 30 을 쓰지 않는다. 해외 팬은 방한을 두세 달 전부터 짚어 보는데
+ * 30일은 "지금 갈 수 있는 것"만 남겨 지방이 사실상 비었다 — 강릉이 0건이었다.
+ *
+ * 60일로 늘렸을 때 실측 (2026-09-14 기준, 필터 통과 건수):
+ *   서울 40→45 · 부산 9→16 · 경주 4→4 · 강릉 0→1
+ * 화면에 뜨는 카드로는 부산 9→12장, 강릉 0→1장이다 (강릉은 섹션이 처음 생긴다).
+ * 서울은 12칸을 진행중이 다 먹고 있어 변화가 없다 — 그건 정렬 문제다(아래 주석 참고).
+ *
+ * 수집 쪽은 건드릴 필요가 없다. upcomingDays 는 받아 온 뒤 거르는 값이라 API 호출이
+ * 달라지지 않는다. FESTIVAL_MAX_PAGES(3) × FESTIVAL_ROWS(100) = 300 이 상한인데
+ * 60일에서 필터를 통과한 최대가 서울 45건이라 여유가 크고, lookback 180일은 진행중
+ * 판정에만 쓰여 예정 축제와 무관하다.
+ */
+const FESTIVAL_UPCOMING_DAYS = 60;
+
+/** 지역 축제 (출처: ⓒ한국관광공사). 표에 없는 지역이거나 실패하면 null */
+export async function fetchRegionFestivals(input: {
+  regionKey: string;
+}): Promise<Festival[] | null> {
+  const parsed = z.object({ regionKey: z.string().min(1).max(40) }).safeParse(input);
+  if (!parsed.success) return null;
+
+  const region = placeRegionOf(parsed.data.regionKey);
+  if (region === null) return null;
+
+  const result = await getFestivals({
+    regnCd: region.lDongRegnCd,
+    signguCd: region.lDongSignguCd,
+    upcomingDays: FESTIVAL_UPCOMING_DAYS,
+    limit: FESTIVAL_LIMIT,
+  });
+  if (!result) return null;
+
+  return result.items.map((item) => ({ ...item, imageUrl: toHttps(item.imageUrl) }));
 }
 
 // ─── 관광지 상세 ──────────────────────────────────────────────────────────────
@@ -102,7 +214,7 @@ export async function fetchAttractionImages(input: {
   if (urls === null) return null;
 
   // 목록 이미지와 같은 처리다. API 가 http 로 주는데 https 페이지에서 mixed content 로 막힌다
-  return urls.map((u) => u.replace(/^http:\/\//, "https://"));
+  return urls.map((u) => toHttps(u) ?? u);
 }
 
 /** 느림 — 영업시간 · 휴무 · 주차 · 전화. 국문 경로면 값 번역이 붙는다 */

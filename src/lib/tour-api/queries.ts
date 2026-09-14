@@ -108,6 +108,7 @@ function toAttraction(item: TourItem, lang: TourLang): Attraction | null {
     imageUrl: toImageUrl(item),
     distanceM: Number.isFinite(distNum) ? Math.round(distNum) : null,
     contentTypeId: pickField(item, ["contenttypeid"]),
+    cat2: pickField(item, ["cat2"]),
   };
 }
 
@@ -239,6 +240,36 @@ export async function getNearbyAttractions({
   }, limit);
 }
 
+/**
+ * 지역 목록에서 빼는 콘텐츠 타입 — 축제/공연/행사.
+ *
+ * 같은 지역의 축제는 바로 아래 getFestivals 가 날짜와 진행 상태까지 붙여 따로 낸다.
+ * 한 항목이 두 줄에 동시에 서면 줄을 나눈 이유가 없어진다.
+ *
+ * 그냥 겹치는 정도가 아니라 위쪽이 틀린 값을 낸다. areaBasedList2 는 기간을 보지 않아
+ * 이미 끝난 행사를 상설 장소와 같은 모양으로 돌려주는데, 관광지 카드에는 날짜 자리가
+ * 없어 끝났다는 사실이 어디에도 드러나지 않는다 (서울 영문 축제 40건 표본 —
+ * 이미 끝남 23 · 유효 8 · 기간 필드가 아예 빈 것 9).
+ *
+ * 두 코드를 함께 적는다. detail-fields 와 같은 이유로 서비스마다 번호가 갈린다 —
+ * KorService2 는 15, EngService2 는 85 다. 지금 네 지역은 영문이 임계를 넘겨
+ * 실제로 걸러지는 것은 전부 85 쪽이지만, 국문 보강이 붙는 지역이 생기면 15 가 온다.
+ *
+ * cat2 로 거르지 않는다. 축제 항목의 cat2 는 A0207 · A0208 이거나 빈값인데
+ * (실측 서울 300건 — A0207 은 전부 contentTypeId 15 와 함께 왔고, 역은 성립하지 않았다)
+ * contentTypeId 가 그 셋을 모두 덮는 상위 집합이다. 좁은 쪽을 더 볼 필요가 없다.
+ */
+const FESTIVAL_CONTENT_TYPES = new Set(["15", "85"]);
+
+/**
+ * 축제를 걸러낸 뒤에도 limit 을 채우려면 그만큼 더 받아 둬야 한다.
+ *
+ * 실측 비중이 1.6~2.7% (서울 78/4,971 · 부산 20/1,129 · 경주 2/102 · 강릉 3/113)라
+ * 100건을 받아도 섞이는 것이 최대 3건이었다. 10 이면 세 배 여유다.
+ * 더 받는 비용은 사실상 없다 — 한 번의 호출로 1,000건까지 오고, 100건 응답이 215ms다.
+ */
+const AREA_FILTER_HEADROOM = 10;
+
 /** 법정동 코드 기준 관광지. getNearbyAttractions 와 같은 이유로 lang 을 받지 않는다 */
 export async function getAreaAttractions({
   regnCd,
@@ -252,15 +283,19 @@ export async function getAreaAttractions({
   return withKoreanBackfill(async (lang) => {
     const res = await callTourApi(lang, "areaBasedList2", {
       ...ldongParams(regnCd, signguCd),
-      numOfRows: limit,
+      numOfRows: limit + AREA_FILTER_HEADROOM,
       arrange: "A",
     });
     if (!res.ok) return null;
 
-    return {
-      items: res.items.map((i) => toAttraction(i, lang)).filter((a): a is Attraction => a !== null),
-      totalCount: res.totalCount,
-    };
+    const items = res.items
+      .map((i) => toAttraction(i, lang))
+      .filter((a): a is Attraction => a !== null && !FESTIVAL_CONTENT_TYPES.has(a.contentTypeId ?? ""))
+      .slice(0, limit);
+
+    // totalCount 는 API 가 준 것을 그대로 둔다 — 축제를 뺀 수가 아니지만,
+    // 이 값을 읽는 쪽이 없고 "지역에 몇 건이 있는지" 라는 뜻은 그대로다
+    return { items, totalCount: res.totalCount };
   }, limit);
 }
 
@@ -358,9 +393,22 @@ export async function getFestivals({
     });
   }
 
-  // ongoing 먼저, 그다음 startDate 오름차순
+  // ongoing 먼저. 그 안의 순서는 "곧 끝나는 것"이다.
+  //
+  // startDate 오름차순이었는데, 그러면 1월 1일에 시작한 연중 상설이 맨 앞을 차지한다.
+  // 실측 서울은 진행중 19건이 거의 전부 상설(왕궁수문장 교대의식 · DDP 건축투어 등)이라
+  // 12칸을 그것들이 다 먹고, upcomingDays 를 늘려도 화면이 그대로였다.
+  // 놓치면 안 되는 것은 곧 끝나는 것이고, 상설은 언제 가도 되므로 뒤로 가도 손해가 없다.
+  //
+  // 끝나는 날이 같으면 늦게 시작한 것을 앞에 둔다 — 서울은 12월 31일에 끝나는 것이
+  // 여럿이라 이 갈림이 실제로 순서를 정한다. 같은 날 끝난다면 짧게 하는 쪽이 행사에 가깝다.
+  //
+  // upcoming 은 그대로 startDate 오름차순이다. 아직 시작도 안 한 것에서는 임박한 것이 먼저다.
   items.sort((a, b) => {
     if (a.status !== b.status) return a.status === "ongoing" ? -1 : 1;
+    if (a.status === "ongoing") {
+      return a.daysUntilEnd - b.daysUntilEnd || b.startDate.localeCompare(a.startDate);
+    }
     return a.startDate.localeCompare(b.startDate);
   });
 
@@ -420,11 +468,29 @@ function cleanText(v: unknown): string | null {
   return s === "" ? null : s;
 }
 
+/** 본문에 섞인 주소. 닫는 괄호·따옴표·꺾쇠는 주소의 일부가 아니라 그 앞에서 끊는다 */
+const BARE_URL = /https?:\/\/[^\s<>"'()[\]]+/gi;
+
 /**
  * homepage 에서 주소만 뽑는다.
  *
- * 실측 형태는 셋이다 — 단일 <a>, <br> 로 이은 복수 <a>(홈페이지+인스타그램), 빈 문자열.
- * 태그 없는 순수 URL 은 표본에 없었지만 폴백을 둔다.
+ * 관광지와 축제가 형태가 다르다. 값이 있는 54건(관광지 · 축제 · Nearby) 실측:
+ *
+ *   <a href> 를 쓴 것          18건   관광지 쪽. href 를 그대로 쓴다
+ *   태그 없이 맨 URL 만         24건   축제 쪽. "공식 홈페이지 https://…" 처럼 라벨이 앞에 붙는다
+ *   프로토콜 없는 주소만        12건   "www.ssfshop.com" · "adidas.co.kr". 아래 참고
+ *   URL 두 개 이상              8건   전부 \n 으로 이어진다 (<br> 로 온 것은 0건이었다)
+ *
+ * 예전 폴백은 태그를 걷은 문자열 "전체"가 URL 일 때만 인정해서(^…$), 라벨이 한 글자라도
+ * 앞에 붙으면 통째로 버렸다. 축제는 그 라벨이 거의 항상 붙어 있어 절반이 빈손으로 돌아왔다.
+ * 이제 본문 어디에 있든 긁는다.
+ *
+ * <a> 가 있으면 href 만 쓰고 본문은 보지 않는다. 앵커 글자가 주소를 그대로 적어 둔 경우가
+ * 많은데 잘려 있을 때가 있어서, 둘을 섞으면 깨진 주소가 한 줄 더 생긴다.
+ *
+ * 프로토콜 없는 주소는 뽑지 않는다. 한글 본문에서 "낱말.낱말" 을 주소로 오인할 여지가 있고,
+ * 12건 중 11건이 면세점·브랜드샵이라 얻는 것에 비해 위험이 크다.
+ *
  * 태그를 화면에 그대로 내보내지 않는다. target·rel 은 우리가 붙인다.
  */
 function parseHomepageUrls(v: unknown): string[] {
@@ -436,10 +502,17 @@ function parseHomepageUrls(v: unknown): string[] {
     if (/^https?:\/\//i.test(u)) urls.push(u);
   }
 
-  // <a> 가 하나도 없으면 태그를 걷어낸 본문이 URL 인지 본다
+  // <a> 가 하나도 없으면 태그를 걷어낸 본문에서 주소를 긁는다.
+  // cleanText 가 <br> 을 \n 으로 바꾸고 줄바꿈을 남기므로 여러 개도 그대로 갈린다.
   if (urls.length === 0) {
     const bare = cleanText(v);
-    if (bare && /^https?:\/\/\S+$/i.test(bare)) urls.push(bare);
+    if (bare) {
+      for (const m of bare.matchAll(BARE_URL)) {
+        // 문장 끝에 붙은 마침표·쉼표는 주소가 아니다
+        const u = m[0].replace(/[.,;:!?]+$/, "");
+        if (u.length > "https://".length) urls.push(u);
+      }
+    }
   }
 
   // 같은 주소를 두 번 그리지 않는다. 셋이면 충분하다

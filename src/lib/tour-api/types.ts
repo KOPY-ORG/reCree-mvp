@@ -60,6 +60,11 @@ export type Attraction = {
   /** locationBasedList2의 dist. 없으면 null */
   distanceM: number | null;
   contentTypeId: string | null;
+  /**
+   * 관광공사 중분류 코드("A0401" 등). 4개 지역 160건 실측에서 38%만 차 있다 —
+   * 비는 자리는 tour-api/category 가 contentTypeId 로 메운다.
+   */
+  cat2: string | null;
 };
 
 /**
