@@ -4,8 +4,10 @@
 
 import type { TourItem, TourLang } from "./types";
 
-const KOR_BASE = "http://apis.data.go.kr/B551011/KorService2";
-const ENG_BASE = "http://apis.data.go.kr/B551011/EngService2";
+// 공공데이터포털 활용신청 상세의 End Point 가 https 다. 실측상 http 와 응답·지연이 같다
+// (p50 차이 -5~+6ms, 항목 수·totalCount 동일).
+const KOR_BASE = "https://apis.data.go.kr/B551011/KorService2";
+const ENG_BASE = "https://apis.data.go.kr/B551011/EngService2";
 
 const MOBILE_OS = "ETC";
 const MOBILE_APP = "recree";
