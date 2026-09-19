@@ -13,6 +13,7 @@ import {
 import type { Level0TopicDeep } from "@/lib/topic-queries";
 import type { TagGroupWithTags } from "@/lib/filter-queries";
 import { KPOP_NAME } from "@/lib/filter-params";
+import type { DistrictOption } from "../_hooks/useDiscoverFilters";
 
 type ChipInfo = { id: string; label: string; bg: string; fg: string };
 
@@ -36,6 +37,10 @@ interface Props {
   regions?: { slug: string; label: string }[];
   stagedRegion?: string | null;
   onToggleRegion?: (slug: string) => void;
+  /** 지금 고른 시도의 시군구 목록. 부르는 쪽이 골라서 넘긴다 — 시트는 어느 시도인지만 안다 */
+  districts?: DistrictOption[];
+  stagedDistrict?: string | null;
+  onToggleDistrict?: (slug: string) => void;
 }
 
 export function DiscoverFilterSheet({
@@ -58,7 +63,12 @@ export function DiscoverFilterSheet({
   regions = [],
   stagedRegion = null,
   onToggleRegion,
+  districts = [],
+  stagedDistrict = null,
+  onToggleDistrict,
 }: Props) {
+  const stagedRegionLabel = regions.find((r) => r.slug === stagedRegion)?.label ?? stagedRegion;
+  const stagedDistrictLabel = districts.find((d) => d.slug === stagedDistrict)?.label ?? stagedDistrict;
   const totalSelected = stagedTopicIds.length + stagedTagIds.length + stagedTagGroupKeys.length + (stagedRegion != null ? 1 : 0);
 
   return (
@@ -158,20 +168,24 @@ export function DiscoverFilterSheet({
                   </LabelBadge>
                 );
               })}
-              {stagedRegion != null && (() => {
-                const label = regions.find((r) => r.slug === stagedRegion)?.label ?? stagedRegion;
-                return (
-                  <button
-                    type="button"
-                    onClick={() => onToggleRegion?.(stagedRegion)}
-                    className="shrink-0 inline-flex items-center gap-1 px-3 h-7 rounded-full bg-white text-xs font-semibold whitespace-nowrap shadow-sm active:opacity-70 transition-opacity"
-                  >
-                    <MapPin className="w-3 h-3 shrink-0" />
-                    {label}
-                    <X className="size-3" />
-                  </button>
-                );
-              })()}
+              {/* 지역은 시도·시군구를 합쳐 칩 하나다. 둘로 나누면 "Seoul 을 지우면 Mapo-gu 는?"
+                  이라는 물음이 생기는데, 답은 언제나 "같이 지운다" 라 나눌 이유가 없다.
+                  X 는 한 단만 벗긴다 — 시군구가 있으면 시군구만, 없으면 시도를 */}
+              {stagedRegion != null && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    stagedDistrict != null
+                      ? onToggleDistrict?.(stagedDistrict)
+                      : onToggleRegion?.(stagedRegion)
+                  }
+                  className="shrink-0 inline-flex items-center gap-1 px-3 h-7 rounded-full bg-white text-xs font-semibold whitespace-nowrap shadow-sm active:opacity-70 transition-opacity"
+                >
+                  <MapPin className="w-3 h-3 shrink-0" />
+                  {stagedDistrict != null ? `${stagedDistrictLabel} · ${stagedRegionLabel}` : stagedRegionLabel}
+                  <X className="size-3" />
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -404,6 +418,45 @@ export function DiscoverFilterSheet({
                     );
                   })}
                 </div>
+
+                {/* 시군구 — 시도를 고르면 그 아래로 한 단 들어간다.
+                    토픽의 L1 소제목 + L2 칩(분기 C)과 같은 생김새다. 같은 "넓은 것 안의
+                    좁은 것" 이라 다르게 생길 이유가 없다.
+                    시군구가 없는 시도(세종)는 districts 가 비어 줄 자체가 서지 않는다. */}
+                {districts.length > 0 && (
+                  <div className="mt-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <p className="text-xs font-semibold text-muted-foreground">
+                        {stagedRegionLabel}
+                      </p>
+                      {/* All = 시군구 없음 = 시도 전체. 이미 All 이면 누를 것이 없다 */}
+                      <AllBadge
+                        active={stagedDistrict === null}
+                        onClick={() => {
+                          if (stagedDistrict !== null) onToggleDistrict?.(stagedDistrict);
+                        }}
+                        className="shrink-0"
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-x-2 gap-y-2.5">
+                      {districts.map((d) => {
+                        const isSelected = stagedDistrict === d.slug;
+                        return (
+                          <button
+                            key={d.slug}
+                            type="button"
+                            onClick={() => onToggleDistrict?.(d.slug)}
+                            className={`shrink-0 inline-flex items-center px-3 h-7 rounded-full bg-white text-xs font-semibold whitespace-nowrap shadow-sm active:opacity-70 transition-all ${
+                              isSelected ? "ring-2 ring-foreground" : ""
+                            }`}
+                          >
+                            {d.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </section>
             )}
 

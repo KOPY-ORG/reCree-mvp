@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { parseFilterParams, serializeFilterParams, topicSlugToId, KPOP_NAME } from "@/lib/filter-params";
+import { parseFilterParams, serializeFilterParams, KPOP_NAME } from "@/lib/filter-params";
 import {
   getPlaceRegionSlug,
   getPlaceRegionLabel,
@@ -163,12 +163,6 @@ export function useDiscoverFilters({
     return map;
   }, [tagGroups]);
 
-  const btsTopicId = useMemo(() => topicSlugToId(topicTree, "bts"), [topicTree]);
-  const btsChipInfo = useMemo(
-    () => (btsTopicId ? (topicChipMap.get(btsTopicId) ?? null) : null),
-    [btsTopicId, topicChipMap]
-  );
-
   // ── effect ──
   // URL ?topics=<slug,…> / ?tags=<slug,…> / ?region=<slug> → 마운트 1회 초기 필터 적용
   useEffect(() => {
@@ -299,8 +293,6 @@ export function useDiscoverFilters({
     topicChipMap,
     tagChipMap,
     tagGroupChipMap,
-    btsTopicId,
-    btsChipInfo,
     commitFilters,
     exitResultMode,
     openFilter,

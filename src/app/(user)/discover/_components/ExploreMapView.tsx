@@ -107,6 +107,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     stagedTagIds,
     stagedTagGroupKeys,
     stagedRegion,
+    stagedDistrict,
     appliedTopicIds,
     appliedTagIds,
     appliedTagGroupKeys,
@@ -115,11 +116,10 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     hasFilters,
     hasPostLevelFilter,
     availableCities,
+    availableDistricts,
     topicChipMap,
     tagChipMap,
     tagGroupChipMap,
-    btsTopicId,
-    btsChipInfo,
     commitFilters,
     exitResultMode,
     openFilter,
@@ -134,6 +134,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     toggleTag,
     toggleTagGroup,
     toggleRegion,
+    toggleDistrict,
   } = useDiscoverFilters({
     topicTree,
     tagGroups,
@@ -305,10 +306,9 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   const isEventMode = activeEventData !== null;
 
   const isResultMode = !isEventMode && (query.trim() !== "" || hasFilters);
-  const hasRegionChips = !isEventMode && availableCities.length >= 2;
   // 이벤트 모드는 EventSearchBar(검색+칩)가 항상 떠 있어 동일한 top reserve가 필요.
   // 비이벤트는 facet 칩이 떠 있을 때(isResultMode)만 필요. 두 조건의 OR는 새 변수에서만.
-  const needsTopReserve = isEventMode || isResultMode || hasRegionChips;
+  const needsTopReserve = isEventMode || isResultMode;
 
   const searchedPlaces = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -681,12 +681,10 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
           onRemoveTagGroup={removeAppliedTagGroup}
           eventCollections={eventCollections}
           onEventCollectionClick={(slug) => setCollectionSlug(slug)}
-          quickTopicChip={btsChipInfo}
-          onQuickTopicClick={() => {
-            if (btsTopicId) commitFilters({ topicIds: [btsTopicId], tagIds: appliedTagIds, tagGroupKeys: appliedTagGroupKeys, region: appliedRegion, district: appliedDistrict });
-          }}
           regions={availableCities}
           appliedRegion={appliedRegion}
+          districts={appliedRegion ? (availableDistricts.get(appliedRegion) ?? []) : []}
+          appliedDistrict={appliedDistrict}
           onRegionChange={(slug) => commitFilters({ topicIds: appliedTopicIds, tagIds: appliedTagIds, tagGroupKeys: appliedTagGroupKeys, region: slug, district: null })}
         />
       )}
@@ -899,6 +897,9 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
         regions={availableCities}
         stagedRegion={stagedRegion}
         onToggleRegion={toggleRegion}
+        districts={stagedRegion ? (availableDistricts.get(stagedRegion) ?? []) : []}
+        stagedDistrict={stagedDistrict}
+        onToggleDistrict={toggleDistrict}
       />
     </div>
   );
