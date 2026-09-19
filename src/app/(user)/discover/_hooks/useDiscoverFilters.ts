@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { parseFilterParams, serializeFilterParams, KPOP_NAME } from "@/lib/filter-params";
+import type { FilterState } from "@/lib/filter-params";
 import {
   getPlaceRegionSlug,
   getPlaceRegionLabel,
@@ -30,6 +31,8 @@ interface UseDiscoverFiltersParams {
   allPlaces: (MapPlace & { isSaved?: boolean })[];
   onExitQuery: () => void;
   onFiltersApplied: () => void;
+  /** 필터를 next 로 바꿨을 때 지금 선택된 장소가 결과에 남는지. false 면 commitFilters 가 ?place= 를 같이 지운다 */
+  shouldKeepSelectedPlace: (next: FilterState) => boolean;
 }
 
 export function useDiscoverFilters({
@@ -38,6 +41,7 @@ export function useDiscoverFilters({
   allPlaces,
   onExitQuery,
   onFiltersApplied,
+  shouldKeepSelectedPlace,
 }: UseDiscoverFiltersParams) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -195,13 +199,16 @@ export function useDiscoverFilters({
   const hasPostLevelFilter = appliedTopicIds.length > 0 || appliedTagIds.length > 0 || appliedTagGroupKeys.length > 0;
 
   // ── 핸들러 ──
-  function commitFilters(next: { topicIds: string[]; tagIds: string[]; tagGroupKeys: string[]; region: string | null; district: string | null }) {
+  function commitFilters(next: FilterState) {
     setAppliedTopicIds(next.topicIds);
     setAppliedTagIds(next.tagIds);
     setAppliedTagGroupKeys(next.tagGroupKeys);
     setAppliedRegion(next.region);
     setAppliedDistrict(next.district);
     const params = serializeFilterParams(next, { topicTree, tagGroups }, new URLSearchParams(searchParams.toString()));
+    // 결과에서 사라지는 선택은 필터 파라미터와 같은 replace 에서 함께 지운다.
+    // 별도 replace 로 나누면 그쪽이 읽는 searchParams 에는 방금 쓴 필터가 아직 없어 URL 에서 필터가 날아간다
+    if (!shouldKeepSelectedPlace(next)) params.delete("place");
     const qs = params.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }

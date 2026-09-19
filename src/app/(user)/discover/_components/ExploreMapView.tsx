@@ -8,6 +8,7 @@ import { dedupeEventMarkers } from "@/lib/event-utils";
 import { EVENT_RED, sortEventMarkers } from "@/lib/event-format";
 import { useSearchParams, useRouter } from "next/navigation";
 import { buildTopicColorMap } from "@/lib/filter-params";
+import type { FilterState } from "@/lib/filter-params";
 import { postMatchesFilters, placeMatchesFilters, placeMatchScore } from "@/lib/discover-filter-utils";
 import { InteractiveMap, type FocusCameraHandle } from "@/components/maps/InteractiveMap";
 import { PlaceBottomSheet } from "@/components/maps/PlaceBottomSheet";
@@ -141,6 +142,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     allPlaces,
     onExitQuery: () => setQuery(""),
     onFiltersApplied: () => setSheetState("half"),
+    shouldKeepSelectedPlace,
   });
 
   useEffect(() => {
@@ -330,6 +332,34 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
       return Boolean(inName || inPost || inTopic);
     });
   }, [query, visiblePlaces]);
+
+  /**
+   * 필터를 next 로 바꾸면 지금 선택된 장소가 결과에 남는가 — commitFilters 가 이 답으로
+   * ?place= 를 지울지 정한다. 판정은 filteredPlaces 와 같은 파이프라인이다:
+   * searchedPlaces(검색어·saved 까지 적용된 집합)에서 찾고, 나머지는 placeMatchesFilters 에
+   * next 를 넣어 본다. 새 판정 규칙을 만들지 않는다.
+   *
+   * 함수 선언이라 호이스팅된다 — useDiscoverFilters 호출부가 이 줄 위에 있어도 되고,
+   * 실제 호출은 렌더가 끝난 뒤 이벤트 핸들러에서만 일어난다.
+   */
+  function shouldKeepSelectedPlace(next: FilterState): boolean {
+    if (!selectedPlaceId) return true;
+    // 이벤트 모드의 선택은 이 파이프라인 밖(컬렉션의 이벤트 장소)이라 건드리지 않는다
+    if (isEventMode) return true;
+    const place = searchedPlaces.find((p) => p.id === selectedPlaceId);
+    if (!place) return false;
+    const nextHasPostLevelFilter =
+      next.topicIds.length > 0 || next.tagIds.length > 0 || next.tagGroupKeys.length > 0;
+    const matchedPosts = new Map([
+      [
+        place.id,
+        place.posts.filter((post) =>
+          postMatchesFilters(post, next.topicIds, next.tagIds, next.tagGroupKeys)
+        ),
+      ],
+    ]);
+    return placeMatchesFilters(place, nextHasPostLevelFilter, matchedPosts, next.region, next.district);
+  }
 
   // topic/tag/tagGroup 필터에 매칭되는 posts를 place당 한 번만 계산 — filteredPlaces 포함 판정과
   // filteredMarkerPlaces 색/카운트 계산이 이 결과를 공유해 동일 post 배열을 중복 스캔하지 않는다.
