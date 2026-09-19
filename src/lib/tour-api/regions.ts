@@ -6,8 +6,9 @@
 // 한동안 하드코딩 표(seoul·busan·gyeongju·gangneung 넷)를 두었는데, 전국 Area 249행에
 // 코드가 채워지면서 그 자리가 없어졌다. 이제 Area 를 늘리면 지역이 늘어난다.
 //
-// getPlaceRegionSlug 가 level 1 을 parent 로 rollup 하므로 여기 들어오는 slug 는
-// 언제나 level 0(시도)의 nameEn 이다. 시군구 단위 섹션을 원하면 rollup 쪽을 고쳐야 한다.
+// 시도(region)와 시군구(district)를 따로 받는다. 시군구 이름 하나로는 못 찾기 때문이다 —
+// level 1 nameEn 이 전국에서 유일하지 않다 (Jung-gu 가 다섯 곳, Dong-gu 가 다섯 곳).
+// 시도를 먼저 찾고 그 자식 안에서 고르면 한 행으로 좁혀진다.
 //
 // 이 모듈은 여전히 떼어내기 쉽다 — 파일을 지우고 부르는 줄을 지우면 관광 데이터가 빠진다.
 
@@ -18,7 +19,7 @@ export type PlaceRegion = {
   label: string;
   lDongRegnCd: string;
   /**
-   * 시도 전체가 대상이면 빈 배열이다.
+   * 시도 전체가 대상이면 빈 배열이다. 시군구를 고르면 그 시군구의 코드들이다.
    *
    * 배열인 이유는 일반시 13곳(수원·창원·전주 등) 때문이다. 축제도 관광지도 시 코드가
    * 아니라 구 코드에 붙어 있어 코드 하나로는 조회가 안 된다 — 수원시(110) 0건,
@@ -27,34 +28,65 @@ export type PlaceRegion = {
   lDongSignguCds: string[];
 };
 
-/**
- * Area.nameEn 이 slug 와 같고 lDongRegnCd 가 채워진 행. 없으면 null 이다.
- *
- * 코드가 비어 있는 Area(광주 · 충청)는 null 로 떨어진다. 광주는 API 가 전남과
- * 통합(12)해 시도에 없고, 충청은 충북·충남 둘 다라 하나로 못 정한다. 어드민에서
- * 사람이 정하면 그때부터 섹션이 뜬다 — 코드를 고칠 필요가 없다.
- *
- * nameEn 은 유일하지 않다(광역시의 "Jung-gu" 가 다섯 곳). rollup 때문에 실제로
- * 들어오는 것은 시도뿐이지만, 결과가 흔들리지 않게 level·sortOrder 로 순서를 고정한다.
- */
-export async function placeRegionOf(slug: string | null | undefined): Promise<PlaceRegion | null> {
-  if (!slug?.trim()) return null;
-
-  const area = await prisma.area.findFirst({
-    where: {
-      isActive: true,
-      nameEn: { equals: slug.trim(), mode: "insensitive" },
-      lDongRegnCd: { not: null },
-    },
-    orderBy: [{ level: "asc" }, { sortOrder: "asc" }],
-    select: { nameEn: true, lDongRegnCd: true, lDongSignguCds: true },
-  });
-
+/** Area 행 하나를 화면이 쓰는 형태로. nameEn·코드가 비어 있으면 null */
+function toPlaceRegion(
+  area: { nameEn: string | null; lDongRegnCd: string | null; lDongSignguCds: string[] } | null
+): PlaceRegion | null {
   if (!area?.nameEn || !area.lDongRegnCd) return null;
-
   return {
     label: area.nameEn,
     lDongRegnCd: area.lDongRegnCd,
     lDongSignguCds: area.lDongSignguCds,
   };
+}
+
+/**
+ * 시도 nameEn 이 region 과 같은 level 0 행. district 를 주면 그 시도의 자식 중
+ * nameEn 이 같은 level 1 행. 없으면 null 이다.
+ *
+ * 코드가 비어 있는 Area 는 null 로 떨어진다. 지금 dev 는 시도 16 · 시군구 229 가
+ * 전부 채워져 있지만, 어드민에서 지역을 늘리면 다시 생길 수 있는 상태다.
+ *
+ * district 가 그 시도에 없으면 시도 전체로 물러난다 — 화면이 그렇게 움직이기 때문이다.
+ * URL 의 모르는 district 는 useDiscoverFilters 가 버리고 시도 전체를 그리는데,
+ * 여기만 null 을 내면 목록은 서울 전체인데 관광 섹션만 사라진다.
+ */
+export async function placeRegionOf(
+  region: string | null | undefined,
+  district?: string | null
+): Promise<PlaceRegion | null> {
+  const regionName = region?.trim();
+  if (!regionName) return null;
+
+  const sido = await prisma.area.findFirst({
+    where: {
+      isActive: true,
+      level: 0,
+      nameEn: { equals: regionName, mode: "insensitive" },
+      lDongRegnCd: { not: null },
+    },
+    orderBy: { sortOrder: "asc" },
+    select: { id: true, nameEn: true, lDongRegnCd: true, lDongSignguCds: true },
+  });
+
+  const resolvedSido = toPlaceRegion(sido);
+  if (!sido || !resolvedSido) return null;
+
+  const districtName = district?.trim();
+  if (!districtName) return resolvedSido;
+
+  // 시도 안에서는 nameEn 이 유일하다 (dev 실측 중복 0건)
+  const sigungu = await prisma.area.findFirst({
+    where: {
+      isActive: true,
+      level: 1,
+      parentId: sido.id,
+      nameEn: { equals: districtName, mode: "insensitive" },
+      lDongRegnCd: { not: null },
+    },
+    orderBy: { sortOrder: "asc" },
+    select: { nameEn: true, lDongRegnCd: true, lDongSignguCds: true },
+  });
+
+  return toPlaceRegion(sigungu) ?? resolvedSido;
 }

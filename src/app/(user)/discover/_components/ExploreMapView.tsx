@@ -111,6 +111,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     appliedTagIds,
     appliedTagGroupKeys,
     appliedRegion,
+    appliedDistrict,
     hasFilters,
     hasPostLevelFilter,
     availableCities,
@@ -343,14 +344,14 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   const filteredPlaces = useMemo(() => {
     if (!hasFilters) return searchedPlaces;
     const matched = searchedPlaces.filter((p) =>
-      placeMatchesFilters(p, hasPostLevelFilter, matchedPostsByPlaceId, appliedRegion)
+      placeMatchesFilters(p, hasPostLevelFilter, matchedPostsByPlaceId, appliedRegion, appliedDistrict)
     );
     return [...matched].sort(
       (a, b) =>
         placeMatchScore(b, appliedTopicIds, appliedTagIds) -
         placeMatchScore(a, appliedTopicIds, appliedTagIds)
     );
-  }, [searchedPlaces, hasFilters, hasPostLevelFilter, matchedPostsByPlaceId, appliedTopicIds, appliedTagIds, appliedRegion]);
+  }, [searchedPlaces, hasFilters, hasPostLevelFilter, matchedPostsByPlaceId, appliedTopicIds, appliedTagIds, appliedRegion, appliedDistrict]);
 
   // topicTree 전체를 한 번만 순회해 topicId → 색 맵을 만들어둔다 (place마다 트리 재순회 방지)
   const topicColorMap = useMemo(() => buildTopicColorMap(topicTree), [topicTree]);
@@ -623,7 +624,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
           isEventMode
             ? `collection:${collectionSlug}`
             : isResultMode
-              ? `q:${query}|t:${[...appliedTopicIds].sort().join(",")}|tg:${[...appliedTagIds].sort().join(",")}|gk:${[...appliedTagGroupKeys].sort().join(",")}|r:${appliedRegion ?? ""}`
+              ? `q:${query}|t:${[...appliedTopicIds].sort().join(",")}|tg:${[...appliedTagIds].sort().join(",")}|gk:${[...appliedTagGroupKeys].sort().join(",")}|r:${appliedRegion ?? ""}|d:${appliedDistrict ?? ""}`
               : isSavedView ? "saved" : "all"
         }
         highlightedIds={
@@ -682,11 +683,11 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
           onEventCollectionClick={(slug) => setCollectionSlug(slug)}
           quickTopicChip={btsChipInfo}
           onQuickTopicClick={() => {
-            if (btsTopicId) commitFilters({ topicIds: [btsTopicId], tagIds: appliedTagIds, tagGroupKeys: appliedTagGroupKeys, region: appliedRegion });
+            if (btsTopicId) commitFilters({ topicIds: [btsTopicId], tagIds: appliedTagIds, tagGroupKeys: appliedTagGroupKeys, region: appliedRegion, district: appliedDistrict });
           }}
           regions={availableCities}
           appliedRegion={appliedRegion}
-          onRegionChange={(slug) => commitFilters({ topicIds: appliedTopicIds, tagIds: appliedTagIds, tagGroupKeys: appliedTagGroupKeys, region: slug })}
+          onRegionChange={(slug) => commitFilters({ topicIds: appliedTopicIds, tagIds: appliedTagIds, tagGroupKeys: appliedTagGroupKeys, region: slug, district: null })}
         />
       )}
 
@@ -807,7 +808,11 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
             시트는 이미 결과 목록 쪽으로 넘어가 있다 — 이 줄이 Hot 탭에 뜨는 일은 없다.
             이벤트 모드는 컬렉션이 화면을 통째로 쓰는 상태라 제외한다. */}
         {!isEventMode && appliedRegion && (
-          <RegionTourSections key={appliedRegion} regionKey={appliedRegion} />
+          <RegionTourSections
+            key={`${appliedRegion}/${appliedDistrict ?? ""}`}
+            regionKey={appliedRegion}
+            district={appliedDistrict}
+          />
         )}
       </PlaceListSheet>
 

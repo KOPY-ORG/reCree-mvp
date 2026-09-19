@@ -3,7 +3,12 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { parseFilterParams, serializeFilterParams, topicSlugToId, KPOP_NAME } from "@/lib/filter-params";
-import { getPlaceRegionSlug, getPlaceRegionLabel } from "@/lib/region-utils";
+import {
+  getPlaceRegionSlug,
+  getPlaceRegionLabel,
+  getPlaceDistrictSlug,
+  getPlaceDistrictLabel,
+} from "@/lib/region-utils";
 import {
   resolveTopicColors,
   resolveTagColors,
@@ -15,6 +20,9 @@ import type { TagGroupWithTags } from "@/lib/filter-queries";
 import type { MapPlace } from "@/lib/map-queries";
 
 export type ChipInfo = { id: string; label: string; bg: string; fg: string };
+
+/** 시도 안에서 고를 수 있는 시군구 하나 — count 는 그 시군구에 있는 장소 수 */
+export type DistrictOption = { slug: string; label: string; count: number };
 
 interface UseDiscoverFiltersParams {
   topicTree: Level0TopicDeep[];
@@ -41,10 +49,12 @@ export function useDiscoverFilters({
   const [stagedTagIds, setStagedTagIds] = useState<string[]>([]);
   const [stagedTagGroupKeys, setStagedTagGroupKeys] = useState<string[]>([]);
   const [stagedRegion, setStagedRegion] = useState<string | null>(null);
+  const [stagedDistrict, setStagedDistrict] = useState<string | null>(null);
   const [appliedTopicIds, setAppliedTopicIds] = useState<string[]>([]);
   const [appliedTagIds, setAppliedTagIds] = useState<string[]>([]);
   const [appliedTagGroupKeys, setAppliedTagGroupKeys] = useState<string[]>([]);
   const [appliedRegion, setAppliedRegion] = useState<string | null>(null);
+  const [appliedDistrict, setAppliedDistrict] = useState<string | null>(null);
   const urlFilterInitRef = useRef(false);
 
   // ── memo ──
@@ -60,6 +70,34 @@ export function useDiscoverFilters({
     return [...map.entries()]
       .map(([slug, label]) => ({ slug, label }))
       .sort((a, b) => a.label.localeCompare(b.label));
+  }, [allPlaces]);
+
+  // 시도 slug → 그 안에서 장소가 있는 시군구 목록. availableCities 와 같은 규칙으로
+  // "장소가 있는 것만" 담는다 — 서울은 25구 중 15개, 경기는 31곳 중 9곳만 값이 있다.
+  // 시도에 직접 붙은 장소(세종)는 시군구가 없어 어느 목록에도 들어가지 않는다.
+  const availableDistricts = useMemo(() => {
+    const byRegion = new Map<string, Map<string, DistrictOption>>();
+    for (const place of allPlaces) {
+      const regionSlug = getPlaceRegionSlug(place.area);
+      const slug = getPlaceDistrictSlug(place.area);
+      const label = getPlaceDistrictLabel(place.area);
+      if (!regionSlug || !slug || !label) continue;
+      let districts = byRegion.get(regionSlug);
+      if (!districts) {
+        districts = new Map();
+        byRegion.set(regionSlug, districts);
+      }
+      const found = districts.get(slug);
+      if (found) found.count += 1;
+      else districts.set(slug, { slug, label, count: 1 });
+    }
+    // 장소 많은 순. 동점이면 이름순이라 목록이 렌더마다 흔들리지 않는다
+    return new Map<string, DistrictOption[]>(
+      [...byRegion].map(([regionSlug, districts]) => [
+        regionSlug,
+        [...districts.values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label)),
+      ])
+    );
   }, [allPlaces]);
 
   const topicChipMap = useMemo(() => {
@@ -147,19 +185,26 @@ export function useDiscoverFilters({
     if (parsed.region && availableCities.some((c) => c.slug === parsed.region)) {
       setAppliedRegion(parsed.region);
       setStagedRegion(parsed.region);
+      // 시군구는 그 시도 안에 실제로 있는 것만 받는다. 없는 값이면 버리고 시도 전체로 둔다
+      const districts = availableDistricts.get(parsed.region) ?? [];
+      if (parsed.district && districts.some((d) => d.slug === parsed.district)) {
+        setAppliedDistrict(parsed.district);
+        setStagedDistrict(parsed.district);
+      }
     }
-  }, [searchParams, topicTree, tagGroups, availableCities]);
+  }, [searchParams, topicTree, tagGroups, availableCities, availableDistricts]);
 
   // ── 파생 ──
   const hasFilters = appliedTopicIds.length > 0 || appliedTagIds.length > 0 || appliedTagGroupKeys.length > 0 || appliedRegion !== null;
   const hasPostLevelFilter = appliedTopicIds.length > 0 || appliedTagIds.length > 0 || appliedTagGroupKeys.length > 0;
 
   // ── 핸들러 ──
-  function commitFilters(next: { topicIds: string[]; tagIds: string[]; tagGroupKeys: string[]; region: string | null }) {
+  function commitFilters(next: { topicIds: string[]; tagIds: string[]; tagGroupKeys: string[]; region: string | null; district: string | null }) {
     setAppliedTopicIds(next.topicIds);
     setAppliedTagIds(next.tagIds);
     setAppliedTagGroupKeys(next.tagGroupKeys);
     setAppliedRegion(next.region);
+    setAppliedDistrict(next.district);
     const params = serializeFilterParams(next, { topicTree, tagGroups }, new URLSearchParams(searchParams.toString()));
     const qs = params.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
@@ -167,7 +212,7 @@ export function useDiscoverFilters({
 
   const exitResultMode = () => {
     onExitQuery();
-    commitFilters({ topicIds: [], tagIds: [], tagGroupKeys: [], region: null });
+    commitFilters({ topicIds: [], tagIds: [], tagGroupKeys: [], region: null, district: null });
   };
 
   const openFilter = () => {
@@ -175,21 +220,22 @@ export function useDiscoverFilters({
     setStagedTagIds(appliedTagIds);
     setStagedTagGroupKeys(appliedTagGroupKeys);
     setStagedRegion(appliedRegion);
+    setStagedDistrict(appliedDistrict);
     setIsFilterOpen(true);
   };
   const applyFilters = () => {
-    commitFilters({ topicIds: stagedTopicIds, tagIds: stagedTagIds, tagGroupKeys: stagedTagGroupKeys, region: stagedRegion });
+    commitFilters({ topicIds: stagedTopicIds, tagIds: stagedTagIds, tagGroupKeys: stagedTagGroupKeys, region: stagedRegion, district: stagedDistrict });
     setIsFilterOpen(false);
     onFiltersApplied();
   };
   const closeFilter = () => setIsFilterOpen(false);
-  const resetStaged = () => { setStagedTopicIds([]); setStagedTagIds([]); setStagedTagGroupKeys([]); setStagedRegion(null); };
+  const resetStaged = () => { setStagedTopicIds([]); setStagedTagIds([]); setStagedTagGroupKeys([]); setStagedRegion(null); setStagedDistrict(null); };
   const removeAppliedTopic = (id: string) =>
-    commitFilters({ topicIds: appliedTopicIds.filter((x) => x !== id), tagIds: appliedTagIds, tagGroupKeys: appliedTagGroupKeys, region: appliedRegion });
+    commitFilters({ topicIds: appliedTopicIds.filter((x) => x !== id), tagIds: appliedTagIds, tagGroupKeys: appliedTagGroupKeys, region: appliedRegion, district: appliedDistrict });
   const removeAppliedTag = (id: string) =>
-    commitFilters({ topicIds: appliedTopicIds, tagIds: appliedTagIds.filter((x) => x !== id), tagGroupKeys: appliedTagGroupKeys, region: appliedRegion });
+    commitFilters({ topicIds: appliedTopicIds, tagIds: appliedTagIds.filter((x) => x !== id), tagGroupKeys: appliedTagGroupKeys, region: appliedRegion, district: appliedDistrict });
   const removeAppliedTagGroup = (key: string) =>
-    commitFilters({ topicIds: appliedTopicIds, tagIds: appliedTagIds, tagGroupKeys: appliedTagGroupKeys.filter((k) => k !== key), region: appliedRegion });
+    commitFilters({ topicIds: appliedTopicIds, tagIds: appliedTagIds, tagGroupKeys: appliedTagGroupKeys.filter((k) => k !== key), region: appliedRegion, district: appliedDistrict });
 
   // 그룹(L0/L1) All 토글 — staged에 groupId가 있으면 그것만 제거, 없으면 하위 노드(descendantIds) 전부 제거 후 groupId 추가(collapse)
   const toggleTopicGroup = (groupId: string, descendantIds: string[]) =>
@@ -225,8 +271,14 @@ export function useDiscoverFilters({
     }
     setStagedTagIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
   };
-  const toggleRegion = (slug: string) =>
+  // 시도를 바꾸거나 끄면 시군구는 따라 내려간다 — 다른 시도의 구가 남으면 결과가 0이 된다
+  const toggleRegion = (slug: string) => {
     setStagedRegion((prev) => prev === slug ? null : slug);
+    setStagedDistrict(null);
+  };
+  // 시군구는 단일 선택. 같은 값 재탭이면 해제 (region 과 같은 방식)
+  const toggleDistrict = (slug: string) =>
+    setStagedDistrict((prev) => prev === slug ? null : slug);
 
   return {
     isFilterOpen,
@@ -234,13 +286,16 @@ export function useDiscoverFilters({
     stagedTagIds,
     stagedTagGroupKeys,
     stagedRegion,
+    stagedDistrict,
     appliedTopicIds,
     appliedTagIds,
     appliedTagGroupKeys,
     appliedRegion,
+    appliedDistrict,
     hasFilters,
     hasPostLevelFilter,
     availableCities,
+    availableDistricts,
     topicChipMap,
     tagChipMap,
     tagGroupChipMap,
@@ -260,5 +315,6 @@ export function useDiscoverFilters({
     toggleTag,
     toggleTagGroup,
     toggleRegion,
+    toggleDistrict,
   };
 }

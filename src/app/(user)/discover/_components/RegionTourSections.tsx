@@ -321,8 +321,16 @@ function TourRow<T>({
  *
  * 지역이 바뀌면 부르는 쪽이 key 로 이 컴포넌트를 새로 만든다 — 상태를 되돌리는 코드가
  * 따로 없고, 옛 지역의 카드가 한 프레임도 새 제목 아래 남지 않는다.
+ * key 에 시군구도 들어간다. 같은 시도 안에서 구만 갈아탈 때도 같은 보장이 서야 한다.
  */
-export function RegionTourSections({ regionKey }: { regionKey: string }) {
+export function RegionTourSections({
+  regionKey,
+  district = null,
+}: {
+  regionKey: string;
+  /** 시군구. null 이면 시도 전체다 */
+  district?: string | null;
+}) {
   /** null = 아직 모름 · "none" = 코드 없는 지역 */
   const [info, setInfo] = useState<{ label: string } | "none" | null>(null);
 
@@ -366,35 +374,35 @@ export function RegionTourSections({ regionKey }: { regionKey: string }) {
   useEffect(() => {
     if (!started) return;
     let alive = true;
-    fetchRegionTourInfo({ regionKey }).then((result) => {
+    fetchRegionTourInfo({ regionKey, district }).then((result) => {
       if (alive) setInfo(result ?? "none");
     });
     return () => {
       alive = false;
     };
-  }, [started, regionKey]);
+  }, [started, regionKey, district]);
 
   useEffect(() => {
     if (!started) return;
     let alive = true;
-    fetchRegionAttractions({ regionKey }).then((result) => {
+    fetchRegionAttractions({ regionKey, district }).then((result) => {
       if (alive) setAttractions(result === null ? "failed" : result);
     });
     return () => {
       alive = false;
     };
-  }, [started, regionKey, attractionAttempt]);
+  }, [started, regionKey, district, attractionAttempt]);
 
   useEffect(() => {
     if (!started) return;
     let alive = true;
-    fetchRegionFestivals({ regionKey }).then((result) => {
+    fetchRegionFestivals({ regionKey, district }).then((result) => {
       if (alive) setFestivals(result === null ? "failed" : result);
     });
     return () => {
       alive = false;
     };
-  }, [started, regionKey, festivalAttempt]);
+  }, [started, regionKey, district, festivalAttempt]);
 
   // 코드를 모르는 지역이면 두 줄 다 없다. 부르는 쪽이 지역별로 분기하지 않아도 되게
   // 판단을 여기서 끝낸다 — 지역 코드를 아는 것은 관광 모듈뿐이다.
