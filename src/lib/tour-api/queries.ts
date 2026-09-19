@@ -1,6 +1,11 @@
 // ─── TourAPI 기능별 조회 ──────────────────────────────────────────────────────
 // 공개 함수 4개. 전부 실패 시 null을 반환하고 throw하지 않는다.
 // 지역 필터는 법정동 코드(lDongRegnCd/lDongSignguCd)만 쓴다 — areaCode는 과소집계한다.
+//
+// 목록 세 함수는 unstable_cache 를 거친다 (아래 "캐시" 절). 공개 함수의 계약은
+// 그대로다 — 캐시는 안쪽에 있고, 실패는 여전히 null 로 나간다.
+
+import { unstable_cache } from "next/cache";
 
 import { callTourApi, pickField } from "./client";
 import { koreanKey, splitBilingualTitle } from "./title";
@@ -158,6 +163,14 @@ type Bilingual = {
   addressKo: string | null;
 };
 
+/**
+ * 언어 한 쪽을 받아 온 결과.
+ *   result    실패하면 null. 그 언어 경로가 통째로 죽은 것이다
+ *   complete  그 언어의 호출이 전부 성공했는지. 시군구 코드가 여럿일 때 일부만
+ *             실패하면 false 다 — 결과는 쓰되 캐시에는 담지 않기 위한 표시다
+ */
+type LangResult = { result: TourResult<Attraction> | null; complete: boolean };
+
 /** 영문 응답 — "영문 (한글)" 을 쪼개기만 한다. 번역 호출이 없다 */
 function splitEnglish<T extends Bilingual>(items: T[]): T[] {
   return items.map((item) => {
@@ -199,23 +212,32 @@ async function fillFromKorean<T extends Bilingual>(items: T[]): Promise<T[]> {
  *
  * 영문을 앞에 두고 국문을 뒤에 붙인다. 거리순으로 다시 정렬하지 않는다 —
  * 화면에 거리를 표시하지 않으므로, 읽을 수 있는 줄이 위에 오는 편이 낫다.
+ *
+ * complete 를 함께 낸다. 캐시가 붙으면서 "덜 찬 결과" 와 "다 찬 결과" 를 구분해야
+ * 하는데, 그 판단이 시작되는 자리가 여기다 — 호출이 실제로 몇 번 나갔는지는
+ * 언어별 fetch 안쪽만 안다.
  */
 async function withKoreanBackfill(
-  fetch: (lang: TourLang) => Promise<TourResult<Attraction> | null>,
+  fetch: (lang: TourLang) => Promise<LangResult>,
   limit: number
-): Promise<TourResult<Attraction> | null> {
+): Promise<LangResult> {
   const en = await fetch("en");
-  const enItems = en === null ? [] : splitEnglish(en.items);
+  const enItems = en.result === null ? [] : splitEnglish(en.result.items);
 
   if (enItems.length >= KO_BACKFILL_THRESHOLD) {
-    return { items: enItems, totalCount: en?.totalCount ?? enItems.length };
+    return {
+      result: { items: enItems, totalCount: en.result?.totalCount ?? enItems.length },
+      complete: en.complete,
+    };
   }
 
-  // 영문이 죽었어도(en === null) 국문은 시도한다. 0건은 임계치 미만이라 같은 길로 온다
+  // 영문이 죽었어도(result === null) 국문은 시도한다. 0건은 임계치 미만이라 같은 길로 온다
   const ko = await fetch("ko");
-  if (ko === null) {
+  if (ko.result === null) {
     // 둘 다 죽었을 때만 섹션을 죽인다
-    return en === null ? null : { items: enItems, totalCount: en.totalCount };
+    return en.result === null
+      ? { result: null, complete: false }
+      : { result: { items: enItems, totalCount: en.result.totalCount }, complete: false };
   }
 
   const seen = new Set<string>();
@@ -226,7 +248,7 @@ async function withKoreanBackfill(
 
   const fresh: Attraction[] = [];
   const room = Math.max(0, limit - enItems.length);
-  for (const item of ko.items) {
+  for (const item of ko.result.items) {
     if (fresh.length >= room) break;
     // 국문 경로는 이 시점의 title 이 아직 국문 원문이다
     const key = koreanKey(item.title);
@@ -237,16 +259,160 @@ async function withKoreanBackfill(
 
   const items = [...enItems, ...await fillFromKorean(fresh)];
   // 두 언어를 합친 수라 어느 쪽 API 의 totalCount 와도 맞지 않는다 (getFestivals 와 같은 판단)
-  return { items, totalCount: items.length };
+  //
+  // 영문이 통째로 죽어 국문이 대신 채운 경우는 complete 가 아니다. 영문이 얇아서
+  // 국문을 덧대는 것(경주·강릉)은 설계대로 동작한 것이지만, 영문이 전멸해 국문만 남은
+  // 목록은 다음 요청에 달라질 결과라 하루를 굳히면 안 된다.
+  return {
+    result: { items, totalCount: items.length },
+    complete: en.result !== null && en.complete && ko.complete,
+  };
+}
+
+// ─── 캐시 ─────────────────────────────────────────────────────────────────────
+// TourAPI 는 키 하나당 하루 1,000회다 (응답 헤더 X-RateLimit-Limit 실측). 지역 섹션은
+// 스크롤로 열리고 시도·시군구를 바꿀 때마다 다시 열리는데, 캐시가 없으면 그 한 번이
+// 곧 호출 여러 번이다 — 수원처럼 시군구 코드가 여덟인 지역은 한 번 여는 데 열 번을 쓴다.
+//
+// 담는 것은 "걸러진 결과"다. 원본 응답이 아니다. areaBasedList2 는 1,000건 요청에
+// 674KB 가 오는데, 쇼핑·숙박·축제를 걷어 limit 으로 자른 뒤는 수십 KB다.
+// 원본을 담으면 캐시가 그 자리에서 열 배가 된다.
+//
+// DB 저장이 아니다. 요강이 금지하는 것은 관광 데이터를 우리 테이블에 쌓는 것이고,
+// unstable_cache 는 요청 수명보다 조금 오래 사는 메모이제이션이다 (CLAUDE.md 참고).
+
+/** 관광지·주변 관광지 — 하루. 상설 장소 목록이라 하루 사이에 달라질 것이 없다 */
+const ATTRACTION_CACHE_TTL_SECONDS = 24 * 60 * 60;
+
+/**
+ * 축제 — 한 시간.
+ *
+ * 관광지와 달리 날짜가 붙은 목록이다. 오늘 끝나는 축제는 오늘 안에 사라져야 하고
+ * "D-1" 이 하루 굳으면 그냥 틀린 값이 된다. 다만 status·D-day 계산 자체는 캐시
+ * 바깥에 있어(getFestivals 참고) 이 TTL 이 결정하는 것은 "새 축제가 얼마나 늦게
+ * 들어오는가" 뿐이다. 한 시간이면 충분하고, 하루 24번이라 한도에도 부담이 없다.
+ */
+const FESTIVAL_CACHE_TTL_SECONDS = 60 * 60;
+
+/**
+ * 캐시 태그. 공통 하나 + 종류별 하나를 함께 단다 — 전부 털 수도, 한 줄만 털 수도 있게.
+ * 무효화하는 코드는 두지 않는다. 필요해지면 revalidateTag 를 부르는 쪽에서 쓴다.
+ *
+ * 종류별 태그는 unstable_cache 의 keyParts 로도 그대로 쓴다. 함수마다 네임스페이스가
+ * 갈려 같은 인자를 받는 다른 함수끼리 키가 겹치지 않는다.
+ */
+const CACHE_TAG = "tour-api";
+const AREA_CACHE_TAG = "tour-api-area-attractions";
+const NEARBY_CACHE_TAG = "tour-api-nearby-attractions";
+const FESTIVAL_CACHE_TAG = "tour-api-festivals";
+
+/**
+ * 캐시 안에서 일부 호출만 실패했을 때 던진다. 담긴 것은 성공한 몫이다.
+ *
+ * 부분 결과를 값으로 돌려주면 unstable_cache 가 그것을 담아 TTL 동안 굳힌다 —
+ * 수원 여덟 구 중 하나가 흔들린 것 때문에 일곱 구짜리 목록이 하루를 간다.
+ * 던지면 아무것도 담기지 않는다. 그런데 화면에는 그 일곱 구를 내야 하므로
+ * (기존 동작 — "하나라도 살아 있으면 그만큼 쓴다") 결과를 에러에 실어 올려 보낸다.
+ */
+class PartialTourResultError<T> extends Error {
+  constructor(readonly partial: T) {
+    super("TourAPI 호출 일부 실패 — 부분 결과는 캐시하지 않는다");
+    this.name = "PartialTourResultError";
+  }
+}
+
+/**
+ * 캐시된 호출을 공개 함수의 계약으로 되돌린다.
+ *   전부 성공  → 결과 (캐시에 담김)
+ *   일부 실패  → 성공한 몫 (캐시에 안 담김)
+ *   전멸       → null (캐시에 안 담김)
+ *
+ * 캐시 안에서 실패를 알릴 방법이 throw 뿐이라 생긴 층이다. 바깥은 예전처럼
+ * null 만 본다 — 섹션 하나가 죽고 나머지 화면은 산다.
+ */
+async function unwrapCached<T>(run: () => Promise<T>, label: string): Promise<T | null> {
+  try {
+    return await run();
+  } catch (e) {
+    if (e instanceof PartialTourResultError) {
+      console.warn(`[${label}] 일부 실패 — 부분 결과를 캐시 없이 반환한다`);
+      // 이 자리에 올라오는 PartialTourResultError 는 바로 아래 캐시 함수가 던진 것뿐이라
+      // T 가 맞는다. throw/catch 경계를 넘으면서 타입이 지워져 되돌려 주는 줄이다
+      return e.partial as T;
+    }
+    console.error(`[${label}] 실패 — 캐시하지 않는다:`, e);
+    return null;
+  }
+}
+
+/**
+ * 시군구 코드 배열을 캐시 키로 쓸 수 있게 만든다.
+ *
+ * 정렬하는 이유는 ["113","111"] 과 ["111","113"] 이 같은 지역인데 키가 갈리기 때문이다.
+ * 조회에도 정렬한 쪽을 그대로 쓴다 — interleave 순서가 배열 순서를 따르므로,
+ * 키만 정렬하고 조회는 원본으로 하면 같은 키에 다른 결과가 담길 수 있다.
+ * 원본을 건드리지 않게 복사해서 정렬한다.
+ */
+function cacheableCodes(signguCds: string[]): string[] {
+  return [...signguCds].sort();
 }
 
 // ─── 공개 함수 ────────────────────────────────────────────────────────────────
+
+/**
+ * 좌표 반경 내 관광지 — 캐시에 담기는 본체. 실패는 throw 다 (캐시 절 참고).
+ *
+ * 언어당 호출이 하나라 "일부 실패" 가 코드 여럿 때문에 생기지는 않는다.
+ * 영문이 죽어 국문이 대신 채운 경우만 부분이다.
+ *
+ * 인자를 객체가 아니라 나열로 받는다 — unstable_cache 가 인자를 그대로 키에 넣으므로
+ * 이 네 줄이 곧 캐시 키다. 객체로 받으면 키에 필드 이름과 순서까지 섞인다.
+ */
+async function fetchNearbyAttractions(
+  lat: number,
+  lng: number,
+  radiusM: number,
+  limit: number
+): Promise<TourResult<Attraction>> {
+  const { result, complete } = await withKoreanBackfill(async (lang) => {
+    const res = await callTourApi(lang, "locationBasedList2", {
+      mapX: lng,
+      mapY: lat,
+      radius: radiusM,
+      numOfRows: limit,
+      arrange: "S",
+    });
+    if (!res.ok) return { result: null, complete: false };
+
+    return {
+      result: {
+        items: res.items
+          .map((i) => toAttraction(i, lang))
+          .filter((a): a is Attraction => a !== null),
+        totalCount: res.totalCount,
+      },
+      complete: true,
+    };
+  }, limit);
+
+  if (result === null) throw new Error("locationBasedList2 — 영문·국문 둘 다 실패");
+  if (!complete) throw new PartialTourResultError(result);
+  return result;
+}
+
+const cachedNearbyAttractions = unstable_cache(fetchNearbyAttractions, [NEARBY_CACHE_TAG], {
+  revalidate: ATTRACTION_CACHE_TTL_SECONDS,
+  tags: [CACHE_TAG, NEARBY_CACHE_TAG],
+});
 
 /**
  * 좌표 반경 내 관광지. 거리순.
  *
  * lang 을 받지 않는다. 영문을 먼저 부르고 모자랄 때만 국문을 덧대는 것이 이 함수의 일이다 —
  * 어느 언어로 부를지는 호출부가 고를 일이 아니게 됐다.
+ *
+ * 캐시 키는 좌표·반경·개수다. 같은 장소를 다시 열면 호출이 0회다. 좌표가 연속값이라
+ * 지역 목록만큼 잘 맞지는 않지만, 포스트 상세는 장소 좌표가 고정이라 두 번째부터 전부 맞는다.
  */
 export async function getNearbyAttractions({
   lat,
@@ -259,21 +425,10 @@ export async function getNearbyAttractions({
   radiusM: number;
   limit?: number;
 }): Promise<TourResult<Attraction> | null> {
-  return withKoreanBackfill(async (lang) => {
-    const res = await callTourApi(lang, "locationBasedList2", {
-      mapX: lng,
-      mapY: lat,
-      radius: radiusM,
-      numOfRows: limit,
-      arrange: "S",
-    });
-    if (!res.ok) return null;
-
-    return {
-      items: res.items.map((i) => toAttraction(i, lang)).filter((a): a is Attraction => a !== null),
-      totalCount: res.totalCount,
-    };
-  }, limit);
+  return unwrapCached(
+    () => cachedNearbyAttractions(lat, lng, radiusM, limit),
+    "getNearbyAttractions"
+  );
 }
 
 /**
@@ -382,22 +537,21 @@ const AREA_FETCH_ROWS = 1000;
 const AREA_ARRANGE = "O";
 
 /**
- * 법정동 코드 기준 관광지. getNearbyAttractions 와 같은 이유로 lang 을 받지 않는다.
+ * 법정동 코드 기준 관광지 — 캐시에 담기는 본체. 실패는 throw 다 (캐시 절 참고).
  *
  * signguCds 가 여럿이면 코드마다 부른다(signguCalls 주석 참고). 병렬이라 호출 수는
  * 늘어도 지연은 한 번과 같다. 코드마다 AREA_FETCH_ROWS 씩 받는데, 나눠서 조금씩 받으면
  * 한 구가 비었을 때 limit 을 못 채운다 — 더 받는 비용은 사실상 없다(위 주석).
+ *
+ * 담기는 것은 걸러서 자른 뒤다. 코드 하나가 674KB 를 물어 오지만 캐시에 남는 것은
+ * limit 개짜리 목록 하나다.
  */
-export async function getAreaAttractions({
-  regnCd,
-  signguCds,
-  limit = DEFAULT_LIMIT,
-}: {
-  regnCd: string;
-  signguCds: string[];
-  limit?: number;
-}): Promise<TourResult<Attraction> | null> {
-  return withKoreanBackfill(async (lang) => {
+async function fetchAreaAttractions(
+  regnCd: string,
+  signguCds: string[],
+  limit: number
+): Promise<TourResult<Attraction>> {
+  const { result, complete } = await withKoreanBackfill(async (lang) => {
     const results = await Promise.all(
       signguCalls(signguCds).map((signguCd) =>
         callTourApi(lang, "areaBasedList2", {
@@ -410,7 +564,7 @@ export async function getAreaAttractions({
 
     // 하나라도 살아 있으면 그만큼 쓴다. 전부 죽었을 때만 언어 경로를 죽인다
     const ok = results.filter((r) => r.ok);
-    if (ok.length === 0) return null;
+    if (ok.length === 0) return { result: null, complete: false };
 
     const lists = ok.map((res) =>
       res.items
@@ -426,12 +580,51 @@ export async function getAreaAttractions({
     // 이 값을 읽는 쪽이 없고 "지역에 몇 건이 있는지" 라는 뜻은 그대로다.
     // 코드가 여럿이면 합이다. 구끼리 겹치지 않으므로 중복이 아니다
     const totalCount = ok.reduce((sum, r) => sum + (r.totalCount ?? 0), 0);
-    return { items, totalCount };
+    return { result: { items, totalCount }, complete: ok.length === results.length };
   }, limit);
+
+  if (result === null) throw new Error("areaBasedList2 — 영문·국문 둘 다 실패");
+  if (!complete) throw new PartialTourResultError(result);
+  return result;
+}
+
+const cachedAreaAttractions = unstable_cache(fetchAreaAttractions, [AREA_CACHE_TAG], {
+  revalidate: ATTRACTION_CACHE_TTL_SECONDS,
+  tags: [CACHE_TAG, AREA_CACHE_TAG],
+});
+
+/**
+ * 법정동 코드 기준 관광지. getNearbyAttractions 와 같은 이유로 lang 을 받지 않는다.
+ *
+ * 캐시 키는 시도 코드 · 정렬한 시군구 코드 · 개수다. 슬러그나 라벨이 아니라 코드라,
+ * 어드민에서 지역 이름을 바꿔도 같은 항목을 다시 받아 오지 않는다.
+ */
+export async function getAreaAttractions({
+  regnCd,
+  signguCds,
+  limit = DEFAULT_LIMIT,
+}: {
+  regnCd: string;
+  signguCds: string[];
+  limit?: number;
+}): Promise<TourResult<Attraction> | null> {
+  return unwrapCached(
+    () => cachedAreaAttractions(regnCd, cacheableCodes(signguCds), limit),
+    "getAreaAttractions"
+  );
 }
 
 /**
- * 법정동 코드 기준 축제. 진행중 + upcomingDays 이내 시작 예정만.
+ * 축제 한 건 — 캐시에 담기는 모양.
+ *
+ * Festival 에서 "지금" 에 달린 세 칸(status · daysUntilStart · daysUntilEnd)을 뺀 것이다.
+ * 그 셋을 담으면 한 시간 뒤에 틀린 값이 된다 — "D-1" 이 그대로 굳고 오늘 끝난 축제가
+ * ongoing 으로 남는다. 계산은 getFestivals 가 캐시 밖에서 한다.
+ */
+type FestivalRecord = Omit<Festival, "status" | "daysUntilStart" | "daysUntilEnd">;
+
+/**
+ * 축제 수집 — 캐시에 담기는 본체. 실패는 throw 다 (캐시 절 참고).
  *
  * searchFestival2는 eventStartDate 이후 "시작하는" 축제를 돌려주므로, 이미 시작해
  * 아직 안 끝난 것을 잡으려면 과거로 거슬러 받은 뒤 직접 걸러야 한다.
@@ -443,26 +636,30 @@ export async function getAreaAttractions({
  * 국문 단일 소스로 가면 중복 자체가 생기지 않는다.
  *
  * 영문 축제 수가 국문의 1/4 수준이라(실측 서울 23 대 122) 어차피 국문이 원천이다.
+ *
+ * lookback 기준일을 여기서 만든다 — 캐시 키가 아니다. 조회 파라미터일 뿐 결과 의미에
+ * 드러나지 않고, TTL 이 한 시간이라 자정을 넘겨도 한 시간 안에 다시 받는다.
+ * 180일 전 경계가 하루 어긋나 봐야 그 하루에 시작한 축제는 이미 끝났거나 아래에서 걸린다.
+ *
+ * 끝난 축제를 여기서 빼지 않는다. "끝났는가" 가 곧 지금 시각이라 캐시 안에 둘 수 없다.
+ * lookback 180일치가 그대로 담기지만 한 건이 300바이트 남짓이다.
  */
-export async function getFestivals({
-  regnCd,
-  signguCds,
-  upcomingDays = DEFAULT_UPCOMING_DAYS,
-  limit = DEFAULT_LIMIT,
-}: {
-  regnCd: string;
-  signguCds: string[];
-  upcomingDays?: number;
-  /** 화면에 올릴 개수. 이 수만큼만 번역한다 — 번역 비용이 곧 개수다 */
-  limit?: number;
-}): Promise<TourResult<Festival> | null> {
+async function fetchFestivalRecords(
+  regnCd: string,
+  signguCds: string[]
+): Promise<FestivalRecord[]> {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const todayStr = yyyymmdd(today);
   const lookbackStr = yyyymmdd(new Date(today.getTime() - FESTIVAL_LOOKBACK_DAYS * DAY_MS));
 
-  /** 코드 하나 몫. 페이지는 순차, 코드끼리는 병렬이다. null 은 첫 페이지부터 실패 */
-  const fetchOne = async (signguCd: string | undefined): Promise<TourItem[] | null> => {
+  /**
+   * 코드 하나 몫. 페이지는 순차, 코드끼리는 병렬이다. null 은 첫 페이지부터 실패.
+   * complete 는 세 페이지를 끝까지 받았는지다 — 중간 페이지가 죽으면 받은 만큼 쓰되
+   * 그 결과는 캐시에 담지 않는다.
+   */
+  const fetchOne = async (
+    signguCd: string | undefined
+  ): Promise<{ items: TourItem[]; complete: boolean } | null> => {
     const params = ldongParams(regnCd, signguCd);
     const got: TourItem[] = [];
     for (let page = 1; page <= FESTIVAL_MAX_PAGES; page++) {
@@ -476,74 +673,120 @@ export async function getFestivals({
       // 첫 페이지가 실패하면 결과 없음, 이후 페이지 실패는 받은 만큼만 쓴다
       if (!res.ok) {
         if (page === 1) return null;
-        break;
+        return { items: got, complete: false };
       }
       got.push(...res.items);
       if (res.items.length < FESTIVAL_ROWS) break;
     }
-    return got;
+    // FESTIVAL_MAX_PAGES 에서 멈춘 것은 실패가 아니라 우리가 건 상한이다
+    return { items: got, complete: true };
   };
 
   const perCode = await Promise.all(signguCalls(signguCds).map(fetchOne));
   // 전부 죽었을 때만 섹션을 죽인다. 하나라도 살아 있으면 그만큼 보여준다
-  if (perCode.every((got) => got === null)) return null;
+  if (perCode.every((got) => got === null)) {
+    throw new Error("searchFestival2 — 모든 시군구 코드 실패");
+  }
 
   // 축제 하나는 구 하나에만 속하므로 코드끼리 겹치지 않지만, 응답이 흔들려도
   // 같은 카드가 두 장 뜨지 않게 contentid 로 한 번 거른다
   const seenContentIds = new Set<string>();
-  const collected: TourItem[] = [];
+  const records: FestivalRecord[] = [];
   for (const got of perCode) {
     if (got === null) continue;
-    for (const item of got) {
-      const id = pickField(item, ["contentid"]);
-      if (id !== null && seenContentIds.has(id)) continue;
-      if (id !== null) seenContentIds.add(id);
-      collected.push(item);
+    for (const item of got.items) {
+      const contentId = pickField(item, ["contentid"]);
+      const title = pickField(item, ["title"]);
+      if (!contentId || !title) continue;
+      if (seenContentIds.has(contentId)) continue;
+      seenContentIds.add(contentId);
+
+      const startDate = (item.eventstartdate ?? "").trim();
+      const endDate = (item.eventenddate ?? "").trim();
+      // 날짜 형태가 아닌 것은 여기서 버린다 — 지금 시각과 무관한 판단이다
+      if (!parseYmd(startDate) || !parseYmd(endDate)) continue;
+
+      records.push({
+        contentId,
+        title,
+        // 국문 원문이다. getFestivals 가 자른 뒤 fillFromKorean 이 title 을 번역으로
+        // 바꾸고 원문을 titleKo 로 옮긴다
+        titleKo: null,
+        address: toAddress(item),
+        addressKo: null,
+        lat: toCoord(pickField(item, ["mapy"])),
+        lng: toCoord(pickField(item, ["mapx"])),
+        imageUrl: toImageUrl(item),
+        startDate,
+        endDate,
+      });
     }
   }
 
+  if (!perCode.every((got) => got !== null && got.complete)) {
+    throw new PartialTourResultError(records);
+  }
+  return records;
+}
+
+const cachedFestivalRecords = unstable_cache(fetchFestivalRecords, [FESTIVAL_CACHE_TAG], {
+  revalidate: FESTIVAL_CACHE_TTL_SECONDS,
+  tags: [CACHE_TAG, FESTIVAL_CACHE_TAG],
+});
+
+/**
+ * 법정동 코드 기준 축제. 진행중 + upcomingDays 이내 시작 예정만.
+ *
+ * 수집은 캐시를 거치고, 이 함수에 남은 것은 전부 "지금" 에 달린 계산이다 — 끝났는지,
+ * 진행중인지 예정인지, 며칠 남았는지. 캐시가 한 시간을 살아도 이 줄들은 매번 다시 돈다.
+ *
+ * upcomingDays 와 limit 은 캐시 키에 없다. 둘 다 받아 온 뒤에 적용하는 값이라 호출을
+ * 바꾸지 않는다 — 값을 조정해도 TourAPI 를 다시 부를 이유가 없다.
+ */
+export async function getFestivals({
+  regnCd,
+  signguCds,
+  upcomingDays = DEFAULT_UPCOMING_DAYS,
+  limit = DEFAULT_LIMIT,
+}: {
+  regnCd: string;
+  signguCds: string[];
+  upcomingDays?: number;
+  /** 화면에 올릴 개수. 이 수만큼만 번역한다 — 번역 비용이 곧 개수다 */
+  limit?: number;
+}): Promise<TourResult<Festival> | null> {
+  const records = await unwrapCached(
+    () => cachedFestivalRecords(regnCd, cacheableCodes(signguCds)),
+    "getFestivals"
+  );
+  if (records === null) return null;
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayStr = yyyymmdd(today);
+
   const items: Festival[] = [];
-  for (const item of collected) {
-    const contentId = pickField(item, ["contentid"]);
-    const title = pickField(item, ["title"]);
-    if (!contentId || !title) continue;
+  for (const record of records) {
+    if (record.endDate < todayStr) continue; // 이미 끝남
 
-    const startDate = (item.eventstartdate ?? "").trim();
-    const endDate = (item.eventenddate ?? "").trim();
-    const start = parseYmd(startDate);
-    const end = parseYmd(endDate);
+    const start = parseYmd(record.startDate);
+    const end = parseYmd(record.endDate);
+    // 캐시에 담을 때 파싱되는 것만 남겼다. 타입을 좁히려고 두는 줄이다
     if (!start || !end) continue;
-
-    if (endDate < todayStr) continue; // 이미 끝남
 
     const daysUntilStart = daysBetween(today, start);
     const daysUntilEnd = daysBetween(today, end);
 
     let status: Festival["status"];
-    if (startDate <= todayStr && todayStr <= endDate) {
+    if (record.startDate <= todayStr && todayStr <= record.endDate) {
       status = "ongoing";
-    } else if (startDate > todayStr && daysUntilStart <= upcomingDays) {
+    } else if (record.startDate > todayStr && daysUntilStart <= upcomingDays) {
       status = "upcoming";
     } else {
       continue;
     }
 
-    items.push({
-      contentId,
-      title,
-      // 국문 원문이다. 바로 아래 fillFromKorean 이 title 을 번역으로 바꾸고 여기에 원문을 옮긴다
-      titleKo: null,
-      address: toAddress(item),
-      addressKo: null,
-      lat: toCoord(pickField(item, ["mapy"])),
-      lng: toCoord(pickField(item, ["mapx"])),
-      imageUrl: toImageUrl(item),
-      startDate,
-      endDate,
-      status,
-      daysUntilStart,
-      daysUntilEnd,
-    });
+    items.push({ ...record, status, daysUntilStart, daysUntilEnd });
   }
 
   // ongoing 먼저. 그 안의 순서는 "곧 끝나는 것"이다.
