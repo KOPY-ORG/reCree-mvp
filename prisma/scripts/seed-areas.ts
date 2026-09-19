@@ -7,7 +7,10 @@
 //     AREA_RESET_YES=1 npx ts-node --compiler-options '{"module":"CommonJS"}' prisma/scripts/seed-areas.ts --execute
 //     → 그 뒤 콘솔에서 "yes" 를 입력해야 시작한다
 //
-// ⚠️ dev 전용. prod 에 돌리지 않는다.
+// ⚠️ 기본 대상은 .env.local 의 DATABASE_URL — dev 다. dry-run 은 아무것도 쓰지 않는다.
+//    prod 를 볼 때는 그 실행에만 DATABASE_URL 을 주입한다. dry-run 은 읽기 전용 URL 로 되고,
+//    --execute 는 쓰기 권한이 있는 관리자 URL 이라야 한다.
+//    시작할 때 host 와 Supabase ref 를 찍으니 대상을 확인하고 진행한다.
 // ⚠️ Area 를 전부 지운다. Place.areaId 는 FK 가 SET NULL 이라 조용히 끊어지므로
 //    삭제 전에 스냅샷 JSON 을 남긴다 (SNAPSHOT_DIR).
 //
@@ -27,9 +30,11 @@
 // 5. 광주·전남은 TourAPI 가 12 로 통합했는데 카카오 법정동도 이미 12 를 준다
 //    (순천 1215013200 · 광주 북구 1230010700 실측). 별도 분기 없이 일반 경로가 먹는다.
 //
-// 6. 시도의 nameEn 은 기존 값을 그대로 쓴다. slug(nameEn 소문자)가 CuratedSection.filterRegion,
-//    FEATURED_REGION_SLUGS, 외부 URL(?region=) 에 FK 없이 묶여 있어 바뀌면 조용히 깨진다.
-//    소문자로 들어간 값(jeju)만 첫 글자를 올린다 — slug 는 그대로다.
+// 6. 시도의 nameEn 은 아래 SIDO_NAME_EN 고정표에서만 온다. slug(nameEn 소문자)가
+//    CuratedSection.filterRegion, 외부 URL(?region=) 에 FK 없이 묶여 있어 바뀌면 조용히 깨진다.
+//    기존 행에서 이름을 물려받는 방식은 lDongRegnCd 가 없는 DB(prod)에서 동작하지 않아
+//    같은 스크립트가 DB 마다 다른 이름을 만들었다. 표를 코드에 두면 어디서 돌려도 같다.
+//    표에 없는 regn 이 TourAPI 에서 오면 이름을 지어내지 않고 즉시 중단한다.
 
 try {
   process.loadEnvFile(".env.local");
@@ -55,6 +60,33 @@ const KAKAO_COORD2REGION = "https://dapi.kakao.com/v2/local/geo/coord2regioncode
 const SEJONG_REGN = "36110";
 /** 카카오 법정동 코드의 세종 regn 2자리. TourAPI 의 36110 과 체계가 달라 따로 본다 */
 const KAKAO_SEJONG_REGN = "36";
+
+/**
+ * lDongRegnCd → 시도 nameEn 고정표. slug 는 이 값의 소문자다.
+ * 규칙: 특별시·광역시·특별자치시·통합특별시는 이름만, 도(특별자치도 포함)는 "-do" 를 붙인다.
+ * 바꾸면 ?region= 링크가 끊긴다. TourAPI 영문명을 쓰지 않는 이유는 파일 머리 6번에 적었다.
+ */
+const SIDO_NAME_EN: Record<string, string> = {
+  "11": "Seoul",
+  "12": "Jeonnam-Gwangju",
+  "26": "Busan",
+  "27": "Daegu",
+  "28": "Incheon",
+  "30": "Daejeon",
+  "31": "Ulsan",
+  "36110": "Sejong",
+  "41": "Gyeonggi-do",
+  "43": "Chungcheongbuk-do",
+  "44": "Chungcheongnam-do",
+  "47": "Gyeongsangbuk-do",
+  "48": "Gyeongsangnam-do",
+  "50": "Jeju-do",
+  "51": "Gangwon-do",
+  "52": "Jeonbuk-do",
+};
+
+/** 카카오가 서비스 영역 밖이라고 답한 좌표. 실패로 세되 중단하지 않는다 */
+const REASON_OVERSEAS = "해외(카카오 서비스 영역 밖)";
 
 /** 카카오 호출 간 지연. 순차 호출이라 초당 8건 정도가 된다 */
 const KAKAO_DELAY_MS = 120;
@@ -96,7 +128,18 @@ type KakaoResponse = {
   documents?: KakaoDoc[];
   errorType?: string;
   message?: string;
+  // 서비스 영역 밖일 때만 오는 본문 — HTTP 400 {"code":-2,"msg":"...not in the service area"}
+  code?: number;
+  msg?: string;
 };
+
+/** 카카오 조회 1건의 결과. 해외는 에러가 아니라 결과의 한 종류다 */
+type KakaoLookup =
+  | { kind: "found"; doc: KakaoDoc }
+  /** 법정동(B) 결과가 비어 온다 — 바다 등 */
+  | { kind: "none" }
+  /** 카카오가 국내가 아니라고 답했다 */
+  | { kind: "outOfService" };
 
 type TargetSido = {
   id: string;
@@ -190,31 +233,16 @@ async function fetchLdong(base: string, label: string): Promise<LdongRow[]> {
   return items;
 }
 
-// ─── 영문 이름 ────────────────────────────────────────────────────────────────
-
-/**
- * 시도만 행정 접미사를 뗀다. 16개가 전부 고유해 떼도 안 헷갈린다.
- * 시군구는 떼지 않는다 — 떼면 Jung(중구)이 5개 시도에서 겹치고 영어로 뜻이 없다.
- */
-function cleanSidoNameEn(raw: string): string {
-  if (raw === "Jeonnam-Gwangju Special Metropolitan City") return "Jeonnam-Gwangju";
-  return raw.replace(/-(do|si)$/, "");
-}
-
-function capitalizeFirst(s: string): string {
-  return s.length === 0 ? s : s[0].toUpperCase() + s.slice(1);
-}
-
 // ─── 목표 Area 계산 ───────────────────────────────────────────────────────────
 
 /**
- * existingSidoNameEn: 현재 dev level 0 의 lDongRegnCd → nameEn.
- * 같은 시도가 있으면 그 이름을 그대로 쓴다 (slug 가 밖에 묶여 있다).
+ * 시도 nameEn 은 SIDO_NAME_EN 에서만 온다 — DB 현재 값도, TourAPI 영문명도 보지 않는다.
+ * 시군구 nameEn 은 TourAPI 영문명을 그대로 쓴다. 접미사를 떼면 Jung(중구)이 5개 시도에서
+ * 겹치고 영어로 뜻이 없어진다.
  */
 function buildTargets(
   ko: LdongRow[],
   en: LdongRow[],
-  existingSidoNameEn: Map<string, string>,
 ): { sidos: TargetSido[]; signgus: TargetSigngu[]; absorbed: Map<string, string[]> } {
   const enByKey = new Map(en.map((r) => [`${r.lDongRegnCd}/${r.lDongSignguCd}`, r]));
   const missingEn = ko.filter((r) => !enByKey.has(`${r.lDongRegnCd}/${r.lDongSignguCd}`));
@@ -250,14 +278,18 @@ function buildTargets(
   for (const r of ko) {
     if (sidoSeen.has(r.lDongRegnCd)) continue;
     sidoSeen.add(r.lDongRegnCd);
-    const enRow = enByKey.get(`${r.lDongRegnCd}/${r.lDongSignguCd}`);
-    if (!enRow) throw new Error(`${r.lDongRegnNm} 영문 행 없음`);
-    const kept = existingSidoNameEn.get(r.lDongRegnCd);
+    const nameEn = SIDO_NAME_EN[r.lDongRegnCd];
+    if (!nameEn) {
+      throw new Error(
+        `SIDO_NAME_EN 에 없는 시도 regn=${r.lDongRegnCd} "${r.lDongRegnNm}".\n` +
+          "   이름을 지어내면 ?region= slug 가 DB 마다 갈린다. 표에 직접 추가해야 한다.",
+      );
+    }
     sidos.push({
       id: randomUUID(),
       regnCd: r.lDongRegnCd,
       nameKo: r.lDongRegnNm,
-      nameEn: kept ? capitalizeFirst(kept) : cleanSidoNameEn(enRow.lDongRegnNm),
+      nameEn,
       sortOrder: sidos.length,
     });
   }
@@ -289,8 +321,11 @@ function buildTargets(
 
 // ─── 카카오 역지오코딩 ────────────────────────────────────────────────────────
 
-/** 첫 호출이 실패하면 즉시 던진다 — 키·권한 문제를 197번 반복해 확인할 이유가 없다 */
-async function coord2region(lat: number, lng: number): Promise<KakaoDoc | null> {
+/**
+ * 키·권한 문제는 즉시 던진다 — 197번 반복해 확인할 이유가 없다.
+ * 서비스 영역 밖(code -2)만 예외다. 해외 장소 한 곳 때문에 전체가 멈추면 안 된다.
+ */
+async function coord2region(lat: number, lng: number): Promise<KakaoLookup> {
   const url = new URL(KAKAO_COORD2REGION);
   url.searchParams.set("x", String(lng));
   url.searchParams.set("y", String(lat));
@@ -300,25 +335,25 @@ async function coord2region(lat: number, lng: number): Promise<KakaoDoc | null> 
     signal: AbortSignal.timeout(10_000),
   });
   const text = await res.text();
-  if (!res.ok) {
-    let detail = text.slice(0, 200);
-    try {
-      const err = JSON.parse(text) as KakaoResponse;
-      detail = `${err.errorType ?? ""} ${err.message ?? ""}`.trim() || detail;
-    } catch {
-      // 본문이 JSON 이 아니면 원문 앞부분을 그대로 쓴다
-    }
-    throw new Error(`카카오 HTTP ${res.status} — ${detail}`);
-  }
 
-  let data: KakaoResponse;
+  let data: KakaoResponse | null = null;
   try {
     data = JSON.parse(text) as KakaoResponse;
   } catch {
-    throw new Error(`카카오 JSON 파싱 실패: ${text.slice(0, 200)}`);
+    // 본문이 JSON 이 아니다. 아래에서 원문 앞부분을 그대로 쓴다
   }
-  // 법정동(B). 바다·국외면 documents 가 비어 온다 — 에러가 아니라 "없음" 이다
-  return (data.documents ?? []).find((d) => d.region_type === "B") ?? null;
+
+  if (!res.ok) {
+    // 국내 좌표가 아니다. 403·5xx 등 나머지는 그대로 던진다
+    if (data?.code === -2) return { kind: "outOfService" };
+    const detail = `${data?.errorType ?? ""} ${data?.message ?? ""}`.trim() || text.slice(0, 200);
+    throw new Error(`카카오 HTTP ${res.status} — ${detail}`);
+  }
+  if (data === null) throw new Error(`카카오 JSON 파싱 실패: ${text.slice(0, 200)}`);
+
+  // 법정동(B). 바다면 documents 가 비어 온다 — 에러가 아니라 "없음" 이다
+  const doc = (data.documents ?? []).find((d) => d.region_type === "B");
+  return doc ? { kind: "found", doc } : { kind: "none" };
 }
 
 // ─── 좌표 → Area 매칭 ─────────────────────────────────────────────────────────
@@ -391,10 +426,10 @@ async function main() {
   const existingAreas = await prisma.area.findMany({
     select: { id: true, nameKo: true, nameEn: true, level: true, lDongRegnCd: true },
   });
-  const existingSidoNameEn = new Map<string, string>();
-  for (const a of existingAreas) {
-    if (a.level === 0 && a.lDongRegnCd && a.nameEn) existingSidoNameEn.set(a.lDongRegnCd, a.nameEn);
-  }
+  const curatedSections = await prisma.curatedSection.findMany({
+    select: { id: true, titleEn: true, filterRegion: true, isActive: true },
+    orderBy: { order: "asc" },
+  });
   const places: PlaceRow[] = await prisma.place.findMany({
     select: {
       id: true,
@@ -416,7 +451,7 @@ async function main() {
   const en = await fetchLdong(ENG_BASE, "EngService2");
   console.log(`  국문 ${ko.length}행 · 영문 ${en.length}행`);
 
-  const { sidos, signgus, absorbed } = buildTargets(ko, en, existingSidoNameEn);
+  const { sidos, signgus, absorbed } = buildTargets(ko, en);
   console.log(`  → 시도 ${sidos.length} · 시군구 ${signgus.length} · 일반시 ${absorbed.size}곳이 구 ${ko.filter((r) => r.lDongSignguNm.includes(" ")).length}개 흡수`);
 
   console.log("\n【1. 생성될 Area】");
@@ -432,7 +467,9 @@ async function main() {
 
   console.log("\n【2. level 0 nameEn — 현재 대비】");
   const newSidoByRegn = new Map(sidos.map((s) => [s.regnCd, s]));
-  for (const a of existingAreas.filter((x) => x.level === 0).sort((x, y) => (x.nameKo > y.nameKo ? 1 : -1))) {
+  const existingSidos = existingAreas.filter((x) => x.level === 0);
+  let sameNameCount = 0;
+  for (const a of existingSidos.sort((x, y) => (x.nameKo > y.nameKo ? 1 : -1))) {
     const next = a.lDongRegnCd ? newSidoByRegn.get(a.lDongRegnCd) : undefined;
     const oldSlug = (a.nameEn ?? "").toLowerCase();
     if (!next) {
@@ -440,11 +477,35 @@ async function main() {
       continue;
     }
     const newSlug = next.nameEn.toLowerCase();
-    if (a.nameEn === next.nameEn) continue;
+    if (a.nameEn === next.nameEn) {
+      sameNameCount++;
+      continue;
+    }
     console.log(`    ~ 바뀜     "${a.nameEn}" → "${next.nameEn}"  slug "${oldSlug}" → "${newSlug}"${oldSlug === newSlug ? "  (slug 동일)" : "  ⚠ slug 변경"}`);
   }
-  const keptCount = sidos.filter((s) => existingSidoNameEn.has(s.regnCd)).length;
-  console.log(`    (기존 이름 유지 ${keptCount}/${sidos.length} · 나머지는 TourAPI 영문명)`);
+  console.log(`    현재와 이름이 같은 시도 ${sameNameCount}/${existingSidos.length}`);
+  console.log(`    (새 시도 ${sidos.length}개의 nameEn 은 전부 SIDO_NAME_EN 고정표에서 온다)`);
+
+  // ── level 0 slug 에 묶인 값 점검 ───────────────────────────────────────────
+  console.log("\n【3. CuratedSection.filterRegion → 새 level 0 slug 매칭】");
+  const newSidoSlugs = new Set(sidos.map((s) => s.nameEn.toLowerCase()));
+  const withRegion = curatedSections.filter((s) => s.filterRegion);
+  if (curatedSections.length === 0) console.log("  CuratedSection 없음");
+  else if (withRegion.length === 0) console.log(`  filterRegion 이 설정된 섹션 없음 (전체 ${curatedSections.length}행)`);
+  let unmatchedRegion = 0;
+  for (const s of withRegion) {
+    const region = s.filterRegion ?? "";
+    // curation-queries 는 level 0 nameEn 과 대소문자 무시 비교한다
+    const matched = newSidoSlugs.has(region.toLowerCase());
+    if (!matched) unmatchedRegion++;
+    console.log(
+      `  ${matched ? "✔" : "⚠"} "${region}"${matched ? "" : "  — 매칭되는 level 0 없음"}  ` +
+        `[${s.isActive ? "활성" : "비활성"}] ${s.titleEn}`,
+    );
+  }
+  if (withRegion.length > 0) {
+    console.log(`  매칭 ${withRegion.length - unmatchedRegion}/${withRegion.length}${unmatchedRegion > 0 ? `  ⚠ 깨지는 값 ${unmatchedRegion}개` : ""}`);
+  }
 
 
   // ── 3. 좌표 해석 (트랜잭션 밖에서 전부 끝낸다) ────────────────────────────
@@ -456,9 +517,9 @@ async function main() {
       resolutions.set(p.id, { kind: "failed", reason: "좌표 없음", kakao: "-" });
       continue;
     }
-    let doc: KakaoDoc | null;
+    let lookup: KakaoLookup;
     try {
-      doc = await coord2region(p.latitude, p.longitude);
+      lookup = await coord2region(p.latitude, p.longitude);
     } catch (e) {
       // 키·권한 문제를 197번 반복해 확인할 이유가 없다. 원인을 붙여 즉시 중단한다
       const msg = e instanceof Error ? e.message : String(e);
@@ -470,9 +531,11 @@ async function main() {
     }
     resolutions.set(
       p.id,
-      doc === null
-        ? { kind: "failed", reason: "카카오 법정동(B) 결과 없음 — 국외·해상", kakao: "-" }
-        : matchArea(doc, sidos, signgus),
+      lookup.kind === "found"
+        ? matchArea(lookup.doc, sidos, signgus)
+        : lookup.kind === "outOfService"
+          ? { kind: "failed", reason: REASON_OVERSEAS, kakao: "-" }
+          : { kind: "failed", reason: "카카오 법정동(B) 결과 없음 — 해상", kakao: "-" },
     );
     done++;
     if (done % 25 === 0) console.log(`  … ${done}건`);
@@ -491,13 +554,18 @@ async function main() {
   for (const s of sidos) areaLabel.set(s.id, `${s.nameEn} (시도)`);
   for (const s of signgus) areaLabel.set(s.id, s.nameEn);
 
-  console.log("\n【3. Place 연결 결과】");
+  const overseas = places.filter((p) => {
+    const r = resolutions.get(p.id);
+    return r?.kind === "failed" && r.reason === REASON_OVERSEAS;
+  });
+
+  console.log("\n【4. Place 연결 결과】");
   console.log(`  코드 매칭 성공  ${byKind.code}`);
   console.log(`  이름 폴백       ${byKind.fallback}`);
-  console.log(`  실패            ${byKind.failed}`);
+  console.log(`  실패            ${byKind.failed}  (그중 해외 ${overseas.length})`);
   console.log(`  합계            ${places.length}`);
 
-  console.log("\n【4. 기존 Area 별 전환】");
+  console.log("\n【5. 기존 Area 별 전환】");
   const transitions = new Map<string, Map<string, number>>();
   for (const p of places) {
     const from = p.area ? `lv${p.area.level} ${p.area.nameKo}` : "(연결 없음)";
@@ -517,7 +585,7 @@ async function main() {
     console.log(`  ${from} ${total} → ${parts.join(", ")}`);
   }
 
-  console.log("\n【5. 실패 목록 전체】");
+  console.log("\n【6. 실패 목록 전체】");
   const failed = places.filter((p) => resolutions.get(p.id)?.kind === "failed");
   if (failed.length === 0) console.log("  없음");
   for (const p of failed) {
@@ -528,7 +596,15 @@ async function main() {
     console.log(`      좌표=${p.latitude ?? "-"},${p.longitude ?? "-"}  카카오=${kakao}  사유=${reason}`);
   }
 
-  console.log("\n【6. 지역이 있었는데 새로 연결 안 되는 Place】");
+  console.log("\n【7. 해외 장소 — 카카오 서비스 영역 밖】");
+  if (overseas.length === 0) console.log("  없음");
+  for (const p of overseas) {
+    console.log(`  ${p.nameKo}${p.nameEn ? ` / ${p.nameEn}` : ""}`);
+    console.log(`      ${p.id}  좌표=${p.latitude ?? "-"},${p.longitude ?? "-"}  기존="${p.area?.nameKo ?? "(연결 없음)"}"`);
+  }
+  console.log(`  합계 ${overseas.length}행 — areaId 는 NULL 로 남는다`);
+
+  console.log("\n【8. 지역이 있었는데 새로 연결 안 되는 Place】");
   const lost = places.filter((p) => p.areaId !== null && resolutions.get(p.id)?.kind === "failed");
   if (lost.length === 0) console.log("  없음");
   for (const p of lost) {
