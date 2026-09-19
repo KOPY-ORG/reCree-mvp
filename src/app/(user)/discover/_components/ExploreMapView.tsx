@@ -306,6 +306,10 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   const isEventMode = activeEventData !== null;
 
   const isResultMode = !isEventMode && (query.trim() !== "" || hasFilters);
+  // 카메라용 결과 모드 — 지역을 뺀 나머지(검색어·토픽·태그)다.
+  // 지역은 regionKey 가 따로 맡는다. boundsKey 에 두면 지역을 벗을 때도 키가 바뀌어
+  // 전국으로 튀는데, 벗을 때는 보던 자리에 그대로 있어야 한다.
+  const hasCameraFilters = !isEventMode && (query.trim() !== "" || hasPostLevelFilter);
   // 이벤트 모드는 EventSearchBar(검색+칩)가 항상 떠 있어 동일한 top reserve가 필요.
   // 비이벤트는 facet 칩이 떠 있을 때(isResultMode)만 필요. 두 조건의 OR는 새 변수에서만.
   const needsTopReserve = isEventMode || isResultMode;
@@ -623,9 +627,12 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
         boundsKey={
           isEventMode
             ? `collection:${collectionSlug}`
-            : isResultMode
-              ? `q:${query}|t:${[...appliedTopicIds].sort().join(",")}|tg:${[...appliedTagIds].sort().join(",")}|gk:${[...appliedTagGroupKeys].sort().join(",")}|r:${appliedRegion ?? ""}|d:${appliedDistrict ?? ""}`
+            : hasCameraFilters
+              ? `q:${query}|t:${[...appliedTopicIds].sort().join(",")}|tg:${[...appliedTagIds].sort().join(",")}|gk:${[...appliedTagGroupKeys].sort().join(",")}`
               : isSavedView ? "saved" : "all"
+        }
+        regionKey={
+          !isEventMode && appliedRegion ? `${appliedRegion}/${appliedDistrict ?? ""}` : null
         }
         highlightedIds={
           isResultMode ? new Set(filteredPlaces.map((p) => p.id)) : undefined

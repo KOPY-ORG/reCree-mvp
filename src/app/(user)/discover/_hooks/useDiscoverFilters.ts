@@ -21,7 +21,7 @@ import type { MapPlace } from "@/lib/map-queries";
 
 export type ChipInfo = { id: string; label: string; bg: string; fg: string };
 
-/** 시도 안에서 고를 수 있는 시군구 하나 — count 는 그 시군구에 있는 장소 수 */
+/** 필터에 뜨는 지역 칩 하나 — count 는 그 지역에 있는 장소 수. 시도·시군구가 같은 모양이다 */
 export type DistrictOption = { slug: string; label: string; count: number };
 
 interface UseDiscoverFiltersParams {
@@ -59,17 +59,19 @@ export function useDiscoverFilters({
 
   // ── memo ──
   // allPlaces에서 등장하는 도시만 추출 (level=1은 parent로 rollup). useEffect보다 먼저 선언.
+  // 정렬은 장소 수 내림차순이다 — 알파벳순이면 82개인 Seoul 이 맨 끝에 앉는다.
+  // 동점은 이름순이라 목록이 렌더마다 흔들리지 않는다 (availableDistricts 와 같은 규칙).
   const availableCities = useMemo(() => {
-    const map = new Map<string, string>(); // slug → label(원본 nameEn)
+    const map = new Map<string, DistrictOption>();
     for (const place of allPlaces) {
       const slug = getPlaceRegionSlug(place.area);
       const label = getPlaceRegionLabel(place.area);
       if (!slug || !label) continue;
-      if (!map.has(slug)) map.set(slug, label);
+      const found = map.get(slug);
+      if (found) found.count += 1;
+      else map.set(slug, { slug, label, count: 1 });
     }
-    return [...map.entries()]
-      .map(([slug, label]) => ({ slug, label }))
-      .sort((a, b) => a.label.localeCompare(b.label));
+    return [...map.values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
   }, [allPlaces]);
 
   // 시도 slug → 그 안에서 장소가 있는 시군구 목록. availableCities 와 같은 규칙으로

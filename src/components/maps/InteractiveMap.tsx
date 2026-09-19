@@ -37,6 +37,14 @@ interface Props {
   focusedPlaceIds?: Set<string>;
   highlightedIds?: Set<string>;
   boundsKey?: string;
+  /**
+   * 지역 필터가 바뀌었다는 신호. 값이 바뀌면 지금 보이는 마커로 카메라를 맞춘다.
+   *
+   * boundsKey 와 나눈 이유는 해제 때문이다. boundsKey 는 "보여줄 것이 바뀌었다" 는
+   * 신호라 지역을 벗는 것도 신호로 읽어 전국으로 튄다 — 보던 동네가 화면에서 사라진다.
+   * 이 키는 지역이 있을 때만 값을 갖고, 벗으면 비어서 카메라가 그대로 있는다.
+   */
+  regionKey?: string | null;
   onMarkerClick: (placeId: string) => void;
   onMapClick?: () => void;
   className?: string;
@@ -50,6 +58,7 @@ function MapContent({
   focusedPlaceIds,
   highlightedIds,
   boundsKey,
+  regionKey,
   onMarkerClick,
   onMapClick,
   bottomOffset = BOTTOM_NAV_SPACE,
@@ -116,6 +125,15 @@ function MapContent({
     fitAllMarkers();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, boundsKey]);
+
+  // 지역 필터 변경 시 그 지역의 마커로 맞춤. 해제(빈 값)면 카메라를 그대로 둔다.
+  // map 을 의존에 두는 것은 boundsKey 와 같은 이유다 — 첫 진입에서 URL 로 지역이
+  // 들어오면 이 effect 가 지도보다 먼저 돈다. map 이 붙을 때 한 번 더 돌아야 맞춰진다.
+  useEffect(() => {
+    if (!regionKey) return;
+    fitAllMarkers();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, regionKey]);
 
   // 카드 탭(focusedPlaceIds) 시 해당 장소들로 카메라 이동
   // 마커 탭 카메라는 handleMarkerClick에서 focusCamera()로 직접 처리 (effect 경유 없음)
@@ -204,7 +222,7 @@ function MapContent({
 }
 
 export const InteractiveMap = forwardRef<FocusCameraHandle, Props>(function InteractiveMap(
-  { places, selectedPlaceId, focusedPlaceIds, highlightedIds, boundsKey, onMarkerClick, onMapClick, className, bottomOffset = BOTTOM_NAV_SPACE, userLocation },
+  { places, selectedPlaceId, focusedPlaceIds, highlightedIds, boundsKey, regionKey, onMarkerClick, onMapClick, className, bottomOffset = BOTTOM_NAV_SPACE, userLocation },
   ref
 ) {
   if (!API_KEY) {
@@ -224,6 +242,7 @@ export const InteractiveMap = forwardRef<FocusCameraHandle, Props>(function Inte
           focusedPlaceIds={focusedPlaceIds}
           highlightedIds={highlightedIds}
           boundsKey={boundsKey}
+          regionKey={regionKey}
           onMarkerClick={onMarkerClick}
           onMapClick={onMapClick}
           bottomOffset={bottomOffset}
