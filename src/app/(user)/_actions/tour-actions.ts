@@ -75,11 +75,26 @@ export async function fetchNearbyAttractions(input: {
 // ─── 지역 단위 관광 데이터 ────────────────────────────────────────────────────
 // 맵 시트의 "Attractions in {도시}" · "Festivals in {도시}" 두 줄이 쓴다.
 //
-// 좌표가 아니라 지역 키를 받는다. 부르는 쪽은 지금 고른 지역 slug 만 알면 되고,
+// 좌표가 아니라 지역 키를 받는다. 부르는 쪽은 지금 고른 시도·시군구 slug 만 알면 되고,
 // 그 slug 가 어떤 법정동 코드인지는 tour-api/regions 안쪽 일이다 — 화면이 코드를 모른다.
+// 시군구를 주면 그 시군구의 코드로, 안 주면 시도 전체로 부른다.
 //
 // 좌표 없는 항목을 걸러내지 않는다. 이 둘은 코스에 담기는 목록이 아니라 읽는 목록이라
 // 지도에 못 찍는 것도 카드로는 멀쩡하다.
+
+/**
+ * 세 액션이 같은 입력을 받는다 — 지역 키 하나, 그리고 시군구(선택).
+ *
+ * district 를 nullish 로 둔 이유는 부르는 쪽이 `appliedDistrict`(string | null)를
+ * 그대로 넘기기 때문이다. undefined 로만 받으면 호출마다 `?? undefined` 가 붙는다.
+ */
+const regionInput = z.object({
+  regionKey: z.string().min(1).max(40),
+  district: z.string().min(1).max(40).nullish(),
+});
+
+/** 세 액션의 입력 — regionInput 과 짝이다 */
+type RegionInput = { regionKey: string; district?: string | null };
 
 /**
  * 화면에 올리는 관광지 수.
@@ -101,19 +116,38 @@ export async function fetchNearbyAttractions(input: {
  */
 const ATTRACTION_LIMIT = 50;
 
-/** 지역 관광지 (출처: ⓒ한국관광공사). 표에 없는 지역이거나 실패하면 null */
-export async function fetchRegionAttractions(input: {
-  regionKey: string;
-}): Promise<Attraction[] | null> {
-  const parsed = z.object({ regionKey: z.string().min(1).max(40) }).safeParse(input);
+/**
+ * 이 지역에 관광 섹션을 그릴 수 있는지와 섹션 제목에 쓸 이름.
+ *
+ * 지역 코드가 하드코딩 표였을 때는 부르는 클라이언트 컴포넌트가 동기로 판단했다.
+ * 이제 Area 를 읽어야 해서 서버로 옮겼다. 코드가 없는 Area(광주 · 충청)는 null 이고,
+ * 그때 화면은 두 줄을 아예 그리지 않는다 — 없는 지역에 실패·재시도 UI 를 띄우지 않는다.
+ *
+ * TourAPI 를 부르지 않는다. DB 한 번이라 관광지·축제와 나란히 띄워도 늦어지지 않는다.
+ */
+export async function fetchRegionTourInfo(
+  input: RegionInput
+): Promise<{ label: string } | null> {
+  const parsed = regionInput.safeParse(input);
   if (!parsed.success) return null;
 
-  const region = placeRegionOf(parsed.data.regionKey);
+  const region = await placeRegionOf(parsed.data.regionKey, parsed.data.district);
+  return region === null ? null : { label: region.label };
+}
+
+/** 지역 관광지 (출처: ⓒ한국관광공사). 코드가 없는 지역이거나 실패하면 null */
+export async function fetchRegionAttractions(
+  input: RegionInput
+): Promise<Attraction[] | null> {
+  const parsed = regionInput.safeParse(input);
+  if (!parsed.success) return null;
+
+  const region = await placeRegionOf(parsed.data.regionKey, parsed.data.district);
   if (region === null) return null;
 
   const result = await getAreaAttractions({
     regnCd: region.lDongRegnCd,
-    signguCd: region.lDongSignguCd,
+    signguCds: region.lDongSignguCds,
     limit: ATTRACTION_LIMIT,
   });
   if (!result) return null;
@@ -156,19 +190,19 @@ const FESTIVAL_LIMIT = 20;
  */
 const FESTIVAL_UPCOMING_DAYS = 60;
 
-/** 지역 축제 (출처: ⓒ한국관광공사). 표에 없는 지역이거나 실패하면 null */
-export async function fetchRegionFestivals(input: {
-  regionKey: string;
-}): Promise<Festival[] | null> {
-  const parsed = z.object({ regionKey: z.string().min(1).max(40) }).safeParse(input);
+/** 지역 축제 (출처: ⓒ한국관광공사). 코드가 없는 지역이거나 실패하면 null */
+export async function fetchRegionFestivals(
+  input: RegionInput
+): Promise<Festival[] | null> {
+  const parsed = regionInput.safeParse(input);
   if (!parsed.success) return null;
 
-  const region = placeRegionOf(parsed.data.regionKey);
+  const region = await placeRegionOf(parsed.data.regionKey, parsed.data.district);
   if (region === null) return null;
 
   const result = await getFestivals({
     regnCd: region.lDongRegnCd,
-    signguCd: region.lDongSignguCd,
+    signguCds: region.lDongSignguCds,
     upcomingDays: FESTIVAL_UPCOMING_DAYS,
     limit: FESTIVAL_LIMIT,
   });
@@ -181,7 +215,8 @@ export async function fetchRegionFestivals(input: {
 // 셋으로 나눈 이유는 도착 시각이 다르기 때문이다. 하나로 묶으면 가장 느린 것
 // (국문 경로의 번역, 최대 5초)이 나머지를 붙잡는다. 화면은 오는 대로 채운다.
 //
-// 어느 것도 캐싱하지 않는다. TourAPI 응답은 실시간 호출이 요강이다.
+// 셋 다 tour-api/queries 안에서 캐시를 거친다 (하루). 여기서는 달라지는 것이 없다 —
+// 실패는 여전히 null 이고, 캐시에 담기지 않는다.
 //
 // lang 은 목록이 준 Attraction.lang 을 그대로 돌려 받는다. EN/KO 는 contentId 공간이
 // 분리돼 상대 서비스에 물으면 0건이라(세 엔드포인트 전부 실측 0/3) 추측해서는 안 된다.

@@ -3,8 +3,8 @@
 import { X, Search, CalendarDays, MapPin } from "lucide-react";
 import { LabelBadge } from "@/components/LabelBadge";
 import { EVENT_RED } from "@/lib/event-format";
-import { FEATURED_REGION_SLUGS } from "@/lib/region-utils";
 import type { ActiveEventCollection } from "@/lib/event-collection-queries";
+import type { DistrictOption } from "../_hooks/useDiscoverFilters";
 
 type ChipInfo = { id: string; label: string; bg: string; fg: string };
 
@@ -22,10 +22,11 @@ interface Props {
   onRemoveTagGroup: (key: string) => void;
   eventCollections?: ActiveEventCollection[];
   onEventCollectionClick?: (id: string) => void;
-  quickTopicChip?: ChipInfo | null;
-  onQuickTopicClick?: () => void;
   regions?: { slug: string; label: string }[];
   appliedRegion?: string | null;
+  /** 지금 걸린 시도의 시군구 목록 — 칩 글자를 만들 때만 쓴다 */
+  districts?: DistrictOption[];
+  appliedDistrict?: string | null;
   onRegionChange?: (slug: string | null) => void;
 }
 
@@ -43,30 +44,26 @@ export function DiscoverActiveFacets({
   onRemoveTagGroup,
   eventCollections = [],
   onEventCollectionClick,
-  quickTopicChip,
-  onQuickTopicClick,
   regions = [],
   appliedRegion = null,
+  districts = [],
+  appliedDistrict = null,
   onRegionChange,
 }: Props) {
   const hasQuery = query.trim() !== "";
   const hasFilters = appliedTopicIds.length > 0 || appliedTagIds.length > 0 || appliedTagGroupKeys.length > 0 || appliedRegion !== null;
   const hasEventCollections = eventCollections.length > 0;
+  // 첫 줄은 이벤트 컬렉션뿐이다. 지역과 토픽은 필터 시트에서 고른다 —
+  // 어느 지역·어느 아이돌을 위로 올릴지 코드가 정하면 그 선택을 설명할 길이 없다.
   const showEventCollections = hasEventCollections && !hasQuery && !hasFilters;
-  const showQuickChips = !hasQuery && !hasFilters && !!quickTopicChip;
-  // FEATURED 순서 유지 + availableCities에 없는 도시(장소 0개) 자동 제외
-  const featuredRegions = FEATURED_REGION_SLUGS
-    .map((slug) => regions.find((r) => r.slug === slug) ?? null)
-    .filter((r): r is { slug: string; label: string } => r !== null);
-  const showRegionChips = featuredRegions.length >= 1;
 
-  if (!showEventCollections && !showQuickChips && !hasQuery && !hasFilters && !showRegionChips) return null;
+  if (!showEventCollections && !hasQuery && !hasFilters) return null;
 
   return (
     <div className="absolute top-[60px] inset-x-0 z-[60] px-3 pb-2 space-y-1.5">
-      {(showEventCollections || showQuickChips || showRegionChips) && !hasQuery && !hasFilters && (
+      {showEventCollections && (
         <div className="flex gap-2 overflow-x-auto py-[6px] -my-[6px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {showEventCollections && eventCollections.map((col) => {
+          {eventCollections.map((col) => {
             const nameEn =
               col.translations.find((t) => t.locale === "en")?.name ?? col.slug;
             return (
@@ -82,29 +79,6 @@ export function DiscoverActiveFacets({
               </button>
             );
           })}
-          {showQuickChips && quickTopicChip && (
-            <button
-              type="button"
-              onClick={onQuickTopicClick}
-              className="shrink-0 inline-flex items-center gap-1 px-3 h-7 rounded-full text-xs font-semibold whitespace-nowrap shadow-sm active:opacity-70 transition-opacity"
-              style={{ background: quickTopicChip.bg, color: quickTopicChip.fg }}
-            >
-              {quickTopicChip.label}
-            </button>
-          )}
-          {showRegionChips && featuredRegions.map(({ slug, label }) => (
-            <button
-              key={slug}
-              type="button"
-              onClick={() => onRegionChange?.(appliedRegion === slug ? null : slug)}
-              className={`shrink-0 inline-flex items-center gap-1 px-3 h-7 rounded-full bg-white text-xs font-semibold whitespace-nowrap shadow-sm active:opacity-70 transition-all ${
-                appliedRegion === slug ? "ring-2 ring-foreground" : ""
-              }`}
-            >
-              <MapPin className="w-3 h-3 shrink-0" />
-              {label}
-            </button>
-          ))}
         </div>
       )}
 
@@ -173,7 +147,10 @@ export function DiscoverActiveFacets({
             );
           })}
           {appliedRegion !== null && (() => {
-            const label = regions.find((r) => r.slug === appliedRegion)?.label ?? appliedRegion;
+            const regionLabel = regions.find((r) => r.slug === appliedRegion)?.label ?? appliedRegion;
+            const districtLabel = districts.find((d) => d.slug === appliedDistrict)?.label ?? appliedDistrict;
+            // 여기 X 는 지역 필터를 통째로 벗긴다. 시트 트레이와 달리 한 단씩 벗길
+            // 자리가 아니다 — 시군구만 지우고 싶으면 시트를 열어 고르는 쪽이 빠르다
             return (
               <button
                 type="button"
@@ -181,7 +158,7 @@ export function DiscoverActiveFacets({
                 className="shrink-0 inline-flex items-center gap-1 px-3 h-7 rounded-full bg-white text-xs font-semibold whitespace-nowrap shadow-sm active:opacity-70 transition-opacity"
               >
                 <MapPin className="w-3 h-3 shrink-0" />
-                {label}
+                {appliedDistrict !== null ? `${districtLabel} · ${regionLabel}` : regionLabel}
                 <X className="size-3" />
               </button>
             );

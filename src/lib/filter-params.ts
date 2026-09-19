@@ -7,6 +7,11 @@ export interface FilterState {
   tagIds: string[];
   tagGroupKeys: string[];
   region: string | null;
+  /**
+   * 시군구. region 과 쌍일 때만 유효하다 — level 1 nameEn 이 전국에서 유일하지 않다
+   * (Jung-gu 가 다섯 곳, Dong-gu 가 다섯 곳). 시도가 정해져야 하나로 좁혀진다.
+   */
+  district: string | null;
 }
 
 export interface FilterLookups {
@@ -106,6 +111,7 @@ function tagIdToSlug(tagGroups: TagGroupWithTags[], id: string): string | null {
  * - ?topics=bts,twice  → topicIds (slug → id 변환, 못 찾은 slug 버림)
  * - ?tags=concert      → tagIds   (slug → id 변환, 못 찾은 slug 버림)
  * - ?region=seoul      → region   (문자열 그대로, 없으면 null)
+ * - ?district=mapo-gu  → district (region 이 있을 때만, 없으면 null)
  */
 export function parseFilterParams(
   searchParams: URLSearchParams,
@@ -116,6 +122,7 @@ export function parseFilterParams(
   const rawTags = searchParams.get("tags");
   const rawTagGroups = searchParams.get("tagGroups");
   const rawRegion = searchParams.get("region");
+  const rawDistrict = searchParams.get("district");
 
   const topicSlugs = rawTopics ? rawTopics.split(",").filter(Boolean) : [];
   const tagSlugs = rawTags ? rawTags.split(",").filter(Boolean) : [];
@@ -132,7 +139,9 @@ export function parseFilterParams(
   const validGroupKeys = new Set(tagGroups.map((g) => g.group));
   const tagGroupKeys = rawTagGroupKeys.filter((k) => validGroupKeys.has(k));
 
-  return { topicIds, tagIds, tagGroupKeys, region: rawRegion || null };
+  // district 혼자 오면 버린다 — 시도가 없으면 어느 시군구인지 정해지지 않는다
+  const region = rawRegion || null;
+  return { topicIds, tagIds, tagGroupKeys, region, district: region ? rawDistrict || null : null };
 }
 
 /**
@@ -141,6 +150,7 @@ export function parseFilterParams(
  * - topicIds → slug → "topics"에 set, 비면 delete
  * - tagIds   → slug → "tags"에   set, 비면 delete
  * - region   → "region"에 set,       null이면 delete
+ * - district → "district"에 set,     region이 없거나 null이면 delete
  */
 export function serializeFilterParams(
   state: FilterState,
@@ -181,6 +191,13 @@ export function serializeFilterParams(
     params.delete("region");
   }
 
+  // region 이 없으면 district 도 없다 — parseFilterParams 와 같은 규칙
+  if (state.region !== null && state.district !== null) {
+    params.set("district", state.district);
+  } else {
+    params.delete("district");
+  }
+
   return params;
 }
 
@@ -193,12 +210,14 @@ export function buildDiscoverHref(opts: {
   tagSlugs?: string[];
   tagGroupKeys?: string[];
   region?: string | null;
+  district?: string | null;
 }): string {
   const params = new URLSearchParams();
   if (opts.topicSlugs?.length) params.set("topics", opts.topicSlugs.join(","));
   if (opts.tagSlugs?.length) params.set("tags", opts.tagSlugs.join(","));
   if (opts.tagGroupKeys?.length) params.set("tagGroups", opts.tagGroupKeys.join(","));
   if (opts.region) params.set("region", opts.region);
+  if (opts.region && opts.district) params.set("district", opts.district);
   const qs = params.toString();
   return qs ? `/discover?${qs}` : "/discover";
 }

@@ -8,6 +8,7 @@ import { dedupeEventMarkers } from "@/lib/event-utils";
 import { EVENT_RED, sortEventMarkers } from "@/lib/event-format";
 import { useSearchParams, useRouter } from "next/navigation";
 import { buildTopicColorMap } from "@/lib/filter-params";
+import type { FilterState } from "@/lib/filter-params";
 import { postMatchesFilters, placeMatchesFilters, placeMatchScore } from "@/lib/discover-filter-utils";
 import { InteractiveMap, type FocusCameraHandle } from "@/components/maps/InteractiveMap";
 import { PlaceBottomSheet } from "@/components/maps/PlaceBottomSheet";
@@ -107,18 +108,19 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     stagedTagIds,
     stagedTagGroupKeys,
     stagedRegion,
+    stagedDistrict,
     appliedTopicIds,
     appliedTagIds,
     appliedTagGroupKeys,
     appliedRegion,
+    appliedDistrict,
     hasFilters,
     hasPostLevelFilter,
     availableCities,
+    availableDistricts,
     topicChipMap,
     tagChipMap,
     tagGroupChipMap,
-    btsTopicId,
-    btsChipInfo,
     commitFilters,
     exitResultMode,
     openFilter,
@@ -133,12 +135,14 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     toggleTag,
     toggleTagGroup,
     toggleRegion,
+    toggleDistrict,
   } = useDiscoverFilters({
     topicTree,
     tagGroups,
     allPlaces,
     onExitQuery: () => setQuery(""),
     onFiltersApplied: () => setSheetState("half"),
+    shouldKeepSelectedPlace,
   });
 
   useEffect(() => {
@@ -304,10 +308,13 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   const isEventMode = activeEventData !== null;
 
   const isResultMode = !isEventMode && (query.trim() !== "" || hasFilters);
-  const hasRegionChips = !isEventMode && availableCities.length >= 2;
+  // 카메라용 결과 모드 — 지역을 뺀 나머지(검색어·토픽·태그)다.
+  // 지역은 regionKey 가 따로 맡는다. boundsKey 에 두면 지역을 벗을 때도 키가 바뀌어
+  // 전국으로 튀는데, 벗을 때는 보던 자리에 그대로 있어야 한다.
+  const hasCameraFilters = !isEventMode && (query.trim() !== "" || hasPostLevelFilter);
   // 이벤트 모드는 EventSearchBar(검색+칩)가 항상 떠 있어 동일한 top reserve가 필요.
   // 비이벤트는 facet 칩이 떠 있을 때(isResultMode)만 필요. 두 조건의 OR는 새 변수에서만.
-  const needsTopReserve = isEventMode || isResultMode || hasRegionChips;
+  const needsTopReserve = isEventMode || isResultMode;
 
   const searchedPlaces = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -326,6 +333,34 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     });
   }, [query, visiblePlaces]);
 
+  /**
+   * 필터를 next 로 바꾸면 지금 선택된 장소가 결과에 남는가 — commitFilters 가 이 답으로
+   * ?place= 를 지울지 정한다. 판정은 filteredPlaces 와 같은 파이프라인이다:
+   * searchedPlaces(검색어·saved 까지 적용된 집합)에서 찾고, 나머지는 placeMatchesFilters 에
+   * next 를 넣어 본다. 새 판정 규칙을 만들지 않는다.
+   *
+   * 함수 선언이라 호이스팅된다 — useDiscoverFilters 호출부가 이 줄 위에 있어도 되고,
+   * 실제 호출은 렌더가 끝난 뒤 이벤트 핸들러에서만 일어난다.
+   */
+  function shouldKeepSelectedPlace(next: FilterState): boolean {
+    if (!selectedPlaceId) return true;
+    // 이벤트 모드의 선택은 이 파이프라인 밖(컬렉션의 이벤트 장소)이라 건드리지 않는다
+    if (isEventMode) return true;
+    const place = searchedPlaces.find((p) => p.id === selectedPlaceId);
+    if (!place) return false;
+    const nextHasPostLevelFilter =
+      next.topicIds.length > 0 || next.tagIds.length > 0 || next.tagGroupKeys.length > 0;
+    const matchedPosts = new Map([
+      [
+        place.id,
+        place.posts.filter((post) =>
+          postMatchesFilters(post, next.topicIds, next.tagIds, next.tagGroupKeys)
+        ),
+      ],
+    ]);
+    return placeMatchesFilters(place, nextHasPostLevelFilter, matchedPosts, next.region, next.district);
+  }
+
   // topic/tag/tagGroup 필터에 매칭되는 posts를 place당 한 번만 계산 — filteredPlaces 포함 판정과
   // filteredMarkerPlaces 색/카운트 계산이 이 결과를 공유해 동일 post 배열을 중복 스캔하지 않는다.
   const matchedPostsByPlaceId = useMemo(() => {
@@ -343,14 +378,14 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   const filteredPlaces = useMemo(() => {
     if (!hasFilters) return searchedPlaces;
     const matched = searchedPlaces.filter((p) =>
-      placeMatchesFilters(p, hasPostLevelFilter, matchedPostsByPlaceId, appliedRegion)
+      placeMatchesFilters(p, hasPostLevelFilter, matchedPostsByPlaceId, appliedRegion, appliedDistrict)
     );
     return [...matched].sort(
       (a, b) =>
         placeMatchScore(b, appliedTopicIds, appliedTagIds) -
         placeMatchScore(a, appliedTopicIds, appliedTagIds)
     );
-  }, [searchedPlaces, hasFilters, hasPostLevelFilter, matchedPostsByPlaceId, appliedTopicIds, appliedTagIds, appliedRegion]);
+  }, [searchedPlaces, hasFilters, hasPostLevelFilter, matchedPostsByPlaceId, appliedTopicIds, appliedTagIds, appliedRegion, appliedDistrict]);
 
   // topicTree 전체를 한 번만 순회해 topicId → 색 맵을 만들어둔다 (place마다 트리 재순회 방지)
   const topicColorMap = useMemo(() => buildTopicColorMap(topicTree), [topicTree]);
@@ -622,9 +657,12 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
         boundsKey={
           isEventMode
             ? `collection:${collectionSlug}`
-            : isResultMode
-              ? `q:${query}|t:${[...appliedTopicIds].sort().join(",")}|tg:${[...appliedTagIds].sort().join(",")}|gk:${[...appliedTagGroupKeys].sort().join(",")}|r:${appliedRegion ?? ""}`
+            : hasCameraFilters
+              ? `q:${query}|t:${[...appliedTopicIds].sort().join(",")}|tg:${[...appliedTagIds].sort().join(",")}|gk:${[...appliedTagGroupKeys].sort().join(",")}`
               : isSavedView ? "saved" : "all"
+        }
+        regionKey={
+          !isEventMode && appliedRegion ? `${appliedRegion}/${appliedDistrict ?? ""}` : null
         }
         highlightedIds={
           isResultMode ? new Set(filteredPlaces.map((p) => p.id)) : undefined
@@ -680,13 +718,11 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
           onRemoveTagGroup={removeAppliedTagGroup}
           eventCollections={eventCollections}
           onEventCollectionClick={(slug) => setCollectionSlug(slug)}
-          quickTopicChip={btsChipInfo}
-          onQuickTopicClick={() => {
-            if (btsTopicId) commitFilters({ topicIds: [btsTopicId], tagIds: appliedTagIds, tagGroupKeys: appliedTagGroupKeys, region: appliedRegion });
-          }}
           regions={availableCities}
           appliedRegion={appliedRegion}
-          onRegionChange={(slug) => commitFilters({ topicIds: appliedTopicIds, tagIds: appliedTagIds, tagGroupKeys: appliedTagGroupKeys, region: slug })}
+          districts={appliedRegion ? (availableDistricts.get(appliedRegion) ?? []) : []}
+          appliedDistrict={appliedDistrict}
+          onRegionChange={(slug) => commitFilters({ topicIds: appliedTopicIds, tagIds: appliedTagIds, tagGroupKeys: appliedTagGroupKeys, region: slug, district: null })}
         />
       )}
 
@@ -807,7 +843,11 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
             시트는 이미 결과 목록 쪽으로 넘어가 있다 — 이 줄이 Hot 탭에 뜨는 일은 없다.
             이벤트 모드는 컬렉션이 화면을 통째로 쓰는 상태라 제외한다. */}
         {!isEventMode && appliedRegion && (
-          <RegionTourSections key={appliedRegion} regionKey={appliedRegion} />
+          <RegionTourSections
+            key={`${appliedRegion}/${appliedDistrict ?? ""}`}
+            regionKey={appliedRegion}
+            district={appliedDistrict}
+          />
         )}
       </PlaceListSheet>
 
@@ -894,6 +934,9 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
         regions={availableCities}
         stagedRegion={stagedRegion}
         onToggleRegion={toggleRegion}
+        districts={stagedRegion ? (availableDistricts.get(stagedRegion) ?? []) : []}
+        stagedDistrict={stagedDistrict}
+        onToggleDistrict={toggleDistrict}
       />
     </div>
   );

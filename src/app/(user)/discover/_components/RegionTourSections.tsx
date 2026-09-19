@@ -7,7 +7,8 @@
 //
 // 지역이 정해졌을 때만 산다. 전국 관광지 스무 건은 고른 것이 아니라 API 가 준 순서라
 // 맥락이 없다 — 지역을 고르면 나타나는 편이 맞다. 그래서 부르는 쪽이 region 이 있을
-// 때만 그리고, 표(tour-api/regions)에 코드가 없는 지역이면 여기서 스스로 물러난다.
+// 때만 그리고, Area 에 법정동 코드가 없는 지역이면 여기서 스스로 물러난다.
+// 그 판단은 fetchRegionTourInfo 가 한다 — 코드가 Area 로 옮겨가 동기로 알 수 없다.
 //
 // 카드 생김새는 시안에서 가져올 수 없다. TourismRow 가 dc-import 라 내부가 없어서,
 // C-3b(NearbyAttractionsSection)가 세운 규칙 — 4:3 사진 · 영문 2줄 · 아랫줄 한 줄 —
@@ -19,10 +20,10 @@ import { MapPin } from "lucide-react";
 import { isExternalImage } from "@/lib/image";
 import { TOUR_API_ATTRIBUTION } from "@/lib/tour-api/attribution";
 import { attractionCategoryLabel } from "@/lib/tour-api/category";
-import { placeRegionOf } from "@/lib/tour-api/regions";
 import {
   fetchRegionAttractions,
   fetchRegionFestivals,
+  fetchRegionTourInfo,
 } from "@/app/(user)/_actions/tour-actions";
 import type { Attraction, Festival } from "@/lib/tour-api/types";
 import { AttractionDetailSheet } from "@/app/(user)/posts/[slug]/_components/AttractionDetailSheet";
@@ -320,9 +321,18 @@ function TourRow<T>({
  *
  * 지역이 바뀌면 부르는 쪽이 key 로 이 컴포넌트를 새로 만든다 — 상태를 되돌리는 코드가
  * 따로 없고, 옛 지역의 카드가 한 프레임도 새 제목 아래 남지 않는다.
+ * key 에 시군구도 들어간다. 같은 시도 안에서 구만 갈아탈 때도 같은 보장이 서야 한다.
  */
-export function RegionTourSections({ regionKey }: { regionKey: string }) {
-  const region = placeRegionOf(regionKey);
+export function RegionTourSections({
+  regionKey,
+  district = null,
+}: {
+  regionKey: string;
+  /** 시군구. null 이면 시도 전체다 */
+  district?: string | null;
+}) {
+  /** null = 아직 모름 · "none" = 코드 없는 지역 */
+  const [info, setInfo] = useState<{ label: string } | "none" | null>(null);
 
   const [attractions, setAttractions] = useState<Loadable<Attraction>>(null);
   const [festivals, setFestivals] = useState<Loadable<Festival>>(null);
@@ -364,33 +374,48 @@ export function RegionTourSections({ regionKey }: { regionKey: string }) {
   useEffect(() => {
     if (!started) return;
     let alive = true;
-    fetchRegionAttractions({ regionKey }).then((result) => {
+    fetchRegionTourInfo({ regionKey, district }).then((result) => {
+      if (alive) setInfo(result ?? "none");
+    });
+    return () => {
+      alive = false;
+    };
+  }, [started, regionKey, district]);
+
+  useEffect(() => {
+    if (!started) return;
+    let alive = true;
+    fetchRegionAttractions({ regionKey, district }).then((result) => {
       if (alive) setAttractions(result === null ? "failed" : result);
     });
     return () => {
       alive = false;
     };
-  }, [started, regionKey, attractionAttempt]);
+  }, [started, regionKey, district, attractionAttempt]);
 
   useEffect(() => {
     if (!started) return;
     let alive = true;
-    fetchRegionFestivals({ regionKey }).then((result) => {
+    fetchRegionFestivals({ regionKey, district }).then((result) => {
       if (alive) setFestivals(result === null ? "failed" : result);
     });
     return () => {
       alive = false;
     };
-  }, [started, regionKey, festivalAttempt]);
+  }, [started, regionKey, district, festivalAttempt]);
 
   // 코드를 모르는 지역이면 두 줄 다 없다. 부르는 쪽이 지역별로 분기하지 않아도 되게
-  // 판단을 여기서 끝낸다 — 표(tour-api/regions)를 아는 것은 관광 모듈뿐이다.
-  if (region === null) return null;
+  // 판단을 여기서 끝낸다 — 지역 코드를 아는 것은 관광 모듈뿐이다.
+  //
+  // info 가 아직 null 이어도 rootRef 는 살려 둬야 한다. 그게 없으면 IntersectionObserver
+  // 가 붙을 곳이 없어 started 가 서지 않고, 호출이 영영 시작되지 않는다.
+  if (info === "none") return <div ref={rootRef} />;
+  if (info === null) return <div ref={rootRef} />;
 
   return (
     <div ref={rootRef}>
       <TourRow
-        title={`Attractions in ${region.label}`}
+        title={`Attractions in ${info.label}`}
         items={attractions}
         onRetry={() => {
           setAttractions(null);
@@ -406,7 +431,7 @@ export function RegionTourSections({ regionKey }: { regionKey: string }) {
       />
 
       <TourRow
-        title={`Festivals in ${region.label}`}
+        title={`Festivals in ${info.label}`}
         items={festivals}
         onRetry={() => {
           setFestivals(null);

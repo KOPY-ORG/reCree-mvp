@@ -53,3 +53,6 @@ prisma/scripts/tour-api-spike-result.json
 
 # tour api spike 2차 결과 (일회성 측정 원본)
 prisma/scripts/tour-api-spike-2-result.json
+
+# Area 재등록 스냅샷 (일회성 백업)
+prisma/scripts/backups/

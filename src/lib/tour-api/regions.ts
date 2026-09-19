@@ -1,35 +1,92 @@
 // ─── 지역 → 법정동 코드 ───────────────────────────────────────────────────────
 // discover 의 지역 slug(region-utils 의 getPlaceRegionSlug — Area.nameEn 소문자)를
-// TourAPI 의 lDongRegnCd / lDongSignguCd 로 옮긴다.
+// TourAPI 의 lDongRegnCd / lDongSignguCds 로 옮긴다.
 //
-// Area 에서 읽지 않고 여기 박아 둔다. #221 이 Area 에 두 컬럼을 냈지만 dev 27건이
-// 전부 NULL 이고, 경주는 Area 행 자체가 없다. 어드민에서 Area 를 관리하게 되면(F-1)
-// 이 표를 지우고 Area.lDongRegnCd 를 읽으면 된다 — 그때까지의 자리다.
+// 표를 박아 두지 않고 Area 에서 읽는다. #226 이 낸 두 컬럼이 전부 NULL 이라
+// 한동안 하드코딩 표(seoul·busan·gyeongju·gangneung 넷)를 두었는데, 전국 Area 249행에
+// 코드가 채워지면서 그 자리가 없어졌다. 이제 Area 를 늘리면 지역이 늘어난다.
 //
-// 코드는 추측이 아니라 실측이다. prisma/scripts/tour-api-spike-2-result.json 의
-// ldongResolution 이 ldongCode2 응답의 지역명과 대조해 뽑은 값이고, 넷 다 exact 매칭이다.
+// 시도(region)와 시군구(district)를 따로 받는다. 시군구 이름 하나로는 못 찾기 때문이다 —
+// level 1 nameEn 이 전국에서 유일하지 않다 (Jung-gu 가 다섯 곳, Dong-gu 가 다섯 곳).
+// 시도를 먼저 찾고 그 자식 안에서 고르면 한 행으로 좁혀진다.
 //
-// label 을 Area 에서 가져오지 않는 이유 — 이 모듈은 Prisma 를 모른다. 섹션 제목이
-// Area 데이터 상태에 흔들리지 않고, 관광 데이터를 뗄 때 이 파일만 지우면 된다.
-// (Area 의 nameEn 은 "jeju" 처럼 소문자로 들어간 행이 섞여 있어 제목에 쓰기에도 불안하다)
+// 이 모듈은 여전히 떼어내기 쉽다 — 파일을 지우고 부르는 줄을 지우면 관광 데이터가 빠진다.
+
+import { prisma } from "@/lib/prisma";
 
 export type PlaceRegion = {
   /** 섹션 제목에 들어가는 이름 — "Attractions in {label}" */
   label: string;
   lDongRegnCd: string;
-  /** 시도 전체가 대상이면 없다. 서울·부산이 그렇고, 경주·강릉은 도 아래 시라 필요하다 */
-  lDongSignguCd?: string;
+  /**
+   * 시도 전체가 대상이면 빈 배열이다. 시군구를 고르면 그 시군구의 코드들이다.
+   *
+   * 배열인 이유는 일반시 13곳(수원·창원·전주 등) 때문이다. 축제도 관광지도 시 코드가
+   * 아니라 구 코드에 붙어 있어 코드 하나로는 조회가 안 된다 — 수원시(110) 0건,
+   * 구 4개(111·113·115·117) 16건.
+   */
+  lDongSignguCds: string[];
 };
 
-export const PLACE_REGIONS: Record<string, PlaceRegion> = {
-  seoul: { label: "Seoul", lDongRegnCd: "11" },
-  busan: { label: "Busan", lDongRegnCd: "26" },
-  gyeongju: { label: "Gyeongju", lDongRegnCd: "47", lDongSignguCd: "130" },
-  gangneung: { label: "Gangneung", lDongRegnCd: "51", lDongSignguCd: "150" },
-};
+/** Area 행 하나를 화면이 쓰는 형태로. nameEn·코드가 비어 있으면 null */
+function toPlaceRegion(
+  area: { nameEn: string | null; lDongRegnCd: string | null; lDongSignguCds: string[] } | null
+): PlaceRegion | null {
+  if (!area?.nameEn || !area.lDongRegnCd) return null;
+  return {
+    label: area.nameEn,
+    lDongRegnCd: area.lDongRegnCd,
+    lDongSignguCds: area.lDongSignguCds,
+  };
+}
 
-/** 표에 없는 지역이면 null. 호출부는 null 이면 관광 섹션을 그리지 않는다 */
-export function placeRegionOf(slug: string | null | undefined): PlaceRegion | null {
-  if (!slug) return null;
-  return PLACE_REGIONS[slug] ?? null;
+/**
+ * 시도 nameEn 이 region 과 같은 level 0 행. district 를 주면 그 시도의 자식 중
+ * nameEn 이 같은 level 1 행. 없으면 null 이다.
+ *
+ * 코드가 비어 있는 Area 는 null 로 떨어진다. 지금 dev 는 시도 16 · 시군구 229 가
+ * 전부 채워져 있지만, 어드민에서 지역을 늘리면 다시 생길 수 있는 상태다.
+ *
+ * district 가 그 시도에 없으면 시도 전체로 물러난다 — 화면이 그렇게 움직이기 때문이다.
+ * URL 의 모르는 district 는 useDiscoverFilters 가 버리고 시도 전체를 그리는데,
+ * 여기만 null 을 내면 목록은 서울 전체인데 관광 섹션만 사라진다.
+ */
+export async function placeRegionOf(
+  region: string | null | undefined,
+  district?: string | null
+): Promise<PlaceRegion | null> {
+  const regionName = region?.trim();
+  if (!regionName) return null;
+
+  const sido = await prisma.area.findFirst({
+    where: {
+      isActive: true,
+      level: 0,
+      nameEn: { equals: regionName, mode: "insensitive" },
+      lDongRegnCd: { not: null },
+    },
+    orderBy: { sortOrder: "asc" },
+    select: { id: true, nameEn: true, lDongRegnCd: true, lDongSignguCds: true },
+  });
+
+  const resolvedSido = toPlaceRegion(sido);
+  if (!sido || !resolvedSido) return null;
+
+  const districtName = district?.trim();
+  if (!districtName) return resolvedSido;
+
+  // 시도 안에서는 nameEn 이 유일하다 (dev 실측 중복 0건)
+  const sigungu = await prisma.area.findFirst({
+    where: {
+      isActive: true,
+      level: 1,
+      parentId: sido.id,
+      nameEn: { equals: districtName, mode: "insensitive" },
+      lDongRegnCd: { not: null },
+    },
+    orderBy: { sortOrder: "asc" },
+    select: { nameEn: true, lDongRegnCd: true, lDongSignguCds: true },
+  });
+
+  return toPlaceRegion(sigungu) ?? resolvedSido;
 }
