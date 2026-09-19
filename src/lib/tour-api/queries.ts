@@ -285,26 +285,44 @@ async function withKoreanBackfill(
 const ATTRACTION_CACHE_TTL_SECONDS = 24 * 60 * 60;
 
 /**
- * 축제 — 한 시간.
+ * 축제 — 여섯 시간.
  *
- * 관광지와 달리 날짜가 붙은 목록이다. 오늘 끝나는 축제는 오늘 안에 사라져야 하고
- * "D-1" 이 하루 굳으면 그냥 틀린 값이 된다. 다만 status·D-day 계산 자체는 캐시
- * 바깥에 있어(getFestivals 참고) 이 TTL 이 결정하는 것은 "새 축제가 얼마나 늦게
- * 들어오는가" 뿐이다. 한 시간이면 충분하고, 하루 24번이라 한도에도 부담이 없다.
+ * 이 TTL 이 정하는 것은 "새로 올라온 축제가 얼마나 늦게 들어오는가" 하나뿐이다.
+ * 끝났는지 · 진행중인지 예정인지 · 며칠 남았는지는 전부 캐시 밖에서 매 요청마다
+ * 다시 센다(getFestivals 본문). 캐시에 담기는 FestivalRecord 에는 그 세 칸이
+ * 아예 없어서, TTL 을 늘려도 "D-1" 이 굳거나 끝난 축제가 남는 일이 생기지 않는다.
+ *
+ * 한 시간이었는데 늘렸다. 관광지를 하루로 누르고 나니 한도를 먹는 쪽이 이 줄만
+ * 남았기 때문이다 — 수원(구 4개)이 축제만 하루 4×24 = 96회였다. 여섯 시간이면
+ * 같은 지역이 4×4 = 16회다. 관광공사가 축제를 하루에 몇 번씩 새로 넣지 않으므로
+ * 여섯 시간 늦게 들어오는 것은 이 화면에서 차이가 없다.
  */
-const FESTIVAL_CACHE_TTL_SECONDS = 60 * 60;
+const FESTIVAL_CACHE_TTL_SECONDS = 6 * 60 * 60;
+
+/**
+ * 관광지 상세 — 하루. 목록과 같은 주기로 둔다.
+ *
+ * 개요 · 영업시간 · 주차 · 사진은 목록의 이름·좌표와 같은 성격의 상설 정보라
+ * 둘을 다른 주기로 둘 이유가 없다. 상수를 따로 두는 것은 값이 달라서가 아니라
+ * 나중에 한쪽만 조일 수 있게 하기 위해서다.
+ */
+const DETAIL_CACHE_TTL_SECONDS = 24 * 60 * 60;
 
 /**
  * 캐시 태그. 공통 하나 + 종류별 하나를 함께 단다 — 전부 털 수도, 한 줄만 털 수도 있게.
  * 무효화하는 코드는 두지 않는다. 필요해지면 revalidateTag 를 부르는 쪽에서 쓴다.
  *
- * 종류별 태그는 unstable_cache 의 keyParts 로도 그대로 쓴다. 함수마다 네임스페이스가
- * 갈려 같은 인자를 받는 다른 함수끼리 키가 겹치지 않는다.
+ * keyParts 는 함수마다 반드시 달라야 한다 — 키가 keyParts + 인자라, 같은 인자를 받는
+ * 두 함수가 같은 keyParts 를 쓰면 서로의 결과를 읽는다. 목록 셋은 태그가 하나씩이라
+ * 태그를 그대로 keyParts 로 쓰지만, 상세 셋은 태그를 공유하므로(DETAIL_CACHE_TAG)
+ * keyParts 를 따로 적어 준다. 셋 다 (contentId, lang) 을 받아 겹칠 자리가 실제로 있다.
  */
 const CACHE_TAG = "tour-api";
 const AREA_CACHE_TAG = "tour-api-area-attractions";
 const NEARBY_CACHE_TAG = "tour-api-nearby-attractions";
 const FESTIVAL_CACHE_TAG = "tour-api-festivals";
+/** 상세 셋이 태그 하나를 같이 쓴다 — 한 관광지의 세 줄은 같이 털어야 앞뒤가 맞는다 */
+const DETAIL_CACHE_TAG = "tour-api-attraction-detail";
 
 /**
  * 캐시 안에서 일부 호출만 실패했을 때 던진다. 담긴 것은 성공한 몫이다.
@@ -847,8 +865,12 @@ export async function getLdongCodes({
 // 세 엔드포인트를 세 함수로 나눈다. 화면이 도착하는 대로 채우기 위해서다 —
 // 하나로 묶으면 가장 느린 것(번역)이 나머지를 붙잡는다.
 //
-// 어느 것도 캐싱하지 않는다. TourAPI 응답은 실시간 호출이 요강이다.
-// 캐싱되는 것은 translateKoToEn 안의 번역 결과뿐이고, 그건 공공데이터가 아니라 파생물이다.
+// 셋 다 캐시를 거친다 (위 "캐시" 절). 목록과 같은 규칙이다 — 실패는 담지 않고,
+// 공개 함수의 계약은 그대로 null 이다.
+//
+// 캐시에 시각 의존 계산이 섞일 걱정이 없는 자리다. 셋이 하는 일은 태그를 걷고
+// 라벨을 붙이고 번역하는 것뿐이라, 같은 contentId 는 언제 물어도 같은 답이 나온다.
+// (축제처럼 캐시 경계를 함수 중간에 둘 이유가 없다 — getFestivals 주석 참고)
 
 /** 응답에 <br> 과 <a> 가 섞여 온다(영문 intro 실측 35~45%). 태그를 걷고 빈 값은 null 로 */
 function cleanText(v: unknown): string | null {
@@ -927,20 +949,19 @@ async function detailItem(
 }
 
 /**
- * detailCommon2 — 개요 · 주소 · 홈페이지.
+ * detailCommon2 본체 — 캐시에 담긴다. 실패는 throw 다 (캐시 절 참고).
  *
- * 국문 경로면 개요를 번역한다. 주소는 번역하지 않는다 — fillFromKorean 과 같은 이유다.
- * 번역이 실패하면 국문 원문이 그대로 남는다. 비어 있는 것보다 낫다.
+ * detailItem 이 null 을 내는 경우가 둘인데(호출 실패 · 응답 0건) 둘 다 던진다.
+ * 0건은 그 자체로는 실패가 아니지만, 목록이 준 contentId 로 물었는데 상세가 없다는
+ * 것은 포털이 흔들릴 때 나오는 모양이라 정상 응답과 구별이 되지 않는다. 담아 두면
+ * 멀쩡한 관광지 하나가 하루 동안 "불러오지 못했습니다" 로 굳는다.
  */
-export async function getAttractionEssentials({
-  contentId,
-  lang,
-}: {
-  contentId: string;
-  lang: TourLang;
-}): Promise<AttractionEssentials | null> {
+async function fetchAttractionEssentials(
+  contentId: string,
+  lang: TourLang
+): Promise<AttractionEssentials> {
   const item = await detailItem(lang, "detailCommon2", { contentId });
-  if (item === null) return null;
+  if (item === null) throw new Error(`detailCommon2 실패 — ${lang}/${contentId}`);
 
   let overview = cleanText(item.overview);
   if (overview !== null && lang === "ko") {
@@ -955,20 +976,49 @@ export async function getAttractionEssentials({
   };
 }
 
-/** detailImage2 — 갤러리. 사진에는 언어가 없지만 contentId 가 갈려 부른 쪽 서비스로 물어야 한다 */
-export async function getAttractionImages({
+const cachedAttractionEssentials = unstable_cache(
+  fetchAttractionEssentials,
+  ["tour-api-attraction-essentials"],
+  { revalidate: DETAIL_CACHE_TTL_SECONDS, tags: [CACHE_TAG, DETAIL_CACHE_TAG] }
+);
+
+/**
+ * detailCommon2 — 개요 · 주소 · 홈페이지.
+ *
+ * 국문 경로면 개요를 번역한다. 주소는 번역하지 않는다 — fillFromKorean 과 같은 이유다.
+ * 번역이 실패하면 국문 원문이 그대로 남는다. 비어 있는 것보다 낫다.
+ *
+ * 캐시 키는 contentId 와 lang 이다. lang 이 빠지면 안 된다 — EN/KO 는 id 공간이
+ * 분리돼 있어 같은 숫자가 양쪽에서 서로 다른 관광지를 가리킨다.
+ * 번역된 개요가 통째로 담기므로, 국문 경로도 두 번째부터는 번역 조회조차 없다.
+ */
+export async function getAttractionEssentials({
   contentId,
   lang,
 }: {
   contentId: string;
   lang: TourLang;
-}): Promise<string[] | null> {
+}): Promise<AttractionEssentials | null> {
+  return unwrapCached(
+    () => cachedAttractionEssentials(contentId, lang),
+    "getAttractionEssentials"
+  );
+}
+
+/**
+ * detailImage2 본체 — 캐시에 담긴다. 실패는 throw 다 (캐시 절 참고).
+ *
+ * 여기서는 빈 배열이 정상이다. 갤러리가 없는 관광지가 흔하고 그때도 응답은 ok 로 온다 —
+ * 위 essentials 와 달리 0건과 실패가 갈리므로, 빈 배열은 그대로 담는다.
+ * 담지 않으면 사진 없는 관광지만 열 때마다 호출을 쓴다.
+ */
+async function fetchAttractionImages(contentId: string, lang: TourLang): Promise<string[]> {
   const res = await callTourApi(lang, "detailImage2", {
     contentId,
     imageYN: "Y",
     numOfRows: 30,
   });
-  if (!res.ok) return null;
+  if (!res.ok) throw new Error(`detailImage2 실패 — ${lang}/${contentId}: ${res.error}`);
 
   const urls: string[] = [];
   for (const item of res.items) {
@@ -978,6 +1028,23 @@ export async function getAttractionImages({
   return [...new Set(urls)];
 }
 
+const cachedAttractionImages = unstable_cache(
+  fetchAttractionImages,
+  ["tour-api-attraction-images"],
+  { revalidate: DETAIL_CACHE_TTL_SECONDS, tags: [CACHE_TAG, DETAIL_CACHE_TAG] }
+);
+
+/** detailImage2 — 갤러리. 사진에는 언어가 없지만 contentId 가 갈려 부른 쪽 서비스로 물어야 한다 */
+export async function getAttractionImages({
+  contentId,
+  lang,
+}: {
+  contentId: string;
+  lang: TourLang;
+}): Promise<string[] | null> {
+  return unwrapCached(() => cachedAttractionImages(contentId, lang), "getAttractionImages");
+}
+
 /**
  * detailIntro2 — 영업시간 · 휴무 · 주차 등. 타입별 필드명 분기는 detail-fields 가 갖는다.
  *
@@ -985,6 +1052,32 @@ export async function getAttractionImages({
  * 값이 빈 줄은 여기서 지운다 — "—" 를 그리지 않기 때문에 화면에 갈 필요가 없다.
  * 국문 경로면 값만 번역한다. 라벨은 우리가 쓴 영어다.
  */
+async function fetchAttractionIntro(
+  contentId: string,
+  contentTypeId: string,
+  lang: TourLang
+): Promise<AttractionIntroRow[]> {
+  const item = await detailItem(lang, "detailIntro2", { contentId, contentTypeId });
+  if (item === null) throw new Error(`detailIntro2 실패 — ${lang}/${contentId}/${contentTypeId}`);
+
+  const rows: AttractionIntroRow[] = [];
+  for (const field of detailFieldsFor(contentTypeId)) {
+    const value = cleanText(item[field.key]);
+    if (value !== null) rows.push({ label: field.label, value });
+  }
+  // 빈 배열은 담는다 — 타입에 맞는 칸이 전부 비어 있는 관광지가 실제로 있고, 실패가 아니다
+  if (rows.length === 0 || lang === "en") return rows;
+
+  const translated = await translateKoToEn(rows.map((r) => r.value));
+  return rows.map((r) => ({ label: r.label, value: translated[r.value] ?? r.value }));
+}
+
+const cachedAttractionIntro = unstable_cache(
+  fetchAttractionIntro,
+  ["tour-api-attraction-intro"],
+  { revalidate: DETAIL_CACHE_TTL_SECONDS, tags: [CACHE_TAG, DETAIL_CACHE_TAG] }
+);
+
 export async function getAttractionIntro({
   contentId,
   contentTypeId,
@@ -994,19 +1087,12 @@ export async function getAttractionIntro({
   contentTypeId: string | null;
   lang: TourLang;
 }): Promise<AttractionIntroRow[] | null> {
-  const fields = detailFieldsFor(contentTypeId);
-  if (fields.length === 0 || !contentTypeId) return [];
+  // 캐시 앞에서 끊는다. 부를 엔드포인트가 없는 타입이라 담을 것도 없고,
+  // 담으면 "빈 배열" 항목만 타입 수만큼 늘어난다
+  if (!contentTypeId || detailFieldsFor(contentTypeId).length === 0) return [];
 
-  const item = await detailItem(lang, "detailIntro2", { contentId, contentTypeId });
-  if (item === null) return null;
-
-  const rows: AttractionIntroRow[] = [];
-  for (const field of fields) {
-    const value = cleanText(item[field.key]);
-    if (value !== null) rows.push({ label: field.label, value });
-  }
-  if (rows.length === 0 || lang === "en") return rows;
-
-  const translated = await translateKoToEn(rows.map((r) => r.value));
-  return rows.map((r) => ({ label: r.label, value: translated[r.value] ?? r.value }));
+  return unwrapCached(
+    () => cachedAttractionIntro(contentId, contentTypeId, lang),
+    "getAttractionIntro"
+  );
 }

@@ -93,7 +93,7 @@ export type LdongCode = { code: string; name: string };
 
 // ─── 상세 ─────────────────────────────────────────────────────────────────────
 // 세 엔드포인트를 세 액션으로 나눠 부른다. 화면이 도착하는 대로 채우기 위해서다.
-// 어느 것도 캐싱하지 않는다 — TourAPI 응답은 실시간 호출이 요강이다.
+// 셋 다 queries 안에서 하루 캐시를 거친다 — 시각에 달린 값이 없어 그대로 담긴다.
 
 /** detailCommon2. 값이 없는 칸은 null 이다 — API 는 빈 문자열로 주지만 여기서 정리한다 */
 export type AttractionEssentials = {
