@@ -17,19 +17,6 @@ import type { DistrictOption } from "../_hooks/useDiscoverFilters";
 
 type ChipInfo = { id: string; label: string; bg: string; fg: string };
 
-/**
- * 지역 칩 뒤에 붙는 장소 수.
- *
- * 토픽·태그 칩에는 없는 것을 지역에만 붙인다. 지역은 고르기 전에는 결과가 몇 개인지
- * 짐작할 길이 없어서다 — 서울 25구 중 값이 있는 것은 15개고 그중 절반이 1개뿐이다.
- * 토픽은 이름만으로 크기가 대충 읽히고 칩 색이 이미 정보를 나르고 있어 숫자가 잡음이 된다.
- *
- * 글자색만 죽이고 크기는 거의 그대로 둔다. 더 작게 하면 폰에서 읽히지 않는다.
- */
-function ChipCount({ n }: { n: number }) {
-  return <span className="font-medium tabular-nums text-muted-foreground">{n}</span>;
-}
-
 interface Props {
   isOpen: boolean;
   onClose: () => void;
@@ -427,7 +414,6 @@ export function DiscoverFilterSheet({
                       >
                         <MapPin className="w-3 h-3 shrink-0" />
                         {r.label}
-                        <ChipCount n={r.count} />
                       </button>
                     );
                   })}
@@ -460,12 +446,11 @@ export function DiscoverFilterSheet({
                             key={d.slug}
                             type="button"
                             onClick={() => onToggleDistrict?.(d.slug)}
-                            className={`shrink-0 inline-flex items-center gap-1 px-3 h-7 rounded-full bg-white text-xs font-semibold whitespace-nowrap shadow-sm active:opacity-70 transition-all ${
+                            className={`shrink-0 inline-flex items-center px-3 h-7 rounded-full bg-white text-xs font-semibold whitespace-nowrap shadow-sm active:opacity-70 transition-all ${
                               isSelected ? "ring-2 ring-foreground" : ""
                             }`}
                           >
                             {d.label}
-                            <ChipCount n={d.count} />
                           </button>
                         );
                       })}
