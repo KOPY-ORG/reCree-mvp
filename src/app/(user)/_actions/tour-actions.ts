@@ -101,19 +101,38 @@ export async function fetchNearbyAttractions(input: {
  */
 const ATTRACTION_LIMIT = 50;
 
-/** 지역 관광지 (출처: ⓒ한국관광공사). 표에 없는 지역이거나 실패하면 null */
+/**
+ * 이 지역에 관광 섹션을 그릴 수 있는지와 섹션 제목에 쓸 이름.
+ *
+ * 지역 코드가 하드코딩 표였을 때는 부르는 클라이언트 컴포넌트가 동기로 판단했다.
+ * 이제 Area 를 읽어야 해서 서버로 옮겼다. 코드가 없는 Area(광주 · 충청)는 null 이고,
+ * 그때 화면은 두 줄을 아예 그리지 않는다 — 없는 지역에 실패·재시도 UI 를 띄우지 않는다.
+ *
+ * TourAPI 를 부르지 않는다. DB 한 번이라 관광지·축제와 나란히 띄워도 늦어지지 않는다.
+ */
+export async function fetchRegionTourInfo(input: {
+  regionKey: string;
+}): Promise<{ label: string } | null> {
+  const parsed = z.object({ regionKey: z.string().min(1).max(40) }).safeParse(input);
+  if (!parsed.success) return null;
+
+  const region = await placeRegionOf(parsed.data.regionKey);
+  return region === null ? null : { label: region.label };
+}
+
+/** 지역 관광지 (출처: ⓒ한국관광공사). 코드가 없는 지역이거나 실패하면 null */
 export async function fetchRegionAttractions(input: {
   regionKey: string;
 }): Promise<Attraction[] | null> {
   const parsed = z.object({ regionKey: z.string().min(1).max(40) }).safeParse(input);
   if (!parsed.success) return null;
 
-  const region = placeRegionOf(parsed.data.regionKey);
+  const region = await placeRegionOf(parsed.data.regionKey);
   if (region === null) return null;
 
   const result = await getAreaAttractions({
     regnCd: region.lDongRegnCd,
-    signguCd: region.lDongSignguCd,
+    signguCds: region.lDongSignguCds,
     limit: ATTRACTION_LIMIT,
   });
   if (!result) return null;
@@ -156,19 +175,19 @@ const FESTIVAL_LIMIT = 20;
  */
 const FESTIVAL_UPCOMING_DAYS = 60;
 
-/** 지역 축제 (출처: ⓒ한국관광공사). 표에 없는 지역이거나 실패하면 null */
+/** 지역 축제 (출처: ⓒ한국관광공사). 코드가 없는 지역이거나 실패하면 null */
 export async function fetchRegionFestivals(input: {
   regionKey: string;
 }): Promise<Festival[] | null> {
   const parsed = z.object({ regionKey: z.string().min(1).max(40) }).safeParse(input);
   if (!parsed.success) return null;
 
-  const region = placeRegionOf(parsed.data.regionKey);
+  const region = await placeRegionOf(parsed.data.regionKey);
   if (region === null) return null;
 
   const result = await getFestivals({
     regnCd: region.lDongRegnCd,
-    signguCd: region.lDongSignguCd,
+    signguCds: region.lDongSignguCds,
     upcomingDays: FESTIVAL_UPCOMING_DAYS,
     limit: FESTIVAL_LIMIT,
   });

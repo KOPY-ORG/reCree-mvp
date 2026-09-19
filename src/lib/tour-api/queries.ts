@@ -86,6 +86,42 @@ function ldongParams(regnCd: string, signguCd?: string): Record<string, string> 
   return p;
 }
 
+/**
+ * 시군구 코드 배열을 호출 단위로 편다. 빈 배열이면 [undefined] — 시도 전체 조회다.
+ *
+ * 코드마다 따로 부르는 것 말고 방법이 없다. lDongSignguCd 는 값을 하나만 받는다.
+ * 실측(searchFestival2 · areaBasedList2 양쪽 동일):
+ *   111             →  1건
+ *   111,113,115,117 →  0건   ← 쉼표
+ *   111|113         →  0건   ← 파이프
+ *   111&...&117     →  1건   ← 파라미터 반복. 합집합이 아니라 하나만 먹는다
+ * 셋 다 resultCode 0000 으로 조용히 0건이 온다. 에러가 안 나서 더 위험하다.
+ *
+ * 응답 item 에 lDongSignguCd 가 들어 있어 "시도 전체를 받아 로컬에서 거르기" 도
+ * 되지만 쓰지 않는다. 축제는 시도 최대 142건이라 되는데 관광지는 경기가 9,440건이다.
+ * 두 함수가 다른 전략을 쓰면 같은 지역에서 한쪽만 비는 이유를 설명할 수 없게 된다.
+ */
+function signguCalls(signguCds: string[]): (string | undefined)[] {
+  return signguCds.length === 0 ? [undefined] : signguCds;
+}
+
+/**
+ * 여러 목록을 라운드로빈으로 섞는다.
+ *
+ * 이어 붙이면 앞에서 자를 때 첫 구가 limit 을 다 먹는다 — arrange=A 라 수원이
+ * 장안구 스무 건이 되고 나머지 세 구는 한 건도 안 보인다. 번갈아 꺼내면 시 전체가 고루 뜬다.
+ */
+function interleave<T>(lists: T[][]): T[] {
+  const out: T[] = [];
+  const max = Math.max(0, ...lists.map((l) => l.length));
+  for (let i = 0; i < max; i++) {
+    for (const list of lists) {
+      if (i < list.length) out.push(list[i]);
+    }
+  }
+  return out;
+}
+
 /** lang 은 부른 서비스 그대로다. 상세 조회가 이 값으로 어느 서비스에 물을지 정한다 */
 function toAttraction(item: TourItem, lang: TourLang): Attraction | null {
   const contentId = pickField(item, ["contentid"]);
@@ -270,32 +306,49 @@ const FESTIVAL_CONTENT_TYPES = new Set(["15", "85"]);
  */
 const AREA_FILTER_HEADROOM = 10;
 
-/** 법정동 코드 기준 관광지. getNearbyAttractions 와 같은 이유로 lang 을 받지 않는다 */
+/**
+ * 법정동 코드 기준 관광지. getNearbyAttractions 와 같은 이유로 lang 을 받지 않는다.
+ *
+ * signguCds 가 여럿이면 코드마다 부른다(signguCalls 주석 참고). 병렬이라 호출 수는
+ * 늘어도 지연은 한 번과 같다. 코드마다 limit+HEADROOM 씩 받는데, 나눠서 조금씩 받으면
+ * 한 구가 비었을 때 limit 을 못 채운다 — 더 받는 비용은 사실상 없다(위 HEADROOM 주석).
+ */
 export async function getAreaAttractions({
   regnCd,
-  signguCd,
+  signguCds,
   limit = DEFAULT_LIMIT,
 }: {
   regnCd: string;
-  signguCd?: string;
+  signguCds: string[];
   limit?: number;
 }): Promise<TourResult<Attraction> | null> {
   return withKoreanBackfill(async (lang) => {
-    const res = await callTourApi(lang, "areaBasedList2", {
-      ...ldongParams(regnCd, signguCd),
-      numOfRows: limit + AREA_FILTER_HEADROOM,
-      arrange: "A",
-    });
-    if (!res.ok) return null;
+    const results = await Promise.all(
+      signguCalls(signguCds).map((signguCd) =>
+        callTourApi(lang, "areaBasedList2", {
+          ...ldongParams(regnCd, signguCd),
+          numOfRows: limit + AREA_FILTER_HEADROOM,
+          arrange: "A",
+        }),
+      ),
+    );
 
-    const items = res.items
-      .map((i) => toAttraction(i, lang))
-      .filter((a): a is Attraction => a !== null && !FESTIVAL_CONTENT_TYPES.has(a.contentTypeId ?? ""))
-      .slice(0, limit);
+    // 하나라도 살아 있으면 그만큼 쓴다. 전부 죽었을 때만 언어 경로를 죽인다
+    const ok = results.filter((r) => r.ok);
+    if (ok.length === 0) return null;
+
+    const lists = ok.map((res) =>
+      res.items
+        .map((i) => toAttraction(i, lang))
+        .filter((a): a is Attraction => a !== null && !FESTIVAL_CONTENT_TYPES.has(a.contentTypeId ?? "")),
+    );
+    const items = interleave(lists).slice(0, limit);
 
     // totalCount 는 API 가 준 것을 그대로 둔다 — 축제를 뺀 수가 아니지만,
-    // 이 값을 읽는 쪽이 없고 "지역에 몇 건이 있는지" 라는 뜻은 그대로다
-    return { items, totalCount: res.totalCount };
+    // 이 값을 읽는 쪽이 없고 "지역에 몇 건이 있는지" 라는 뜻은 그대로다.
+    // 코드가 여럿이면 합이다. 구끼리 겹치지 않으므로 중복이 아니다
+    const totalCount = ok.reduce((sum, r) => sum + (r.totalCount ?? 0), 0);
+    return { items, totalCount };
   }, limit);
 }
 
@@ -315,12 +368,12 @@ export async function getAreaAttractions({
  */
 export async function getFestivals({
   regnCd,
-  signguCd,
+  signguCds,
   upcomingDays = DEFAULT_UPCOMING_DAYS,
   limit = DEFAULT_LIMIT,
 }: {
   regnCd: string;
-  signguCd?: string;
+  signguCds: string[];
   upcomingDays?: number;
   /** 화면에 올릴 개수. 이 수만큼만 번역한다 — 번역 비용이 곧 개수다 */
   limit?: number;
@@ -329,24 +382,46 @@ export async function getFestivals({
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const todayStr = yyyymmdd(today);
   const lookbackStr = yyyymmdd(new Date(today.getTime() - FESTIVAL_LOOKBACK_DAYS * DAY_MS));
-  const params = ldongParams(regnCd, signguCd);
 
-  const collected: TourItem[] = [];
-  for (let page = 1; page <= FESTIVAL_MAX_PAGES; page++) {
-    const res = await callTourApi("ko", "searchFestival2", {
-      ...params,
-      eventStartDate: lookbackStr,
-      numOfRows: FESTIVAL_ROWS,
-      pageNo: page,
-      arrange: "A",
-    });
-    // 첫 페이지가 실패하면 결과 없음, 이후 페이지 실패는 받은 만큼만 쓴다
-    if (!res.ok) {
-      if (page === 1) return null;
-      break;
+  /** 코드 하나 몫. 페이지는 순차, 코드끼리는 병렬이다. null 은 첫 페이지부터 실패 */
+  const fetchOne = async (signguCd: string | undefined): Promise<TourItem[] | null> => {
+    const params = ldongParams(regnCd, signguCd);
+    const got: TourItem[] = [];
+    for (let page = 1; page <= FESTIVAL_MAX_PAGES; page++) {
+      const res = await callTourApi("ko", "searchFestival2", {
+        ...params,
+        eventStartDate: lookbackStr,
+        numOfRows: FESTIVAL_ROWS,
+        pageNo: page,
+        arrange: "A",
+      });
+      // 첫 페이지가 실패하면 결과 없음, 이후 페이지 실패는 받은 만큼만 쓴다
+      if (!res.ok) {
+        if (page === 1) return null;
+        break;
+      }
+      got.push(...res.items);
+      if (res.items.length < FESTIVAL_ROWS) break;
     }
-    collected.push(...res.items);
-    if (res.items.length < FESTIVAL_ROWS) break;
+    return got;
+  };
+
+  const perCode = await Promise.all(signguCalls(signguCds).map(fetchOne));
+  // 전부 죽었을 때만 섹션을 죽인다. 하나라도 살아 있으면 그만큼 보여준다
+  if (perCode.every((got) => got === null)) return null;
+
+  // 축제 하나는 구 하나에만 속하므로 코드끼리 겹치지 않지만, 응답이 흔들려도
+  // 같은 카드가 두 장 뜨지 않게 contentid 로 한 번 거른다
+  const seenContentIds = new Set<string>();
+  const collected: TourItem[] = [];
+  for (const got of perCode) {
+    if (got === null) continue;
+    for (const item of got) {
+      const id = pickField(item, ["contentid"]);
+      if (id !== null && seenContentIds.has(id)) continue;
+      if (id !== null) seenContentIds.add(id);
+      collected.push(item);
+    }
   }
 
   const items: Festival[] = [];
