@@ -319,7 +319,7 @@ model Area {
   longitude     Float?
   radiusM       Int?
   lDongRegnCd   String?
-  lDongSignguCd String?
+  lDongSignguCds String[]
   sortOrder     Int      @default(0)
   isActive      Boolean  @default(true)
   createdAt     DateTime @default(now())
