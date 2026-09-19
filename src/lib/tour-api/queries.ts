@@ -298,20 +298,95 @@ export async function getNearbyAttractions({
 const FESTIVAL_CONTENT_TYPES = new Set(["15", "85"]);
 
 /**
- * 축제를 걸러낸 뒤에도 limit 을 채우려면 그만큼 더 받아 둬야 한다.
+ * 지역 목록에서 빼는 콘텐츠 타입 — 쇼핑.
  *
- * 실측 비중이 1.6~2.7% (서울 78/4,971 · 부산 20/1,129 · 경주 2/102 · 강릉 3/113)라
- * 100건을 받아도 섞이는 것이 최대 3건이었다. 10 이면 세 배 여유다.
- * 더 받는 비용은 사실상 없다 — 한 번의 호출로 1,000건까지 오고, 100건 응답이 215ms다.
+ * 영문 지역 목록은 사실상 쇼핑 목록이다. 면세 환급 가맹점(Tax Refund Shop)이 통째로
+ * 들어와 있어 제목순 앞자리를 "7-Eleven", "8 Seconds", "ABC-Mart" 가 채운다.
+ * 실측 비중(영문·1,000건 요청) 서울 919/1,000 · 마포 278/327 · 수원 290/331 ·
+ * 제주 352/582 · 충북 127/262. 여행지를 찾는 줄에서 편의점이 앞에 설 이유가 없다.
+ *
+ * 축제와 같은 이유로 두 코드를 함께 적는다 — 서비스마다 번호가 갈린다.
+ * 실응답으로 확인했다(contentTypeId 를 직접 지정한 서울 조회):
+ *   KorService2 38 → 4,356건, "가나안경원 명동점 · 가나안약국 · 가네시 롯데백화점 본점"
+ *   EngService2 79 → 4,147건, "0914 Flagship Store Dosan Park[Tax Refund Shop]"
+ *
+ * cat2(A0401 Shopping)로 거르지 않는다. 축제와 같은 판단이다 — cat2 는 38% 만 차 있고
+ * contentTypeId 는 실측 160/160 이 차 있다.
  */
-const AREA_FILTER_HEADROOM = 10;
+const SHOPPING_CONTENT_TYPES = new Set(["38", "79"]);
+
+/**
+ * 지역 목록에서 빼는 콘텐츠 타입 — 숙박.
+ *
+ * "이 지역에 뭐가 있나" 를 훑는 줄에 호텔·게스트하우스가 낄 자리가 아니다. 쇼핑과 달리
+ * 목록을 잠식하지는 않지만(영문 실측 서울 3 · 마포 3 · 수원 1 · 제주 13 · 충북 7)
+ * 제목순 앞자리를 이름으로 차지한다 — 서울 앞 다섯 중 둘이 "Aank ..." 호텔이었다.
+ *
+ * 음식점(KorService2 39 · EngService2 82)은 남긴다. 먹으러 가는 것은 그 지역에서
+ * 할 일이지만 자는 것은 일정을 짜는 일이라, 이 줄이 답하는 질문이 서로 다르다.
+ *
+ * 두 방법으로 확인했다(서울, 실응답):
+ *   contentTypeId 지정 조회  KorService2 32 → 382건 "강남스테이힐 · 강남아르누보씨티호텔"
+ *                            EngService2 80 →  36건 "Aank Air Hotel Gaebong …"
+ *   searchStay2(숙박 전용)    국문 응답의 contenttypeid 가 전부 32, 영문은 전부 80 이고
+ *                            totalCount 도 382 · 36 으로 위와 같았다
+ */
+const STAY_CONTENT_TYPES = new Set(["32", "80"]);
+
+/** 지역 목록에서 빼는 것 전부. 빼는 이유가 서로 달라 따로 적고 여기서 합친다 */
+const AREA_EXCLUDED_CONTENT_TYPES = new Set([
+  ...FESTIVAL_CONTENT_TYPES,
+  ...SHOPPING_CONTENT_TYPES,
+  ...STAY_CONTENT_TYPES,
+]);
+
+/**
+ * 지역 목록에서 한 번에 받아 오는 수. limit 과 이어지지 않는다 —
+ * 걸러내는 양을 정하는 것이 limit 이 아니라 그 지역의 쇼핑 비중이기 때문이다.
+ *
+ * 축제만 뺄 때는 limit+10 으로 충분했다(비중 1.6~2.7%). 쇼핑이 들어오면서 그 셈이 깨졌다.
+ * 실측 — 영문·arrange=O 로 요청해 필터를 통과한 수:
+ *        요청 60  200  500  1,000
+ *   서울        1    8   37     73
+ *   마포        2   19   44     44   ← 영문 재고 327건이 전부라 더 받아도 안 는다
+ *   수원       15   37   37     37   ← 같은 이유로 331건이 전부
+ *   제주       10   61  142    210
+ *   충북       32   80  124    124   ← 262건이 전부
+ * limit 50 을 채우려면 서울이 1,000 을 요구한다. 마포·수원은 재고가 먼저 바닥나
+ * 몇 을 요청하든 44·37 이고, 국문 보강은 10건 미만일 때만 붙는 장치라 여기선 안 붙는다.
+ *
+ * 호출 수는 그대로다. 1,000건 응답이 575ms · 674KB 라 REQUEST_TIMEOUT_MS(4초) 안이다.
+ */
+const AREA_FETCH_ROWS = 1000;
+
+/**
+ * 지역 목록 정렬 — "대표이미지 있는 것 먼저, 그 안에서 제목순".
+ *
+ * 걷어낸 자리를 이미지 없는 항목이 채우면 회색 자리표시만 늘어난다.
+ * 실측(1,000건 요청 후 필터, 앞 50장의 이미지 보유) — arrange=A 는 서울 22/50 ·
+ * 제주 32/50 · 충북 40/50 인데 O 는 셋 다 50/50 이다
+ * (마포·수원은 통과분이 44·37 이라 그 전량인 28/44 · 31/37 로 같다).
+ *
+ * O 는 거르는 정렬이 아니라 앞으로 당기는 정렬이다 — 전량이 들어오는 지역에서
+ * A 와 O 의 통과 건수가 충북 124 · 마포 44 · 수원 37 · 제주 210 으로 같았다.
+ * 재고가 줄지 않는다.
+ *
+ * 이미지 우선 3종(O 제목순 · Q 수정일순 · R 생성일순) 중 O 를 쓰는 이유는 셋이다.
+ *   수율  서울은 4,971건의 일부만 오므로 정렬이 곧 표본이다. 통과 수가
+ *         O 73 · Q 55 · R 11 이라 R 은 limit(50)을 못 채운다
+ *   안정  Q·R 은 관광공사가 레코드를 손대면 순서가 바뀐다. 제목순은 고정이다
+ *   범위  Q·R 은 축제를 앞으로 끌어온다(서울 60건 중 Q 20 · R 14). 축제는 아래 줄이
+ *         날짜까지 붙여 따로 내는 것이라 여기서는 버려지는 자리다
+ * 바꾼 것은 하나다 — 제목순은 그대로 두고 이미지 있는 것을 앞으로 당겼다.
+ */
+const AREA_ARRANGE = "O";
 
 /**
  * 법정동 코드 기준 관광지. getNearbyAttractions 와 같은 이유로 lang 을 받지 않는다.
  *
  * signguCds 가 여럿이면 코드마다 부른다(signguCalls 주석 참고). 병렬이라 호출 수는
- * 늘어도 지연은 한 번과 같다. 코드마다 limit+HEADROOM 씩 받는데, 나눠서 조금씩 받으면
- * 한 구가 비었을 때 limit 을 못 채운다 — 더 받는 비용은 사실상 없다(위 HEADROOM 주석).
+ * 늘어도 지연은 한 번과 같다. 코드마다 AREA_FETCH_ROWS 씩 받는데, 나눠서 조금씩 받으면
+ * 한 구가 비었을 때 limit 을 못 채운다 — 더 받는 비용은 사실상 없다(위 주석).
  */
 export async function getAreaAttractions({
   regnCd,
@@ -327,8 +402,8 @@ export async function getAreaAttractions({
       signguCalls(signguCds).map((signguCd) =>
         callTourApi(lang, "areaBasedList2", {
           ...ldongParams(regnCd, signguCd),
-          numOfRows: limit + AREA_FILTER_HEADROOM,
-          arrange: "A",
+          numOfRows: AREA_FETCH_ROWS,
+          arrange: AREA_ARRANGE,
         }),
       ),
     );
@@ -340,11 +415,14 @@ export async function getAreaAttractions({
     const lists = ok.map((res) =>
       res.items
         .map((i) => toAttraction(i, lang))
-        .filter((a): a is Attraction => a !== null && !FESTIVAL_CONTENT_TYPES.has(a.contentTypeId ?? "")),
+        .filter(
+          (a): a is Attraction =>
+            a !== null && !AREA_EXCLUDED_CONTENT_TYPES.has(a.contentTypeId ?? ""),
+        ),
     );
     const items = interleave(lists).slice(0, limit);
 
-    // totalCount 는 API 가 준 것을 그대로 둔다 — 축제를 뺀 수가 아니지만,
+    // totalCount 는 API 가 준 것을 그대로 둔다 — 축제·쇼핑을 뺀 수가 아니지만,
     // 이 값을 읽는 쪽이 없고 "지역에 몇 건이 있는지" 라는 뜻은 그대로다.
     // 코드가 여럿이면 합이다. 구끼리 겹치지 않으므로 중복이 아니다
     const totalCount = ok.reduce((sum, r) => sum + (r.totalCount ?? 0), 0);
