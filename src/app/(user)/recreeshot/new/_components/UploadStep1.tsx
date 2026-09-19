@@ -168,9 +168,9 @@ export function UploadStep1({
               <div className="relative flex items-center justify-center">
                 <span
                   className="absolute inline-flex size-36 rounded-full animate-ping"
-                  style={{ backgroundColor: "rgba(200,255,9,0.15)" }}
+                  style={{ backgroundColor: "rgba(211,253,82,0.15)" }}
                 />
-                <div className="relative flex flex-col items-center leading-tight" style={{ color: "#C8FF09", textShadow: "0 0 40px rgba(200,255,9,0.6)" }}>
+                <div className="relative flex flex-col items-center leading-tight" style={{ color: "#D3FD52", textShadow: "0 0 40px rgba(211,253,82,0.6)" }}>
                   <span className="text-4xl font-black tracking-tight">AI</span>
                   <span className="text-4xl font-black tracking-tight">Scoring</span>
                 </div>
@@ -198,7 +198,7 @@ export function UploadStep1({
       {scoreMessage && previewScore !== null && (
         <div className="flex items-center gap-3 px-1">
           <div className="flex-shrink-0 size-16 rounded-full bg-black flex items-center justify-center shadow-md">
-            <span className="text-xl font-black tracking-tight leading-none" style={{ color: "#C8FF09" }}>
+            <span className="text-xl font-black tracking-tight leading-none" style={{ color: "#D3FD52" }}>
               {Math.round(previewScore)}%
             </span>
           </div>

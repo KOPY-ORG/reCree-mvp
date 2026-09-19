@@ -97,13 +97,13 @@ export function HallDetailClient({
           <Bookmark
             className="size-5"
             strokeWidth={1.5}
-            style={saved ? { fill: "#C8FF09", stroke: "#C8FF09" } : undefined}
+            style={saved ? { fill: "#D3FD52", stroke: "#D3FD52" } : undefined}
           />
         </button>
       </div>
 
       {toast && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-black/50 text-white text-sm whitespace-nowrap shadow-lg pointer-events-none">
+        <div className="fixed bottom-[var(--bottom-nav-space)] left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-black/50 text-white text-sm whitespace-nowrap shadow-lg pointer-events-none">
           {toast.message}
         </div>
       )}

@@ -1,7 +1,7 @@
 // Discover 필터 pure 헬퍼 — React 의존성 없음, 클라이언트/서버 무관
 import type { MapPlace, MapPost } from "@/lib/map-queries";
 import { topicMatchesFilter } from "@/lib/map-utils";
-import { getPlaceRegionSlug } from "@/lib/region-utils";
+import { getPlaceRegionSlug, getPlaceDistrictSlug } from "@/lib/region-utils";
 
 export function postMatchesFilters(post: MapPost, topicIds: string[], tagIds: string[], tagGroupKeys: string[]): boolean {
   const topicHit =
@@ -16,9 +16,12 @@ export function placeMatchesFilters(
   place: Pick<MapPlace, "id" | "posts" | "area">,
   hasPostLevelFilter: boolean,
   matchedPostsByPlaceId: Map<string, MapPost[]>,
-  region: string | null
+  region: string | null,
+  district: string | null
 ): boolean {
   if (region !== null && getPlaceRegionSlug(place.area) !== region) return false;
+  // 시군구는 시도를 좁힐 뿐이라 시도 비교 뒤에 온다. 시도에 직접 붙은 장소(세종)는 여기서 빠진다
+  if (district !== null && getPlaceDistrictSlug(place.area) !== district) return false;
   if (!hasPostLevelFilter) return true;
   return (matchedPostsByPlaceId.get(place.id)?.length ?? 0) > 0;
 }

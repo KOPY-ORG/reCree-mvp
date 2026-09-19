@@ -2,21 +2,27 @@
 
 import { useRef, useState, useEffect } from "react";
 import { useSheetDrag } from "@/app/(user)/_hooks/useSheetDrag";
+import { BOTTOM_NAV_SPACE, setBottomNavTucked } from "@/lib/bottom-nav";
 
 export type PlaceListSheetState = "hidden" | "tab-only" | "half" | "full";
 
 const DRAGGABLE_STATES = ["tab-only", "half", "full"] as const;
 type DraggableState = (typeof DRAGGABLE_STATES)[number];
 
-const BOTTOM_NAV_H = 64;
 // searchbar(60px) + facet 칩(~27px) + pb-2(8px) + 1px buffer
 const FULL_TOP_WITH_FACETS = 96;
 
+/**
+ * 시트는 화면 바닥까지 내려가고 탭바가 그 위에 뜬다 (시안 Home_Map_View).
+ * 그래서 세 상태 모두 탭바가 먹는 만큼을 높이에 더한다 — 윗변 위치는 그대로고
+ * 아래로만 늘어난다. 탭바에 가리지 않는 건 안쪽 스크롤 영역의 하단 여백이 맡는다.
+ */
 export function getSheetHeight(state: PlaceListSheetState, tabOnlyH: number, fullTop: number): string {
   if (state === "hidden") return "0px";
-  if (state === "tab-only") return `${tabOnlyH}px`;
-  if (state === "half") return `calc((100dvh - ${BOTTOM_NAV_H}px) * 0.5)`;
-  return `calc(100dvh - ${BOTTOM_NAV_H}px - ${fullTop}px)`;
+  // 핸들 + 헤더가 탭바 위로 올라오도록 그만큼 더 키운다
+  if (state === "tab-only") return `calc(${tabOnlyH}px + var(--bottom-nav-space))`;
+  if (state === "half") return `calc((100dvh - var(--bottom-nav-space)) * 0.5 + var(--bottom-nav-space))`;
+  return `calc(100dvh - ${fullTop}px)`;
 }
 
 interface Props {
@@ -53,13 +59,36 @@ export function PlaceListSheet({ state, onStateChange, topOffset = 24, hasActive
 
   const fullTop = hasActiveFacets ? FULL_TOP_WITH_FACETS : topOffset;
 
+  // getSheetHeight 와 같은 식이어야 드래그를 놓은 자리와 붙는 자리가 어긋나지 않는다.
+  // safe-area 는 빠진 근사다 — 그려지는 높이는 CSS 변수라 기기에서 정확하고,
+  // 여기 몇십 px 차이는 "어느 상태로 붙일지" 판정만 바꾼다.
   function getSnapHeights() {
     return [
-      tabOnlyH,
-      Math.round((window.innerHeight - BOTTOM_NAV_H) * 0.5),
-      window.innerHeight - BOTTOM_NAV_H - fullTop,
+      tabOnlyH + BOTTOM_NAV_SPACE,
+      Math.round((window.innerHeight - BOTTOM_NAV_SPACE) * 0.5) + BOTTOM_NAV_SPACE,
+      window.innerHeight - fullTop,
     ];
   }
+
+  // 시트를 끝까지(full) 올렸을 때만 탭바가 물러난다. 그때는 시트가 화면 전체를
+  // 대신하므로 알약 두 개가 리스트 위에 얹힌 군더더기가 된다.
+  // half 는 지도와 리스트를 같이 보는 상태라 탭바가 그대로 있어야 한다.
+  //
+  // 드래그를 손가락 위치에 비례해 따라가게 하지 않는다 — 탭바는 시트의 일부가 아니라
+  // 뒤에 있는 화면의 것이라, 붙어 움직이면 시트에 매달린 것처럼 보인다.
+  // 대신 임계를 넘는 순간 한 번에 바뀌되 놓기 전에 바뀐다. 임계는 스냅이 쓰는
+  // 경계(half 와 full 의 중간)와 같아서, 드래그 중에 본 결과가 놓았을 때 그대로 남는다.
+  function tuckForHeight(h: number) {
+    const [, halfH, fullH] = getSnapHeights();
+    setBottomNavTucked(h >= (halfH + fullH) / 2);
+  }
+
+  useEffect(() => {
+    setBottomNavTucked(state === "full");
+  }, [state]);
+
+  // 지도를 떠날 때 탭바를 반드시 되돌린다 — 속성은 <html> 에 있어서 화면이 바뀌어도 남는다
+  useEffect(() => () => setBottomNavTucked(false), []);
 
   const { isDragging, dragHandlers } = useSheetDrag<DraggableState>({
     sheetRef,
@@ -67,6 +96,7 @@ export function PlaceListSheet({ state, onStateChange, topOffset = 24, hasActive
     getSnapHeights,
     currentState: state === "hidden" ? "tab-only" : state,
     onStateChange,
+    onDragMove: tuckForHeight,
   });
 
   const sheetStyle: React.CSSProperties = {
@@ -75,6 +105,8 @@ export function PlaceListSheet({ state, onStateChange, topOffset = 24, hasActive
   };
 
   return (
+    // 시트는 화면 바닥까지 내려간다. 탭바는 시트 위에 뜨고,
+    // 가려지지 않게 하는 건 아래 스크롤 영역의 padding-bottom 이다.
     <div
       ref={sheetRef}
       className="absolute inset-x-0 bottom-0 z-40 bg-white rounded-t-[2rem] flex flex-col shadow-[0_-8px_40px_rgba(0,0,0,0.18)] overflow-hidden"
@@ -97,8 +129,13 @@ export function PlaceListSheet({ state, onStateChange, topOffset = 24, hasActive
         <div ref={headerRef} className="shrink-0">{header}</div>
       )}
 
-      {/* 콘텐츠 */}
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
+      {/* 콘텐츠 — 시트가 바닥까지 내려가므로 마지막 줄이 탭바에 가리지 않게 여기서 비운다.
+          탭바가 물러난 상태(full)에서는 --sheet-scroll-pb 가 알아서 줄어든다 */}
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto"
+        style={{ paddingBottom: "var(--sheet-scroll-pb)" }}
+      >
         {children}
         {/* 콘텐츠 끝 드래그 spacer */}
         {state !== "hidden" && (

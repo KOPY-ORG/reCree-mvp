@@ -130,7 +130,7 @@ export default async function PostsPage({
   function resolveTopicColors(node: ColorNode): { colorHex: string; colorHex2: string | null; gradientDir: string; gradientStop: number; textColorHex: string } {
     if (node.colorHex) return { colorHex: node.colorHex, colorHex2: node.colorHex2 ?? null, gradientDir: node.gradientDir ?? "to bottom", gradientStop: node.gradientStop ?? 150, textColorHex: node.textColorHex ?? "#000000" };
     if (node.parent) return resolveTopicColors(node.parent);
-    return { colorHex: "#C8FF09", colorHex2: null, gradientDir: "to bottom", gradientStop: 150, textColorHex: "#000000" };
+    return { colorHex: "#D3FD52", colorHex2: null, gradientDir: "to bottom", gradientStop: 150, textColorHex: "#000000" };
   }
 
   // 토픽/태그 effective 색상 resolve
@@ -144,7 +144,7 @@ export default async function PostsPage({
       displayOrder,
       tag: {
         ...tag,
-        effectiveColorHex: tag.colorHex ?? configMap.get(tag.group)?.colorHex ?? "#C8FF09",
+        effectiveColorHex: tag.colorHex ?? configMap.get(tag.group)?.colorHex ?? "#D3FD52",
         effectiveColorHex2: tag.colorHex ? (tag.colorHex2 ?? null) : (configMap.get(tag.group)?.colorHex2 ?? null),
         effectiveGradientDir: configMap.get(tag.group)?.gradientDir ?? "to bottom",
         effectiveGradientStop: configMap.get(tag.group)?.gradientStop ?? 150,

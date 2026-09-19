@@ -22,7 +22,7 @@ export function ScrapButton({ postId, initialSaved, size = "md", unsavedClassNam
 
   const iconSize = size === "sm" ? "h-4 w-4" : size === "lg" ? "h-6 w-6" : "h-5 w-5";
   const unsavedClass = unsavedClassName ?? "text-muted-foreground hover:text-foreground";
-  const activeSavedStyle = savedStyle ?? { fill: "#C8FF09", stroke: "#C8FF09" };
+  const activeSavedStyle = savedStyle ?? { fill: "#D3FD52", stroke: "#D3FD52" };
 
   function handleClick(e: React.MouseEvent) {
     e.preventDefault();
@@ -71,7 +71,7 @@ export function ScrapButton({ postId, initialSaved, size = "md", unsavedClassNam
       </button>
 
       {toast && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-black/50 text-white text-sm whitespace-nowrap shadow-lg pointer-events-none">
+        <div className="fixed bottom-[var(--bottom-nav-space)] left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-black/50 text-white text-sm whitespace-nowrap shadow-lg pointer-events-none">
           {toast.message}
         </div>
       )}

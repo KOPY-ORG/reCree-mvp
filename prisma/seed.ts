@@ -481,7 +481,7 @@ async function main() {
   await prisma.tagGroupConfig.createMany({
     data: [
       { group: "FOOD",       nameEn: "Food",       colorHex: "#FFC300", textColorHex: "#000000", sortOrder: 0 },
-      { group: "SPOT",       nameEn: "Spot",       colorHex: "#C8FF09", textColorHex: "#000000", sortOrder: 1 },
+      { group: "SPOT",       nameEn: "Spot",       colorHex: "#D3FD52", textColorHex: "#000000", sortOrder: 1 },
       { group: "EXPERIENCE", nameEn: "Experience", colorHex: "#FF0026", textColorHex: "#000000", sortOrder: 2 },
       { group: "BEAUTY",     nameEn: "Beauty",     colorHex: "#FF08CA", textColorHex: "#000000", sortOrder: 3 },
       { group: "ITEM",       nameEn: "Item",       colorHex: "#00FFC8", textColorHex: "#000000", sortOrder: 4 },

@@ -37,9 +37,9 @@ export function PlaceMarker({ color, isSelected, isSaved, nameEn, postCount, pla
 
   const inverted = isSelected && invertOnSelect;
   const bodyFill = inverted ? color : (hasGradient ? `url(#${gradientId})` : (gradient?.colorHex ?? color));
-  const glyphFill = inverted ? "#C8FF09" : GLYPH_FILL;
+  const glyphFill = inverted ? "#D3FD52" : GLYPH_FILL;
   const glyphOpacity = inverted ? 1.0 : GLYPH_OPACITY;
-  const countTextFill = inverted ? "#C8FF09" : "#18181b";
+  const countTextFill = inverted ? "#D3FD52" : "#18181b";
 
   return (
     <div

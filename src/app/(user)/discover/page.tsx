@@ -35,6 +35,8 @@ export async function generateMetadata({
   const tags = parseAxis(sp.tags);
   const tagGroups = parseAxis(sp.tagGroups);
   const region = parseAxis(sp.region);
+  // district 는 region 과 쌍일 때만 유효하다 — 혼자 오면 인식하지 않는다 (parseFilterParams 와 같은 규칙)
+  const district = region.length ? parseAxis(sp.district) : [];
 
   // 인식된 축만 고정 순서로 재구성한 정규화 self URL (canonical / og:url 용)
   const qs = new URLSearchParams();
@@ -42,6 +44,7 @@ export async function generateMetadata({
   if (tags.length) qs.set("tags", tags.join(","));
   if (tagGroups.length) qs.set("tagGroups", tagGroups.join(","));
   if (region.length) qs.set("region", region.join(","));
+  if (district.length) qs.set("district", district.join(","));
   const selfUrl = qs.toString() ? `${BASE_URL}/discover?${qs.toString()}` : `${BASE_URL}/discover`;
 
   // 값이 있는 축이 정확히 1개 && 그 축 값이 1개일 때만 단일 필터로 취급
@@ -50,13 +53,14 @@ export async function generateMetadata({
     { axis: "tags", values: tags },
     { axis: "tagGroups", values: tagGroups },
     { axis: "region", values: region },
+    { axis: "district", values: district },
   ].filter((a) => a.values.length > 0);
   const isBase = present.length === 0;
   const single = present.length === 1 && present[0].values.length === 1 ? present[0] : null;
 
-  // region은 라벨 조회 없이 index 제외. 단일 topic/tagGroup/tag만 라벨 조회 (별개 경량 쿼리)
+  // region·district는 라벨 조회 없이 index 제외. 단일 topic/tagGroup/tag만 라벨 조회 (별개 경량 쿼리)
   let label: string | null = null;
-  if (single && single.axis !== "region") {
+  if (single && single.axis !== "region" && single.axis !== "district") {
     const value = single.values[0];
     if (single.axis === "topics") {
       const t = await prisma.topic.findUnique({ where: { slug: value }, select: { nameEn: true } });
@@ -70,7 +74,7 @@ export async function generateMetadata({
     }
   }
 
-  // index 대상 = 필터 없는 기본, 또는 라벨을 찾은 단일 필터. (조합/region/잘못된 slug → noindex)
+  // index 대상 = 필터 없는 기본, 또는 라벨을 찾은 단일 필터. (조합/region/district/잘못된 slug → noindex)
   const isIndexTarget = isBase || Boolean(label);
 
   const title = label ? `${label} Spots in Korea` : DEFAULT_TITLE;

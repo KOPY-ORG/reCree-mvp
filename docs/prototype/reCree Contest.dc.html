@@ -1,0 +1,2166 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
+<script src="https://unpkg.com/d3@7.9.0/dist/d3.min.js" integrity="sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/topojson-client@3.1.0/dist/topojson-client.min.js" integrity="sha384-Ukv1p/xTma6P4/2bY5KzWBw+ydSpXmhCMtyciIQVDJ1RmOxtCYNMF1uXT9T63H67" crossorigin="anonymous"></script>
+<script src="./korea-map.js"></script>
+<style>
+  body{margin:0;background:#DEDCD7;font-family:Pretendard,system-ui,sans-serif}
+  a{color:#7B4FE8;text-decoration:none}a:hover{color:#5B2FC8}
+  ::-webkit-scrollbar{width:0;height:0}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes pulse{0%{opacity:1}50%{opacity:.45}100%{opacity:1}}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+</style>
+</helmet>
+
+<div style="min-height:100vh;display:flex;align-items:flex-start;justify-content:center;gap:26px;padding:36px 20px">
+
+<sc-if value="{{ showPanel }}" hint-placeholder-val="{{ true }}">
+<div style="position:sticky;top:36px;width:246px;background:#fff;border-radius:20px;padding:18px;box-shadow:0 18px 44px rgba(0,0,0,.14)">
+  <div style="font:600 13px/1 Pretendard,system-ui,sans-serif;color:#111">State panel</div>
+  <div style="font:500 10.5px/1.45 Pretendard,system-ui,sans-serif;color:#96968F;margin:7px 0 0">Force any intermediate state on the screen you are looking at.</div>
+  <div style="display:flex;flex-direction:column;gap:8px;margin:15px 0 0">
+    <sc-for list="{{ panelToggles }}" as="t" hint-placeholder-count="4">
+      <div onClick="{{ t.tap }}" style="display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:12px;cursor:pointer;background:{{ t.bg }};border:1.5px solid {{ t.bd }}">
+        <div style="flex:1;font:500 11.5px/1.3 Pretendard,system-ui,sans-serif;color:#111">{{ t.label }}</div>
+        <div style="flex:none;width:34px;height:20px;border-radius:11px;position:relative;background:{{ t.knobBg }}">
+          <div style="position:absolute;top:2px;left:{{ t.knobX }};width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .18s ease"></div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+  <div style="font:600 9.5px/1 Pretendard,system-ui,sans-serif;letter-spacing:.14em;color:#B6B6B0;margin:18px 0 9px">MY MAP DENSITY</div>
+  <div style="display:flex;gap:6px">
+    <sc-for list="{{ panelMapModes }}" as="m" hint-placeholder-count="3">
+      <div onClick="{{ m.tap }}" style="flex:1;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;font:600 10.5px/1 Pretendard,system-ui,sans-serif;background:{{ m.bg }};color:{{ m.fg }}">{{ m.label }}</div>
+    </sc-for>
+  </div>
+  <div onClick="{{ openStates }}" style="height:40px;border-radius:20px;background:#111;display:flex;align-items:center;justify-content:center;margin:16px 0 0;cursor:pointer;font:600 11.5px/1 Pretendard,system-ui,sans-serif;color:#fff">Open state index</div>
+  <div style="font:500 10px/1.5 Pretendard,system-ui,sans-serif;color:#B6B6B0;margin:12px 0 0">Journeys is the one word used for multi-day plans. Copy action is called “Make it mine”.</div>
+</div>
+</sc-if>
+
+<div style="position:relative;width:390px;height:844px;border-radius:46px;overflow:hidden;background:#fff;box-shadow:0 34px 80px rgba(0,0,0,.28), 0 0 0 1px rgba(0,0,0,.06)">
+
+  <div style="position:absolute;top:0;left:0;right:0;height:54px;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 26px;pointer-events:none">
+    <div style="font:700 15px/1 'Open Sans',system-ui,sans-serif;color:{{ statusColor }}">9:41</div>
+    <div style="position:absolute;left:50%;top:11px;transform:translateX(-50%);width:118px;height:30px;border-radius:20px;background:#0A0A0A"></div>
+    <div style="display:flex;align-items:center;gap:5px">
+      <svg width="17" height="12" viewBox="0 0 17 12" fill="{{ statusColor }}"><rect x="0" y="8" width="3" height="4" rx="1"></rect><rect x="4.6" y="6" width="3" height="6" rx="1"></rect><rect x="9.2" y="3.4" width="3" height="8.6" rx="1"></rect><rect x="13.8" y="0" width="3" height="12" rx="1"></rect></svg>
+      <svg width="24" height="12" viewBox="0 0 26 13" fill="none"><rect x="0.6" y="0.6" width="22" height="11.8" rx="3.4" stroke="{{ statusColor }}" stroke-opacity=".45"></rect><rect x="2.4" y="2.4" width="18.4" height="8.2" rx="2.2" fill="{{ statusColor }}"></rect><path d="M24.4 4.4v4a2.2 2.2 0 000-4z" fill="{{ statusColor }}" fill-opacity=".5"></path></svg>
+    </div>
+  </div>
+
+  <!-- ============ HOME ============ -->
+  <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+  <div style="position:absolute;inset:0;background:#fff;display:flex;flex-direction:column">
+    <div style="padding:58px 18px 0;background:#fff;z-index:20">
+      <div onClick="{{ openSearch }}" style="display:flex;align-items:center;gap:11px;height:52px;padding:0 20px;border-radius:26px;background:#F2F2EF;cursor:pointer">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#8E8E8B" stroke-width="2.2"><circle cx="10.5" cy="10.5" r="7"></circle><path d="M15.8 15.8L21 21"></path></svg>
+        <div style="font:500 16px/1 Pretendard,system-ui,sans-serif;color:#9A9A97">Search</div>
+      </div>
+      <div style="display:flex;gap:8px;overflow-x:auto;padding:14px 0 12px">
+        <sc-for list="{{ homeChips }}" as="ch" hint-placeholder-count="5">
+          <div onClick="{{ ch.tap }}" style="flex:none;height:36px;display:flex;align-items:center;padding:0 16px;border-radius:20px;cursor:pointer;font:500 13px/1 Pretendard,system-ui,sans-serif;background:{{ ch.bg }};color:#111;border:1.5px solid {{ ch.bd }}">{{ ch.label }}</div>
+        </sc-for>
+        <div onClick="{{ openFollow }}" style="flex:none;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:50%;border:1.5px solid #E4E4DF;cursor:pointer">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.4"><path d="M12 5v14M5 12h14"></path></svg>
+        </div>
+      </div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:6px 0 130px">
+      <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:16px 18px 0;animation:pulse 1.4s ease-in-out infinite">
+          <div style="height:15px;width:52%;border-radius:8px;background:#EFEEE9"></div>
+          <div style="display:flex;gap:12px;margin:14px 0 0">
+            <div style="flex:none;width:166px"><div style="height:200px;border-radius:14px;background:#EFEEE9"></div><div style="height:11px;border-radius:6px;background:#F1F0EB;margin:10px 0 0"></div><div style="height:11px;width:55%;border-radius:6px;background:#F5F4F0;margin:7px 0 0"></div></div>
+            <div style="flex:none;width:166px"><div style="height:200px;border-radius:14px;background:#F3F2EE"></div><div style="height:11px;border-radius:6px;background:#F5F4F0;margin:10px 0 0"></div><div style="height:11px;width:55%;border-radius:6px;background:#F8F7F4;margin:7px 0 0"></div></div>
+          </div>
+          <div style="height:15px;width:40%;border-radius:8px;background:#EFEEE9;margin:30px 0 0"></div>
+          <div style="display:flex;gap:12px;margin:14px 0 0">
+            <div style="flex:none;width:210px;height:132px;border-radius:14px;background:#EFEEE9"></div>
+            <div style="flex:none;width:210px;height:132px;border-radius:14px;background:#F3F2EE"></div>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ homeReady }}" hint-placeholder-val="{{ true }}">
+        <sc-for list="{{ homeSections }}" as="s" hint-placeholder-count="3">
+          <dc-import name="SectionRow" title="{{ s.title }}" note="{{ s.note }}" cards="{{ s.cards }}" hint-size="100%,290px"></dc-import>
+        </sc-for>
+      </sc-if>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ============ MAP ============ -->
+  <sc-if value="{{ isMap }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;inset:0;background:#EDEBE6;overflow:hidden">
+
+    <sc-if value="{{ nationalView }}" hint-placeholder-val="{{ true }}">
+      <div style="position:absolute;inset:0;animation:fadeIn .32s ease">
+        <div data-korea="{{ nationalKey }}" data-korea-mode="explore" style="position:absolute;left:0;right:0;top:36px;bottom:214px"></div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ localView }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;overflow:hidden;animation:fadeIn .32s ease">
+        <div style="position:absolute;inset:0;transform:scale({{ localScale }});transform-origin:50% 42%;transition:transform .42s cubic-bezier(.2,.8,.25,1)">
+          <div style="position:absolute;left:-10%;top:26%;width:130%;height:52px;background:#DCE6EC;transform:rotate(-7deg)"></div>
+          <div style="position:absolute;left:-12%;top:14%;width:130%;height:9px;background:#fff;transform:rotate(6deg)"></div>
+          <div style="position:absolute;left:-12%;top:47%;width:130%;height:11px;background:#fff;transform:rotate(-4deg)"></div>
+          <div style="position:absolute;left:-12%;top:68%;width:130%;height:8px;background:#fff;transform:rotate(3deg)"></div>
+          <div style="position:absolute;left:22%;top:-10%;width:9px;height:130%;background:#fff;transform:rotate(9deg)"></div>
+          <div style="position:absolute;left:58%;top:-10%;width:11px;height:130%;background:#fff;transform:rotate(-6deg)"></div>
+          <div style="position:absolute;left:82%;top:-10%;width:7px;height:130%;background:#fff;transform:rotate(4deg)"></div>
+          <sc-for list="{{ hoodLabels }}" as="h" hint-placeholder-count="4">
+            <div style="position:absolute;left:{{ h.left }};top:{{ h.top }};font:500 10px/1 Pretendard,system-ui,sans-serif;letter-spacing:.13em;color:#B4B2AC">{{ h.label }}</div>
+          </sc-for>
+          <div style="position:absolute;left:44%;top:39%;font:600 22px/1 'Open Sans',system-ui,sans-serif;color:#9C9A94">{{ cityName }}</div>
+        </div>
+
+        <sc-for list="{{ pins }}" as="p" hint-placeholder-count="4">
+          <div onClick="{{ p.tap }}" style="position:absolute;left:{{ p.left }};top:{{ p.top }};transform:translate(-50%,-50%);cursor:pointer;z-index:{{ p.z }};transition:left .42s cubic-bezier(.2,.8,.25,1), top .42s cubic-bezier(.2,.8,.25,1)">
+            <sc-if value="{{ p.isTeardrop }}" hint-placeholder-val="{{ true }}">
+              <div style="width:{{ p.dropSize }};height:{{ p.dropSize }};box-sizing:border-box;padding:2.5px;border-radius:50% 50% 50% 3px;transform:rotate(-45deg);background:{{ p.ring }};box-shadow:0 5px 14px rgba(0,0,0,.22);transition:width .3s ease, height .3s ease">
+                <div style="width:100%;height:100%;border-radius:inherit;background:#fff;display:flex;align-items:center;justify-content:center">
+                  <svg width="{{ p.iconSize }}" height="{{ p.iconSize }}" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.9" stroke-linecap="round" style="transform:rotate(45deg)"><path d="{{ p.iconPath }}"></path></svg>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ p.isPhoto }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+                <div style="font:600 9px/1 Pretendard,system-ui,sans-serif;color:#fff;background:{{ p.color }};padding:4px 7px;border-radius:5px;white-space:nowrap">{{ p.label }}</div>
+                <div style="position:relative;width:{{ p.size }};height:{{ p.size }};transition:width .3s ease, height .3s ease">
+                  <div style="width:100%;height:100%;box-sizing:border-box;border-radius:50%;padding:2.5px;background:{{ p.ring }};box-shadow:0 7px 18px rgba(0,0,0,.24)">
+                    <div style="width:100%;height:100%;box-sizing:border-box;border-radius:50%;background:{{ p.g }};border:2px solid #fff"></div>
+                  </div>
+                  <div style="position:absolute;right:-4px;bottom:-4px;width:21px;height:21px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 7px rgba(0,0,0,.2)">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round"><path d="{{ p.iconPath }}"></path></svg>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <div style="position:absolute;top:58px;left:0;right:0;z-index:30;padding:0 16px">
+      <sc-if value="{{ mapSearching }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;gap:10px;height:48px;padding:0 8px 0 16px;border-radius:24px;background:#fff;box-shadow:0 4px 18px rgba(0,0,0,.14)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8E8E8B" stroke-width="2.2"><circle cx="10.5" cy="10.5" r="7"></circle><path d="M15.8 15.8L21 21"></path></svg>
+          <input value="{{ mapQuery }}" onChange="{{ onMapQuery }}" placeholder="Search places" style="flex:1;border:0;outline:0;font:600 15px/1 Pretendard,system-ui,sans-serif;color:#111;background:transparent">
+          <div onClick="{{ closeMapSearch }}" style="width:34px;height:34px;border-radius:50%;background:#F2F2EF;display:flex;align-items:center;justify-content:center;cursor:pointer">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.6"><path d="M5 5l14 14M19 5L5 19"></path></svg>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ mapIdle }}" hint-placeholder-val="{{ true }}">
+        <div onClick="{{ openMapSearch }}" style="display:flex;align-items:center;gap:10px;height:48px;padding:0 16px;border-radius:24px;background:#fff;box-shadow:0 4px 18px rgba(0,0,0,.14);cursor:pointer">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8E8E8B" stroke-width="2.2"><circle cx="10.5" cy="10.5" r="7"></circle><path d="M15.8 15.8L21 21"></path></svg>
+          <div style="flex:1;font:500 15px/1 Pretendard,system-ui,sans-serif;color:#9A9A97">Search places</div>
+        </div>
+        <div style="display:flex;gap:7px;overflow-x:auto;padding:11px 0 0">
+          <sc-for list="{{ cityChips }}" as="ch" hint-placeholder-count="4">
+            <div onClick="{{ ch.tap }}" style="flex:none;height:34px;display:flex;align-items:center;padding:0 13px;border-radius:18px;cursor:pointer;font:500 12.5px/1 Pretendard,system-ui,sans-serif;background:{{ ch.bg }};color:{{ ch.fg }};box-shadow:0 2px 10px rgba(0,0,0,.1)">{{ ch.label }}</div>
+          </sc-for>
+        </div>
+      </sc-if>
+    </div>
+
+    <div style="position:absolute;right:16px;top:186px;z-index:25;display:flex;flex-direction:column;gap:9px">
+      <div onClick="{{ zoomIn }}" style="width:42px;height:42px;border-radius:21px 21px 4px 4px;background:#fff;box-shadow:0 4px 16px rgba(0,0,0,.16);display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:{{ zoomInOpacity }}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+      </div>
+      <div onClick="{{ zoomOut }}" style="width:42px;height:42px;border-radius:4px 4px 21px 21px;background:#fff;box-shadow:0 4px 16px rgba(0,0,0,.16);display:flex;align-items:center;justify-content:center;cursor:pointer;margin-top:-7px;opacity:{{ zoomOutOpacity }}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.6" stroke-linecap="round"><path d="M5 12h14"></path></svg>
+      </div>
+      <div style="width:42px;display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:4px">
+        <sc-for list="{{ zoomTicks }}" as="t" hint-placeholder-count="3">
+          <div style="width:{{ t.w }};height:3px;border-radius:2px;background:{{ t.bg }};transition:width .3s ease"></div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="position:absolute;left:0;right:0;bottom:0;height:{{ sheetH }}px;background:#fff;border-radius:24px 24px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.16);z-index:40;display:flex;flex-direction:column;overflow:hidden;transition:height .3s cubic-bezier(.2,.8,.25,1)">
+      <div onClick="{{ sheetHandleTap }}" style="flex:none;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer">
+        <div style="width:44px;height:5px;border-radius:3px;background:#D8D8D2"></div>
+      </div>
+
+      <sc-if value="{{ isPlaceCard }}" hint-placeholder-val="{{ false }}">
+        <div onPointerDown="{{ cardGrab }}" onPointerMove="{{ cardMove }}" onPointerUp="{{ cardUp }}" style="flex:1;overflow-y:auto;padding:0 0 26px;touch-action:pan-y">
+          <div style="display:flex;align-items:flex-start;gap:10px;padding:0 18px">
+            <div style="flex:1;display:flex;flex-wrap:wrap;gap:5px">
+              <sc-for list="{{ placeCard.badges }}" as="b" hint-placeholder-count="3">
+                <div style="font:600 9.5px/1 Pretendard,system-ui,sans-serif;color:{{ b.fg }};background:{{ b.bg }};padding:6px 8px;border-radius:6px">{{ b.name }}</div>
+              </sc-for>
+            </div>
+            <div onClick="{{ closePlaceCard }}" style="flex:none;width:30px;height:30px;border-radius:50%;background:#F2F2EF;display:flex;align-items:center;justify-content:center;cursor:pointer">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.6"><path d="M5 5l14 14M19 5L5 19"></path></svg>
+            </div>
+          </div>
+          <div onClick="{{ placeCard.open }}" style="position:relative;height:176px;margin:12px 18px 0;border-radius:16px;overflow:hidden;background:{{ placeCard.g }};cursor:pointer">
+            <div onClick="{{ placeCard.shoot }}" style="position:absolute;right:11px;bottom:11px;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.94);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.2)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.9"><rect x="3" y="6.6" width="18" height="13.4" rx="3.2"></rect><circle cx="12" cy="13.3" r="3.4"></circle><path d="M9 6.6l1.2-2.2h3.6L15 6.6"></path></svg>
+            </div>
+          </div>
+          <div onClick="{{ placeCard.open }}" style="padding:13px 18px 0;cursor:pointer">
+            <div style="font:600 18px/1.25 'Open Sans',system-ui,sans-serif;letter-spacing:-0.02em;color:#111">{{ placeCard.title }}</div>
+            <div style="font:400 12px/1.4 Pretendard,system-ui,sans-serif;color:#8E8E8B;margin:6px 0 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ placeCard.postTitle }}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:18px;padding:15px 18px 0">
+            <div onClick="{{ postLike }}" style="display:flex;align-items:center;gap:6px;cursor:pointer">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="{{ postLikeFill }}" stroke="#111" stroke-width="1.8"><path d="M12 20s-7-4.6-7-9.4A3.9 3.9 0 0112 8.6 3.9 3.9 0 0119 10.6c0 4.8-7 9.4-7 9.4z"></path></svg>
+              <div style="font:600 12px/1 Pretendard,system-ui,sans-serif;color:#111">{{ postLikeCount }}</div>
+            </div>
+            <div onClick="{{ placeCard.open }}" style="display:flex;align-items:center;gap:6px;cursor:pointer">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8"><path d="M21 12a8.4 8.4 0 01-11.9 7.6L4 21l1.5-4.8A8.4 8.4 0 1121 12z"></path></svg>
+              <div style="font:600 12px/1 Pretendard,system-ui,sans-serif;color:#111">{{ placeCard.comments }}</div>
+            </div>
+            <div style="flex:1"></div>
+            <div onClick="{{ postBookmark }}" style="cursor:pointer;display:flex;align-items:center">
+              <svg width="15" height="18" viewBox="0 0 14 18" fill="{{ postBookmarkFill }}" stroke="#111" stroke-width="1.8"><path d="M1.6 1.4h10.8v15L7 12.6l-5.4 3.8z"></path></svg>
+            </div>
+          </div>
+          <div onClick="{{ placeCard.open }}" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:18px 0 0;cursor:pointer">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#B6B6B0" stroke-width="2.6" stroke-linecap="round"><path d="M6 14l6-6 6 6"></path></svg>
+            <div style="font:400 11px/1 Pretendard,system-ui,sans-serif;color:#B6B6B0">Drag up for the full post</div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isAreaSheet }}" hint-placeholder-val="{{ true }}">
+        <div style="flex:1;overflow-y:auto;padding:0 0 130px">
+          <div style="padding:0 18px 0">
+            <sc-if value="{{ isHoodSheet }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:baseline;gap:8px">
+                <div onClick="{{ backToCity }}" style="font:700 18px/1.2 'Open Sans',system-ui,sans-serif;color:#B6B6B0;text-decoration:underline;cursor:pointer">In {{ cityName }}</div>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#B6B6B0" stroke-width="2.6"><path d="M9 5l7 7-7 7"></path></svg>
+                <div style="font:700 22px/1.2 'Open Sans',system-ui,sans-serif;letter-spacing:-0.02em;color:#111">{{ hoodName }}</div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ isCitySheet }}" hint-placeholder-val="{{ true }}">
+              <div style="font:700 26px/1.15 'Open Sans',system-ui,sans-serif;letter-spacing:-0.03em;color:#111">{{ sheetTitle }}</div>
+              <sc-if value="{{ noHoodNote }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;gap:9px;align-items:flex-start;margin:12px 0 0;padding:11px 13px;border-radius:12px;background:#F7F7F4">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8E8E8B" stroke-width="2" style="margin-top:1px"><circle cx="12" cy="12" r="9"></circle><path d="M12 8.2v.2M12 11.4v4.4"></path></svg>
+                  <div style="font:500 11.5px/1.45 Pretendard,system-ui,sans-serif;color:#7E7E79">{{ cityName }} has no neighbourhood breakdown yet, so zooming in keeps the city view.</div>
+                </div>
+              </sc-if>
+            </sc-if>
+            <div onClick="{{ createHere }}" style="display:flex;align-items:center;justify-content:center;gap:8px;height:44px;border-radius:22px;background:#111;margin:16px 0 0;cursor:pointer">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C8FF09" stroke-width="2.6"><path d="M12 5v14M5 12h14"></path></svg>
+              <div style="font:600 13.5px/1 Pretendard,system-ui,sans-serif;color:#fff">Create a journey here</div>
+            </div>
+          </div>
+
+          <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:22px 18px 0;animation:pulse 1.4s ease-in-out infinite">
+              <div style="height:14px;width:44%;border-radius:7px;background:#EFEEE9"></div>
+              <div style="display:flex;gap:12px;margin:14px 0 0">
+                <div style="flex:none;width:166px;height:200px;border-radius:14px;background:#EFEEE9"></div>
+                <div style="flex:none;width:166px;height:200px;border-radius:14px;background:#F3F2EE"></div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ areaEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:18px 18px 0">
+              <div style="border-radius:16px;background:#F7F7F4;padding:22px 18px">
+                <div style="font:700 15px/1.3 'Open Sans',system-ui,sans-serif;color:#111">No places here yet</div>
+                <div style="font:500 12.5px/1.5 Pretendard,system-ui,sans-serif;color:#96968F;margin:6px 0 0">Nothing has been added to {{ hoodName }}. Be the first to post a recreeshot here.</div>
+              </div>
+              <div style="font:700 15px/1 'Open Sans',system-ui,sans-serif;color:#111;margin:24px 0 4px">Nearest areas</div>
+              <sc-for list="{{ nearestAreas }}" as="n" hint-placeholder-count="3">
+                <div onClick="{{ n.tap }}" style="display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid #F0F0EB;cursor:pointer">
+                  <div style="width:38px;height:38px;border-radius:50%;background:{{ n.g }}"></div>
+                  <div style="flex:1">
+                    <div style="font:500 13.5px/1.2 Pretendard,system-ui,sans-serif;color:#111">{{ n.name }}</div>
+                    <div style="font:500 11px/1.2 Pretendard,system-ui,sans-serif;color:#A3A3A0;margin-top:4px">{{ n.count }}</div>
+                  </div>
+                  <div style="font:500 12px/1 Pretendard,system-ui,sans-serif;color:#111">{{ n.dist }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ sheetReady }}" hint-placeholder-val="{{ true }}">
+            <sc-for list="{{ sheetSections }}" as="s" hint-placeholder-count="2">
+              <dc-import name="SectionRow" title="{{ s.title }}" note="{{ s.note }}" cards="{{ s.cards }}" hint-size="100%,290px"></dc-import>
+            </sc-for>
+            <sc-for list="{{ sheetTourism }}" as="t" hint-placeholder-count="2">
+              <dc-import name="TourismRow" title="{{ t.title }}" state="{{ t.state }}" items="{{ t.items }}" on-retry="{{ retryTourism }}" hint-size="100%,200px"></dc-import>
+            </sc-for>
+          </sc-if>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ============ PROFILE ============ -->
+  <sc-if value="{{ isProfile }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;inset:0;background:#fff;display:flex;flex-direction:column">
+    <div style="flex:1;overflow-y:auto;padding:0 0 130px">
+      <div style="position:relative;height:430px;background:#0E0C14;overflow:hidden">
+        <div data-korea="{{ myMapKey }}" data-korea-mode="mymap" style="position:absolute;left:0;right:0;top:24px;bottom:96px"></div>
+        <sc-if value="{{ myMapEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);width:230px;text-align:center">
+            <div style="font:600 13.5px/1.35 Pretendard,system-ui,sans-serif;color:#fff">Nothing on your map yet</div>
+            <div style="font:500 11.5px/1.5 Pretendard,system-ui,sans-serif;color:rgba(255,255,255,.6);margin:7px 0 0">Post a recreeshot and the place you shot it in fills in here.</div>
+          </div>
+        </sc-if>
+        <div style="position:absolute;left:18px;right:18px;top:62px;display:flex;align-items:center;gap:12px">
+          <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(140deg,#C8FF09,#5E7A08);border:2px solid rgba(255,255,255,.25)"></div>
+          <div style="flex:1">
+            <div style="font:700 17px/1.2 'Open Sans',system-ui,sans-serif;letter-spacing:-0.02em;color:#fff">{{ profileName }}</div>
+            <div style="font:600 10.5px/1 Pretendard,system-ui,sans-serif;color:rgba(255,255,255,.55);margin:5px 0 0">{{ profileTopicLine }}</div>
+          </div>
+        </div>
+        <div style="position:absolute;left:18px;right:18px;bottom:20px">
+          <div style="font:600 9.5px/1 Pretendard,system-ui,sans-serif;letter-spacing:.14em;color:#C8FF09">MY MAP</div>
+          <div style="display:flex;align-items:flex-end;gap:22px;margin:10px 0 0">
+            <div>
+              <div style="font:700 30px/1 'Open Sans',system-ui,sans-serif;letter-spacing:-0.03em;color:#fff">{{ statShots }}</div>
+              <div style="font:500 9px/1 Pretendard,system-ui,sans-serif;letter-spacing:.08em;color:rgba(255,255,255,.5);margin:6px 0 0">RECREESHOTS</div>
+            </div>
+            <div>
+              <div style="font:700 30px/1 'Open Sans',system-ui,sans-serif;letter-spacing:-0.03em;color:#fff">{{ statRegions }}</div>
+              <div style="font:500 9px/1 Pretendard,system-ui,sans-serif;letter-spacing:.08em;color:rgba(255,255,255,.5);margin:6px 0 0">REGIONS</div>
+            </div>
+            <div>
+              <div style="font:700 30px/1 'Open Sans',system-ui,sans-serif;letter-spacing:-0.03em;color:#fff">{{ statJourneys }}</div>
+              <div style="font:500 9px/1 Pretendard,system-ui,sans-serif;letter-spacing:.08em;color:rgba(255,255,255,.5);margin:6px 0 0">JOURNEYS</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin:14px 0 0">
+            <sc-for list="{{ myMapLegend }}" as="l" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;gap:6px">
+                <div style="width:9px;height:9px;border-radius:2px;background:{{ l.color }}"></div>
+                <div style="font:600 9.5px/1 Pretendard,system-ui,sans-serif;color:rgba(255,255,255,.65)">{{ l.label }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding:24px 18px 22px;border-bottom:1px solid #F0F0EB">
+        <div style="display:flex;align-items:baseline;gap:9px">
+          <div style="font:600 22px/1.15 'Open Sans',system-ui,sans-serif;letter-spacing:-0.02em;color:#111">Areas visited</div>
+          <div style="font:600 12px/1 Pretendard,system-ui,sans-serif;color:#A3A3A0">{{ areaTotal }}</div>
+        </div>
+        <sc-if value="{{ areasEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="font:400 12px/1.55 Pretendard,system-ui,sans-serif;color:#A3A3A0;margin:11px 0 0">No areas yet. The first recreeshot you post writes the first line here.</div>
+        </sc-if>
+        <sc-for list="{{ areaRows }}" as="a" hint-placeholder-count="4">
+          <div onClick="{{ a.tap }}" style="display:flex;align-items:center;gap:12px;padding:13px 0 12px;border-bottom:1px solid #F6F5F1;cursor:pointer">
+            <div style="flex:none;display:flex;gap:3px">
+              <sc-for list="{{ a.dots }}" as="d" hint-placeholder-count="2">
+                <div style="width:7px;height:7px;border-radius:50%;background:{{ d.color }}"></div>
+              </sc-for>
+            </div>
+            <div style="flex:1;min-width:0;font:500 14px/1.3 Pretendard,system-ui,sans-serif;color:#111;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ a.label }}</div>
+            <div style="flex:none;font:600 12px/1 Pretendard,system-ui,sans-serif;color:#8E8E8B">{{ a.meta }}</div>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#C3C3BE" stroke-width="2.6"><path d="M9 5l7 7-7 7"></path></svg>
+          </div>
+        </sc-for>
+        <sc-if value="{{ areasMore }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ toggleAreasAll }}" style="height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;font:500 12px/1 Pretendard,system-ui,sans-serif;color:#5E5E5A">{{ areasMoreLabel }}</div>
+        </sc-if>
+      </div>
+
+      <div style="display:flex;gap:14px;overflow-x:auto;padding:16px 18px 0;border-bottom:1.5px solid #F0F0EB">
+        <sc-for list="{{ profileTabs }}" as="t" hint-placeholder-count="4">
+          <div onClick="{{ t.tap }}" style="flex:none;padding:0 0 11px;cursor:pointer;font:600 12.5px/1 Pretendard,system-ui,sans-serif;color:{{ t.fg }};box-shadow:{{ t.line }}">{{ t.label }}</div>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{ pOnShots }}" hint-placeholder-val="{{ true }}">
+        <sc-if value="{{ shotsEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="margin:22px 18px 0;border-radius:16px;border:1.5px dashed #E2E2DC;padding:28px 20px;text-align:center">
+            <div style="font:600 14px/1.3 Pretendard,system-ui,sans-serif;color:#111">No recreeshots yet</div>
+            <div style="font:500 11.5px/1.5 Pretendard,system-ui,sans-serif;color:#A3A3A0;margin:7px 0 0">Recreate a scene at a spot, post the photo, and it lands here.</div>
+            <div onClick="{{ addShot }}" style="height:42px;border-radius:21px;background:#C8FF09;display:flex;align-items:center;justify-content:center;margin:16px 0 0;cursor:pointer;font:600 12.5px/1 Pretendard,system-ui,sans-serif;color:#111">Post a recreeshot</div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ areaFiltered }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:8px;padding:18px 18px 0">
+            <div style="font:500 14px/1 Pretendard,system-ui,sans-serif;color:#111">{{ areaFilterLabel }}</div>
+            <div onClick="{{ clearAreaFilter }}" style="width:26px;height:26px;border-radius:50%;background:#F2F2EF;display:flex;align-items:center;justify-content:center;cursor:pointer">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.6"><path d="M5 5l14 14M19 5L5 19"></path></svg>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ shotsFilled }}" hint-placeholder-val="{{ true }}">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;padding:18px 18px 0">
+            <sc-for list="{{ myShots }}" as="g" hint-placeholder-count="6">
+              <div style="aspect-ratio:1;border-radius:6px;background:{{ g }}"></div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </sc-if>
+
+      <sc-if value="{{ pOnJourneys }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:18px 18px 0">
+          <div onClick="{{ newJourney }}" style="height:48px;border-radius:24px;background:#C8FF09;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.6"><path d="M12 5v14M5 12h14"></path></svg>
+            <div style="font:600 14px/1 Pretendard,system-ui,sans-serif;color:#111">Create a journey</div>
+          </div>
+          <div onClick="{{ openJourneyList }}" style="height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;font:500 12.5px/1 Pretendard,system-ui,sans-serif;color:#5E5E5A">Browse all journeys</div>
+          <sc-if value="{{ journeysEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="border-radius:16px;border:1.5px dashed #E2E2DC;padding:26px 20px;text-align:center;margin:6px 0 0">
+              <div style="font:600 14px/1.3 Pretendard,system-ui,sans-serif;color:#111">No journeys yet</div>
+              <div style="font:500 11.5px/1.5 Pretendard,system-ui,sans-serif;color:#A3A3A0;margin:7px 0 0">Build one from scratch, or open someone else’s and make it yours.</div>
+            </div>
+          </sc-if>
+          <sc-for list="{{ myJourneyRows }}" as="c" hint-placeholder-count="2">
+            <div onClick="{{ c.tap }}" style="display:flex;align-items:center;gap:13px;padding:12px 0;border-bottom:1px solid #F0F0EB;cursor:pointer">
+              <div style="flex:none;width:84px;height:64px;border-radius:12px;background:{{ c.g }}"></div>
+              <div style="flex:1;min-width:0">
+                <div style="display:flex;align-items:center;gap:7px">
+                  <div style="font:500 13.5px/1.25 Pretendard,system-ui,sans-serif;color:#111;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.title }}</div>
+                  <div style="flex:none;font:500 9px/1 Pretendard,system-ui,sans-serif;color:#111;background:{{ c.badgeBg }};padding:4px 6px;border-radius:5px">{{ c.badge }}</div>
+                </div>
+                <div style="font:600 11px/1.2 Pretendard,system-ui,sans-serif;color:#A3A3A0;margin:6px 0 0">{{ c.meta }}</div>
+              </div>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#C3C3BE" stroke-width="2.6"><path d="M9 5l7 7-7 7"></path></svg>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ pOnSaved }}" hint-placeholder-val="{{ false }}">
+        <sc-if value="{{ savedEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="margin:22px 18px 0;border-radius:16px;border:1.5px dashed #E2E2DC;padding:28px 20px;text-align:center">
+            <div style="font:600 14px/1.3 Pretendard,system-ui,sans-serif;color:#111">No saved places</div>
+            <div style="font:500 11.5px/1.5 Pretendard,system-ui,sans-serif;color:#A3A3A0;margin:7px 0 0">Bookmark a spot from any post and it shows up here, ready to drop into a journey.</div>
+          </div>
+        </sc-if>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px 12px;padding:20px 18px 0">
+          <sc-for list="{{ savedPlaceCards }}" as="c" hint-placeholder-count="4">
+            <div onClick="{{ c.tap }}" style="cursor:pointer">
+              <div style="position:relative;height:148px;border-radius:14px;overflow:hidden;background:{{ c.g }}">
+                <div style="position:absolute;top:8px;left:8px;display:flex;gap:4px">
+                  <sc-for list="{{ c.badges }}" as="b" hint-placeholder-count="1">
+                    <div style="font:600 9px/1 Pretendard,system-ui,sans-serif;color:#fff;background:{{ b.color }};padding:5px 7px;border-radius:6px">{{ b.name }}</div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="font:500 12.5px/1.35 Pretendard,system-ui,sans-serif;color:#111;margin:8px 0 0">{{ c.title }}</div>
+              <div style="font:500 10.5px/1.2 Pretendard,system-ui,sans-serif;color:#A3A3A0;margin:5px 0 0">{{ c.region }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ============ JOURNEY LIST ============ -->
+  <sc-if value="{{ showJourneyList }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;inset:0;background:#fff;z-index:72;display:flex;flex-direction:column;animation:fadeUp .22s ease">
+    <div style="flex:none;padding:58px 18px 0;display:flex;align-items:center;gap:10px">
+      <div onClick="{{ closeJourneyList }}" style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.6"><path d="M14.5 5L7.5 12l7 7"></path></svg>
+      </div>
+      <div style="flex:1;font:700 19px/1.2 'Open Sans',system-ui,sans-serif;letter-spacing:-0.02em;color:#111">Journeys</div>
+      <div onClick="{{ newJourney }}" style="height:34px;padding:0 14px;border-radius:17px;background:#C8FF09;display:flex;align-items:center;gap:6px;cursor:pointer">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="3"><path d="M12 5v14M5 12h14"></path></svg>
+        <div style="font:600 12px/1 Pretendard,system-ui,sans-serif;color:#111">New</div>
+      </div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:8px 0 40px">
+      <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:14px 18px 0;animation:pulse 1.4s ease-in-out infinite">
+          <div style="height:76px;border-radius:14px;background:#EFEEE9"></div>
+          <div style="height:76px;border-radius:14px;background:#F3F2EE;margin:12px 0 0"></div>
+          <div style="height:76px;border-radius:14px;background:#F6F5F1;margin:12px 0 0"></div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ journeyListReady }}" hint-placeholder-val="{{ true }}">
+        <sc-for list="{{ journeyGroups }}" as="g" hint-placeholder-count="2">
+          <div style="padding:14px 18px 0">
+            <div style="font:600 11px/1 Pretendard,system-ui,sans-serif;letter-spacing:.16em;color:#B6B6B0">{{ g.label }}</div>
+            <sc-if value="{{ g.empty }}" hint-placeholder-val="{{ false }}">
+              <div style="border-radius:14px;border:1.5px dashed #E2E2DC;padding:22px 18px;text-align:center;margin:12px 0 0">
+                <div style="font:500 13px/1.3 Pretendard,system-ui,sans-serif;color:#111">{{ g.emptyTitle }}</div>
+                <div style="font:500 11px/1.5 Pretendard,system-ui,sans-serif;color:#A3A3A0;margin:6px 0 0">{{ g.emptyBody }}</div>
+              </div>
+            </sc-if>
+            <sc-for list="{{ g.rows }}" as="c" hint-placeholder-count="3">
+              <div onClick="{{ c.tap }}" style="display:flex;align-items:center;gap:13px;padding:13px 0;border-bottom:1px solid #F0F0EB;cursor:pointer">
+                <div style="flex:none;width:84px;height:64px;border-radius:12px;background:{{ c.g }}"></div>
+                <div style="flex:1;min-width:0">
+                  <div style="display:flex;align-items:center;gap:7px">
+                    <div style="font:500 13.5px/1.25 Pretendard,system-ui,sans-serif;color:#111;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.title }}</div>
+                    <div style="flex:none;font:500 9px/1 Pretendard,system-ui,sans-serif;color:#111;background:{{ c.badgeBg }};padding:4px 6px;border-radius:5px">{{ c.badge }}</div>
+                  </div>
+                  <div style="font:500 11px/1.2 Pretendard,system-ui,sans-serif;color:#8E8E8B;margin:6px 0 0">{{ c.author }}</div>
+                  <div style="font:600 11px/1.2 Pretendard,system-ui,sans-serif;color:#A3A3A0;margin:4px 0 0">{{ c.meta }}</div>
+                </div>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#C3C3BE" stroke-width="2.6"><path d="M9 5l7 7-7 7"></path></svg>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+      </sc-if>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ============ JOURNEY DETAIL ============ -->
+  <sc-if value="{{ showJourney }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;inset:0;background:#fff;z-index:76;display:flex;flex-direction:column;animation:fadeUp .22s ease">
+    <div style="flex:1;overflow-y:auto;padding:0 0 110px">
+      <div style="position:relative;height:222px;background:{{ journey.g }}">
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg, rgba(0,0,0,.34) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,.55))"></div>
+        <div onClick="{{ closeJourney }}" style="position:absolute;left:14px;top:58px;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;cursor:pointer">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.6"><path d="M14.5 5L7.5 12l7 7"></path></svg>
+        </div>
+        <sc-if value="{{ journey.mine }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;right:14px;top:58px;display:flex;gap:8px">
+            <div onClick="{{ journey.edit }}" style="height:36px;padding:0 14px;border-radius:18px;background:rgba(255,255,255,.92);display:flex;align-items:center;cursor:pointer;font:600 12px/1 Pretendard,system-ui,sans-serif;color:#111">Edit</div>
+            <div onClick="{{ journey.remove }}" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;cursor:pointer">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F01941" stroke-width="2.2"><path d="M5 7h14M9 7V5h6v2M7 7l1 13h8l1-13"></path></svg>
+            </div>
+          </div>
+        </sc-if>
+        <div style="position:absolute;left:18px;right:18px;bottom:18px">
+          <div style="display:flex;gap:6px">
+            <div style="font:600 9.5px/1 Pretendard,system-ui,sans-serif;color:#111;background:#C8FF09;padding:5px 8px;border-radius:6px">{{ journey.badge }}</div>
+            <div style="font:600 9.5px/1 Pretendard,system-ui,sans-serif;color:#fff;background:rgba(255,255,255,.22);padding:5px 8px;border-radius:6px">{{ journey.dayCount }}</div>
+          </div>
+          <div style="font:700 25px/1.18 'Open Sans',system-ui,sans-serif;letter-spacing:-0.03em;color:#fff;margin:10px 0 0">{{ journey.title }}</div>
+          <div style="font:600 11.5px/1 Pretendard,system-ui,sans-serif;color:rgba(255,255,255,.8);margin:8px 0 0">{{ journey.author }}</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;padding:16px 18px 0">
+        <div style="flex:1;background:#F7F7F4;border-radius:14px;padding:13px 14px">
+          <div style="font:700 17px/1 'Open Sans',system-ui,sans-serif;color:#111">{{ journey.places }}</div>
+          <div style="font:600 10.5px/1 Pretendard,system-ui,sans-serif;color:#A3A3A0;margin:6px 0 0">places</div>
+        </div>
+        <div style="flex:1;background:#F7F7F4;border-radius:14px;padding:13px 14px">
+          <div style="font:700 17px/1 'Open Sans',system-ui,sans-serif;color:#111">{{ journey.km }}</div>
+          <div style="font:600 10.5px/1 Pretendard,system-ui,sans-serif;color:#A3A3A0;margin:6px 0 0">total distance</div>
+        </div>
+        <div style="flex:1;background:#F7F7F4;border-radius:14px;padding:13px 14px">
+          <div style="font:700 17px/1 'Open Sans',system-ui,sans-serif;color:#111">{{ journey.dur }}</div>
+          <div style="font:600 10.5px/1 Pretendard,system-ui,sans-serif;color:#A3A3A0;margin:6px 0 0">estimated</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:7px;overflow-x:auto;padding:18px 18px 0">
+        <sc-for list="{{ journey.dayTabs }}" as="d" hint-placeholder-count="3">
+          <div onClick="{{ d.tap }}" style="flex:none;height:34px;display:flex;align-items:center;padding:0 14px;border-radius:18px;cursor:pointer;font:600 12px/1 Pretendard,system-ui,sans-serif;background:{{ d.bg }};color:{{ d.fg }}">{{ d.label }}</div>
+        </sc-for>
+      </div>
+
+      <div style="margin:16px 18px 0;height:172px;border-radius:16px;overflow:hidden;position:relative;background:#EDEBE6">
+        <div style="position:absolute;left:-10%;top:30%;width:130%;height:9px;background:#fff;transform:rotate(-5deg)"></div>
+        <div style="position:absolute;left:-10%;top:64%;width:130%;height:7px;background:#fff;transform:rotate(4deg)"></div>
+        <div style="position:absolute;left:30%;top:-10%;width:8px;height:130%;background:#fff;transform:rotate(7deg)"></div>
+        <div style="position:absolute;left:70%;top:-10%;width:7px;height:130%;background:#fff;transform:rotate(-5deg)"></div>
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%">
+          <polyline points="{{ journey.routePath }}" fill="none" stroke="#111" stroke-width="0.7" stroke-dasharray="2.4 2.2" vector-effect="non-scaling-stroke"></polyline>
+        </svg>
+        <sc-for list="{{ journey.route }}" as="r" hint-placeholder-count="3">
+          <div style="position:absolute;left:{{ r.left }};top:{{ r.top }};transform:translate(-50%,-50%);width:24px;height:24px;border-radius:50%;background:#C8FF09;border:2px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center;font:600 11px/1 Pretendard,system-ui,sans-serif;color:#111">{{ r.n }}</div>
+        </sc-for>
+        <sc-if value="{{ journey.dayEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;inset:0;background:rgba(237,235,230,.86);display:flex;align-items:center;justify-content:center;font:500 12px/1 Pretendard,system-ui,sans-serif;color:#96968F">Nothing planned for this day</div>
+        </sc-if>
+      </div>
+
+      <div style="padding:22px 18px 0">
+        <div style="font:700 16px/1 'Open Sans',system-ui,sans-serif;color:#111">{{ journey.dayLabel }}</div>
+        <sc-if value="{{ journey.dayEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="border-radius:14px;background:#F7F7F4;padding:22px 18px;margin:14px 0 0">
+            <div style="font:500 13px/1.3 Pretendard,system-ui,sans-serif;color:#111">This day is empty</div>
+            <div style="font:500 11.5px/1.5 Pretendard,system-ui,sans-serif;color:#96968F;margin:6px 0 0">The author left it open — a rest day, or a gap to fill in once you make it yours.</div>
+          </div>
+        </sc-if>
+        <sc-for list="{{ journey.items }}" as="it" hint-placeholder-count="3">
+          <div onClick="{{ it.tap }}" style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #F0F0EB;cursor:pointer">
+            <div style="flex:none;width:24px;height:24px;border-radius:50%;background:#111;color:#fff;display:flex;align-items:center;justify-content:center;font:600 11px/1 Pretendard,system-ui,sans-serif">{{ it.n }}</div>
+            <div style="flex:none;width:56px;height:56px;border-radius:12px;background:{{ it.g }}"></div>
+            <div style="flex:1;min-width:0">
+              <div style="font:500 13px/1.3 Pretendard,system-ui,sans-serif;color:#111">{{ it.title }}</div>
+              <div style="font:500 11px/1.2 Pretendard,system-ui,sans-serif;color:#A3A3A0;margin:5px 0 0">{{ it.region }}</div>
+            </div>
+            <div style="flex:none;font:500 9px/1 Pretendard,system-ui,sans-serif;color:{{ it.tagFg }};background:{{ it.tagBg }};padding:5px 6px;border-radius:5px">{{ it.tag }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    <sc-if value="{{ journey.canCopy }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:none;padding:12px 18px 26px;background:#fff;box-shadow:0 -8px 24px rgba(0,0,0,.07)">
+        <div onClick="{{ journey.copy }}" style="height:54px;border-radius:27px;background:#111;display:flex;align-items:center;justify-content:center;gap:9px;cursor:pointer">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#C8FF09" stroke-width="2.2"><rect x="8" y="8" width="12" height="12" rx="3"></rect><path d="M16 5H6.5A2.5 2.5 0 004 7.5V16"></path></svg>
+          <div style="font:700 15px/1 'Open Sans',system-ui,sans-serif;color:#fff">Make it mine</div>
+        </div>
+        <div style="font:500 10.5px/1.4 Pretendard,system-ui,sans-serif;color:#A3A3A0;text-align:center;margin:9px 0 0">Copies all {{ journey.dayCount }} into a private journey you can edit.</div>
+      </div>
+    </sc-if>
+  </div>
+  </sc-if>
+
+  <!-- ============ JOURNEY EDITOR ============ -->
+  <sc-if value="{{ showEditor }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;inset:0;background:#fff;z-index:86;display:flex;flex-direction:column;animation:fadeUp .22s ease">
+    <div style="flex:none;padding:58px 18px 0;display:flex;align-items:center;gap:10px">
+      <div onClick="{{ closeEditor }}" style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.6"><path d="M5 5l14 14M19 5L5 19"></path></svg>
+      </div>
+      <div style="flex:1;font:700 15px/1 'Open Sans',system-ui,sans-serif;color:#111;text-align:center">Journey editor</div>
+      <div onClick="{{ saveJourney }}" style="height:34px;padding:0 15px;border-radius:17px;background:{{ saveBg }};color:{{ saveFg }};display:flex;align-items:center;font:600 12.5px/1 Pretendard,system-ui,sans-serif;cursor:pointer">{{ saveLabel }}</div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:16px 0 40px">
+      <sc-if value="{{ copiedBanner }}" hint-placeholder-val="{{ false }}">
+        <div style="margin:0 18px 16px;display:flex;gap:10px;align-items:flex-start;padding:13px 14px;border-radius:14px;background:#F4FFD0;border:1.5px solid #C8FF09">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.4" style="margin-top:1px"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+          <div style="flex:1">
+            <div style="font:600 12.5px/1.3 Pretendard,system-ui,sans-serif;color:#111">It’s yours now</div>
+            <div style="font:500 11px/1.45 Pretendard,system-ui,sans-serif;color:#5E5E5A;margin:5px 0 0">{{ copiedFromLine }} Edits stay private until you save it as public. Nothing goes back to the original.</div>
+          </div>
+        </div>
+      </sc-if>
+      <div style="padding:0 18px">
+        <input value="{{ editorTitle }}" onChange="{{ onEditorTitle }}" placeholder="Journey title" style="width:100%;box-sizing:border-box;border:0;border-bottom:2px solid #EEEEE9;outline:0;padding:0 0 12px;font:700 22px/1.2 'Open Sans',system-ui,sans-serif;letter-spacing:-0.02em;color:#111;background:transparent">
+        <div style="font:500 12.5px/1 Pretendard,system-ui,sans-serif;color:#8E8E8B;margin:14px 0 0">{{ editorMeta }}</div>
+
+        <div style="display:flex;align-items:center;gap:12px;margin:18px 0 0;padding:14px 16px;border-radius:14px;background:#F7F7F4">
+          <div style="flex:1">
+            <div style="font:500 13px/1 Pretendard,system-ui,sans-serif;color:#111">{{ visibilityLabel }}</div>
+            <div style="font:500 11px/1.3 Pretendard,system-ui,sans-serif;color:#A3A3A0;margin:5px 0 0">Public journeys can be found and copied by other fans.</div>
+          </div>
+          <div onClick="{{ toggleVisibility }}" style="flex:none;position:relative;width:46px;height:26px;border-radius:14px;cursor:pointer;background:{{ visibilityBg }}">
+            <div style="position:absolute;top:2px;left:{{ visibilityKnob }};width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.2);transition:left .2s ease"></div>
+          </div>
+        </div>
+      </div>
+
+      <sc-for list="{{ editorDays }}" as="d" hint-placeholder-count="2">
+        <div style="padding:24px 18px 0">
+          <div style="display:flex;align-items:center;gap:9px">
+            <div style="font:700 15px/1 'Open Sans',system-ui,sans-serif;color:#111">{{ d.label }}</div>
+            <div style="font:600 10.5px/1 Pretendard,system-ui,sans-serif;color:#A3A3A0">{{ d.meta }}</div>
+            <div style="flex:1"></div>
+            <div onClick="{{ d.remove }}" style="height:28px;padding:0 11px;border-radius:14px;background:#FDF0F3;display:flex;align-items:center;gap:5px;cursor:pointer">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#F01941" stroke-width="2.6"><path d="M5 7h14M8 7l1 13h6l1-13"></path></svg>
+              <div style="font:600 10.5px/1 Pretendard,system-ui,sans-serif;color:#F01941">Delete day</div>
+            </div>
+          </div>
+
+          <sc-if value="{{ d.empty }}" hint-placeholder-val="{{ false }}">
+            <div style="margin:12px 0 0;border-radius:14px;border:1.5px dashed #E2E2DC;padding:22px 18px;text-align:center">
+              <div style="font:500 12.5px/1.3 Pretendard,system-ui,sans-serif;color:#111">Empty day</div>
+              <div style="font:500 11px/1.45 Pretendard,system-ui,sans-serif;color:#A3A3A0;margin:6px 0 0">Keep it as a rest day, or add the first stop.</div>
+            </div>
+          </sc-if>
+
+          <sc-for list="{{ d.rows }}" as="r" hint-placeholder-count="3">
+            <div style="display:flex;align-items:center;gap:11px;padding:11px 8px;margin:2px -8px 0;border-bottom:1px solid #F0F0EB;border-radius:12px;background:{{ r.bg }};box-shadow:{{ r.shadow }};transform:{{ r.lift }}">
+              <div onPointerDown="{{ r.grab }}" onPointerMove="{{ onRowMove }}" onPointerUp="{{ onRowUp }}" style="flex:none;width:24px;height:36px;display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#B6B6B0" stroke-width="2.4"><path d="M4 8h16M4 16h16"></path></svg>
+              </div>
+              <div style="flex:none;width:22px;height:22px;border-radius:50%;background:#111;color:#fff;display:flex;align-items:center;justify-content:center;font:600 10.5px/1 Pretendard,system-ui,sans-serif">{{ r.n }}</div>
+              <div style="flex:none;width:50px;height:50px;border-radius:11px;background:{{ r.g }}"></div>
+              <div style="flex:1;min-width:0">
+                <div style="font:500 12.5px/1.3 Pretendard,system-ui,sans-serif;color:#111">{{ r.title }}</div>
+                <div style="font:500 10.5px/1.2 Pretendard,system-ui,sans-serif;color:#A3A3A0;margin:5px 0 0">{{ r.region }}</div>
+              </div>
+              <div onClick="{{ r.remove }}" style="flex:none;width:28px;height:28px;border-radius:50%;background:#F4F4F1;display:flex;align-items:center;justify-content:center;cursor:pointer">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.6"><path d="M5 5l14 14M19 5L5 19"></path></svg>
+              </div>
+            </div>
+          </sc-for>
+
+          <div onClick="{{ d.add }}" style="margin:14px 0 0;height:44px;border-radius:22px;border:1.5px solid #E4E4DF;display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.6"><path d="M12 5v14M5 12h14"></path></svg>
+            <div style="font:600 12.5px/1 Pretendard,system-ui,sans-serif;color:#111">Add places to {{ d.label }}</div>
+          </div>
+        </div>
+      </sc-for>
+
+      <sc-if value="{{ dragging }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;left:50%;bottom:120px;transform:translateX(-50%);height:34px;padding:0 16px;border-radius:17px;background:#111;display:flex;align-items:center;font:600 11.5px/1 Pretendard,system-ui,sans-serif;color:#C8FF09;z-index:6">Reordering — drop to place</div>
+      </sc-if>
+
+      <div style="padding:24px 18px 0">
+        <div onClick="{{ addDay }}" style="height:48px;border-radius:24px;background:#111;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C8FF09" stroke-width="2.6"><path d="M12 5v14M5 12h14"></path></svg>
+          <div style="font:600 13.5px/1 Pretendard,system-ui,sans-serif;color:#fff">Add a day</div>
+        </div>
+      </div>
+
+      <dc-import name="TourismRow" title="Nearby Attractions" state="{{ editorNearbyState }}" items="{{ editorNearby }}" on-retry="{{ retryTourism }}" hint-size="100%,240px"></dc-import>
+    </div>
+
+    <sc-if value="{{ addOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;background:rgba(20,20,18,.42);display:flex;align-items:flex-end;z-index:8">
+        <div style="width:100%;height:620px;background:#fff;border-radius:24px 24px 0 0;display:flex;flex-direction:column;overflow:hidden">
+          <div style="flex:none;display:flex;align-items:center;padding:16px 18px 0">
+            <div style="flex:1">
+              <div style="font:700 17px/1 'Open Sans',system-ui,sans-serif;color:#111">Add places</div>
+              <div style="font:600 10.5px/1 Pretendard,system-ui,sans-serif;color:#A3A3A0;margin:6px 0 0">Adding to {{ addTargetLabel }}</div>
+            </div>
+            <div onClick="{{ closeAdd }}" style="width:32px;height:32px;border-radius:50%;background:#F4F4F1;display:flex;align-items:center;justify-content:center;cursor:pointer">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.6"><path d="M5 5l14 14M19 5L5 19"></path></svg>
+            </div>
+          </div>
+          <div style="flex:none;display:flex;gap:7px;overflow-x:auto;padding:14px 18px 0">
+            <sc-for list="{{ addTabs }}" as="t" hint-placeholder-count="3">
+              <div onClick="{{ t.tap }}" style="flex:none;height:34px;display:flex;align-items:center;padding:0 14px;border-radius:18px;cursor:pointer;font:500 12px/1 Pretendard,system-ui,sans-serif;background:{{ t.bg }};color:{{ t.fg }}">{{ t.label }}</div>
+            </sc-for>
+          </div>
+          <sc-if value="{{ addSearching }}" hint-placeholder-val="{{ true }}">
+            <div style="flex:none;margin:14px 18px 0;display:flex;align-items:center;gap:10px;height:44px;padding:0 15px;border-radius:22px;background:#F2F2EF">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8E8E8B" stroke-width="2.2"><circle cx="10.5" cy="10.5" r="7"></circle><path d="M15.8 15.8L21 21"></path></svg>
+              <input value="{{ addQuery }}" onChange="{{ onAddQuery }}" placeholder="Search places" style="flex:1;border:0;outline:0;background:transparent;font:600 13.5px/1 Pretendard,system-ui,sans-serif;color:#111">
+            </div>
+          </sc-if>
+          <div style="flex:1;overflow-y:auto;padding:8px 18px 30px">
+            <sc-if value="{{ addEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="border-radius:14px;background:#F7F7F4;padding:26px 18px;text-align:center;margin:12px 0 0">
+                <div style="font:600 13.5px/1.3 Pretendard,system-ui,sans-serif;color:#111">{{ addEmptyTitle }}</div>
+                <div style="font:500 11.5px/1.5 Pretendard,system-ui,sans-serif;color:#96968F;margin:7px 0 0">{{ addEmptyBody }}</div>
+              </div>
+            </sc-if>
+            <sc-for list="{{ addRows }}" as="r" hint-placeholder-count="5">
+              <div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid #F0F0EB">
+                <div style="flex:none;width:48px;height:48px;border-radius:11px;background:{{ r.g }}"></div>
+                <div style="flex:1;min-width:0">
+                  <div style="font:500 12.5px/1.3 Pretendard,system-ui,sans-serif;color:#111">{{ r.title }}</div>
+                  <div style="font:500 10.5px/1.2 Pretendard,system-ui,sans-serif;color:#A3A3A0;margin:5px 0 0">{{ r.region }}</div>
+                  <div style="font:600 9.5px/1 Pretendard,system-ui,sans-serif;color:#B4B3AC;margin:5px 0 0">{{ r.source }}</div>
+                </div>
+                <div onClick="{{ r.add }}" style="flex:none;width:30px;height:30px;border-radius:50%;background:{{ r.btnBg }};display:flex;align-items:center;justify-content:center;cursor:pointer">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.8"><path d="{{ r.btnPath }}"></path></svg>
+                </div>
+              </div>
+            </sc-for>
+            <sc-if value="{{ addIsTourism }}" hint-placeholder-val="{{ false }}">
+              <div style="font:600 9.5px/1 Pretendard,system-ui,sans-serif;color:#B4B3AC;padding:16px 0 0">출처: ⓒ한국관광공사</div>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+  </sc-if>
+
+  <!-- ============ POST DETAIL ============ -->
+  <sc-if value="{{ showPost }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;inset:0;background:#fff;z-index:95;display:flex;flex-direction:column;animation:fadeUp .22s ease">
+    <div style="flex:1;overflow-y:auto;padding:0 0 30px">
+      <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}">
+        <div style="animation:pulse 1.4s ease-in-out infinite">
+          <div style="height:290px;background:#EFEEE9"></div>
+          <div style="padding:16px">
+            <div style="height:12px;width:34%;border-radius:6px;background:#EFEEE9"></div>
+            <div style="height:20px;width:74%;border-radius:8px;background:#EFEEE9;margin:14px 0 0"></div>
+            <div style="height:190px;border-radius:14px;background:#F3F2EE;margin:18px 0 0"></div>
+            <div style="height:11px;border-radius:6px;background:#F3F2EE;margin:18px 0 0"></div>
+            <div style="height:11px;width:88%;border-radius:6px;background:#F5F4F0;margin:8px 0 0"></div>
+            <div style="height:11px;width:64%;border-radius:6px;background:#F7F6F3;margin:8px 0 0"></div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ postReady }}" hint-placeholder-val="{{ true }}">
+      <div style="position:relative;height:290px;background:{{ post.g }}">
+        <div style="position:absolute;inset:0;background:radial-gradient(120% 80% at 28% 8%, rgba(255,255,255,.32), rgba(255,255,255,0) 62%)"></div>
+        <div style="position:absolute;left:0;right:0;top:0;height:96px;background:linear-gradient(180deg, rgba(0,0,0,.42), rgba(0,0,0,0))"></div>
+        <div onClick="{{ prevShot }}" style="position:absolute;left:0;top:0;bottom:0;width:40%;cursor:pointer"></div>
+        <div onClick="{{ nextShot }}" style="position:absolute;right:0;top:0;bottom:0;width:40%;cursor:pointer"></div>
+        <div onClick="{{ closePost }}" style="position:absolute;left:14px;top:58px;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.88);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.6"><path d="M14.5 5L7.5 12l7 7"></path></svg>
+        </div>
+        <div style="position:absolute;right:12px;bottom:12px;font:500 11px/1 Pretendard,system-ui,sans-serif;color:#fff;background:rgba(0,0,0,.5);padding:6px 9px;border-radius:11px">{{ postGal }}</div>
+        <div style="position:absolute;left:14px;bottom:14px;display:flex;gap:5px">
+          <sc-for list="{{ galleryDots }}" as="d" hint-placeholder-count="4">
+            <div style="width:{{ d.w }};height:5px;border-radius:3px;background:{{ d.bg }}"></div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="padding:14px 16px 0">
+        <div style="display:flex;flex-wrap:wrap;gap:5px">
+          <sc-for list="{{ post.badges }}" as="b" hint-placeholder-count="3">
+            <div style="font:600 10px/1 Pretendard,system-ui,sans-serif;color:{{ b.fg }};background:{{ b.bg }};padding:6px 8px;border-radius:6px">{{ b.n }}</div>
+          </sc-for>
+        </div>
+        <div style="font:700 21px/1.2 'Open Sans',system-ui,sans-serif;letter-spacing:-0.03em;color:#111;margin:12px 0 0">{{ post.title }}</div>
+        <div style="font:600 12.5px/1.4 Pretendard,system-ui,sans-serif;color:#8E8E8B;margin:7px 0 0">{{ post.postTitle }}</div>
+      </div>
+
+      <div style="margin:16px 16px 0;border-radius:14px;overflow:hidden;background:#111">
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 12px">
+          <svg width="17" height="12" viewBox="0 0 28 20"><rect width="28" height="20" rx="5" fill="#FF0033"></rect><path d="M11 6l7 4-7 4z" fill="#fff"></path></svg>
+          <div style="font:600 10px/1 Pretendard,system-ui,sans-serif;letter-spacing:.1em;color:#C8FF09">{{ post.source.label }}</div>
+          <div style="flex:1"></div>
+          <div style="font:500 10.5px/1 Pretendard,system-ui,sans-serif;color:rgba(255,255,255,.6)">{{ post.source.channel }}</div>
+        </div>
+        <div style="position:relative;height:190px;background:{{ post.source.g }}">
+          <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:56px;height:40px;border-radius:9px;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center">
+            <svg width="17" height="19" viewBox="0 0 24 24" fill="#111"><path d="M6 3l14 9-14 9z"></path></svg>
+          </div>
+          <div style="position:absolute;left:12px;bottom:11px;right:12px;font:600 12.5px/1.3 Pretendard,system-ui,sans-serif;color:#fff">{{ post.source.title }}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:9px;padding:11px 12px">
+          <div style="flex:none;font:600 10.5px/1 Pretendard,system-ui,sans-serif;color:#111;background:#C8FF09;padding:6px 8px;border-radius:6px">{{ post.source.pos }}</div>
+          <div style="font:600 11.5px/1.35 Pretendard,system-ui,sans-serif;color:rgba(255,255,255,.82)">{{ post.source.moment }}</div>
+        </div>
+      </div>
+
+      <div style="font:500 13px/1.65 Pretendard,system-ui,sans-serif;color:#3B3B38;padding:14px 16px 0;text-wrap:pretty">{{ post.context }}</div>
+
+      <div style="display:flex;align-items:center;gap:16px;padding:16px;margin:14px 0 0;border-top:1px solid #F0F0EB">
+        <div onClick="{{ postLike }}" style="display:flex;align-items:center;gap:6px;cursor:pointer">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="{{ postLikeFill }}" stroke="#111" stroke-width="1.8"><path d="M12 20s-7-4.6-7-9.4A3.9 3.9 0 0112 8.6 3.9 3.9 0 0119 10.6c0 4.8-7 9.4-7 9.4z"></path></svg>
+          <div style="font:500 12px/1 Pretendard,system-ui,sans-serif;color:#111">{{ postLikeCount }}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8"><path d="M21 12a8.4 8.4 0 01-11.9 7.6L4 21l1.5-4.8A8.4 8.4 0 1121 12z"></path></svg>
+          <div style="font:500 12px/1 Pretendard,system-ui,sans-serif;color:#111">{{ post.commentCount }}</div>
+        </div>
+        <div style="flex:1"></div>
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8"><circle cx="17.5" cy="5.5" r="2.6"></circle><circle cx="6" cy="12" r="2.6"></circle><circle cx="17.5" cy="18.5" r="2.6"></circle><path d="M8.4 10.8l6.7-3.9M8.4 13.2l6.7 3.9"></path></svg>
+        <div onClick="{{ postBookmark }}" style="cursor:pointer;display:flex;align-items:center">
+          <svg width="16" height="19" viewBox="0 0 14 18" fill="{{ postBookmarkFill }}" stroke="#111" stroke-width="1.8"><path d="M1.6 1.4h10.8v15L7 12.6l-5.4 3.8z"></path></svg>
+        </div>
+      </div>
+
+      <div style="padding:0 16px">
+        <div style="display:flex;align-items:flex-start;gap:9px">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C8FF09" stroke-width="2.4" style="margin-top:2px"><path d="M12 21s7-6.3 7-11a7 7 0 10-14 0c0 4.7 7 11 7 11z"></path><circle cx="12" cy="10" r="2.4" stroke="#111"></circle></svg>
+          <div style="font:500 11.5px/1.5 Pretendard,system-ui,sans-serif;color:#5E5E5A">{{ post.address }}</div>
+        </div>
+        <div style="position:relative;height:118px;border-radius:12px;background:#E5E9EC;margin:11px 0 0;overflow:hidden">
+          <div style="position:absolute;left:-8%;top:46%;width:120%;height:6px;background:#fff;transform:rotate(-4deg)"></div>
+          <div style="position:absolute;left:36%;top:-10%;width:5px;height:120%;background:#fff;transform:rotate(8deg)"></div>
+          <div style="position:absolute;left:50%;top:48%;transform:translate(-50%,-50%);width:20px;height:20px;border-radius:50%;background:#C8FF09;border:3px solid #fff;box-shadow:0 2px 7px rgba(0,0,0,.25)"></div>
+        </div>
+        <div style="display:flex;gap:8px;margin:10px 0 0">
+          <div style="flex:1;height:44px;border-radius:22px;border:1.5px solid #E4E4DF;display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer;font:500 12.5px/1 Pretendard,system-ui,sans-serif;color:#111">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2"><path d="M14 4h6v6"></path><path d="M20 4l-9 9"></path><path d="M18 14v5.5H4.5V6H10"></path></svg>
+            Google Maps
+          </div>
+          <div style="flex:1;height:44px;border-radius:22px;border:1.5px solid #E4E4DF;display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer;font:500 12.5px/1 Pretendard,system-ui,sans-serif;color:#111">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2"><path d="M14 4h6v6"></path><path d="M20 4l-9 9"></path><path d="M18 14v5.5H4.5V6H10"></path></svg>
+            Naver Maps
+          </div>
+        </div>
+      </div>
+
+      <div style="padding:24px 0 0">
+        <div style="display:flex;align-items:baseline;gap:8px;padding:0 16px">
+          <div style="font:700 15px/1 'Open Sans',system-ui,sans-serif;color:#111">How others reCree’d</div>
+          <div style="font:600 11px/1 Pretendard,system-ui,sans-serif;color:#A3A3A0">{{ post.shots }}</div>
+        </div>
+        <div style="display:flex;gap:8px;overflow-x:auto;padding:11px 16px 0">
+          <div onClick="{{ addShot }}" style="flex:none;width:92px;height:112px;border-radius:12px;border:1.5px dashed #D8D8D2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#8E8E8B" stroke-width="1.8"><rect x="3" y="6.6" width="18" height="13.4" rx="3.2"></rect><circle cx="12" cy="13.3" r="3.4"></circle></svg>
+            <div style="font:500 10px/1.2 Pretendard,system-ui,sans-serif;color:#8E8E8B;text-align:center">Add<br>recreeshot</div>
+          </div>
+          <sc-for list="{{ post.shotThumbs }}" as="g" hint-placeholder-count="3">
+            <div style="flex:none;width:92px;height:112px;border-radius:12px;background:{{ g }}"></div>
+          </sc-for>
+        </div>
+      </div>
+
+      <dc-import name="TourismRow" title="Nearby Attractions" state="{{ postNearbyState }}" items="{{ post.nearby }}" on-retry="{{ retryTourism }}" hint-size="100%,200px"></dc-import>
+
+      <div style="padding:22px 16px 0">
+        <div style="font:700 15px/1 'Open Sans',system-ui,sans-serif;color:#111">Comments</div>
+        <sc-for list="{{ post.comments }}" as="c" hint-placeholder-count="2">
+          <div style="display:flex;gap:9px;margin:14px 0 0">
+            <div style="flex:none;width:30px;height:30px;border-radius:50%;background:{{ c.g }}"></div>
+            <div>
+              <div style="font:500 11.5px/1 Pretendard,system-ui,sans-serif;color:#111">{{ c.u }}</div>
+              <div style="font:500 12px/1.45 Pretendard,system-ui,sans-serif;color:#5E5E5A;margin:5px 0 0">{{ c.t }}</div>
+            </div>
+          </div>
+        </sc-for>
+        <div style="display:flex;align-items:center;gap:8px;height:44px;padding:0 6px 0 15px;border-radius:22px;background:#F4F4F1;margin:16px 0 0">
+          <div style="flex:1;font:500 12px/1 Pretendard,system-ui,sans-serif;color:#9A9A97">Add a comment…</div>
+          <div onClick="{{ postComment }}" style="height:32px;padding:0 14px;border-radius:16px;background:#C8FF09;display:flex;align-items:center;font:600 11.5px/1 Pretendard,system-ui,sans-serif;color:#111;cursor:pointer">Post</div>
+        </div>
+      </div>
+      </sc-if>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ============ SEARCH ============ -->
+  <sc-if value="{{ showSearch }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;inset:0;background:#fff;z-index:70;display:flex;flex-direction:column;animation:fadeUp .22s ease">
+    <div style="padding:58px 16px 0;display:flex;align-items:center;gap:10px">
+      <div onClick="{{ closeSearch }}" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.6"><path d="M14.5 5L7.5 12l7 7"></path></svg>
+      </div>
+      <div style="flex:1;display:flex;align-items:center;gap:10px;height:46px;padding:0 16px;border-radius:23px;background:#F2F2EF">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8E8E8B" stroke-width="2.2"><circle cx="10.5" cy="10.5" r="7"></circle><path d="M15.8 15.8L21 21"></path></svg>
+        <input value="{{ query }}" onChange="{{ onQuery }}" placeholder="Search topics, spots, journeys" style="flex:1;border:0;outline:0;background:transparent;font:600 14px/1 Pretendard,system-ui,sans-serif;color:#111">
+      </div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:20px 0 40px">
+      <sc-if value="{{ searchIdle }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:0 18px">
+          <div style="font:700 15px/1 'Open Sans',system-ui,sans-serif;color:#111;margin:0 0 12px">Recent searches</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <sc-for list="{{ recents }}" as="r" hint-placeholder-count="5">
+              <div onClick="{{ r.tap }}" style="height:34px;display:flex;align-items:center;padding:0 13px;border-radius:18px;background:#F4F4F1;cursor:pointer;font:600 12.5px/1 Pretendard,system-ui,sans-serif;color:#3B3B38">{{ r.label }}</div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ searchNoResults }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:0 18px">
+          <div style="border-radius:16px;background:#F7F7F4;padding:26px 20px;text-align:center">
+            <div style="font:700 15px/1.3 'Open Sans',system-ui,sans-serif;color:#111">No results for “{{ query }}”</div>
+            <div style="font:500 12px/1.5 Pretendard,system-ui,sans-serif;color:#96968F;margin:7px 0 0">Nothing curated under that name yet. Try a topic, a city, or a place.</div>
+          </div>
+          <div style="font:600 11px/1 Pretendard,system-ui,sans-serif;letter-spacing:.16em;color:#B6B6B0;margin:26px 0 12px">TRY INSTEAD</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <sc-for list="{{ recents }}" as="r" hint-placeholder-count="4">
+              <div onClick="{{ r.tap }}" style="height:34px;display:flex;align-items:center;padding:0 13px;border-radius:18px;background:#F4F4F1;cursor:pointer;font:600 12.5px/1 Pretendard,system-ui,sans-serif;color:#3B3B38">{{ r.label }}</div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ searchHasResults }}" hint-placeholder-val="{{ false }}">
+        <sc-for list="{{ searchSections }}" as="s" hint-placeholder-count="2">
+          <dc-import name="SectionRow" title="{{ s.title }}" note="{{ s.note }}" cards="{{ s.cards }}" hint-size="100%,290px"></dc-import>
+        </sc-for>
+      </sc-if>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ============ FOLLOW ============ -->
+  <sc-if value="{{ showFollow }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;inset:0;background:#fff;z-index:80;display:flex;flex-direction:column;animation:fadeUp .22s ease">
+    <div style="padding:58px 18px 0;display:flex;align-items:center;gap:10px">
+      <div onClick="{{ closeFollow }}" style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.6"><path d="M14.5 5L7.5 12l7 7"></path></svg>
+      </div>
+      <div style="font:700 19px/1.2 'Open Sans',system-ui,sans-serif;letter-spacing:-0.02em;color:#111">Follow topics</div>
+      <div style="flex:1"></div>
+      <div style="font:500 12px/1 Pretendard,system-ui,sans-serif;color:#111;background:#C8FF09;padding:9px 13px;border-radius:16px">{{ followCount }}</div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:22px 18px 40px">
+      <sc-for list="{{ followGroups }}" as="grp" hint-placeholder-count="2">
+        <div style="margin:0 0 28px">
+          <div style="font:600 11px/1 Pretendard,system-ui,sans-serif;letter-spacing:.16em;color:#B6B6B0;margin:0 0 14px">{{ grp.label }}</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px 14px">
+            <sc-for list="{{ grp.items }}" as="t" hint-placeholder-count="6">
+              <div onClick="{{ t.tap }}" style="cursor:pointer">
+                <div style="position:relative;width:100%;aspect-ratio:1;border-radius:50%;background:{{ t.g }};border:3px solid {{ t.ring }}">
+                  <sc-if value="{{ t.following }}" hint-placeholder-val="{{ false }}">
+                    <div style="position:absolute;right:-2px;bottom:-2px;width:26px;height:26px;border-radius:50%;background:#C8FF09;border:2.5px solid #fff;display:flex;align-items:center;justify-content:center">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="3"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+                    </div>
+                  </sc-if>
+                </div>
+                <div style="font:500 12px/1.25 Pretendard,system-ui,sans-serif;color:#111;text-align:center;margin:9px 0 0">{{ t.name }}</div>
+                <div style="font:500 10px/1.2 Pretendard,system-ui,sans-serif;color:#A3A3A0;text-align:center;margin:3px 0 0">{{ t.followers }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ============ STATE INDEX ============ -->
+  <sc-if value="{{ showStates }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;inset:0;background:#F7F7F4;z-index:98;display:flex;flex-direction:column;animation:fadeUp .22s ease">
+    <div style="flex:none;padding:58px 18px 0;display:flex;align-items:center;gap:10px">
+      <div onClick="{{ closeStates }}" style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.6"><path d="M5 5l14 14M19 5L5 19"></path></svg>
+      </div>
+      <div style="flex:1">
+        <div style="font:700 19px/1.2 'Open Sans',system-ui,sans-serif;letter-spacing:-0.02em;color:#111">State index</div>
+        <div style="font:500 11px/1 Pretendard,system-ui,sans-serif;color:#96968F;margin:6px 0 0">Every intermediate state, one tap away</div>
+      </div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:18px 18px 40px">
+      <sc-for list="{{ stateGroups }}" as="g" hint-placeholder-count="4">
+        <div style="margin:0 0 20px">
+          <div style="font:600 10.5px/1 Pretendard,system-ui,sans-serif;letter-spacing:.16em;color:#B6B6B0;margin:0 0 10px">{{ g.label }}</div>
+          <div style="background:#fff;border-radius:16px;overflow:hidden">
+            <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="3">
+              <div onClick="{{ r.tap }}" style="display:flex;align-items:center;gap:12px;padding:13px 15px;border-bottom:1px solid #F4F3EF;cursor:pointer">
+                <div style="flex:1">
+                  <div style="font:500 12.5px/1.3 Pretendard,system-ui,sans-serif;color:#111">{{ r.label }}</div>
+                  <div style="font:500 10.5px/1.35 Pretendard,system-ui,sans-serif;color:#A3A3A0;margin:5px 0 0">{{ r.path }}</div>
+                </div>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#C3C3BE" stroke-width="2.6"><path d="M9 5l7 7-7 7"></path></svg>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ============ LOGIN SHEET ============ -->
+  <sc-if value="{{ showLogin }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;inset:0;background:rgba(20,20,18,.5);display:flex;align-items:flex-end;z-index:120">
+    <div style="width:100%;background:#fff;border-radius:26px 26px 0 0;padding:28px 22px 34px;animation:fadeUp .2s ease">
+      <div style="width:52px;height:52px;border-radius:50%;background:#C8FF09;display:flex;align-items:center;justify-content:center">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2"><circle cx="12" cy="8" r="3.6"></circle><path d="M4.5 20.5a7.5 7.5 0 0115 0"></path></svg>
+      </div>
+      <div style="font:700 21px/1.25 'Open Sans',system-ui,sans-serif;letter-spacing:-0.02em;color:#111;margin:16px 0 0">{{ loginTitle }}</div>
+      <div style="font:500 13px/1.5 Pretendard,system-ui,sans-serif;color:#8E8E8B;margin:8px 0 0">{{ loginBody }}</div>
+      <div onClick="{{ doLogin }}" style="height:52px;border-radius:26px;background:#111;color:#fff;display:flex;align-items:center;justify-content:center;font:700 15px/1 'Open Sans',system-ui,sans-serif;margin:22px 0 0;cursor:pointer">Log in</div>
+      <div onClick="{{ dismissLogin }}" style="height:48px;display:flex;align-items:center;justify-content:center;font:600 13.5px/1 Pretendard,system-ui,sans-serif;color:#96968F;cursor:pointer">Not now</div>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ============ CONFIRM ============ -->
+  <sc-if value="{{ showConfirm }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;inset:0;background:rgba(20,20,18,.5);display:flex;align-items:center;justify-content:center;padding:0 30px;z-index:130">
+    <div style="width:100%;background:#fff;border-radius:22px;padding:24px 22px;animation:fadeUp .18s ease">
+      <div style="font:700 17px/1.3 'Open Sans',system-ui,sans-serif;letter-spacing:-0.02em;color:#111">{{ confirmTitle }}</div>
+      <div style="font:500 12.5px/1.5 Pretendard,system-ui,sans-serif;color:#8E8E8B;margin:9px 0 0">{{ confirmBody }}</div>
+      <div style="display:flex;gap:9px;margin:22px 0 0">
+        <div onClick="{{ cancelConfirm }}" style="flex:1;height:46px;border-radius:23px;border:1.5px solid #E4E4DF;display:flex;align-items:center;justify-content:center;cursor:pointer;font:500 13px/1 Pretendard,system-ui,sans-serif;color:#111">Cancel</div>
+        <div onClick="{{ acceptConfirm }}" style="flex:1;height:46px;border-radius:23px;background:#F01941;display:flex;align-items:center;justify-content:center;cursor:pointer;font:600 13px/1 Pretendard,system-ui,sans-serif;color:#fff">{{ confirmCta }}</div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ============ TOAST ============ -->
+  <sc-if value="{{ showToast }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;left:20px;right:20px;bottom:100px;z-index:140;display:flex;justify-content:center;pointer-events:none">
+    <div style="max-width:100%;display:flex;align-items:center;gap:9px;height:44px;padding:0 18px;border-radius:22px;background:#111;box-shadow:0 10px 26px rgba(0,0,0,.28);animation:fadeUp .18s ease">
+      <sc-if value="{{ toastSpin }}" hint-placeholder-val="{{ false }}">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C8FF09" stroke-width="2.6"><path d="M12 3.5a8.5 8.5 0 108.5 8.5"></path></svg>
+      </sc-if>
+      <sc-if value="{{ toastDone }}" hint-placeholder-val="{{ true }}">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C8FF09" stroke-width="3"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+      </sc-if>
+      <div style="font:500 12.5px/1 Pretendard,system-ui,sans-serif;color:#fff;white-space:nowrap">{{ toastText }}</div>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ============ TAB BAR ============ -->
+  <sc-if value="{{ showTabs }}" hint-placeholder-val="{{ true }}">
+  <div style="position:absolute;left:20px;right:20px;bottom:26px;z-index:90;display:flex;align-items:center;justify-content:space-between;pointer-events:none">
+    <div style="display:flex;align-items:center;gap:2px;padding:6px;border-radius:34px;background:rgba(255,255,255,.94);backdrop-filter:blur(12px);box-shadow:0 8px 26px rgba(0,0,0,.16);pointer-events:auto">
+      <div onClick="{{ goProfile }}" style="width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;background:{{ profileTabBg }}">
+        <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.9"><circle cx="12" cy="8" r="3.6"></circle><path d="M4.6 20.4a7.4 7.4 0 0114.8 0"></path></svg>
+      </div>
+      <div onClick="{{ goShop }}" style="width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer">
+        <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#3B3B38" stroke-width="1.9"><path d="M5.4 8h13.2l-1.3 12.2H6.7z"></path><path d="M9.2 8V6.2a2.8 2.8 0 015.6 0V8"></path></svg>
+      </div>
+      <div onClick="{{ addShot }}" style="width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer">
+        <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#3B3B38" stroke-width="1.9"><rect x="3" y="6.6" width="18" height="13.4" rx="3.2"></rect><circle cx="12" cy="13.3" r="3.4"></circle><path d="M9 6.6l1.2-2.2h3.6L15 6.6"></path></svg>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:2px;padding:6px;border-radius:34px;background:rgba(255,255,255,.94);backdrop-filter:blur(12px);box-shadow:0 8px 26px rgba(0,0,0,.16);pointer-events:auto">
+      <div onClick="{{ goHome }}" style="width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;background:{{ homeTabBg }}">
+        <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.9"><path d="M4 10.6L12 4l8 6.6V20H4z"></path><path d="M9.6 20v-5.4h4.8V20"></path></svg>
+      </div>
+      <div onClick="{{ goMap }}" style="width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;background:{{ mapTabBg }}">
+        <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.9"><path d="M3.6 6.6l5.2-2 6.4 2.4 5.2-2v14l-5.2 2-6.4-2.4-5.2 2z"></path><path d="M8.8 4.6V19M15.2 7V21"></path></svg>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+</div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:740,&quot;height&quot;:916},&quot;showPanel&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Prototype&quot;}}">
+const LIME = '#C8FF09';
+const RED = '#F01941';
+
+const TOPICS = [
+  { id:'bts', name:'BTS', color:'#7B4FE8', group:'K-POP', followers:'4.2M' },
+  { id:'svt', name:'SVT', color:'#F19BC8', group:'K-POP', followers:'2.6M' },
+  { id:'v', name:'V', color:'#6E7BFF', group:'K-POP', followers:'3.1M' },
+  { id:'nctwish', name:'NCT WISH', color:'#3FD0C4', group:'K-POP', followers:'980K' },
+  { id:'aespa', name:'aespa', color:'#FF4F86', group:'K-POP', followers:'2.2M' },
+  { id:'ive', name:'IVE', color:'#9B7BF5', group:'K-POP', followers:'1.9M' },
+  { id:'riize', name:'RIIZE', color:'#FF8A3C', group:'K-POP', followers:'1.1M' },
+  { id:'goblin', name:'Goblin', color:'#2F6B5C', group:'K-CONTENT', followers:'640K' },
+  { id:'queen', name:'Queen of Tears', color:'#8C6BD6', group:'K-CONTENT', followers:'870K' },
+  { id:'twinkling', name:'Twinkling Watermelon', color:'#E8452F', group:'K-CONTENT', followers:'310K' }
+];
+const T = {};
+TOPICS.forEach(t => { T[t.id] = t; });
+
+const grad = (a, b, ang) => 'linear-gradient(' + (ang || 140) + 'deg, ' + a + ', ' + b + ')';
+const PH = [
+  grad('#8E7CC3', '#3D3654'), grad('#C9A88F', '#5E4638'), grad('#7FB0C9', '#2E4A5C'),
+  grad('#D28FA8', '#5A2E45'), grad('#9BC98F', '#33502E'), grad('#C9C08F', '#54502E'),
+  grad('#8F9BC9', '#2E3450'), grad('#C98F8F', '#502E2E'), grad('#8FC9C0', '#2E4E4A')
+];
+const ph = i => PH[((i % PH.length) + PH.length) % PH.length];
+const KPH = [grad('#C0A98F', '#4A3A28'), grad('#A9BBA0', '#3C4A38'), grad('#A0B4C0', '#354652'), grad('#C0B49B', '#4E4433')];
+const kph = i => KPH[i % KPH.length];
+
+const tb = id => ({ n: T[id].name, bg: T[id].color, fg: '#fff' });
+const cb = name => ({ n: name, bg: '#F0F0EA', fg: '#111' });
+const lb = name => ({ n: name, bg: LIME, fg: '#111' });
+const badges = ids => ids.map(id => ({ name: T[id].name, color: T[id].color }));
+
+const CITIES = [
+  { id:'seoul', name:'Seoul', left:'26%', top:'23%', hoods:['Seogyo-dong', 'Seongsu-dong', 'Yeonnam-dong', 'Sajik-dong', 'Ukgajwa-dong'] },
+  { id:'busan', name:'Busan', left:'84%', top:'80%', hoods:['Haeundae', 'Gamcheon-dong'] },
+  { id:'gyeongju', name:'Gyeongju', left:'88%', top:'63%', hoods:[] },
+  { id:'gangneung', name:'Gangneung', left:'78%', top:'20%', hoods:[] }
+];
+const C = {};
+CITIES.forEach(c => { C[c.id] = c; });
+
+const PLACES = [
+  { id:'p4', title:'Hongdae Street Stage', city:'seoul', hood:'Seogyo-dong', region:'Seogyo-dong, Seoul', shots:'520', views:'6.1k views', topics:['bts','svt','riize'], x:'40%', y:'62%' },
+  { id:'p6', title:'Yeonnam Noodle House', city:'seoul', hood:'Yeonnam-dong', region:'Yeonnam-dong, Seoul', shots:'134', views:'1.7k views', topics:['svt'], x:'16%', y:'56%' },
+  { id:'p3', title:'Cafe Onion Seongsu', city:'seoul', hood:'Seongsu-dong', region:'Seongsu-dong, Seoul', shots:'190', views:'2.4k views', topics:['ive','aespa'], x:'74%', y:'28%' },
+  { id:'p5', title:'Gyeongbokgung Palace', city:'seoul', hood:'Sajik-dong', region:'Sajik-dong, Seoul', shots:'880', views:'12k views', topics:['queen','goblin'], x:'66%', y:'71%' },
+  { id:'p7', title:'7-Eleven Jongno Sajik Branch', city:'seoul', hood:'Sajik-dong', region:'Jongno-gu, Seoul', shots:'612', views:'18k views', topics:[], x:'50%', y:'20%' },
+  { id:'b1', title:'Gamcheon Culture Village', city:'busan', hood:'Gamcheon-dong', region:'Gamcheon-dong, Busan', shots:'305', views:'4.2k views', topics:['bts'], x:'30%', y:'44%' },
+  { id:'b2', title:'Haeundae Blueline Park', city:'busan', hood:'Haeundae', region:'Haeundae, Busan', shots:'271', views:'3.6k views', topics:['twinkling'], x:'62%', y:'36%' },
+  { id:'g1', title:'Hwangnidan-gil', city:'gyeongju', hood:null, region:'Gyeongju', shots:'146', views:'2.1k views', topics:['ive'], x:'44%', y:'40%' },
+  { id:'g2', title:'Bomun Lake Promenade', city:'gyeongju', hood:null, region:'Gyeongju', shots:'88', views:'1.2k views', topics:[], x:'64%', y:'58%' },
+  { id:'n1', title:'Jumunjin Bus Stop', city:'gangneung', hood:null, region:'Jumunjin, Gangneung', shots:'930', views:'22k views', topics:['bts','v'], x:'38%', y:'34%' },
+  { id:'n2', title:'Anmok Coffee Street', city:'gangneung', hood:null, region:'Anmok, Gangneung', shots:'204', views:'2.8k views', topics:['nctwish'], x:'58%', y:'62%' }
+];
+const P = {};
+PLACES.forEach(p => { P[p.id] = p; });
+const pIndex = id => PLACES.findIndex(x => x.id === id);
+
+const CATS = { p4:'attraction', p6:'eat', p3:'cafe', p5:'attraction', p7:'shop', b1:'attraction', b2:'bar', g1:'cafe', g2:'attraction', n1:'attraction', n2:'cafe' };
+const CAT_ICON = {
+  cafe: 'M6 8h9v5.4a4.5 4.5 0 01-9 0zM15 9.2h2.3a2.1 2.1 0 010 4.2H15M5 19.6h11',
+  eat: 'M7.4 4v16M5 4v4.2a2.4 2.4 0 004.8 0V4M16.6 4a3 3 0 013 3c0 2-1.2 2.8-1.2 4.2h-3.6C14.8 9.8 13.6 9 13.6 7a3 3 0 013-3zM16.6 11.2V20',
+  bar: 'M4.6 5h14.8L12 13zM12 13v6M8.6 19.4h6.8',
+  shop: 'M5.4 8h13.2l-1.3 12.2H6.7zM9.2 8V6.2a2.8 2.8 0 015.6 0V8',
+  attraction: 'M12 4l2.3 5.1 5.6.6-4.2 3.8 1.2 5.5L12 16.3l-4.9 2.7 1.2-5.5L4.1 9.7l5.6-.6z'
+};
+const catOf = id => CATS[id] || 'attraction';
+const CITY_LL = { seoul: [37.5665, 126.9780], busan: [35.1796, 129.0756], gyeongju: [35.8562, 129.2247], gangneung: [37.7519, 128.8761] };
+
+const AREA_SEED = [
+  { label:'Seoul · Mapo-gu', spots:4, topics:['bts','svt','riize'] },
+  { label:'Seoul · Seongdong-gu', spots:2, topics:['ive'] },
+  { label:'Busan · Haeundae', spots:1, topics:['twinkling'] },
+  { label:'Gyeongju', spots:1, topics:['ive'] },
+  { label:'Seoul · Jongno-gu', spots:3, topics:['queen','goblin'] },
+  { label:'Gangneung · Jumunjin', spots:2, topics:['bts','v'] },
+  { label:'Gangneung · Anmok', spots:1, topics:['nctwish'] },
+  { label:'Busan · Saha-gu', spots:2, topics:['bts'] },
+  { label:'Seoul · Yongsan-gu', spots:2, topics:['aespa'] },
+  { label:'Daejeon · Jung-gu', spots:1, topics:['nctwish'] },
+  { label:'Gwangju · Dong-gu', spots:1, topics:['riize'] },
+  { label:'Jeju · Jeju-si', spots:1, topics:['queen'] }
+];
+
+const POSTS = {
+  p4: {
+    badges: [tb('bts'), tb('svt'), tb('riize'), cb('Busking'), cb('Night')],
+    postTitle: 'The Hongdae busking corner where the crowd closes in',
+    context: 'The stretch of Hongdae Street where more than one debut story started as a Saturday busking set. Crowds form from about 7pm and the pavement closes to traffic on weekends. Fans still leave setlists taped to the wall behind the stage.',
+    gallery: 4,
+    source: { label:'THE SCENE', title:'Hongdae Street busking — archive clip', channel:'Seoul Street Sessions', pos:'2:38', moment:'The stage corner as the crowd closes in', g: grad('#4A3F7B', '#14102A', 160) },
+    address: '20 Hongik-ro, Seogyo-dong, Mapo-gu, Seoul',
+    comments: [{ u:'@hongdae_nights', t:'Get there by 6:30 if you want the front.', g: ph(0) }]
+  },
+  n1: {
+    badges: [tb('bts'), tb('v'), lb('MV'), cb('Coast')],
+    postTitle: 'The bus stop from the Spring Day visuals',
+    context: 'A single shelter on the seawall at Jumunjin, facing the water. The bus that stops here is a working local route, so the queue is real people going home. Morning light puts the sea behind the shelter; by late afternoon the glare comes straight at the camera.',
+    gallery: 5,
+    source: { label:'THE SCENE', title:'BTS — Spring Day, seawall sequence', channel:'HYBE LABELS', pos:'1:12', moment:'The wait at the shelter before the bus pulls in', g: grad('#3F7A9B', '#0E2634', 160) },
+    address: 'Jumunjin-eup, Gangneung, Gangwon-do — Hyanghori seawall',
+    comments: [
+      { u:'@springday.kr', t:'Wind is brutal in winter. Bring a coat you can move in.', g: ph(2) },
+      { u:'@gangneung_walks', t:'Bus 315 actually stops. Do not block the door.', g: ph(4) }
+    ]
+  },
+  p3: {
+    badges: [tb('ive'), tb('aespa'), lb('SNS'), cb('Cafe')],
+    postTitle: 'The window seat from the winter reel',
+    context: 'A former metal foundry turned bakery. The bench on the right of the main hall is the one from the reel; raw concrete keeps the light flat and even all afternoon. Pastries sell out by 3pm at weekends.',
+    gallery: 4,
+    source: { label:'WHERE IT WENT VIRAL', title:'Winter behind-the-scenes reel', channel:'Instagram · 2.4M views', pos:'0:14', moment:'The window seat in the main hall', g: grad('#D9628A', '#3A1226', 160) },
+    address: '8 Achasan-ro 9-gil, Seongdong-gu, Seoul',
+    comments: [{ u:'@frames.by.jo', t:'Queue moves fast but the bench fills up first.', g: ph(3) }]
+  },
+  p5: {
+    badges: [tb('queen'), tb('goblin'), lb('TV'), cb('Palace')],
+    postTitle: 'The palace gate from the hanbok scenes',
+    context: 'The Gwanghwamun approach and the inner courtyard used for the hanbok scenes, and earlier for winter sequences. Hanbok rental gets you in free, which is why the courtyard fills with fans in costume by mid-morning. Go at opening for an empty frame.',
+    gallery: 4,
+    source: { label:'FROM THE SHOW', title:'Queen of Tears Ep.9', channel:'tvN · streaming clip', pos:'12:40', moment:'The walk through the palace gate', g: grad('#7B6A4A', '#241C10', 160) },
+    address: '161 Sajik-ro, Jongno-gu, Seoul',
+    comments: [{ u:'@seoul_dawn', t:'Opening is 9:00 — empty for maybe 20 minutes.', g: ph(5) }]
+  },
+  p7: {
+    badges: [lb('Photo Spot'), cb('K-CVS')],
+    postTitle: 'The convenience store that frames N Seoul Tower',
+    context: 'A working 7-Eleven whose roofline frames N Seoul Tower almost exactly, which is why there is usually a small queue on the opposite pavement. No artist connection — it became a landmark purely through photos. The uphill walk from Gyeongbokgung Station takes about eight minutes.',
+    gallery: 3,
+    source: { label:'WHERE IT WENT VIRAL', title:'“Seoul’s Lawson” — 7-Eleven Sajik', channel:'Instagram · 1.2M views', pos:'0:06', moment:'The pan up to the tower over the store sign', g: grad('#D9628A', '#3A1226', 160) },
+    address: '1-2 Sajik-ro 9-gil, Jongno-gu, Seoul',
+    comments: [{ u:'@sajik_local', t:'Buy a drink — it is a real shop, not a set.', g: ph(1) }]
+  },
+  b1: {
+    badges: [tb('bts'), lb('SNS'), cb('Village')],
+    postTitle: 'The blue stairway above the harbour',
+    context: 'A hillside of painted houses stacked over Busan harbour. The stairway used in the photo set is two turns above the main観 viewpoint, past the bookshop. It is a residential lane — voices carry.',
+    gallery: 3,
+    source: { label:'WHERE IT WENT VIRAL', title:'Summer photo set — Gamcheon', channel:'Weverse · post', pos:'0:22', moment:'The turn where the harbour opens up', g: grad('#4A7B9B', '#12263A', 160) },
+    address: '203 Gamnae 2-ro, Saha-gu, Busan',
+    comments: [{ u:'@busan_steps', t:'Quiet hours from 6pm. Locals live here.', g: ph(6) }]
+  }
+};
+const fallbackPost = id => ({
+  badges: (P[id].topics.length ? P[id].topics.map(tb) : [lb('Photo Spot')]).concat([cb('Filming Location')]),
+  postTitle: 'Editor’s note in progress',
+  context: 'This spot is curated but the long write-up is not published yet. The gallery, source clip and location are live; the context paragraph is what an editor adds last.',
+  gallery: 3,
+  source: { label:'THE SCENE', title:'Source clip pending', channel:'To be linked', pos:'0:00', moment:'Timestamp not set yet', g: grad('#6E6A7B', '#20202E', 160) },
+  address: P[id].region,
+  comments: []
+});
+
+const KTO = {
+  seoul: {
+    attractions: [
+      { name:'Gyeongbokgung Palace', meta:'Palace · 0.6 km' },
+      { name:'Inwangsan Trail', meta:'Hiking · 0.9 km' },
+      { name:'Tongin Market', meta:'Market · 0.5 km' },
+      { name:'Seoul City Wall', meta:'Heritage · 1.2 km' }
+    ],
+    festivals: [
+      { name:'Seoul Street Arts Festival', meta:'Oct 3 – Oct 6' },
+      { name:'Hangang Autumn Night', meta:'Sep 20 – Sep 22' },
+      { name:'Seongsu Craft Week', meta:'Sep 12 – Sep 18' }
+    ]
+  },
+  busan: {
+    attractions: [
+      { name:'Taejongdae Park', meta:'Coast · 6.4 km' },
+      { name:'Jagalchi Market', meta:'Market · 1.8 km' },
+      { name:'Songdo Skywalk', meta:'Coast · 2.2 km' }
+    ],
+    festivals: [
+      { name:'Busan Sea Festival', meta:'Aug 1 – Aug 5' },
+      { name:'Gamcheon Alley Festival', meta:'Oct 10 – Oct 12' }
+    ]
+  },
+  gyeongju: {
+    attractions: [
+      { name:'Bulguksa Temple', meta:'Heritage · 8.1 km' },
+      { name:'Cheomseongdae', meta:'Heritage · 1.1 km' },
+      { name:'Woljeonggyo Bridge', meta:'Heritage · 1.6 km' },
+      { name:'Gyeongju National Museum', meta:'Museum · 2.3 km' }
+    ],
+    festivals: [
+      { name:'Silla Cultural Festival', meta:'Oct 5 – Oct 9' },
+      { name:'Cherry Blossom Marathon', meta:'Apr 4 – Apr 5' }
+    ]
+  },
+  gangneung: {
+    attractions: [
+      { name:'Ojukheon House', meta:'Heritage · 3.4 km' },
+      { name:'Gyeongpo Beach', meta:'Coast · 2.0 km' },
+      { name:'Jumunjin Fish Market', meta:'Market · 0.8 km' }
+    ],
+    festivals: [
+      { name:'Gangneung Danoje Festival', meta:'Jun 6 – Jun 13' },
+      { name:'Coffee Festival', meta:'Oct 17 – Oct 20' }
+    ]
+  }
+};
+const NEARBY_SUGGEST = {
+  seoul: [
+    { name:'Tongin Market', note:'8 min walk from your last stop' },
+    { name:'Seoul City Wall', note:'12 min walk, ends near your Day 1 finish' },
+    { name:'Inwangsan Trail', note:'One bus stop from Gyeongbokgung' }
+  ],
+  busan: [
+    { name:'Jagalchi Market', note:'10 min by bus from Gamcheon' },
+    { name:'Songdo Skywalk', note:'Same coast road, 14 min' }
+  ],
+  gyeongju: [
+    { name:'Cheomseongdae', note:'6 min walk from Hwangnidan-gil' },
+    { name:'Woljeonggyo Bridge', note:'Riverside, 11 min on foot' }
+  ],
+  gangneung: [
+    { name:'Jumunjin Fish Market', note:'5 min walk from the bus stop' },
+    { name:'Gyeongpo Beach', note:'20 min by bus, good last stop' }
+  ]
+};
+
+const st = id => ({ id: id, title: P[id].title, region: P[id].region, kto: false });
+const kt = (name, city) => ({ id: 'kto-' + name, title: name, region: C[city].name + ' · tourism data', kto: true });
+
+const JOURNEY_SEED = [
+  { id:'j1', title:'Hongdae to Seongsu in one day', author:'@mina_travels', g: grad('#C24BE8','#3B0B4E',150), copies:128, public:true, mine:false, city:'seoul', days:[[st('p4'), st('p6')], [st('p3'), st('p5')]] },
+  { id:'j2', title:'Gangneung coast, two mornings', author:'@wishwalker', g: grad('#3FD0C4','#0C3A44',150), copies:64, public:true, mine:false, city:'gangneung', days:[[st('n1'), st('n2')], [st('n1')]] },
+  { id:'j3', title:'Gyeongju slow weekend', author:'@seoul_dawn', g: grad('#8C6BD6','#221238',150), copies:212, public:true, mine:false, city:'gyeongju', days:[[st('g1'), st('g2')], []] },
+  { id:'j4', title:'BTS Seoul day', author:'@armyroutes', g: grad('#7B4FE8','#1B0E38',150), copies:1840, public:true, mine:false, city:'seoul', days:[[st('p4'), st('p5')], [st('p7'), st('p3')]] },
+  { id:'j5', title:'Seongsu cafe loop', author:'@recree_min', g: grad('#C9A88F','#4A3528',150), copies:0, public:false, mine:true, city:'seoul', days:[[st('p3'), st('p6')]] }
+];
+
+const ROUTE_XY = [[16,68],[34,40],[52,58],[68,30],[82,62],[46,78],[24,50],[72,74]];
+const fmt = n => n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n);
+const plural = (n, one, many) => n + ' ' + (n === 1 ? one : many);
+function metaOf(days) {
+  const n = days.reduce((a, d) => a + d.length, 0);
+  const km = (n * 1.1).toFixed(1);
+  const hrs = Math.max(1, Math.round(n * 0.7));
+  return { count: n, km: km + ' km', hrs: hrs + ' h', line: days.length + (days.length === 1 ? ' day · ' : ' days · ') + n + ' places · ' + km + 'km' };
+}
+
+class Component extends DCLogic {
+  state = {
+    tab: 'home',
+    homeChip: 'hot',
+    followed: ['bts', 'svt', 'nctwish'],
+    loggedIn: false,
+    loading: false,
+    ktoFail: false,
+    myMap: 'sparse',
+    journeysEmpty: false,
+    savedEmpty: false,
+    shotsEmpty: false,
+    showSearch: false,
+    showFollow: false,
+    showStates: false,
+    query: '',
+    zl: 1,
+    areaFilter: null,
+    areasAll: false,
+    city: 'seoul',
+    hood: null,
+    selected: null,
+    sheet: 1,
+    mapSearching: false,
+    mapQuery: '',
+    journeys: JOURNEY_SEED.map(j => Object.assign({}, j)),
+    journeyList: false,
+    journeyView: null,
+    journeyDay: 0,
+    editor: null,
+    editorDay: 0,
+    addOpen: false,
+    addTab: 'search',
+    addQuery: '',
+    profileTab: 'shots',
+    postView: null,
+    postGal: 1,
+    postLiked: false,
+    postSaved: true,
+    savedPlaces: ['p4','p3','n1','p5'],
+    login: null,
+    confirm: null,
+    toast: null,
+    saving: false,
+    dragRow: null,
+    copied: null
+  };
+
+  componentDidMount() { this.paintMaps(); }
+  componentDidUpdate() { this.paintMaps(); }
+  componentWillUnmount() { if (this.timer) clearTimeout(this.timer); }
+
+  toast(text, spin) {
+    if (this.timer) clearTimeout(this.timer);
+    this.setState({ toast: { text: text, spin: !!spin } });
+    if (!spin) this.timer = setTimeout(() => this.setState({ toast: null }), 1900);
+  }
+
+  paintMaps(tries) {
+    tries = tries || 0;
+    if (!window.ReCreeKoreaMap || !window.d3 || !window.topojson) {
+      if (tries < 60) setTimeout(() => this.paintMaps(tries + 1), 100);
+      return;
+    }
+    const self = this;
+    document.querySelectorAll('[data-korea]').forEach(el => {
+      if (!el.clientWidth || !el.clientHeight) return;
+      const sig = el.getAttribute('data-korea') + ':' + el.clientWidth + 'x' + el.clientHeight;
+      if (el.dataset.painted === sig) return;
+      el.dataset.painted = sig;
+      if (el.getAttribute('data-korea-mode') === 'explore') {
+        window.ReCreeKoreaMap.render(el, { landFill: '#DCD9D1', blur: 0.036, pad: 20, blooms: self.exploreBlooms() });
+      } else {
+        window.ReCreeKoreaMap.render(el, self.myMapOpts());
+      }
+    });
+  }
+
+  exploreBlooms() {
+    const out = [];
+    CITIES.forEach(c => {
+      const places = PLACES.filter(p => p.city === c.id);
+      const cols = [];
+      places.forEach(p => p.topics.forEach(id => { if (cols.indexOf(T[id].color) < 0) cols.push(T[id].color); }));
+      if (!cols.length) cols.push('#9C9A94');
+      const here = c.id === this.state.city;
+      const ll = CITY_LL[c.id];
+      cols.slice(0, 4).forEach((col, i) => {
+        const a = (i / Math.max(1, cols.length)) * Math.PI * 2;
+        out.push({
+          lat: ll[0] + Math.sin(a) * 0.16, lng: ll[1] + Math.cos(a) * 0.2,
+          color: col, opacity: here ? 0.9 : 0.62,
+          r: (0.07 + Math.min(places.length, 5) * 0.012) * (here ? 1.2 : 1)
+        });
+      });
+    });
+    return out;
+  }
+
+  myMapOpts() {
+    const mode = this.state.myMap;
+    if (mode === 'empty') return { mode: 'empty', landFill: '#181524', hatch: '#241F33', pad: 26, blooms: [] };
+    const patch = (lat, lng, color, r) => ({ lat: lat, lng: lng, color: color, r: r, opacity: 1 });
+    const sparse = [
+      patch(37.5665, 126.9780, T.bts.color, 0.13),
+      patch(37.7519, 128.8761, T.v.color, 0.10),
+      patch(35.8562, 129.2247, T.ive.color, 0.09)
+    ];
+    const rich = sparse.concat([
+      patch(35.1796, 129.0756, T.twinkling.color, 0.12),
+      patch(37.5445, 127.0557, T.aespa.color, 0.09),
+      patch(35.2285, 128.6811, T.svt.color, 0.10),
+      patch(36.3504, 127.3845, T.nctwish.color, 0.11),
+      patch(35.1595, 126.8526, T.riize.color, 0.10),
+      patch(33.4996, 126.5312, T.queen.color, 0.09)
+    ]);
+    return { landFill: '#181524', blur: 0.012, pad: 26, blooms: mode === 'rich' ? rich : sparse };
+  }
+
+  // ---- guards ----
+  requireLogin(reason, then) {
+    if (this.state.loggedIn) { then(); return; }
+    this.setState({ login: reason });
+  }
+
+  // ---- cards ----
+  card(kind, o) {
+    return Object.assign({
+      isPlace: kind === 'place', isJourney: kind === 'journey', isEvent: kind === 'event',
+      isBanner: kind === 'banner', isHood: kind === 'hood', isTopic: kind === 'topic'
+    }, o);
+  }
+
+  placeCards(list, offset) {
+    return list.map((p, i) => this.card('place', {
+      title: p.title, region: p.region, shots: p.shots, views: p.views,
+      badges: badges(p.topics).slice(0, 2), g: ph(pIndex(p.id) + (offset || 0)),
+      tap: () => this.openPost(p.id)
+    }));
+  }
+
+  journeyCards(ids) {
+    return ids.map(id => {
+      const j = this.state.journeys.find(x => x.id === id) || this.state.journeys[0];
+      const m = metaOf(j.days);
+      return this.card('journey', {
+        title: j.title, author: j.author, meta: m.line, g: j.g,
+        badge: j.days.length + 'D',
+        tap: () => this.openJourney(j.id)
+      });
+    });
+  }
+
+  // ---- navigation ----
+  goHome = () => this.setState({ tab: 'home', showSearch: false, showFollow: false });
+  goMap = () => this.setState({ tab: 'map', showSearch: false, showFollow: false });
+  goProfile = () => this.setState({ tab: 'profile', showSearch: false, showFollow: false });
+  goShop = () => this.toast('Shop is out of scope for this prototype');
+  addShot = () => this.requireLogin('shot', () => this.toast('Camera capture is out of scope'));
+
+  openPost = id => this.setState({ postView: id, postGal: 1, postLiked: false, selected: null });
+  closePost = () => this.setState({ postView: null });
+
+  openJourneyList = () => this.setState({ journeyList: true, journeyView: null });
+  closeJourneyList = () => this.setState({ journeyList: false });
+  openJourney = id => this.setState({ journeyView: id, journeyDay: 0 });
+  closeJourney = () => this.setState({ journeyView: null });
+
+  newJourney = (seed, title, city) => this.requireLogin('journey', () => this.setState({
+    editor: { id: null, title: title || '', days: seed || [[]], public: false, city: city || this.state.city, g: null },
+    editorDay: 0, journeyView: null, journeyList: false, copied: null, addOpen: false
+  }));
+
+  copyJourney = id => this.requireLogin('copy', () => {
+    const j = this.state.journeys.find(x => x.id === id);
+    this.setState(s => ({
+      journeys: s.journeys.map(x => x.id === id ? Object.assign({}, x, { copies: x.copies + 1 }) : x),
+      journeyView: null, journeyList: false,
+      editor: { id: null, title: j.title, days: j.days.map(d => d.slice()), public: false, city: j.city, g: j.g },
+      editorDay: 0, copied: j.author
+    }));
+    this.toast('Copied into your journeys');
+  });
+
+  // ---- editor ----
+  addDay = () => this.setState(s => ({ editor: Object.assign({}, s.editor, { days: s.editor.days.concat([[]]) }) }));
+  removeDay = i => this.setState({ confirm: { kind: 'day', i: i } });
+  removeStop = (d, i) => this.setState({ confirm: { kind: 'stop', d: d, i: i } });
+  removeJourney = id => this.setState({ confirm: { kind: 'journey', id: id } });
+
+  addStop = (stop, dayIndex) => this.setState(s => {
+    const days = s.editor.days.map(d => d.slice());
+    const d = dayIndex == null ? s.editorDay : dayIndex;
+    if (days[d].some(x => x.id === stop.id)) return { toast: { text: 'Already in this day', spin: false } };
+    days[d].push(stop);
+    return { editor: Object.assign({}, s.editor, { days: days }), toast: { text: 'Added to Day ' + (d + 1), spin: false } };
+  }, () => { if (this.timer) clearTimeout(this.timer); this.timer = setTimeout(() => this.setState({ toast: null }), 1600); });
+
+  onRowGrab = (d, i, e) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    this.rowDrag = { d: d, i: i, y: e.clientY };
+    this.setState({ dragRow: d + ':' + i });
+  };
+  onRowMove = e => {
+    const g = this.rowDrag;
+    if (!g) return;
+    const step = Math.round((e.clientY - g.y) / 74);
+    if (!step) return;
+    const list = this.state.editor.days[g.d];
+    const to = Math.max(0, Math.min(list.length - 1, g.i + step));
+    if (to === g.i) return;
+    const from = g.i;
+    g.y += (to - from) * 74;
+    g.i = to;
+    this.setState(s => {
+      const days = s.editor.days.map(x => x.slice());
+      const item = days[g.d].splice(from, 1)[0];
+      days[g.d].splice(to, 0, item);
+      return { editor: Object.assign({}, s.editor, { days: days }), dragRow: g.d + ':' + to };
+    });
+  };
+  onRowUp = () => { this.rowDrag = null; this.setState({ dragRow: null }); };
+
+  saveJourney = () => {
+    const e = this.state.editor;
+    if (!e || this.state.saving) return;
+    this.setState({ saving: true, toast: { text: 'Saving…', spin: true } });
+    setTimeout(() => {
+      const id = e.id || ('mine' + Date.now());
+      const rec = {
+        id: id, title: e.title || 'Untitled journey', author: '@recree_min',
+        g: e.g || grad('#C24BE8', '#3B0B4E', 150), copies: 0, public: e.public, mine: true,
+        city: e.city, days: e.days
+      };
+      this.setState(s => ({
+        journeys: s.journeys.some(j => j.id === id) ? s.journeys.map(j => j.id === id ? rec : j) : s.journeys.concat([rec]),
+        editor: null, addOpen: false, saving: false, copied: null, journeysEmpty: false,
+        tab: 'profile', profileTab: 'journeys', toast: { text: 'Saved · ' + (e.public ? 'Public' : 'Private'), spin: false }
+      }));
+      if (this.timer) clearTimeout(this.timer);
+      this.timer = setTimeout(() => this.setState({ toast: null }), 1900);
+    }, 900);
+  };
+
+  acceptConfirm = () => {
+    const c = this.state.confirm;
+    if (!c) return;
+    if (c.kind === 'day') {
+      this.setState(s => ({
+        editor: Object.assign({}, s.editor, { days: s.editor.days.filter((d, i) => i !== c.i) }),
+        confirm: null, editorDay: 0
+      }));
+      this.toast('Day deleted');
+    } else if (c.kind === 'stop') {
+      this.setState(s => ({
+        editor: Object.assign({}, s.editor, { days: s.editor.days.map((d, i) => i === c.d ? d.filter((x, j) => j !== c.i) : d) }),
+        confirm: null
+      }));
+    } else {
+      this.setState(s => ({
+        journeys: s.journeys.filter(j => j.id !== c.id), confirm: null, journeyView: null
+      }));
+      this.toast('Journey deleted');
+    }
+  };
+
+  // ---- sheet ----
+  sheetHeight() {
+    const s = this.state;
+    if (s.selected) return 434;
+    return [300, 300, 560, 780][s.sheet] || 300;
+  }
+  cycleSheet = () => this.setState(s => ({ sheet: s.sheet >= 3 ? 1 : s.sheet + 1 }));
+
+  ktoState(kind) {
+    if (this.state.ktoFail) return 'failed';
+    if (this.state.loading) return 'loading';
+    return kind || 'list';
+  }
+
+  ktoItems(city, key, offset) {
+    return (KTO[city][key] || []).map((x, i) => ({ name: x.name, meta: x.meta, g: kph(i + (offset || 0)) }));
+  }
+
+  renderVals() {
+    const s = this.state;
+    const city = C[s.city];
+    const overlay = s.showSearch || s.showFollow || s.showStates || !!s.journeyView || !!s.editor || !!s.postView || s.journeyList;
+    const cityPlaces = PLACES.filter(p => p.city === s.city);
+    const hoodPlaces = s.hood ? cityPlaces.filter(p => p.hood === s.hood) : cityPlaces;
+    const isHoodSheet = !!s.hood && city.hoods.length > 0;
+    const areaEmpty = isHoodSheet && hoodPlaces.length === 0;
+    const areaList = s.myMap === 'empty' ? [] : (s.myMap === 'rich' ? AREA_SEED : AREA_SEED.slice(0, 4));
+    const areaShown = s.areasAll ? areaList : areaList.slice(0, 5);
+
+    const editorDays = s.editor ? s.editor.days : [];
+    const journey = (() => {
+      const j = s.journeys.find(x => x.id === s.journeyView) || s.journeys[0];
+      const day = Math.min(s.journeyDay, Math.max(0, j.days.length - 1));
+      const stops = j.days[day] || [];
+      const m = metaOf(j.days);
+      return {
+        mine: j.mine, canCopy: !j.mine, g: j.g, title: j.title, author: 'by ' + j.author,
+        badge: j.public ? 'Public' : 'Private',
+        dayCount: j.days.length + (j.days.length === 1 ? ' day' : ' days'),
+        places: String(m.count), km: m.km, dur: m.hrs,
+        dayLabel: 'Day ' + (day + 1),
+        dayEmpty: stops.length === 0,
+        dayTabs: j.days.map((d, i) => ({
+          label: 'Day ' + (i + 1), bg: i === day ? '#111' : '#F4F4F1', fg: i === day ? '#fff' : '#3B3B38',
+          tap: () => this.setState({ journeyDay: i })
+        })),
+        items: stops.map((x, i) => ({
+          n: String(i + 1), title: x.title, region: x.region, g: x.kto ? kph(i) : ph(pIndex(x.id)),
+          tag: x.kto ? 'Tourism data' : 'reCree spot',
+          tagBg: x.kto ? '#F2F1EC' : '#F4FFD0', tagFg: x.kto ? '#8E8E8B' : '#4A5E06',
+          tap: () => { if (!x.kto) this.openPost(x.id); }
+        })),
+        route: stops.map((x, i) => ({ n: String(i + 1), left: ROUTE_XY[i % 8][0] + '%', top: ROUTE_XY[i % 8][1] + '%' })),
+        routePath: stops.map((x, i) => ROUTE_XY[i % 8][0] + ',' + ROUTE_XY[i % 8][1]).join(' '),
+        copy: () => this.copyJourney(j.id),
+        edit: () => this.setState({ editor: { id: j.id, title: j.title, days: j.days.map(d => d.slice()), public: j.public, city: j.city, g: j.g }, editorDay: 0, journeyView: null, copied: null }),
+        remove: () => this.removeJourney(j.id)
+      };
+    })();
+
+    const searchHits = s.query
+      ? PLACES.filter(p => (p.title + ' ' + p.region + ' ' + p.topics.map(t => T[t].name).join(' ')).toLowerCase().indexOf(s.query.toLowerCase()) >= 0)
+      : [];
+    const searchJourneys = s.query
+      ? s.journeys.filter(j => j.title.toLowerCase().indexOf(s.query.toLowerCase()) >= 0)
+      : [];
+
+    const addTargetDay = s.editorDay;
+    let addList = [];
+    let addEmptyTitle = '';
+    let addEmptyBody = '';
+    if (s.addTab === 'search') {
+      addList = (s.addQuery ? PLACES.filter(p => (p.title + ' ' + p.region).toLowerCase().indexOf(s.addQuery.toLowerCase()) >= 0) : PLACES).map(p => st(p.id));
+      addEmptyTitle = 'No places match “' + s.addQuery + '”';
+      addEmptyBody = 'Only curated spots are searchable here. Tourism data lives in the third tab.';
+    } else if (s.addTab === 'saved') {
+      addList = (s.savedEmpty ? [] : s.savedPlaces).map(id => st(id));
+      addEmptyTitle = 'No saved places';
+      addEmptyBody = 'Bookmark a spot from any post and it appears here.';
+    } else {
+      addList = s.ktoFail ? [] : (KTO[s.editor ? s.editor.city : s.city].attractions || []).map(a => Object.assign(kt(a.name, s.editor ? s.editor.city : s.city), { meta: a.meta }));
+      addEmptyTitle = s.ktoFail ? 'Tourism data unavailable' : 'Nothing listed nearby';
+      addEmptyBody = s.ktoFail ? 'The tourism feed failed. Search and saved places still work.' : 'No attractions returned for this city.';
+    }
+    const inDay = id => !!(s.editor && (s.editor.days[addTargetDay] || []).some(x => x.id === id));
+
+    const stateRow = (label, path, fn) => ({ label: label, path: path, tap: () => { this.setState({ showStates: false }); fn(); } });
+
+    return {
+      showPanel: this.props.showPanel !== false,
+      statusColor: (s.tab === 'profile' && !overlay) || !!s.postView || !!s.journeyView ? '#fff' : '#111',
+      loading: s.loading,
+
+      panelToggles: [
+        { key: 'loggedIn', label: 'Logged in' },
+        { key: 'loading', label: 'Loading (skeletons)' },
+        { key: 'ktoFail', label: 'Tourism data fails' },
+        { key: 'journeysEmpty', label: 'No journeys' },
+        { key: 'savedEmpty', label: 'No saved places' },
+        { key: 'shotsEmpty', label: 'No recreeshots' }
+      ].map(t => {
+        const on = !!s[t.key];
+        return {
+          label: t.label, bg: on ? '#F7FFE0' : '#fff', bd: on ? LIME : '#EDECE6',
+          knobBg: on ? '#111' : '#E2E2DC', knobX: on ? '16px' : '2px',
+          tap: () => this.setState(prev => { const o = {}; o[t.key] = !prev[t.key]; return o; })
+        };
+      }),
+      panelMapModes: ['empty', 'sparse', 'rich'].map(m => ({
+        label: m === 'empty' ? '0' : (m === 'sparse' ? '3' : 'many'),
+        bg: s.myMap === m ? '#111' : '#F4F4F1', fg: s.myMap === m ? '#fff' : '#3B3B38',
+        tap: () => this.setState({
+          myMap: m, tab: 'profile', profileTab: 'shots', shotsEmpty: m === 'empty',
+          editor: null, postView: null, journeyView: null, journeyList: false,
+          showStates: false, showSearch: false, showFollow: false, addOpen: false, confirm: null, login: null
+        })
+      })),
+      openStates: () => this.setState({ showStates: true }),
+      closeStates: () => this.setState({ showStates: false }),
+      showStates: s.showStates,
+      stateGroups: [
+        { label: 'LOADING', rows: [
+          stateRow('Home — skeleton', 'Home · first load', () => this.setState({ loading: true, tab: 'home' })),
+          stateRow('Post detail — skeleton', 'Post · first load', () => this.setState({ loading: true, postView: 'n1' })),
+          stateRow('Journeys list — skeleton', 'Journeys · first load', () => this.setState({ loading: true, journeyList: true }))
+        ] },
+        { label: 'EMPTY', rows: [
+          stateRow('No journeys', 'Profile › Journeys', () => this.setState({ journeysEmpty: true, tab: 'profile', profileTab: 'journeys', loading: false })),
+          stateRow('No saved places', 'Profile › Saved', () => this.setState({ savedEmpty: true, tab: 'profile', profileTab: 'saved', loading: false })),
+          stateRow('No recreeshots', 'Profile › recreeshots', () => this.setState({ shotsEmpty: true, myMap: 'empty', tab: 'profile', profileTab: 'shots', loading: false })),
+          stateRow('Neighbourhood with no places', 'Map › Ukgajwa-dong', () => this.setState({ tab: 'map', city: 'seoul', zl: 2, hood: 'Ukgajwa-dong', selected: null, sheet: 2, loading: false })),
+          stateRow('Search — no results', 'Home › Search', () => this.setState({ showSearch: true, query: 'blackpink', loading: false })),
+          stateRow('City with no neighbourhoods', 'Map › Gyeongju zoomed in', () => this.setState({ tab: 'map', city: 'gyeongju', zl: 2, hood: null, selected: null, sheet: 2, loading: false }))
+        ] },
+        { label: 'ERROR', rows: [
+          stateRow('Tourism section fails — post', 'Post › Nearby Attractions', () => this.setState({ ktoFail: true, loading: false, postView: 'n1' })),
+          stateRow('Tourism section fails — city sheet', 'Map › Seoul', () => this.setState({ ktoFail: true, loading: false, tab: 'map', city: 'seoul', zl: 1, hood: null, selected: null, sheet: 2 }))
+        ] },
+        { label: 'JOURNEY FLOW', rows: [
+          stateRow('Copy just happened', 'Journey › Make it mine › editor', () => { this.setState({ loggedIn: true, loading: false }); setTimeout(() => this.copyJourney('j1'), 30); }),
+          stateRow('Empty day in an editor', 'Editor · Day 2 empty', () => this.setState({ loggedIn: true, loading: false, editor: { id: null, title: 'Gyeongju slow weekend', days: [[st('g1'), st('g2')], []], public: false, city: 'gyeongju', g: null }, editorDay: 0 })),
+          stateRow('Delete confirm — day', 'Editor › Delete day', () => this.setState({ loggedIn: true, loading: false, editor: { id: null, title: 'Seongsu cafe loop', days: [[st('p3'), st('p6')], []], public: false, city: 'seoul', g: null }, confirm: { kind: 'day', i: 1 } })),
+          stateRow('Saving in progress', 'Editor › Save', () => { this.setState({ loggedIn: true, loading: false, editor: { id: null, title: 'Seongsu cafe loop', days: [[st('p3'), st('p6')]], public: true, city: 'seoul', g: null } }); setTimeout(() => this.saveJourney(), 40); }),
+          stateRow('Add places — nothing found', 'Editor › Add places', () => this.setState({ loggedIn: true, loading: false, editor: { id: null, title: 'New journey', days: [[]], public: false, city: 'seoul', g: null }, addOpen: true, addTab: 'search', addQuery: 'zzz' }))
+        ] },
+        { label: 'LOGIN REQUIRED', rows: [
+          stateRow('Create a journey', 'Profile › Create a journey', () => this.setState({ loggedIn: false, loading: false, tab: 'profile', profileTab: 'journeys', login: 'journey' })),
+          stateRow('Post a recreeshot', 'Post › Add recreeshot', () => this.setState({ loggedIn: false, loading: false, postView: 'n1', login: 'shot' })),
+          stateRow('Save a place', 'Post › Bookmark', () => this.setState({ loggedIn: false, loading: false, postView: 'p3', login: 'save' }))
+        ] }
+      ],
+
+      // ---- home ----
+      isHome: s.tab === 'home' && !overlay,
+      homeReady: !s.loading,
+      homeChips: [{ id: 'hot', label: 'Hot' }].concat(s.followed.map(id => ({ id: id, label: T[id].name }))).map(c => ({
+        label: c.label, bg: s.homeChip === c.id ? LIME : '#fff', bd: s.homeChip === c.id ? LIME : '#E4E4DF',
+        tap: () => this.setState({ homeChip: c.id })
+      })),
+      homeSections: s.homeChip === 'hot' ? [
+        { title: 'Recently added spots', note: '', cards: this.placeCards([P.n1, P.p7, P.p3, P.b1], 0) },
+        { title: 'Fresh picks', note: '', cards: [
+          this.card('banner', { title: 'BTS spots,\nfour cities', g: grad('#7B4FE8', '#1B0E38', 160), tap: () => this.setState({ homeChip: 'bts' }) }),
+          this.card('banner', { title: 'Autumn in\nGyeongju', g: grad('#D98F4A', '#3A1F10', 160), tap: () => this.setState({ tab: 'map', city: 'gyeongju', zl: 1, hood: null, selected: null }) }),
+          this.card('banner', { title: 'Drama sets\nof Seoul', g: grad('#4EA8FF', '#0C2340', 160), tap: () => this.setState({ homeChip: 'queen' }) })
+        ] },
+        { title: 'Journeys', note: 'multi-day plans by fans', cards: this.journeyCards(['j4', 'j1', 'j2', 'j3']) },
+        { title: 'Most recreated', note: '', cards: this.placeCards([P.p5, P.p4, P.n2], 2) }
+      ] : (() => {
+        const t = T[s.homeChip];
+        const list = PLACES.filter(p => p.topics.indexOf(s.homeChip) >= 0);
+        return [
+          { title: t.name + ' spots', note: list.length + ' curated', cards: this.placeCards(list.length ? list : PLACES.slice(0, 3), 0) },
+          { title: t.name + ' journeys', note: '', cards: this.journeyCards(['j4', 'j1']) },
+          { title: 'Followed topics', note: '', cards: s.followed.map(id => this.card('topic', {
+            title: T[id].name, meta: T[id].followers, color: T[id].color, g: grad(T[id].color, '#1E1A33'),
+            tap: () => this.setState({ homeChip: id })
+          })) }
+        ];
+      })(),
+      openSearch: () => this.setState({ showSearch: true, query: '' }),
+
+      // ---- map ----
+      isMap: s.tab === 'map' && !overlay,
+      nationalView: s.zl === 1,
+      localView: s.zl >= 2,
+      nationalKey: 'explore-' + s.city,
+      localScale: s.zl >= 3 ? 1.24 : 1,
+      cityName: city.name,
+      hoodLabels: city.hoods.slice(0, 5).map((h, i) => ({
+        label: h.toUpperCase(), left: ['6%', '56%', '8%', '62%', '14%'][i], top: ['20%', '17%', '52%', '56%', '74%'][i]
+      })),
+      pins: hoodPlaces.map(p => {
+        const cols = p.topics.length ? p.topics.map(id => T[id].color) : ['#B4B2AC', '#7E7E79'];
+        const isSel = s.selected === p.id;
+        const small = !!s.selected && !isSel;
+        const photo = isSel || (s.zl >= 3 && !s.selected);
+        return {
+          left: p.x, top: p.y, z: isSel ? 12 : 5,
+          isPhoto: photo, isTeardrop: !photo,
+          dropSize: (small ? 27 : 36) + 'px',
+          iconSize: (small ? 12 : 15) + 'px',
+          iconPath: CAT_ICON[catOf(p.id)],
+          size: (isSel ? 74 : 56) + 'px',
+          color: cols[0],
+          ring: cols.length > 1 ? 'linear-gradient(135deg, ' + cols.join(', ') + ')' : cols[0],
+          label: p.topics.length ? T[p.topics[0]].name + (p.topics.length > 1 ? ' +' + (p.topics.length - 1) : '') : 'Photo spot',
+          g: ph(pIndex(p.id)),
+          tap: () => this.setState({ selected: p.id, sheet: 1 })
+        };
+      }),
+      cityChips: CITIES.map(c => ({
+        label: c.name, bg: c.id === s.city ? LIME : '#fff', fg: '#111',
+        tap: () => this.setState(prev => ({
+          city: c.id, selected: null, sheet: 2,
+          hood: prev.zl >= 2 && C[c.id].hoods.length ? C[c.id].hoods[0] : null
+        }))
+      })),
+      zoomIn: () => this.setState(prev => {
+        if (prev.zl >= 3) return {};
+        const cc = C[prev.city];
+        const nz = prev.zl + 1;
+        return { zl: nz, selected: null, sheet: 2, hood: cc.hoods.length ? (prev.hood || cc.hoods[0]) : null };
+      }),
+      zoomOut: () => this.setState(prev => {
+        if (prev.zl <= 1) return {};
+        const nz = prev.zl - 1;
+        return { zl: nz, selected: null, sheet: 2, hood: nz >= 2 ? prev.hood : null };
+      }),
+      zoomInOpacity: s.zl >= 3 ? 0.4 : 1,
+      zoomOutOpacity: s.zl <= 1 ? 0.4 : 1,
+      zoomTicks: [1, 2, 3].map(n => ({ w: n <= s.zl ? '18px' : '9px', bg: n <= s.zl ? '#111' : 'rgba(17,17,17,.22)' })),
+      mapSearching: s.mapSearching, mapIdle: !s.mapSearching, mapQuery: s.mapQuery,
+      onMapQuery: e => this.setState({ mapQuery: e.target.value }),
+      openMapSearch: () => this.setState({ mapSearching: true, selected: null, sheet: 2 }),
+      closeMapSearch: () => this.setState({ mapSearching: false, mapQuery: '', sheet: 1 }),
+      sheetH: this.sheetHeight(),
+      sheetHandleTap: s.selected ? () => this.openPost(s.selected) : this.cycleSheet,
+      cardGrab: e => { this.cardDrag = e.clientY; },
+      cardMove: e => {
+        if (this.cardDrag == null) return;
+        if (this.cardDrag - e.clientY > 46) { this.cardDrag = null; if (this.state.selected) this.openPost(this.state.selected); }
+      },
+      cardUp: () => { this.cardDrag = null; },
+      isPlaceCard: !!s.selected,
+      isAreaSheet: !s.selected,
+      isCitySheet: !isHoodSheet,
+      isHoodSheet: isHoodSheet,
+      noHoodNote: s.zl >= 2 && city.hoods.length === 0,
+      sheetTitle: s.mapSearching ? 'Results' : 'Now in ' + city.name,
+      hoodName: s.hood || city.name,
+      areaEmpty: areaEmpty && !s.loading,
+      sheetReady: !s.loading && !areaEmpty,
+      backToCity: () => this.setState({ zl: 2, hood: null, selected: null }),
+      createHere: () => this.newJourney([hoodPlaces.slice(0, 2).map(p => st(p.id))], (s.hood || city.name) + ' day route', s.city),
+      nearestAreas: city.hoods.filter(h => h !== s.hood).slice(0, 3).map((h, i) => ({
+        name: h, count: plural(cityPlaces.filter(p => p.hood === h).length, 'place', 'places'), dist: (1.4 + i * 1.7).toFixed(1) + ' km',
+        g: ph(i + 3), tap: () => this.setState({ hood: h, selected: null })
+      })),
+      placeCard: (() => {
+        const p = P[s.selected] || PLACES[0];
+        const d = POSTS[p.id] || fallbackPost(p.id);
+        return {
+          g: ph(pIndex(p.id)), title: p.title, region: p.region,
+          postTitle: d.postTitle, comments: String(d.comments.length),
+          stats: p.shots + ' recreeshots · ' + p.views,
+          shoot: e => { if (e && e.stopPropagation) e.stopPropagation(); this.addShot(); },
+          badges: d.badges.map(b => ({ name: b.n, bg: b.bg, fg: b.fg })),
+          open: () => this.openPost(p.id),
+          addTo: () => this.requireLogin('journey', () => this.newJourney([[st(p.id)]], p.title + ' route', p.city))
+        };
+      })(),
+      sheetSections: s.mapSearching
+        ? [{ title: 'Results', note: '', cards: this.placeCards(s.mapQuery ? cityPlaces.filter(p => (p.title + ' ' + p.region).toLowerCase().indexOf(s.mapQuery.toLowerCase()) >= 0) : cityPlaces, 0) }]
+        : (isHoodSheet
+          ? [{ title: 'Places here', note: plural(hoodPlaces.length, 'spot', 'spots'), cards: this.placeCards(hoodPlaces, 0) },
+             { title: 'Journeys through ' + s.hood, note: '', cards: this.journeyCards(['j1', 'j4']) }]
+          : [{ title: 'Most recreated in ' + city.name, note: '', cards: this.placeCards(cityPlaces, 0) },
+             (city.hoods.length ? { title: 'Neighbourhoods', note: '', cards: city.hoods.map((h, i) => this.card('hood', {
+               title: h, meta: plural(cityPlaces.filter(p => p.hood === h).length, 'place', 'places'), g: ph(i + 2),
+               tap: () => this.setState({ zl: 2, hood: h, selected: null, sheet: 2 })
+             })) } : { title: 'Journeys in ' + city.name, note: '', cards: this.journeyCards(['j3', 'j2']) })]),
+      sheetTourism: isHoodSheet
+        ? [{ title: 'Festivals in ' + city.name, state: this.ktoState('list'), items: this.ktoItems(s.city, 'festivals', 1) }]
+        : [{ title: 'Attractions in ' + city.name, state: this.ktoState('list'), items: this.ktoItems(s.city, 'attractions', 0) },
+           { title: 'Festivals in ' + city.name, state: this.ktoState('list'), items: this.ktoItems(s.city, 'festivals', 1) }],
+      retryTourism: () => { this.setState({ ktoFail: false, loading: true }); setTimeout(() => this.setState({ loading: false }), 700); },
+      closePlaceCard: () => this.setState({ selected: null }),
+
+      // ---- profile ----
+      isProfile: s.tab === 'profile' && !overlay,
+      myMapKey: 'mymap-' + s.myMap,
+      myMapEmpty: s.myMap === 'empty',
+      areasEmpty: areaList.length === 0,
+      areaTotal: areaList.length ? plural(areaList.length, 'area visited', 'areas visited') : '',
+      areaRows: areaShown.map(a => ({
+        label: a.label,
+        meta: plural(a.spots, 'spot', 'spots') + ' · ' + plural(a.topics.length, 'topic', 'topics'),
+        dots: a.topics.map(id => ({ color: T[id].color })),
+        tap: () => this.setState({ profileTab: 'shots', areaFilter: a.label })
+      })),
+      areasMore: areaList.length > 5,
+      areasMoreLabel: s.areasAll ? 'Show fewer' : 'Show all ' + areaList.length,
+      toggleAreasAll: () => this.setState(prev => ({ areasAll: !prev.areasAll })),
+      areaFiltered: !!s.areaFilter && !s.shotsEmpty,
+      areaFilterLabel: s.areaFilter || '',
+      clearAreaFilter: () => this.setState({ areaFilter: null }),
+      profileName: '@recree_min',
+      profileTopicLine: s.followed.map(id => T[id].name).join(' · '),
+      statShots: s.shotsEmpty ? '0' : (s.myMap === 'rich' ? '37' : '4'),
+      statRegions: s.myMap === 'empty' ? '0' : (s.myMap === 'rich' ? '9' : '3'),
+      statJourneys: String(s.journeysEmpty ? 0 : s.journeys.filter(j => j.mine).length),
+      myMapLegend: s.myMap === 'empty' ? [] : [
+        { color: T.bts.color, label: 'BTS' }, { color: T.v.color, label: 'V' }, { color: T.ive.color, label: 'IVE' }
+      ].concat(s.myMap === 'rich' ? [{ color: '#8E8E8B', label: '+6 more' }] : []),
+      profileTabs: [
+        { id: 'shots', label: 'recreeshots' }, { id: 'journeys', label: 'Journeys' }, { id: 'saved', label: 'Saved places' }
+      ].map(t => ({
+        label: t.label, fg: s.profileTab === t.id ? '#111' : '#A3A3A0',
+        line: s.profileTab === t.id ? 'inset 0 -2.5px 0 #111' : 'none',
+        tap: () => this.setState({ profileTab: t.id })
+      })),
+      pOnShots: s.profileTab === 'shots',
+      pOnJourneys: s.profileTab === 'journeys',
+      pOnSaved: s.profileTab === 'saved',
+      shotsEmpty: s.shotsEmpty,
+      shotsFilled: !s.shotsEmpty,
+      myShots: (s.areaFilter
+        ? Array.from({ length: (areaList.find(a => a.label === s.areaFilter) || { spots: 3 }).spots }, (x, i) => i + 2)
+        : (s.myMap === 'rich' ? [0,1,2,3,4,5,6,7,8] : [0,1,2,3])).map(i => ph(i)),
+      journeysEmpty: s.journeysEmpty,
+      myJourneyRows: (s.journeysEmpty ? [] : s.journeys.filter(j => j.mine)).map(j => {
+        const m = metaOf(j.days);
+        return {
+          title: j.title, g: j.g, meta: m.line,
+          badge: j.public ? 'Public' : 'Private', badgeBg: j.public ? LIME : '#EFEFEA',
+          tap: () => this.openJourney(j.id)
+        };
+      }),
+      savedEmpty: s.savedEmpty,
+      savedPlaceCards: (s.savedEmpty ? [] : s.savedPlaces).map(id => ({
+        title: P[id].title, region: P[id].region, g: ph(pIndex(id)),
+        badges: badges(P[id].topics).slice(0, 1), tap: () => this.openPost(id)
+      })),
+      newJourney: () => this.newJourney([[]], '', s.city),
+      openJourneyList: this.openJourneyList,
+      addShot: this.addShot,
+      goShop: this.goShop,
+
+      // ---- journey list ----
+      showJourneyList: s.journeyList && !s.journeyView && !s.editor,
+      closeJourneyList: this.closeJourneyList,
+      journeyListReady: !s.loading,
+      journeyGroups: [
+        { label: 'PUBLIC JOURNEYS', rows: s.journeys.filter(j => !j.mine && j.public).map(j => {
+            const m = metaOf(j.days);
+            return { title: j.title, author: j.author, meta: m.line + ' · copied ' + fmt(j.copies) + '×', g: j.g, badge: j.days.length + 'D', badgeBg: LIME, tap: () => this.openJourney(j.id) };
+          }), empty: false, emptyTitle: '', emptyBody: '' },
+        { label: 'MY JOURNEYS', rows: (s.journeysEmpty ? [] : s.journeys.filter(j => j.mine)).map(j => {
+            const m = metaOf(j.days);
+            return { title: j.title, author: 'you', meta: m.line, g: j.g, badge: j.public ? 'Public' : 'Private', badgeBg: j.public ? LIME : '#EFEFEA', tap: () => this.openJourney(j.id) };
+          }),
+          empty: s.journeysEmpty || !s.journeys.some(j => j.mine),
+          emptyTitle: 'Nothing of your own yet',
+          emptyBody: 'Start from scratch, or open a public journey and make it yours.' }
+      ],
+
+      // ---- journey detail ----
+      showJourney: !!s.journeyView && !s.editor,
+      closeJourney: this.closeJourney,
+      journey: journey,
+
+      // ---- editor ----
+      showEditor: !!s.editor,
+      copiedBanner: !!s.copied,
+      copiedFromLine: 'Copied from ' + (s.copied || '') + '.',
+      editorTitle: s.editor ? s.editor.title : '',
+      onEditorTitle: e => this.setState(prev => ({ editor: Object.assign({}, prev.editor, { title: e.target.value }) })),
+      editorMeta: s.editor ? metaOf(s.editor.days).line : '',
+      editorDays: editorDays.map((d, di) => ({
+        label: 'Day ' + (di + 1),
+        meta: d.length ? d.length + (d.length === 1 ? ' stop' : ' stops') : 'no stops',
+        empty: d.length === 0,
+        remove: () => this.removeDay(di),
+        add: () => this.setState({ addOpen: true, addTab: 'search', addQuery: '', editorDay: di }),
+        rows: d.map((x, i) => ({
+          n: String(i + 1), title: x.title, region: x.region, g: x.kto ? kph(i) : ph(pIndex(x.id)),
+          bg: s.dragRow === di + ':' + i ? '#F7FFE0' : '#fff',
+          shadow: s.dragRow === di + ':' + i ? '0 10px 24px rgba(0,0,0,.14)' : 'none',
+          lift: s.dragRow === di + ':' + i ? 'scale(1.015)' : 'none',
+          grab: e => this.onRowGrab(di, i, e),
+          remove: () => this.removeStop(di, i)
+        }))
+      })),
+      dragging: !!s.dragRow,
+      onRowMove: this.onRowMove, onRowUp: this.onRowUp,
+      addDay: this.addDay,
+      visibilityLabel: s.editor && s.editor.public ? 'Public' : 'Private',
+      visibilityKnob: s.editor && s.editor.public ? '22px' : '2px',
+      visibilityBg: s.editor && s.editor.public ? LIME : '#E2E2DC',
+      toggleVisibility: () => this.setState(prev => ({ editor: Object.assign({}, prev.editor, { public: !prev.editor.public }) })),
+      closeEditor: () => this.setState({ editor: null, addOpen: false, copied: null }),
+      saveJourney: this.saveJourney,
+      saveLabel: s.saving ? 'Saving…' : 'Save',
+      saveBg: s.saving ? '#E2E2DC' : '#111',
+      saveFg: s.saving ? '#8E8E8B' : '#fff',
+      editorNearbyState: s.ktoFail ? 'failed' : 'suggest',
+      editorNearby: (NEARBY_SUGGEST[s.editor ? s.editor.city : s.city] || []).map((n, i) => ({
+        name: n.name, note: n.note, g: kph(i), actLabel: 'Add to Day ' + (s.editorDay + 1),
+        act: () => this.addStop(kt(n.name, s.editor ? s.editor.city : s.city), s.editorDay)
+      })),
+      addOpen: !!s.addOpen,
+      closeAdd: () => this.setState({ addOpen: false }),
+      addTargetLabel: 'Day ' + (addTargetDay + 1),
+      addTabs: [
+        { id: 'search', label: 'Search places' }, { id: 'saved', label: 'Saved Places' }, { id: 'nearby', label: 'Nearby Attractions' }
+      ].map(t => ({
+        label: t.label, bg: s.addTab === t.id ? '#111' : '#F4F4F1', fg: s.addTab === t.id ? '#fff' : '#3B3B38',
+        tap: () => this.setState({ addTab: t.id })
+      })),
+      addSearching: s.addTab === 'search',
+      addQuery: s.addQuery,
+      onAddQuery: e => this.setState({ addQuery: e.target.value }),
+      addIsTourism: s.addTab === 'nearby',
+      addEmpty: addList.length === 0,
+      addEmptyTitle: addEmptyTitle,
+      addEmptyBody: addEmptyBody,
+      addRows: addList.map((x, i) => ({
+        title: x.title, region: x.region, g: x.kto ? kph(i) : ph(pIndex(x.id)),
+        source: x.kto ? '출처: ⓒ한국관광공사' : '',
+        btnBg: inDay(x.id) ? '#EDECE6' : LIME,
+        btnPath: inDay(x.id) ? 'M5 12.5l4.5 4.5L19 7.5' : 'M12 5v14M5 12h14',
+        add: () => this.addStop(x, addTargetDay)
+      })),
+
+      // ---- post ----
+      showPost: !!s.postView,
+      postReady: !s.loading,
+      closePost: this.closePost,
+      postGal: s.postGal + ' / ' + ((POSTS[s.postView] || fallbackPost(s.postView || 'p4')).gallery),
+      galleryDots: (() => {
+        const n = (POSTS[s.postView] || fallbackPost(s.postView || 'p4')).gallery;
+        const out = [];
+        for (let i = 1; i <= n; i++) out.push({ w: i === s.postGal ? '16px' : '5px', bg: i === s.postGal ? '#fff' : 'rgba(255,255,255,.5)' });
+        return out;
+      })(),
+      nextShot: () => this.setState(prev => {
+        const n = (POSTS[prev.postView] || fallbackPost(prev.postView || 'p4')).gallery;
+        return { postGal: prev.postGal >= n ? 1 : prev.postGal + 1 };
+      }),
+      prevShot: () => this.setState(prev => {
+        const n = (POSTS[prev.postView] || fallbackPost(prev.postView || 'p4')).gallery;
+        return { postGal: prev.postGal <= 1 ? n : prev.postGal - 1 };
+      }),
+      postLike: () => this.setState({ postLiked: !s.postLiked }),
+      postLikeFill: s.postLiked ? LIME : 'none',
+      postLikeCount: String(212 + (s.postLiked ? 1 : 0)),
+      postBookmark: () => this.requireLogin('save', () => this.setState({ postSaved: !s.postSaved })),
+      postBookmarkFill: s.postSaved && s.loggedIn ? LIME : 'none',
+      postComment: () => this.requireLogin('comment', () => this.toast('Comment posted')),
+      postNearbyState: this.ktoState('list'),
+      post: (() => {
+        const id = s.postView || 'p4';
+        const p = P[id] || PLACES[0];
+        const d = POSTS[id] || fallbackPost(id);
+        return {
+          g: ph(pIndex(id) + s.postGal), title: p.title, postTitle: d.postTitle, context: d.context,
+          address: d.address, badges: d.badges, source: d.source, comments: d.comments,
+          shots: p.shots + ' recreeshots', commentCount: String(d.comments.length),
+          shotThumbs: [ph(pIndex(id) + 1), ph(pIndex(id) + 3), ph(pIndex(id) + 5)],
+          nearby: this.ktoItems(p.city, 'attractions', 0)
+        };
+      })(),
+
+      // ---- search ----
+      showSearch: s.showSearch,
+      closeSearch: () => this.setState({ showSearch: false, query: '' }),
+      query: s.query,
+      onQuery: e => this.setState({ query: e.target.value }),
+      searchIdle: !s.query,
+      searchNoResults: !!s.query && searchHits.length === 0 && searchJourneys.length === 0,
+      searchHasResults: !!s.query && (searchHits.length > 0 || searchJourneys.length > 0),
+      recents: ['BTS Gangneung', 'Jumunjin', 'Seongsu cafe', 'Gyeongju', 'NCT WISH'].map(r => ({
+        label: r, tap: () => this.setState({ query: r })
+      })),
+      searchSections: [
+        { title: 'Places', note: searchHits.length + ' found', cards: this.placeCards(searchHits, 0) },
+        { title: 'Journeys', note: '', cards: this.journeyCards(searchJourneys.map(j => j.id)) }
+      ].filter(x => x.cards.length),
+
+      // ---- follow ----
+      showFollow: s.showFollow,
+      openFollow: () => this.requireLogin('follow', () => this.setState({ showFollow: true })),
+      closeFollow: () => this.setState({ showFollow: false }),
+      followCount: s.followed.length + ' following',
+      followGroups: ['K-POP', 'K-CONTENT'].map(g => ({
+        label: g,
+        items: TOPICS.filter(t => t.group === g).map(t => {
+          const on = s.followed.indexOf(t.id) >= 0;
+          return {
+            name: t.name, followers: t.followers, following: on,
+            ring: on ? t.color : '#EDEDE8', g: grad(t.color, '#1E1A33'),
+            tap: () => this.setState(prev => ({
+              followed: prev.followed.indexOf(t.id) >= 0 ? prev.followed.filter(x => x !== t.id) : prev.followed.concat([t.id])
+            }))
+          };
+        })
+      })),
+
+      // ---- login / confirm / toast ----
+      showLogin: !!s.login,
+      loginTitle: ({
+        journey: 'Log in to build journeys', shot: 'Log in to post a recreeshot',
+        save: 'Log in to save places', copy: 'Log in to copy this journey',
+        follow: 'Log in to follow topics', comment: 'Log in to comment'
+      })[s.login] || 'Log in',
+      loginBody: ({
+        journey: 'Journeys are tied to your account so you can edit them across days and devices.',
+        shot: 'recreeshots are credited to you and appear on your own map.',
+        save: 'Saved places sync to your account and feed the Saved Places tab in the journey editor.',
+        copy: 'A copy becomes your own private journey, editable from the start.',
+        follow: 'Following keeps your home feed tuned to the artists and shows you care about.',
+        comment: 'Comments show your handle next to them.'
+      })[s.login] || '',
+      doLogin: () => {
+        const reason = s.login;
+        this.setState({ loggedIn: true, login: null });
+        if (reason === 'follow') this.setState({ showFollow: true });
+      },
+      dismissLogin: () => this.setState({ login: null }),
+      showConfirm: !!s.confirm,
+      confirmTitle: s.confirm ? ({
+        day: 'Delete Day ' + ((s.confirm.i || 0) + 1) + '?', stop: 'Remove this stop?', journey: 'Delete this journey?'
+      })[s.confirm.kind] : '',
+      confirmBody: s.confirm ? ({
+        day: 'The stops in this day are removed with it. The following days move up.',
+        stop: 'It stays saved in your places — only this journey changes.',
+        journey: 'Anyone who copied it keeps their copy. Yours is gone for good.'
+      })[s.confirm.kind] : '',
+      confirmCta: s.confirm && s.confirm.kind === 'stop' ? 'Remove' : 'Delete',
+      cancelConfirm: () => this.setState({ confirm: null }),
+      acceptConfirm: this.acceptConfirm,
+      showToast: !!s.toast,
+      toastText: s.toast ? s.toast.text : '',
+      toastSpin: !!(s.toast && s.toast.spin),
+      toastDone: !!(s.toast && !s.toast.spin),
+
+      // ---- tabs ----
+      showTabs: !overlay,
+      homeTabBg: s.tab === 'home' ? LIME : 'transparent',
+      mapTabBg: s.tab === 'map' ? LIME : 'transparent',
+      profileTabBg: s.tab === 'profile' ? LIME : 'transparent',
+      goHome: this.goHome, goMap: this.goMap, goProfile: this.goProfile
+    };
+  }
+}
+
+</script>
+</body>
+</html>

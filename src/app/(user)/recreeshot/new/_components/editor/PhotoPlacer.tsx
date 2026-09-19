@@ -293,7 +293,7 @@ export function PhotoPlacer({
             width: "100%",
             padding: "14px 0",
             borderRadius: 9999,
-            background: canProceed && !isUploading ? "#C6FD09" : "#e5e5e5",
+            background: canProceed && !isUploading ? "#D3FD52" : "#e5e5e5",
             border: "none",
             fontWeight: 700,
             fontSize: 16,

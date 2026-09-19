@@ -20,9 +20,14 @@ import {
   EyeOff,
 } from "lucide-react";
 import { ReCreeshotImage } from "@/components/recreeshot-image";
+import { CourseCard } from "../../journeys/_components/CourseCard";
+import type { CourseListItem } from "@/lib/course-queries";
 import { deleteAccount } from "../_actions/profile-actions";
 import { signOut } from "@/lib/actions/auth";
 import { showError } from "@/lib/toast";
+
+/** 프로필에 미리 보여줄 코스 개수. 넘으면 "See all" 로 /journeys 에 넘긴다 */
+const PROFILE_COURSE_LIMIT = 6;
 
 interface ReCreeshot {
   id: string;
@@ -37,6 +42,8 @@ interface Props {
   bio: string | null;
   profileImageUrl: string | null;
   recreeshots: ReCreeshot[];
+  /** 내가 만든 코스. 저장한 코스는 넣지 않는다 — 코스를 저장하는 UI 가 아직 없어 항상 빈 목록이다 */
+  courses: CourseListItem[];
 }
 
 export function ProfileView({
@@ -45,6 +52,7 @@ export function ProfileView({
   bio,
   profileImageUrl,
   recreeshots,
+  courses,
 }: Props) {
   const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -146,6 +154,57 @@ export function ProfileView({
             <Heart className="size-4" />
             Following
           </Link>
+        </div>
+
+        {/* 내 코스 — 편집기 진입점. 프로필에는 탭이 없어 reCreeshot 그리드 위 섹션으로 둔다.
+            그리드가 이 화면의 본문이라 코스는 가로 스크롤로 자리를 적게 쓴다. */}
+        <div className="pb-6">
+          <div className="flex items-center justify-between mb-3">
+            <p className="font-semibold text-base">My Journeys</p>
+            {courses.length > PROFILE_COURSE_LIMIT && (
+              <Link
+                href="/journeys"
+                className="shrink-0 text-xs font-medium text-muted-foreground underline underline-offset-2"
+              >
+                See all {courses.length}
+              </Link>
+            )}
+          </div>
+
+          {courses.length === 0 ? (
+            <Link
+              href="/journeys/new"
+              className="flex items-center gap-2.5 rounded-2xl bg-muted px-3.5 py-3.5 transition-opacity active:opacity-70"
+            >
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand">
+                <Plus className="size-4 text-black" strokeWidth={2.6} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold">Create new journey</span>
+                <span className="block text-xs text-muted-foreground">
+                  Plan a route and keep the spots you want to visit in one place.
+                </span>
+              </span>
+            </Link>
+          ) : (
+            <>
+              {/* -mx-4 px-4 — 카드가 화면 가장자리까지 흘러가야 더 있다는 게 보인다 */}
+              <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+                {courses.slice(0, PROFILE_COURSE_LIMIT).map((course) => (
+                  <div key={course.id} className="w-[150px] shrink-0">
+                    <CourseCard course={course} isMine />
+                  </div>
+                ))}
+              </div>
+              <Link
+                href="/journeys/new"
+                className="mt-3 flex h-11 items-center justify-center gap-1.5 rounded-full bg-muted text-sm font-semibold transition-opacity active:opacity-70"
+              >
+                <Plus className="size-4" strokeWidth={2.5} />
+                Create new journey
+              </Link>
+            </>
+          )}
         </div>
       </div>
 

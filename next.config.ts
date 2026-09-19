@@ -29,6 +29,13 @@ const nextConfig: NextConfig = {
         hostname: "cdn.recree.io",
       },
       {
+        // 한국관광공사 OpenAPI 이미지 (firstimage / firstimage2).
+        // 실측 470건 전부 이 호스트 하나다 (prisma/scripts/tour-api-spike*-result.json).
+        // API는 http로도 내려주지만 액션에서 https로 정규화해 넘긴다.
+        protocol: "https",
+        hostname: "tong.visitkorea.or.kr",
+      },
+      {
         protocol: "https",
         hostname: "picsum.photos",
       },
