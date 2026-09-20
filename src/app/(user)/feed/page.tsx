@@ -9,7 +9,8 @@ import type { TagGroupColorMap } from "@/lib/post-labels";
 import { getCurrentUser } from "@/lib/auth";
 import { getMyFollows } from "@/lib/follow-queries";
 import { resolveFeedTab } from "@/lib/feed-tabs";
-import { HomeTabBar, type TabTopic } from "./_components/HomeTabBar";
+import { type TabTopic } from "./_components/HomeTabBar";
+import { HomeTopBar } from "./_components/HomeTopBar";
 import { CuratedSections } from "./_components/CuratedSections";
 import { FreshDrops } from "./_components/FreshDrops";
 import { fetchLatestFeed } from "../_actions/feed-actions";
@@ -62,9 +63,9 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
   // ─── 메인 렌더링 ─────────────────────────────────────────────────────────────
 
   return (
-    <div className="pt-2 pb-4 max-w-2xl mx-auto">
-      {/* 탭바는 어떤 경우에도 남는다. 볼 게 없는 화면일수록 다른 탭으로 갈 길이 필요하다 */}
-      <HomeTabBar activeTab={activeTab} topics={tabTopics} isLoggedIn={!!currentUser} />
+    <div className="pb-4 max-w-2xl mx-auto">
+      {/* 상단 바는 어떤 경우에도 남는다. 볼 게 없는 화면일수록 다른 탭으로 갈 길이 필요하다 */}
+      <HomeTopBar activeTab={activeTab} topics={tabTopics} isLoggedIn={!!currentUser} />
 
       {isEmpty ? (
         <div className="flex flex-col items-center justify-center gap-2 py-24 text-center px-4">

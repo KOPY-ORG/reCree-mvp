@@ -9,41 +9,39 @@ import { feedTabHref, HOT_TAB, type FeedTab } from "@/lib/feed-tabs";
  * 선택 판정도 서버에서 구독 목록과 대조해 이미 끝나 있다. 상태가 없다.
  *
  * 탭에 토픽 색을 입히지 않는다. 색이 들어가면 "선택됨"과 "어느 토픽인가"가
- * 같은 축(색)에서 겨뤄 무엇이 선택인지 흐려진다. 선택은 명암으로만 말한다.
+ * 같은 축(색)에서 겨뤄 무엇이 선택인지 흐려진다. 선택은 브랜드색 하나로만 말한다.
  */
 export type TabTopic = { id: string; slug: string; nameEn: string };
 
-/** 알약 치수. .pill-badge 의 배지 기본값(12px · px-2)을 탭이 눌릴 만한 크기로 키운다 */
-const PILL_SIZE = "text-sm py-2 px-3.5";
+/** 칩 치수 — 높이 32px 은 그대로 두고 글자만 한 단계 낮춘다 */
+const CHIP_SIZE = "text-[15px] h-8";
 
-const SELECTED: React.CSSProperties = {
-  background: "var(--primary)",
-  color: "var(--primary-foreground)",
-};
+/** .pill-badge 는 배지용이라 굵기·크기·여백이 모두 달라 쓰지 않는다 */
+const TAB_BASE =
+  `inline-flex items-center justify-center shrink-0 ${CHIP_SIZE} rounded-full font-medium transition-opacity active:opacity-70`;
 
-const UNSELECTED: React.CSSProperties = {
-  background: "var(--secondary)",
-  color: "var(--foreground)",
-};
+const SELECTED = "bg-brand text-foreground";
+const UNSELECTED = "bg-background text-muted-foreground";
 
 function Tab({
   href,
   active,
   children,
   ariaLabel,
+  className = "px-2.5",
 }: {
   href: string;
   active: boolean;
   children: React.ReactNode;
   ariaLabel?: string;
+  className?: string;
 }) {
   return (
     <Link
       href={href}
       aria-label={ariaLabel}
       aria-current={active ? "page" : undefined}
-      className={`pill-badge ${PILL_SIZE} shrink-0 transition-opacity active:opacity-70`}
-      style={active ? SELECTED : UNSELECTED}
+      className={`${TAB_BASE} ${active ? SELECTED : UNSELECTED} ${className}`}
     >
       {children}
     </Link>
@@ -62,7 +60,7 @@ export function HomeTabBar({
 }) {
   return (
     <nav aria-label="Home tabs" className="overflow-x-auto scrollbar-hide">
-      <div className="flex items-center gap-2 px-4 py-3">
+      <div className="flex items-center gap-2 px-5">
         <Tab href={feedTabHref(HOT_TAB)} active={activeTab.kind === "hot"}>
           Hot
         </Tab>
@@ -85,8 +83,10 @@ export function HomeTabBar({
           href={isLoggedIn ? "/topics" : "/login"}
           active={false}
           ariaLabel={isLoggedIn ? "Manage followed topics" : "Sign in to follow topics"}
+          /* 아이콘만 들어가는 칩이라 높이와 같은 너비를 줘 정원으로 만든다 */
+          className="w-8"
         >
-          <Plus className="size-4" strokeWidth={2.5} />
+          <Plus className="size-[15px]" strokeWidth={2.5} />
         </Tab>
 
         {/* 마지막 탭이 화면 끝에 붙지 않게 — HScrollSection 과 같은 관례 */}
