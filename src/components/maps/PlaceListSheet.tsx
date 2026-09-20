@@ -55,7 +55,9 @@ export function PlaceListSheet({ state, onStateChange, topOffset = 24, hasActive
     if (handleRef.current) observer.observe(handleRef.current);
     if (headerRef.current) observer.observe(headerRef.current);
     return () => observer.disconnect();
-  }, []);
+    // state 에 걸어야 한다 — hidden 으로 마운트되면(?place= 로 들어온 경우) 핸들·헤더가
+    // 아직 없어 ref 가 null 이고, 빈 의존성이면 그 뒤로 영영 측정하지 않아 80 에 머문다.
+  }, [state]);
 
   const fullTop = hasActiveFacets ? FULL_TOP_WITH_FACETS : topOffset;
 

@@ -19,7 +19,8 @@ import { DiscoverSearchBar } from "./DiscoverSearchBar";
 import { EventSearchBar } from "./EventSearchBar";
 import { DiscoverFilterSheet } from "./DiscoverFilterSheet";
 import { DiscoverActiveFacets } from "./DiscoverActiveFacets";
-import { DiscoverSheetHeader } from "./DiscoverSheetHeader";
+import { DiscoverSheetHeader, CATEGORY_CHIP_ROW_HEIGHT } from "./DiscoverSheetHeader";
+import { PLACE_CATEGORY_CHIPS, placeCategories, type PlaceCategoryChip } from "@/lib/place-types";
 import { EventSheetHeader } from "./EventSheetHeader";
 import { EventPeekCarousel } from "./EventPeekCarousel";
 import { HotTabStub } from "./HotTabStub";
@@ -112,6 +113,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     appliedTopicIds,
     appliedTagIds,
     appliedTagGroupKeys,
+    appliedPlaceCategory,
     appliedRegion,
     appliedDistrict,
     hasFilters,
@@ -130,6 +132,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     removeAppliedTopic,
     removeAppliedTag,
     removeAppliedTagGroup,
+    togglePlaceCategory,
     toggleTopic,
     toggleTopicGroup,
     toggleTag,
@@ -297,6 +300,22 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     [isSavedView, markerPlaces]
   );
 
+  /**
+   * 장소가 하나라도 있는 카테고리. 고를 수 없는 칩(지금 dev 의 Bar)을 접는다.
+   *
+   * 기준은 allPlaces — 검색어·필터는 물론 저장 목록 보기(visiblePlaces)도 거치지 않은
+   * 지도 전체다. 그래서 무엇을 걸든 칩 구성이 흔들리지 않는다. 저장 목록에서도 같은
+   * 칩이 서고, 그 중 결과가 0인 칩은 "저장한 것 중엔 없다" 를 0 places 로 말한다.
+   */
+  const availablePlaceCategories = useMemo(() => {
+    const set = new Set<PlaceCategoryChip>();
+    for (const place of allPlaces)
+      for (const category of placeCategories(place.placePlaceTypes))
+        if ((PLACE_CATEGORY_CHIPS as readonly string[]).includes(category))
+          set.add(category as PlaceCategoryChip);
+    return set;
+  }, [allPlaces]);
+
   // isResultMode보다 먼저 선언해야 참조 가능
   const activeEventData = useMemo(
     () =>
@@ -358,7 +377,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
         ),
       ],
     ]);
-    return placeMatchesFilters(place, nextHasPostLevelFilter, matchedPosts, next.region, next.district);
+    return placeMatchesFilters(place, nextHasPostLevelFilter, matchedPosts, next.region, next.district, next.placeCategory);
   }
 
   // topic/tag/tagGroup 필터에 매칭되는 posts를 place당 한 번만 계산 — filteredPlaces 포함 판정과
@@ -378,14 +397,14 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   const filteredPlaces = useMemo(() => {
     if (!hasFilters) return searchedPlaces;
     const matched = searchedPlaces.filter((p) =>
-      placeMatchesFilters(p, hasPostLevelFilter, matchedPostsByPlaceId, appliedRegion, appliedDistrict)
+      placeMatchesFilters(p, hasPostLevelFilter, matchedPostsByPlaceId, appliedRegion, appliedDistrict, appliedPlaceCategory)
     );
     return [...matched].sort(
       (a, b) =>
         placeMatchScore(b, appliedTopicIds, appliedTagIds) -
         placeMatchScore(a, appliedTopicIds, appliedTagIds)
     );
-  }, [searchedPlaces, hasFilters, hasPostLevelFilter, matchedPostsByPlaceId, appliedTopicIds, appliedTagIds, appliedRegion, appliedDistrict]);
+  }, [searchedPlaces, hasFilters, hasPostLevelFilter, matchedPostsByPlaceId, appliedTopicIds, appliedTagIds, appliedRegion, appliedDistrict, appliedPlaceCategory]);
 
   // topicTree 전체를 한 번만 순회해 topicId → 색 맵을 만들어둔다 (place마다 트리 재순회 방지)
   const topicColorMap = useMemo(() => buildTopicColorMap(topicTree), [topicTree]);
@@ -640,8 +659,22 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
       ? "tab-only"
       : sheetState;
 
-  // FAB bottom 계산용 — tabOnlyH는 측정값 근사(80), fullTop은 PlaceListSheet와 동일 공식
-  const fabSheetH = getSheetHeight(effectiveSheetState, 80, needsTopReserve ? 96 : 64);
+  // 이벤트 모드만 칩이 없다 — 헤더 자체가 EventSheetHeader 라 자리도 없고, 보는 집합이
+  // 장소가 아니라 이벤트다. 저장 목록 보기에는 칩이 있다: 카테고리는 어차피 filteredPlaces
+  // 에 걸리므로, 칩을 접으면 통제할 수 없는 필터가 숨은 채 걸린다.
+  //
+  // 설 칩이 하나도 없으면 줄 자체를 접는다. 조건은 헤더의 렌더 조건과 같은 식이어야
+  // 아래 FAB 높이가 어긋나지 않는다 (URL 로 고른 칩은 0곳이어도 서기 때문).
+  const showCategoryChips =
+    !isEventMode && (availablePlaceCategories.size > 0 || appliedPlaceCategory !== null);
+
+  // FAB bottom 계산용 — tabOnlyH는 측정값 근사(핸들+헤더 80, 칩 줄이 있으면 그만큼 더),
+  // fullTop은 PlaceListSheet와 동일 공식
+  const fabSheetH = getSheetHeight(
+    effectiveSheetState,
+    80 + (showCategoryChips ? CATEGORY_CHIP_ROW_HEIGHT : 0),
+    needsTopReserve ? 96 : 64
+  );
 
   return (
     // 지도는 100dvh 전체를 쓴다 — 탭바가 그 위에 떠야 반투명·blur 가 의미를 갖는다.
@@ -722,7 +755,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
           appliedRegion={appliedRegion}
           districts={appliedRegion ? (availableDistricts.get(appliedRegion) ?? []) : []}
           appliedDistrict={appliedDistrict}
-          onRegionChange={(slug) => commitFilters({ topicIds: appliedTopicIds, tagIds: appliedTagIds, tagGroupKeys: appliedTagGroupKeys, region: slug, district: null })}
+          onRegionChange={(slug) => commitFilters({ topicIds: appliedTopicIds, tagIds: appliedTagIds, tagGroupKeys: appliedTagGroupKeys, placeCategory: appliedPlaceCategory, region: slug, district: null })}
         />
       )}
 
@@ -748,6 +781,10 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
               isSavedView={isSavedView}
               query={query}
               onExitResultMode={exitResultMode}
+              showCategoryChips={showCategoryChips}
+              availablePlaceCategories={availablePlaceCategories}
+              placeCategory={appliedPlaceCategory}
+              onPlaceCategoryToggle={togglePlaceCategory}
             />
           )
         }
@@ -780,10 +817,18 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
         ) : (contentTab === "list" || isResultMode || isSavedView) ? (
           allVisiblePosts.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
+              {/* 저장 목록이 비는 이유는 둘이다 — 저장한 게 없거나, 걸러서 남은 게 없거나.
+                  "아직 없다" 는 앞의 경우에만 참이다. 뒤의 경우는 벗을 필터가 있으니 그렇게 말한다 */}
               <p className="text-sm font-semibold text-foreground">
-                {isSavedView ? "No saved places yet" : "No places match your filters"}
+                {!isSavedView
+                  ? "No places match your filters"
+                  : isResultMode
+                    ? "No saved places match your filters"
+                    : "No saved places yet"}
               </p>
-              {!isSavedView && <p className="text-xs text-muted-foreground mt-1.5">Try removing a filter.</p>}
+              {(!isSavedView || isResultMode) && (
+                <p className="text-xs text-muted-foreground mt-1.5">Try removing a filter.</p>
+              )}
             </div>
           ) : (
             <div className="px-4 pt-2 pb-4 space-y-2">

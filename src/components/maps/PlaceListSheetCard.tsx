@@ -6,7 +6,7 @@ import { ChevronRight, MapPin } from "lucide-react";
 import { isExternalImage } from "@/lib/image";
 import { topicMatchesFilter } from "@/lib/map-utils";
 import type { MapPost } from "@/lib/map-queries";
-import type { PlaceTypeLink } from "@/lib/place-types";
+import { primaryPlaceType, type PlaceTypeLink } from "@/lib/place-types";
 import {
   labelBackground,
   selectCardLabels,
@@ -46,6 +46,10 @@ export function PlaceListSheetCard({ post, place, isSaved, isFocused, tagGroupMa
     ? (place.area.nameEn ?? place.area.nameKo) +
       (place.area.parent ? ", " + (place.area.parent.nameEn ?? place.area.parent.nameKo) : "")
     : null;
+
+  // "Cafe · Mapo-gu" — 대표 타입이 지역 앞에 붙는다. 둘 중 하나만 있으면 있는 쪽만 쓴다
+  const typeName = primaryPlaceType(place.placePlaceTypes)?.name ?? null;
+  const metaLabel = [typeName, areaLabel].filter(Boolean).join(" · ") || null;
 
   const sortedTopics = matchedTopicIds?.length
     ? [...post.topics].sort((a, b) => {
@@ -116,10 +120,10 @@ export function PlaceListSheetCard({ post, place, isSaved, isFocused, tagGroupMa
               View on map
             </button>
           )}
-          {areaLabel && (
+          {metaLabel && (
             <div className="flex items-center gap-0.5 flex-1 min-w-0">
               <MapPin className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-              <span className="text-xs text-muted-foreground truncate">{areaLabel}</span>
+              <span className="text-xs text-muted-foreground truncate">{metaLabel}</span>
             </div>
           )}
         </div>

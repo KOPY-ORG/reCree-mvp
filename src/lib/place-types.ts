@@ -60,3 +60,43 @@ export function placeCategories(links: Links): PlaceCategory[] {
   }
   return out;
 }
+
+/**
+ * discover 시트에 나오는 카테고리 칩과 그 순서.
+ *
+ * OTHER 만 칩이 없다 — 카테고리라기보다 나머지를 담는 칸이라 고를 이름이 없다.
+ *
+ * satisfies 가 PlaceCategory 와의 어긋남을 컴파일 때 잡는다 — enum 이 바뀌면 여기서 먼저 깨진다.
+ */
+export const PLACE_CATEGORY_CHIPS = [
+  "EAT",
+  "CAFE",
+  "BAR",
+  "ATTRACTIONS",
+  "K_CULTURE",
+  "EXPERIENCE",
+  "SHOP",
+  "STAY",
+] as const satisfies readonly PlaceCategory[];
+
+export type PlaceCategoryChip = (typeof PLACE_CATEGORY_CHIPS)[number];
+
+/**
+ * 칩 글자 — 칩과 결과 모드 제목이 함께 쓰는 유일한 출처다.
+ * 카테고리 대표 타입 이름(EAT 의 "Restaurant")과 겹치지 않게 축 이름으로 짓는다.
+ */
+export const PLACE_CATEGORY_CHIP_LABELS: Record<PlaceCategoryChip, string> = {
+  EAT: "Food",
+  CAFE: "Cafe",
+  BAR: "Bar",
+  ATTRACTIONS: "Attraction",
+  K_CULTURE: "K-Culture",
+  EXPERIENCE: "Activity",
+  SHOP: "Shop",
+  STAY: "Stay",
+};
+
+/** URL 로 들어온 값이 칩 카테고리인가 — 아니면 그 값을 버린다 (OTHER 도 여기서 걸린다) */
+export function isPlaceCategoryChip(value: string): value is PlaceCategoryChip {
+  return (PLACE_CATEGORY_CHIPS as readonly string[]).includes(value);
+}

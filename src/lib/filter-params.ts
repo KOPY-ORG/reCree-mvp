@@ -1,3 +1,4 @@
+import { isPlaceCategoryChip, type PlaceCategoryChip } from "./place-types";
 import type { Level0TopicDeep } from "./topic-queries";
 import type { TagGroupWithTags } from "./filter-queries";
 import type { MarkerGradient } from "./map-utils";
@@ -7,6 +8,11 @@ export interface FilterState {
   tagIds: string[];
   tagGroupKeys: string[];
   region: string | null;
+  /**
+   * 장소 카테고리 칩. 단일 선택이라 배열이 아니다 — 칩 하나가 "지금 이 동네의 카페" 를 뜻한다.
+   * 장소의 속성이라 포스트 축(topic·tag)과 달리 시트 staged 를 거치지 않고 즉시 적용된다.
+   */
+  placeCategory: PlaceCategoryChip | null;
   /**
    * 시군구. region 과 쌍일 때만 유효하다 — level 1 nameEn 이 전국에서 유일하지 않다
    * (Jung-gu 가 다섯 곳, Dong-gu 가 다섯 곳). 시도가 정해져야 하나로 좁혀진다.
@@ -112,6 +118,7 @@ function tagIdToSlug(tagGroups: TagGroupWithTags[], id: string): string | null {
  * - ?tags=concert      → tagIds   (slug → id 변환, 못 찾은 slug 버림)
  * - ?region=seoul      → region   (문자열 그대로, 없으면 null)
  * - ?district=mapo-gu  → district (region 이 있을 때만, 없으면 null)
+ * - ?category=CAFE     → placeCategory (칩에 없는 값 STAY·OTHER·오타는 버림)
  */
 export function parseFilterParams(
   searchParams: URLSearchParams,
@@ -123,6 +130,7 @@ export function parseFilterParams(
   const rawTagGroups = searchParams.get("tagGroups");
   const rawRegion = searchParams.get("region");
   const rawDistrict = searchParams.get("district");
+  const rawCategory = searchParams.get("category");
 
   const topicSlugs = rawTopics ? rawTopics.split(",").filter(Boolean) : [];
   const tagSlugs = rawTags ? rawTags.split(",").filter(Boolean) : [];
@@ -139,9 +147,12 @@ export function parseFilterParams(
   const validGroupKeys = new Set(tagGroups.map((g) => g.group));
   const tagGroupKeys = rawTagGroupKeys.filter((k) => validGroupKeys.has(k));
 
+  // 칩에 없는 카테고리는 고를 길이 없으니 URL 로 들어와도 받지 않는다
+  const placeCategory = rawCategory && isPlaceCategoryChip(rawCategory) ? rawCategory : null;
+
   // district 혼자 오면 버린다 — 시도가 없으면 어느 시군구인지 정해지지 않는다
   const region = rawRegion || null;
-  return { topicIds, tagIds, tagGroupKeys, region, district: region ? rawDistrict || null : null };
+  return { topicIds, tagIds, tagGroupKeys, placeCategory, region, district: region ? rawDistrict || null : null };
 }
 
 /**
@@ -149,6 +160,7 @@ export function parseFilterParams(
  * - currentParams를 복사해서 시작 (saved/collection/place 등 기존 param 보존)
  * - topicIds → slug → "topics"에 set, 비면 delete
  * - tagIds   → slug → "tags"에   set, 비면 delete
+ * - placeCategory → "category"에 set, null이면 delete
  * - region   → "region"에 set,       null이면 delete
  * - district → "district"에 set,     region이 없거나 null이면 delete
  */
@@ -185,6 +197,12 @@ export function serializeFilterParams(
     params.delete("tagGroups");
   }
 
+  if (state.placeCategory !== null) {
+    params.set("category", state.placeCategory);
+  } else {
+    params.delete("category");
+  }
+
   if (state.region !== null) {
     params.set("region", state.region);
   } else {
@@ -209,6 +227,7 @@ export function buildDiscoverHref(opts: {
   topicSlugs?: string[];
   tagSlugs?: string[];
   tagGroupKeys?: string[];
+  placeCategory?: string | null;
   region?: string | null;
   district?: string | null;
 }): string {
@@ -216,6 +235,7 @@ export function buildDiscoverHref(opts: {
   if (opts.topicSlugs?.length) params.set("topics", opts.topicSlugs.join(","));
   if (opts.tagSlugs?.length) params.set("tags", opts.tagSlugs.join(","));
   if (opts.tagGroupKeys?.length) params.set("tagGroups", opts.tagGroupKeys.join(","));
+  if (opts.placeCategory) params.set("category", opts.placeCategory);
   if (opts.region) params.set("region", opts.region);
   if (opts.region && opts.district) params.set("district", opts.district);
   const qs = params.toString();
