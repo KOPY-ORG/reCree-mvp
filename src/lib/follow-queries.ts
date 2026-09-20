@@ -46,7 +46,9 @@ export async function getMyFollows(userId: string) {
         },
       },
     },
-    orderBy: { createdAt: "desc" },
+    // sortOrder 는 사용자가 정한 순서, createdAt 은 그 안에서의 tiebreak.
+    // 초기값이 전부 0 인 사용자도 예전과 같은 순서(최신 팔로우 먼저)로 보인다.
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
   });
 }
 

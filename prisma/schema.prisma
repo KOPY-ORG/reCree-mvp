@@ -558,6 +558,7 @@ model Save {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, targetType, targetId])
+  @@index([targetType, createdAt])
 }
 
 model HomeBanner {
@@ -661,13 +662,15 @@ model TopicFollow {
   id        String   @id @default(uuid()) @db.Uuid
   userId    String   @db.Uuid
   topicId   String   @db.Uuid
+  /// 홈 탭바에 구독 토픽을 늘어놓는 순서. 사용자 안에서만 의미가 있다
+  sortOrder Int      @default(0)
   createdAt DateTime @default(now())
 
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
 
   @@unique([userId, topicId])
-  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, sortOrder])
   @@index([topicId])
 }
 
