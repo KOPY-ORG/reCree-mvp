@@ -5,8 +5,8 @@ export default async function NewPlacePage() {
   const [allPlaceTypes, allAreas] = await Promise.all([
     prisma.placeType.findMany({
       where: { isActive: true },
-      orderBy: { sortOrder: "asc" },
-      select: { id: true, name: true, nameKo: true },
+      orderBy: [{ category: "asc" }, { sortOrder: "asc" }],
+      select: { id: true, name: true, nameKo: true, category: true, isDefault: true },
     }),
     prisma.area.findMany({
       orderBy: [{ level: "asc" }, { sortOrder: "asc" }],

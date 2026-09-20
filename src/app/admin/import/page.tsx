@@ -19,18 +19,6 @@ export default function ImportPage() {
         </div>
       </div>
 
-      {/* 장소 유형 이전(PlacePlaceType) 이 끝났는데 import 경로만 아직 옛 방식이다 */}
-      <Alert variant="destructive" className="mt-6">
-        <AlertTriangle className="h-4 w-4" />
-        <AlertTitle>당분간 사용하지 마세요</AlertTitle>
-        <AlertDescription className="text-xs">
-          <p>
-            장소 타입 반영이 불완전합니다. map_pin_icon 값이 장소 유형 마스터와 대조되지 않고
-            연결(PlacePlaceType)도 만들어지지 않아, 가져온 장소는 지도 카테고리에 잡히지 않습니다.
-          </p>
-        </AlertDescription>
-      </Alert>
-
       {!isConfigured && (
         <Alert variant="destructive" className="mt-6">
           <AlertTriangle className="h-4 w-4" />

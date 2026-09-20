@@ -96,6 +96,28 @@ export const PLACE_CATEGORY_CHIP_LABELS: Record<PlaceCategoryChip, string> = {
   STAY: "Stay",
 };
 
+/**
+ * 어드민 화면용 한국어 카테고리 이름 — 사용자 칩 라벨(영어)과 층이 다르다.
+ * 어드민은 칩에 없는 OTHER 까지 다뤄야 해서 아홉 개 전부 있다.
+ */
+export const PLACE_CATEGORY_LABELS_KO: Record<PlaceCategory, string> = {
+  EAT: "식당",
+  CAFE: "카페",
+  BAR: "바",
+  ATTRACTIONS: "명소",
+  ENTERTAINMENT: "연예",
+  EXPERIENCE: "체험",
+  SHOP: "쇼핑",
+  STAY: "숙박",
+  OTHER: "기타",
+};
+
+/** 어드민 목록·칩을 묶을 때 쓰는 카테고리 순서. 칩 여덟 개 뒤에 OTHER */
+export const PLACE_CATEGORY_ORDER: readonly PlaceCategory[] = [
+  ...PLACE_CATEGORY_CHIPS,
+  "OTHER",
+];
+
 /** URL 로 들어온 값이 칩 카테고리인가 — 아니면 그 값을 버린다 (OTHER 도 여기서 걸린다) */
 export function isPlaceCategoryChip(value: string): value is PlaceCategoryChip {
   return (PLACE_CATEGORY_CHIPS as readonly string[]).includes(value);

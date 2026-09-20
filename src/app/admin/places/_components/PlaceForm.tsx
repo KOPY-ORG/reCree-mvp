@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useTransition, useState, useRef } from "react";
+import React, { useCallback, useMemo, useTransition, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -8,7 +8,7 @@ import {
   ExternalLink,
   GripVertical,
   Loader2,
-  Map,
+  Map as MapIcon,
   MapPin,
   RotateCcw,
   Search,
@@ -37,7 +37,8 @@ import { CSS } from "@dnd-kit/utilities";
 import Link from "next/link";
 import Image from "next/image";
 import { isExternalImage } from "@/lib/image";
-import type { PlaceStatus } from "@prisma/client";
+import type { PlaceCategory, PlaceStatus } from "@prisma/client";
+import { PLACE_CATEGORY_LABELS_KO, PLACE_CATEGORY_ORDER } from "@/lib/place-types";
 import { STATUS_LABELS } from "../_constants";
 import { getPlaceImagePresignedUrl } from "@/lib/actions/upload-actions";
 import { ALLOWED_IMAGE_TYPES, ALLOWED_IMAGE_ACCEPT, MAX_PLACE_IMAGE_SIZE } from "@/lib/upload-constants";
@@ -120,6 +121,9 @@ export type PlaceTypeOption = {
   id: string;
   name: string;
   nameKo: string;
+  category: PlaceCategory;
+  /** 그 카테고리의 "어느 종류인지 모른다" 상태. 구체 타입과 함께 고를 수 없다 */
+  isDefault: boolean;
 };
 
 export type AreaOption = {
@@ -418,10 +422,61 @@ export function PlaceForm({
     setGoogleSearchDone(true);
   }, []);
 
+  // 이름 → 마스터 행. 카테고리·기본값 판정에 쓴다
+  const placeTypeByName = useMemo(
+    () => new Map(allPlaceTypes.map((pt) => [pt.name, pt])),
+    [allPlaceTypes],
+  );
+
+  // 카테고리 제목 + 그 아래 타입들. 비활성 타입은 쿼리에서 이미 빠져 있다
+  const placeTypeGroups = useMemo(() => {
+    const byCategory = new Map<PlaceCategory, PlaceTypeOption[]>();
+    for (const pt of allPlaceTypes) {
+      const list = byCategory.get(pt.category);
+      if (list) list.push(pt);
+      else byCategory.set(pt.category, [pt]);
+    }
+    // 카테고리 순서는 고정이다 — 쿼리 정렬이 바뀌어도 화면의 줄 순서는 흔들리지 않는다
+    return PLACE_CATEGORY_ORDER.filter((c) => byCategory.has(c)).map(
+      (c) => [c, byCategory.get(c)!] as const,
+    );
+  }, [allPlaceTypes]);
+
+  /**
+   * 같은 카테고리에서 기본값과 구체 타입이 같이 선택되면 기본값을 뺀다.
+   * 서버가 거부하는 조합을 화면에서 먼저 정리한다 — create 모드에서 이미지를 먼저
+   * 올린 뒤 서버가 거부하면 올린 파일이 고아로 남기 때문이다.
+   */
+  function dropCoveredDefaults(names: string[]): string[] {
+    const rows = names.map((n) => placeTypeByName.get(n)).filter((r): r is PlaceTypeOption => !!r);
+    const specificCategories = new Set(rows.filter((r) => !r.isDefault).map((r) => r.category));
+    return names.filter((n) => {
+      const row = placeTypeByName.get(n);
+      if (!row) return true;
+      return !(row.isDefault && specificCategories.has(row.category));
+    });
+  }
+
+  /** 이 타입을 지금 고를 수 있는가 — 같은 카테고리의 구체 타입이 이미 있으면 기본값은 고를 수 없다 */
+  function isCoveredDefault(pt: PlaceTypeOption): boolean {
+    if (!pt.isDefault) return false;
+    return selectedPlaceTypes.some((n) => {
+      const row = placeTypeByName.get(n);
+      return !!row && !row.isDefault && row.category === pt.category;
+    });
+  }
+
   function togglePlaceType(name: string) {
     setSelectedPlaceTypes((prev) =>
-      prev.includes(name) ? prev.filter((t) => t !== name) : [...prev, name],
+      prev.includes(name)
+        ? prev.filter((t) => t !== name)
+        : dropCoveredDefaults([...prev, name]),
     );
+  }
+
+  /** 대표로 올린다 — 순서가 곧 sortOrder 라 맨 앞으로 옮기면 된다 */
+  function makePrimaryPlaceType(name: string) {
+    setSelectedPlaceTypes((prev) => [name, ...prev.filter((t) => t !== name)]);
   }
 
   const handleSubmit = (e: { preventDefault(): void }) => {
@@ -443,13 +498,19 @@ export function PlaceForm({
       toast.error("장소 유형을 1개 이상 선택해주세요.");
       return;
     }
+    // 서버가 거부하는 조합을 보내기 전에 정리한다. 이 줄 아래에서 create 모드는 이미지를
+    // 먼저 올리므로, 서버까지 갔다가 거부당하면 올린 파일이 고아로 남는다
+    const normalizedPlaceTypes = dropCoveredDefaults(selectedPlaceTypes);
+    if (normalizedPlaceTypes.length !== selectedPlaceTypes.length) {
+      setSelectedPlaceTypes(normalizedPlaceTypes);
+    }
     const data: PlaceFormData = {
       nameKo: nameKo.trim(),
       nameEn: nameEn.trim(),
       addressKo: addressKo.trim(),
       addressEn: addressEn.trim(),
       areaId: areaId || null,
-      placeTypes: selectedPlaceTypes,
+      placeTypes: normalizedPlaceTypes,
       latitude,
       longitude,
       googlePlaceId,
@@ -1261,28 +1322,76 @@ export function PlaceForm({
                     <CardHeader>
                       <CardTitle className="text-sm font-semibold">장소 유형 <span className="text-destructive">*</span></CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <p className="mb-2 text-xs text-muted-foreground">
-                        처음 고른 타입이 대표 타입입니다.
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {allPlaceTypes.map((pt) => {
-                          const isSelected = selectedPlaceTypes.includes(pt.name);
-                          return (
-                            <button
-                              key={pt.id}
-                              type="button"
-                              onClick={() => togglePlaceType(pt.name)}
-                              className={`h-7 px-2.5 rounded-md text-xs font-medium border transition-colors ${
-                                isSelected
-                                  ? "bg-foreground text-background border-foreground"
-                                  : "bg-background text-muted-foreground border-border hover:border-foreground hover:text-foreground"
-                              }`}
-                            >
-                              {pt.nameKo}
-                            </button>
-                          );
-                        })}
+                    <CardContent className="space-y-3">
+                      {/* 선택한 것과 그 순서 — 맨 앞이 대표다 */}
+                      {selectedPlaceTypes.length > 0 && (
+                        <div className="rounded-md border border-border bg-muted/30 p-2">
+                          <p className="mb-1.5 text-xs text-muted-foreground">
+                            선택한 순서대로 저장됩니다. 맨 앞이 대표입니다.
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {selectedPlaceTypes.map((name, i) => {
+                              const pt = placeTypeByName.get(name);
+                              return (
+                                <span
+                                  key={name}
+                                  className="inline-flex items-center gap-1.5 h-7 pl-2.5 pr-1 rounded-md border border-border bg-background text-xs font-medium"
+                                >
+                                  {pt?.nameKo ?? name}
+                                  {i === 0 ? (
+                                    <span className="h-5 px-1.5 inline-flex items-center rounded bg-foreground text-background text-[10px] font-semibold">
+                                      대표
+                                    </span>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => makePrimaryPlaceType(name)}
+                                      className="h-5 px-1.5 inline-flex items-center rounded border border-border text-[10px] text-muted-foreground hover:border-foreground hover:text-foreground transition-colors"
+                                    >
+                                      대표로
+                                    </button>
+                                  )}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 카테고리별 타입 칩 */}
+                      <div className="space-y-2.5">
+                        {placeTypeGroups.map(([category, types]) => (
+                          <div key={category}>
+                            <p className="mb-1 text-xs font-semibold text-muted-foreground">
+                              {PLACE_CATEGORY_LABELS_KO[category]}
+                            </p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {types.map((pt) => {
+                                const isSelected = selectedPlaceTypes.includes(pt.name);
+                                // 같은 카테고리의 구체 타입을 이미 골랐으면 이 칩은 고를 수 없다.
+                                // 골라 봐야 저장 직전에 빠지므로 아예 누르지 못하게 둔다
+                                const covered = !isSelected && isCoveredDefault(pt);
+                                return (
+                                  <button
+                                    key={pt.id}
+                                    type="button"
+                                    disabled={covered}
+                                    onClick={() => togglePlaceType(pt.name)}
+                                    className={`h-7 px-2.5 rounded-md text-xs font-medium border transition-colors ${
+                                      isSelected
+                                        ? "bg-foreground text-background border-foreground"
+                                        : covered
+                                          ? "bg-muted text-muted-foreground/50 border-border cursor-not-allowed"
+                                          : "bg-background text-muted-foreground border-border hover:border-foreground hover:text-foreground"
+                                    }`}
+                                  >
+                                    {pt.nameKo}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </CardContent>
                   </Card>
@@ -1299,7 +1408,7 @@ export function PlaceForm({
                           className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
                           onClick={() => setMapDialogOpen(true)}
                         >
-                          <Map className="h-3 w-3" />
+                          <MapIcon className="h-3 w-3" />
                           크게 보기
                         </button>
                       </CardAction>

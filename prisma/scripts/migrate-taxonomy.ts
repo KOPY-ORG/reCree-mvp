@@ -200,9 +200,17 @@ async function main() {
   });
   const existingByName = new Map(existingTypes.map((t) => [t.name, t]));
   const toCreate = TAXONOMY.filter((t) => !existingByName.has(t.name));
-  const toUpdate = TAXONOMY.filter((t) => {
+  // sortOrder 도 센다 — 실행 쪽은 TAXONOMY 의 index 를 그대로 덮어쓰므로,
+  // 이름·카테고리만 보면 dry-run 이 18 이라 말하고 실제로는 19 가 바뀌는 어긋남이 생긴다
+  const toUpdate = TAXONOMY.filter((t, i) => {
     const cur = existingByName.get(t.name);
-    return cur && (cur.category !== t.category || cur.isDefault !== t.isDefault || cur.nameKo !== t.nameKo);
+    return (
+      cur !== undefined &&
+      (cur.category !== t.category ||
+        cur.isDefault !== t.isDefault ||
+        cur.nameKo !== t.nameKo ||
+        cur.sortOrder !== i)
+    );
   });
   const legacy = existingTypes.filter((t) => !byName.has(t.name));
 
