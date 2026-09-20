@@ -16,12 +16,6 @@ import { HomeTabBar, type TabTopic } from "./_components/HomeTabBar";
 import { ReCreeshotImage } from "@/components/recreeshot-image";
 import { fetchLatestFeed } from "../_actions/feed-actions";
 import { InfiniteFeed } from "../_components/InfiniteFeed";
-import {
-  getActiveEventCollections,
-  getEventCollectionForMap,
-  type EventCollectionForMap,
-} from "@/lib/event-collection-queries";
-import { EventVerticalCarousel } from "@/components/maps/EventVerticalCarousel";
 import { FeedbackForm } from "@/components/feedback/FeedbackForm";
 
 // ─── 메인 페이지 ──────────────────────────────────────────────────────────────
@@ -41,9 +35,8 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
   }));
   const activeTab = resolveFeedTab(tab, tabTopics);
 
-  // 서로 의존하지 않는 조회는 한 번에 띄운다. 이벤트 컬렉션만 두 단계다 —
-  // 목록을 받아야 각 컬렉션의 마커를 부를 수 있어 그 안에서 다시 Promise.all 한다.
-  const [homeBanners, sections, tagGroupConfigs, savedPostIds, latestFeedResult, guideVideo, homeEvents] =
+  // 서로 의존하지 않는 조회는 한 번에 띄운다
+  const [homeBanners, sections, tagGroupConfigs, savedPostIds, latestFeedResult, guideVideo] =
     await Promise.all([
       getHomeBanners(),
       getCuratedSections({ showOnHome: true }),
@@ -53,20 +46,7 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
       getSavedPostIds(currentUser?.id ?? null),
       fetchLatestFeed({}),
       prisma.guideVideo.findFirst({ where: { isActive: true } }),
-      (async () => {
-        const collections = await getActiveEventCollections();
-        const mapData: Record<string, EventCollectionForMap | null> = Object.fromEntries(
-          await Promise.all(
-            collections.map(async (c) => [c.slug, await getEventCollectionForMap(c.slug)] as const)
-          )
-        );
-        return { collections, mapData };
-      })(),
     ]);
-
-  const homeFirstColData = homeEvents.collections[0]
-    ? (homeEvents.mapData[homeEvents.collections[0].slug] ?? null)
-    : null;
 
   // sections 를 받아야 각 섹션의 콘텐츠를 부를 수 있어 여기 남는다
   const sectionData: SectionData[] = await getSectionData(sections);
@@ -117,17 +97,6 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
       {hasBanners && (
         <div className="mb-4">
           <HomeBannerCarousel banners={bannerItems} />
-        </div>
-      )}
-
-      {homeFirstColData && (
-        <div className="mb-6">
-          <EventVerticalCarousel
-            title="BTS THE CITY ARIRANG LONDON"
-            events={homeFirstColData.markers}
-            collectionSlug={homeFirstColData.collection.slug}
-            collectionName={homeFirstColData.collection.nameEn}
-          />
         </div>
       )}
 
