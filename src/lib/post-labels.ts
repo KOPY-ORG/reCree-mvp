@@ -278,7 +278,10 @@ export type CardLabelSource = {
   topics: LabelTopicInput[];
   /** isVisible 이 걸러진 뒤 displayOrder 순 */
   tags: LabelTagInput[];
-  /** 폴백용 장소 타입. 없으면(장소 없음·옛 캐시) 폴백 없이 태그만으로 그린다 */
+  /**
+   * 카드의 장소 타입 칸을 채울 원본. 없으면(장소 없음·옛 캐시) 그 칸은 비고 뒤 종류가 당겨 온다.
+   * 카드 밖에 이미 장소 타입을 적는 화면(discover 장소 시트)은 일부러 넘기지 않는다.
+   */
   placeTypes?: readonly PlaceTypeLink[] | null;
   tagGroupMap: TagGroupColorMap;
 };
@@ -342,12 +345,12 @@ export function toPlaceTypeSlot(info: PlaceTypeInfo | null): LabelSlot | null {
  * 슬롯에서 카드 라벨을 고른다. 색 계산 방식이 달라 슬롯을 직접 만드는 곳
  * (어드민 미리보기)도 이 함수를 써서 선택 규칙만은 한 벌로 둔다.
  *
- * 순서는 고정이다 — 대표 토픽 → 팬 맥락 태그 → 대표 장소 타입.
+ * 순서는 고정이다 — 대표 토픽 → 대표 장소 타입 → 팬 맥락 태그.
  * list  세 칸: 세 종류를 이 순서 그대로
  * home  두 칸: 이 순서에서 있는 것부터 둘
  *
  * 종류마다 카드에 최대 하나다. 토픽이 둘이어도 둘째는 카드에 안 나오고, 앞 종류가
- * 비면 뒤 종류가 당겨 채운다 (토픽 없음 → 태그·타입, 태그 없음 → 토픽·타입).
+ * 비면 뒤 종류가 당겨 채운다 (토픽 없음 → 타입·태그, 타입 없음 → 토픽·태그).
  * 분위기 태그는 카드 후보가 아니다 — 상세와 필터 시트에서만 보인다.
  */
 export function pickCardLabels(
@@ -357,7 +360,7 @@ export function pickCardLabels(
   variant: "home" | "list",
 ): ResolvedLabel[] {
   const cap = variant === "home" ? 2 : 3;
-  const selected = [topicSlots[0], tagSlots.find(isFanContextSlot), placeTypeSlot]
+  const selected = [topicSlots[0], placeTypeSlot, tagSlots.find(isFanContextSlot)]
     .filter((slot): slot is LabelSlot => slot != null)
     .slice(0, cap);
   // 이미 보여줄 순서대로 골랐다 — finalizeSlots 의 그룹 정렬을 태우지 않는다

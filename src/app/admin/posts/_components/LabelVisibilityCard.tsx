@@ -225,7 +225,7 @@ interface Props {
   topicEffectiveStyleMap: Map<string, React.CSSProperties>;
   topicEffectiveInfoMap: Map<string, EffectiveColorInfo>;
   tagGroups: TagGroupItem[];
-  /** 지금 고른 장소의 타입 — 팬 맥락 태그가 없을 때 대표 타입으로 폴백한다 */
+  /** 지금 고른 장소의 타입 — 카드 배지의 둘째 칸(대표 장소 타입)에 쓴다 */
   placeTypes?: readonly PlaceTypeLink[];
 }
 
