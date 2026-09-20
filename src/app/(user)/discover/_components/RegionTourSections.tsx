@@ -18,11 +18,8 @@ import { useEffect, useRef, useState } from "react";
 import { TOUR_API_ATTRIBUTION } from "@/lib/tour-api/attribution";
 import { attractionCategoryLabel } from "@/lib/tour-api/category";
 import { CARD_W, TEXT_H, CardImage, type CardAspect } from "@/components/tour/CardImage";
-import {
-  FestivalCard,
-  festivalStatusLabel,
-  formatFestivalPeriod,
-} from "@/components/tour/FestivalCard";
+import { FestivalCard } from "@/components/tour/FestivalCard";
+import { festivalSheetProps } from "@/components/tour/festival-detail";
 import {
   fetchRegionAttractions,
   fetchRegionFestivals,
@@ -32,37 +29,6 @@ import type { Attraction, Festival } from "@/lib/tour-api/types";
 import { AttractionDetailSheet } from "@/app/(user)/posts/[slug]/_components/AttractionDetailSheet";
 
 type Loadable<T> = T[] | "failed" | null;
-
-/**
- * 축제를 상세 시트가 아는 형태로 옮긴다.
- *
- * 시트를 하나 더 만들지 않는 이유 — 축제도 detailCommon2(개요·주소·홈페이지)와
- * detailImage2(갤러리)가 관광지와 똑같이 답한다. 실측으로 개요 365자 · 사진 9장이었다.
- * 다른 것은 detailIntro2 의 필드명뿐이고 그건 detail-fields 의 프리셋이 이미 흡수한다.
- *
- *   lang           getFestivals 는 국문 단일 소스다. 영문 서비스에 이 contentId 를
- *                  물으면 0건이다 (id 공간이 갈려 있다)
- *   contentTypeId  축제는 KorService2 에서 15 다. 프리셋이 이 값으로 걸려 있다
- *   distanceM      areaBasedList2 · searchFestival2 는 dist 를 주지 않는다.
- *                  null 이면 시트가 거리 줄을 그리지 않고 그 자리에 meta 가 들어간다
- */
-function festivalAsAttraction(festival: Festival): Attraction {
-  return {
-    contentId: festival.contentId,
-    lang: "ko",
-    title: festival.title,
-    titleKo: festival.titleKo,
-    address: festival.address,
-    addressKo: festival.addressKo,
-    lat: festival.lat,
-    lng: festival.lng,
-    imageUrl: festival.imageUrl,
-    distanceM: null,
-    contentTypeId: "15",
-    // 축제 목록(searchFestival2)은 cat2 를 주지 않는다. contentTypeId 15 가 Festival 로 읽힌다
-    cat2: null,
-  };
-}
 
 // ─── 카드 ─────────────────────────────────────────────────────────────────────
 
@@ -311,17 +277,7 @@ export function RegionTourSections({
           <FestivalCard
             key={item.contentId}
             item={item}
-            onSelect={(picked, trigger) => {
-              const period = formatFestivalPeriod(picked);
-              const status = festivalStatusLabel(picked);
-              setSelected({
-                item: festivalAsAttraction(picked),
-                trigger,
-                meta: period ? `${status} · ${period}` : status,
-                // 축제 카드가 세로 포스터라 시트도 같은 비율로 연다 (FestivalCard.tsx:124)
-                imageAspect: "3/4",
-              });
-            }}
+            onSelect={(picked, trigger) => setSelected({ ...festivalSheetProps(picked), trigger })}
           />
         )}
       />

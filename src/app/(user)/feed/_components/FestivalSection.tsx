@@ -1,7 +1,6 @@
 import { TOUR_API_ATTRIBUTION } from "@/lib/tour-api/attribution";
-import { HScrollSection } from "@/components/curation/HScrollSection";
-import { FestivalCard } from "@/components/tour/FestivalCard";
 import { fetchRegionFestivals } from "../../_actions/tour-actions";
+import { FestivalRow } from "./FestivalRow";
 
 /**
  * 지금 서울에서 열리고 있는 축제 (출처: ⓒ한국관광공사).
@@ -36,12 +35,8 @@ export async function FestivalSection() {
 
   return (
     <div>
-      {/* moreHref 를 넘기지 않는다 — 축제 전체 목록 화면이 없다 */}
-      <HScrollSection title={TITLE}>
-        {ongoing.map((festival) => (
-          <FestivalCard key={festival.contentId} item={festival} href="/discover" />
-        ))}
-      </HScrollSection>
+      {/* 카드를 누르면 상세 시트가 올라온다. 누른 축제를 들고 있어야 해서 그 한 겹만 클라이언트다 */}
+      <FestivalRow title={TITLE} festivals={ongoing} />
 
       {/* 출처 표기는 요강상 빼먹을 수 없다. discover 와 같은 자리(목록 아래 한 번)·같은 글자다.
           -mt-4 는 HScrollSection 이 스스로 가진 mb-6 을 되물러 카드에 붙이는 것이고,
