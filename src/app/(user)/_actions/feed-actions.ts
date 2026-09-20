@@ -40,8 +40,7 @@ export async function fetchFollowFeed({
 
   const posts = await getPostsWithLabels(
     {
-      status: "PUBLISHED",
-      isShop: false,
+      ...PUBLIC_PLACE_POST_WHERE,
       postTopics: { some: { topicId: { in: topicIds } } },
     },
     {

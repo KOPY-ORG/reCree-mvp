@@ -8,6 +8,7 @@
 import type { Prisma } from "@prisma/client";
 
 // 샵 포스트 제외. 샵까지 포함하려면 status 조건만 따로 쓸 것
+// TODO: 이름과 달리 placeId 조건이 없다. 별도 이슈에서 결정
 export const PUBLIC_PLACE_POST_WHERE = {
   status: "PUBLISHED",
   isShop: false,
