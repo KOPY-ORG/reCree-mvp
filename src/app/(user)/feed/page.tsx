@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { HomeBannerCarousel } from "../_components/HomeBannerCarousel";
@@ -13,6 +14,8 @@ import { type TabTopic } from "./_components/HomeTabBar";
 import { HomeTopBar } from "./_components/HomeTopBar";
 import { CuratedSections } from "./_components/CuratedSections";
 import { KoreaMapCard } from "./_components/KoreaMapCard";
+import { FollowFeedSection } from "./_components/FollowFeedSection";
+import { FollowFeedSkeleton } from "./_components/FollowFeedSkeleton";
 import { FreshDrops } from "./_components/FreshDrops";
 import { getSidoPlaceCounts } from "@/lib/area-queries";
 import { fetchLatestFeed } from "../_actions/feed-actions";
@@ -90,6 +93,14 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
               maxCount={sidoCounts.maxCount}
               accentColor="var(--brand)"
             />
+          )}
+
+          {/* 이 섹션만 사용자별이라 캐시가 안 된다. 위의 Promise.all 에 넣으면
+              캐시되는 배너·지도까지 이 쿼리를 기다리므로 경계를 따로 세운다 */}
+          {activeTab.kind === "hot" && (
+            <Suspense fallback={<FollowFeedSkeleton />}>
+              <FollowFeedSection />
+            </Suspense>
           )}
 
           <CuratedSections
