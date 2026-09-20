@@ -10,7 +10,7 @@
 // 서버 컴포넌트가 이 카드를 그리는 것은 막히지 않는다.
 
 import Link from "next/link";
-import { CARD_W, TEXT_H, CardImage } from "./CardImage";
+import { TEXT_H, CardImage } from "./CardImage";
 import type { Festival } from "@/lib/tour-api/types";
 
 // ─── 날짜 · 상태 ──────────────────────────────────────────────────────────────
@@ -90,13 +90,25 @@ type FestivalCardProps = { item: Festival } & (
 );
 
 /**
+ * 축제 카드 폭. 공용 CARD_W(140px)보다 20px 넓다.
+ *
+ * 사진이 3/4 라 140px 이면 사진만 187px 이고 글자까지 247px 이 된다 — 폭 대 높이가
+ * 1 대 1.76 이라 한 장이 기둥처럼 선다. 160px 이면 273px 로 1 대 1.71 이고,
+ * 375px 화면에서 두 장 반이 보여 "옆에 더 있다"가 그대로 읽힌다.
+ *
+ * 관광지 카드는 140px 그대로다. 두 줄이 위아래로 붙어 있지만 사진 비율부터 다르니
+ * 폭까지 맞출 이유가 없다 — 맞추면 오히려 같은 종류로 읽힌다.
+ */
+const FESTIVAL_CARD_W = "w-[160px]";
+
+/**
  * 축제 카드는 관광지 카드와 두 군데가 다르다.
  *
  *   사진 위 뱃지  상태. 진행중은 브랜드색, 예정은 검정 — 한 줄을 훑으며 "지금 하는 것"만
  *                 골라내는 것이 축제를 보는 유일한 방식이다. 글줄에 섞으면 세어야 한다
  *   아랫줄        기간. 관광지 카드의 분류 자리다
  *
- * 뱃지와 아랫줄을 합쳐 한 줄로 쓰지 않는다. 카드 폭이 140px 이라
+ * 뱃지와 아랫줄을 합쳐 한 줄로 쓰지 않는다. 카드 폭이 160px 이라
  * "Now on · Sep 12 – 21" 은 잘린다.
  */
 export function FestivalCard(props: FestivalCardProps) {
@@ -105,11 +117,11 @@ export function FestivalCard(props: FestivalCardProps) {
   const ongoing = item.status === "ongoing";
 
   // 두 갈래가 같은 문자열을 쓴다 — 링크로 열든 시트로 열든 같은 카드로 보여야 한다
-  const shell = `${CARD_W} flex-none text-left transition-opacity active:opacity-70`;
+  const shell = `${FESTIVAL_CARD_W} flex-none text-left transition-opacity active:opacity-70`;
 
   const body = (
     <>
-      <CardImage url={item.imageUrl}>
+      <CardImage url={item.imageUrl} aspect="3/4" fallbackTitle={item.title}>
         <span
           className={`absolute left-1.5 top-1.5 rounded-full px-2 py-[3px] text-[10px] font-semibold leading-none ${
             ongoing ? "bg-brand text-black" : "bg-black/70 text-white"

@@ -16,7 +16,42 @@ import { isExternalImage } from "@/lib/image";
 export const CARD_W = "w-[140px]";
 export const TEXT_H = "h-[52px]";
 
-export function CardImage({ url, children }: { url: string | null; children?: React.ReactNode }) {
+/**
+ * 사진 비율. 문자열을 조립하지 않고 표로 두는 이유는 Tailwind 가 소스에 그대로 적힌
+ * 클래스만 보기 때문이다 — `aspect-[${r}]` 로 만들면 그 클래스가 생성되지 않는다.
+ *
+ * 비율마다 next/image 에 줄 intrinsic 크기를 같이 적는다. 비율 하나를 카드 한 종류가
+ * 쓰고 있어 폭이 곧 그 카드의 폭이다. 렌더 크기는 CSS 가 정하고, 이 숫자는 srcset 용이다.
+ *
+ *   4/3  관광지 · 주변 관광지. 대표사진이 대부분 가로다
+ *   3/4  축제. 실측(서울 진행중 12건 표본) w/h 중앙값이 0.750 으로 정확히 3/4 였다.
+ *        세로 7건이 0.707~0.750 에 몰려 있고, 4/3 으로 담으면 포스터 제목이 잘려 나간다
+ */
+const ASPECT = {
+  "4/3": { cls: "aspect-[4/3]", w: 140, h: 105 },
+  "3/4": { cls: "aspect-[3/4]", w: 160, h: 213 },
+} as const;
+
+export type CardAspect = keyof typeof ASPECT;
+
+export function CardImage({
+  url,
+  aspect = "4/3",
+  fallbackTitle,
+  children,
+}: {
+  url: string | null;
+  /** 기본값이 기존 값이라 넘기지 않는 카드는 달라지지 않는다 */
+  aspect?: CardAspect;
+  /**
+   * 사진이 없을 때 빈 상자 대신 얹을 글자. 넘기지 않으면 예전처럼 핀 하나만 둔다 —
+   * 관광지 카드는 한 줄에 여러 장이 비어도 제목이 바로 아래 있어 얹을 이유가 없다.
+   */
+  fallbackTitle?: string;
+  children?: React.ReactNode;
+}) {
+  const { cls, w, h } = ASPECT[aspect];
+
   return (
     <div className="relative">
       {url ? (
@@ -25,16 +60,24 @@ export function CardImage({ url, children }: { url: string | null; children?: Re
         <Image
           src={url}
           alt=""
-          width={140}
-          height={105}
+          width={w}
+          height={h}
           unoptimized={isExternalImage(url)}
-          className="aspect-[4/3] w-full rounded-xl bg-muted object-cover"
+          className={`${cls} w-full rounded-xl bg-muted object-cover`}
         />
-      ) : (
+      ) : fallbackTitle ? (
+        /* 브랜드 라임 3단 그라데이션. 세로형 자리가 통째로 비면 회색 상자 하나가
+           카드 높이의 4분의 3을 먹는다 — 색과 글자로 채워 카드로 보이게 한다.
+           대각선(좌상→우하)인 것은 세로 상자에서 수직 그라데이션이 띠처럼 보여서다 */
         <div
-          aria-hidden
-          className="flex aspect-[4/3] w-full items-center justify-center rounded-xl bg-muted"
+          className={`flex ${cls} w-full items-center justify-center rounded-xl bg-gradient-to-br from-brand via-brand-sub2 to-brand-sub3 px-2.5`}
         >
+          <p className="line-clamp-4 text-center text-[12px] font-bold leading-[1.3] text-foreground">
+            {fallbackTitle}
+          </p>
+        </div>
+      ) : (
+        <div aria-hidden className={`flex ${cls} w-full items-center justify-center rounded-xl bg-muted`}>
           <MapPin className="size-5 text-muted-foreground" />
         </div>
       )}
