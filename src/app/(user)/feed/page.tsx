@@ -17,6 +17,8 @@ import { KoreaMapCard } from "./_components/KoreaMapCard";
 import { FollowFeedSection } from "./_components/FollowFeedSection";
 import { FollowFeedSkeleton } from "./_components/FollowFeedSkeleton";
 import { PopularReCreeshotSection } from "./_components/PopularReCreeshotSection";
+import { FestivalSection } from "./_components/FestivalSection";
+import { FestivalSkeleton } from "./_components/FestivalSkeleton";
 import { FreshDrops } from "./_components/FreshDrops";
 import { getSidoPlaceCounts } from "@/lib/area-queries";
 import { fetchLatestFeed } from "../_actions/feed-actions";
@@ -114,6 +116,14 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
             savedPostIds={savedPostIds}
             guideVideo={guideVideo}
           />
+
+          {/* TourAPI 를 타는 유일한 줄이다. 캐시가 비면 최악 12초(4초 × 3페이지)에
+              번역 5초가 붙어, 경계가 없으면 홈 첫 바이트가 그만큼 밀린다 */}
+          {activeTab.kind === "hot" && (
+            <Suspense fallback={<FestivalSkeleton />}>
+              <FestivalSection />
+            </Suspense>
+          )}
         </>
       )}
 

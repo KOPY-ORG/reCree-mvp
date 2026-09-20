@@ -10,9 +10,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { ExternalLink, MapPin, X } from "lucide-react";
+import { Copy, ExternalLink, MapPin, X } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { isExternalImage } from "@/lib/image";
+import { showToast } from "@/lib/toast";
+import { aspectClass, type CardAspect } from "@/components/tour/CardImage";
 import { TOUR_API_ATTRIBUTION } from "@/lib/tour-api/attribution";
 import {
   fetchAttractionEssentials,
@@ -59,7 +61,7 @@ function RowSkeleton() {
 }
 
 /** 갤러리 — 문자열 배열만 받는 최소판. scroll-snap 이라 시트의 세로 스크롤과 다투지 않는다 */
-function Gallery({ urls }: { urls: string[] }) {
+function Gallery({ urls, aspect }: { urls: string[]; aspect: CardAspect }) {
   const [active, setActive] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -93,7 +95,7 @@ function Gallery({ urls }: { urls: string[] }) {
             ref={(el) => {
               slideRefs.current[i] = el;
             }}
-            className="relative aspect-[4/3] w-[85%] flex-none snap-start overflow-hidden rounded-xl bg-muted"
+            className={`relative ${aspectClass(aspect)} w-[85%] flex-none snap-start overflow-hidden rounded-xl bg-muted`}
           >
             <Image
               src={url}
@@ -119,6 +121,46 @@ function Gallery({ urls }: { urls: string[] }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * 주소 한 줄. 라벨 · 글자 · 복사 버튼.
+ *
+ * 언어는 오는 대로 둔다 — 영문 경로는 영문 주소가, 국문 경로(축제)는 국문 주소가 온다.
+ * 기계 번역으로 통일하지 않는 이유는 tour-api/queries.ts:186-191 에 적혀 있다:
+ * 품질이 한 응답 안에서도 흔들렸고, 로마자로 옮긴 주소는 택시에서도 지도앱에서도 안 통한다.
+ * 그래서 복사가 더 중요하다 — 국문이면 그대로 붙여넣어 쓸 수 있다.
+ *
+ * 라벨 글자는 Block 의 제목과 같다. 여기에 Block 을 쓰면 meta 바로 밑에 구분선이 하나 더 생긴다.
+ */
+function AddressRow({ address }: { address: string }) {
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(address);
+      showToast("Address copied!");
+      return;
+    } catch {
+      // HTTP 등 clipboard 불가 → prompt fallback (PostMetaBar.tsx:36-40 과 같은 길)
+    }
+    prompt("Copy this address:", address);
+  }
+
+  return (
+    <div className="px-4 pt-3">
+      <p className="text-xs font-bold text-muted-foreground">Address</p>
+      <div className="mt-1 flex items-start gap-2">
+        <p className="min-w-0 flex-1 text-[13px] leading-[1.5] text-foreground">{address}</p>
+        <button
+          type="button"
+          onClick={copy}
+          aria-label="Copy address"
+          className="-mt-1.5 flex size-8 flex-none items-center justify-center rounded-full text-muted-foreground transition-colors active:bg-muted"
+        >
+          <Copy className="size-4" />
+        </button>
+      </div>
     </div>
   );
 }
@@ -153,6 +195,7 @@ export function AttractionDetailSheet({
   item,
   trigger,
   meta,
+  imageAspect = "4/3",
   onClose,
 }: {
   /** null 이면 닫힌 상태 */
@@ -172,6 +215,12 @@ export function AttractionDetailSheet({
    * 지역 목록(areaBasedList2 · searchFestival2)은 dist 를 주지 않아 거리와 겹치지 않는다.
    */
   meta?: string;
+  /**
+   * 사진 비율. 목록 카드가 쓰는 비율을 그대로 넘겨 카드와 시트가 같은 모양을 말하게 한다 —
+   * 축제는 세로 포스터(3/4)이고 관광지는 가로 대표사진(4/3)이다.
+   * 기본값이 기존 값이라 넘기지 않는 쪽은 달라지지 않는다.
+   */
+  imageAspect?: CardAspect;
   onClose: () => void;
 }) {
   const [essentials, setEssentials] = useState<Loadable<AttractionEssentials>>(null);
@@ -259,7 +308,11 @@ export function AttractionDetailSheet({
           e.preventDefault();
           shownTrigger?.focus({ preventScroll: true });
         }}
-        className="flex max-h-[88vh] flex-col gap-0 rounded-t-2xl p-0"
+        // 시트는 fixed 라 레이아웃의 540px 기둥 밖으로 나간다 — 그 폭을 여기서 다시 건다.
+        // (user)/layout.tsx:20 과 같은 값·같은 방식이고, 탭바(BottomNav.tsx:163)·
+        // 맵 탭바(ExploreTabBar.tsx:30)처럼 흐름을 벗어난 것들이 이미 쓰는 방법이다.
+        // inset-x-0 위에 max-w 와 mx-auto 를 얹으면 좌우 auto 가 남는 자리를 반씩 먹어 가운데로 간다
+        className="mx-auto flex max-h-[88vh] max-w-[540px] flex-col gap-0 rounded-t-2xl p-0"
       >
         <div className="flex flex-none justify-center pb-1 pt-3">
           <div className="h-1 w-9 rounded-full bg-muted-foreground/25" />
@@ -287,10 +340,10 @@ export function AttractionDetailSheet({
         <div className="min-h-0 flex-1 overflow-y-auto">
           {/* 0단계 — 목록이 이미 가진 것. 갤러리가 오면 그 자리를 넘긴다 */}
           {gallery.length > 0 ? (
-            <Gallery urls={gallery} />
+            <Gallery urls={gallery} aspect={imageAspect} />
           ) : (
             <div className="px-4">
-              <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-muted">
+              <div className={`relative ${aspectClass(imageAspect)} w-full overflow-hidden rounded-xl bg-muted`}>
                 {shown.imageUrl ? (
                   <Image
                     src={shown.imageUrl}
@@ -333,11 +386,7 @@ export function AttractionDetailSheet({
             </div>
           ) : (
             <>
-              {ess?.address && (
-                <p className="px-4 pt-3 text-[13px] leading-[1.5] text-foreground">
-                  {ess.address}
-                </p>
-              )}
+              {ess?.address && <AddressRow address={ess.address} />}
 
               <div className="px-4 pt-3">
                 {essentials === null ? <RowSkeleton /> : null}

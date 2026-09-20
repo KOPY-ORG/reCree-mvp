@@ -121,7 +121,7 @@ export function FestivalCard(props: FestivalCardProps) {
 
   const body = (
     <>
-      <CardImage url={item.imageUrl} aspect="3/4" fallbackTitle={item.title}>
+      <CardImage url={item.imageUrl} aspect="3/4" fallback="brand">
         <span
           className={`absolute left-1.5 top-1.5 rounded-full px-2 py-[3px] text-[10px] font-semibold leading-none ${
             ongoing ? "bg-brand text-black" : "bg-black/70 text-white"

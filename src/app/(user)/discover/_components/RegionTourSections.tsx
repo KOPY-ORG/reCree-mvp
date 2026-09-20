@@ -17,7 +17,7 @@
 import { useEffect, useRef, useState } from "react";
 import { TOUR_API_ATTRIBUTION } from "@/lib/tour-api/attribution";
 import { attractionCategoryLabel } from "@/lib/tour-api/category";
-import { CARD_W, TEXT_H, CardImage } from "@/components/tour/CardImage";
+import { CARD_W, TEXT_H, CardImage, type CardAspect } from "@/components/tour/CardImage";
 import {
   FestivalCard,
   festivalStatusLabel,
@@ -213,6 +213,8 @@ export function RegionTourSections({
     item: Attraction;
     trigger: HTMLElement;
     meta?: string;
+    /** 누른 카드의 사진 비율. 시트가 같은 모양으로 열리게 한다 */
+    imageAspect?: CardAspect;
   } | null>(null);
 
   const rootRef = useRef<HTMLDivElement>(null);
@@ -316,6 +318,8 @@ export function RegionTourSections({
                 item: festivalAsAttraction(picked),
                 trigger,
                 meta: period ? `${status} · ${period}` : status,
+                // 축제 카드가 세로 포스터라 시트도 같은 비율로 연다 (FestivalCard.tsx:124)
+                imageAspect: "3/4",
               });
             }}
           />
@@ -326,6 +330,7 @@ export function RegionTourSections({
         item={selected?.item ?? null}
         trigger={selected?.trigger ?? null}
         meta={selected?.meta}
+        imageAspect={selected?.imageAspect}
         onClose={() => setSelected(null)}
       />
     </div>

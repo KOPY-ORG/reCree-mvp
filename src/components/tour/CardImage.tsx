@@ -34,20 +34,31 @@ const ASPECT = {
 
 export type CardAspect = keyof typeof ASPECT;
 
+/**
+ * 비율 클래스만 꺼낸다. 상세 시트처럼 next/image 를 fill 로 채워
+ * intrinsic 크기가 필요 없는 곳이 쓴다 — 카드와 시트가 같은 비율을 말하게 하려는 것이다.
+ */
+export function aspectClass(aspect: CardAspect): string {
+  return ASPECT[aspect].cls;
+}
+
 export function CardImage({
   url,
   aspect = "4/3",
-  fallbackTitle,
+  fallback = "pin",
   children,
 }: {
   url: string | null;
   /** 기본값이 기존 값이라 넘기지 않는 카드는 달라지지 않는다 */
   aspect?: CardAspect;
   /**
-   * 사진이 없을 때 빈 상자 대신 얹을 글자. 넘기지 않으면 예전처럼 핀 하나만 둔다 —
-   * 관광지 카드는 한 줄에 여러 장이 비어도 제목이 바로 아래 있어 얹을 이유가 없다.
+   * 사진이 없을 때 그 자리에 무엇을 둘지.
+   *
+   *   pin    회색 상자에 핀 하나. 관광지 카드가 쓰던 그대로다
+   *   brand  브랜드 라임 그라데이션. 세로형은 빈 자리가 카드 높이의 4분의 3이라
+   *          회색 상자 하나가 그 자리를 다 먹는다 — 색으로 채워 카드로 보이게 한다
    */
-  fallbackTitle?: string;
+  fallback?: "pin" | "brand";
   children?: React.ReactNode;
 }) {
   const { cls, w, h } = ASPECT[aspect];
@@ -65,17 +76,13 @@ export function CardImage({
           unoptimized={isExternalImage(url)}
           className={`${cls} w-full rounded-xl bg-muted object-cover`}
         />
-      ) : fallbackTitle ? (
-        /* 브랜드 라임 3단 그라데이션. 세로형 자리가 통째로 비면 회색 상자 하나가
-           카드 높이의 4분의 3을 먹는다 — 색과 글자로 채워 카드로 보이게 한다.
+      ) : fallback === "brand" ? (
+        /* 글자를 얹지 않는다. 카드 바로 아래가 제목이라 같은 글자가 두 번 나온다.
            대각선(좌상→우하)인 것은 세로 상자에서 수직 그라데이션이 띠처럼 보여서다 */
         <div
-          className={`flex ${cls} w-full items-center justify-center rounded-xl bg-gradient-to-br from-brand via-brand-sub2 to-brand-sub3 px-2.5`}
-        >
-          <p className="line-clamp-4 text-center text-[12px] font-bold leading-[1.3] text-foreground">
-            {fallbackTitle}
-          </p>
-        </div>
+          aria-hidden
+          className={`${cls} w-full rounded-xl bg-gradient-to-br from-brand via-brand-sub2 to-brand-sub3`}
+        />
       ) : (
         <div aria-hidden className={`flex ${cls} w-full items-center justify-center rounded-xl bg-muted`}>
           <MapPin className="size-5 text-muted-foreground" />
