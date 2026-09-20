@@ -314,28 +314,13 @@ export function buildTopicSlots(topics: LabelTopicInput[]): LabelSlot[] {
   });
 }
 
-/**
- * 카드 배지에서 그룹 표시명(TagGroupConfig.displayLabel)으로 뭉뚱그리지 않는 그룹.
- *
- * SPOT 에서 카드까지 오는 건 Fan Spot 하나다. "Spot" 으로 뭉뚱그리면 왜 팬이 가는지가
- * 글자에서 사라져 장소형 태그와 구분되지 않는다 — 태그 본래 이름을 쓴다.
- * DB 의 displayLabel 은 그대로 둔다. 다른 그룹의 치환은 예전대로다.
- */
-export const NO_DISPLAY_LABEL_GROUPS: readonly string[] = ["SPOT"];
-
-/** 그 그룹이 카드에서 실제로 쓸 표시명. 치환 제외 그룹이면 null */
-export function cardDisplayLabel(group: string, displayLabel: string | null | undefined): string | null {
-  if (NO_DISPLAY_LABEL_GROUPS.includes(group)) return null;
-  return displayLabel ?? null;
-}
-
 export function buildTagSlots(tags: LabelTagInput[], tagGroupMap: TagGroupColorMap): LabelSlot[] {
   return tags.map((tag) => {
     const gc = tagGroupMap.get(tag.group);
     return {
       group: tag.group,
       name: tag.name,
-      displayLabel: cardDisplayLabel(tag.group, gc?.displayLabel),
+      displayLabel: gc?.displayLabel ?? null,
       colors: resolveTagColors(tag, gc),
       ...(tag.slug ? { slug: tag.slug } : {}),
     };

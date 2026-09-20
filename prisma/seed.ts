@@ -1,3 +1,7 @@
+// ⚠️ 이 파일의 태그 구조가 낡았다. docs/design/taxonomy.md 참고
+//    (여기서 만드는 FOOD · SPOT · EXPERIENCE 그룹과 그 태그들은 정리 단계에서 지워진 것들이다 —
+//     이 시드를 그대로 돌리면 되살아난다. prisma/scripts/cleanup-taxonomy.ts 가 정리본이다)
+
 /**
  * Prisma 시드 스크립트 - reCree MVP 초기 데이터
  *
