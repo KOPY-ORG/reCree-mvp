@@ -19,7 +19,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import Image from "next/image";
-import { Check, ChevronLeft, GripVertical, Loader2, MapPin, Plus, Trash2, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, GripVertical, Loader2, MapPin, Plus, Trash2, X } from "lucide-react";
 import { isExternalImage } from "@/lib/image";
 import { showError } from "@/lib/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -32,9 +32,13 @@ import {
   removeCourseItem,
   reorderCourseItems,
   updateCourse,
+  type CourseTopicOption,
 } from "@/app/(user)/_actions/course-actions";
 import type { CourseDetail } from "@/lib/course-queries";
+import { LabelBadge } from "@/components/LabelBadge";
+import { labelBackground, resolveTopicColors } from "@/lib/post-labels";
 import { PlaceAddSheet, type PickedPlace } from "./PlaceAddSheet";
+import { TopicPickSheet } from "./TopicPickSheet";
 import {
   CHIP_BG,
   CONTROL_LINE,
@@ -289,6 +293,26 @@ function SortableItemRow({
 // ─── CourseEditor ────────────────────────────────────────────────────────────
 
 /**
+ * 상세에서 온 Topic 을 편집기가 쓰는 모양으로 옮긴다.
+ *
+ * 둘은 색 필드가 같고 나머지가 다르다 — CourseTopicLabel 은 slug·nameKo 를,
+ * CourseTopicOption 은 parentNameEn 을 갖는다. parentNameEn 은 선택 시트의 검색어로만
+ * 쓰이고 그 시트는 자기 목록을 따로 받으므로 여기서는 null 로 둔다.
+ */
+function toTopicOption(topic: CourseDetail["topics"][number]): CourseTopicOption {
+  return {
+    id: topic.id,
+    nameEn: topic.nameEn,
+    parentNameEn: null,
+    colorHex: topic.colorHex,
+    colorHex2: topic.colorHex2,
+    gradientDir: topic.gradientDir,
+    gradientStop: topic.gradientStop,
+    textColorHex: topic.textColorHex,
+  };
+}
+
+/**
  * 코스 편집기. 화면은 하나지만 저장 시점이 두 갈래다.
  *
  *   draft (courseId 없음)  — 아직 코스가 없다. 제목·공개여부·Day 를 전부 로컬에서 만진다.
@@ -317,6 +341,7 @@ export function CourseEditor({
   // 전부 함께 흐려져(각각 transition-opacity) 화면 전체가 깜빡이는 것처럼 보인다.
   const [titlePending, startTitleTransition] = useTransition();
   const [visibilityPending, startVisibilityTransition] = useTransition();
+  const [topicPending, startTopicTransition] = useTransition();
   const [isDayPending, startDayTransition] = useTransition();
   // 아이템 삭제·정렬은 어떤 컨트롤도 흐리게 하지 않는다. 지운 줄은 그 자리에서 사라지고
   // 옮긴 줄은 그 자리에 있는 것이 곧 피드백이라, pending 을 disabled 에 연결하지 않는다.
@@ -325,7 +350,8 @@ export function CourseEditor({
   const [deletePending, startDeleteTransition] = useTransition();
 
   /** 저장이 하나라도 돌고 있으면 화면을 뜨면 안 된다 — Done 버튼만 이걸 본다 */
-  const isBusy = titlePending || visibilityPending || isDayPending || itemPending || deletePending;
+  const isBusy =
+    titlePending || visibilityPending || topicPending || isDayPending || itemPending || deletePending;
 
   /**
    * 터치와 마우스를 모두 등록한다.
@@ -340,6 +366,15 @@ export function CourseEditor({
   const [title, setTitle] = useState(initialData?.title ?? "");
   const [isPublic, setIsPublic] = useState(initialData?.isPublic ?? false);
   const [courseId, setCourseId] = useState<string | undefined>(initialCourseId);
+
+  /**
+   * 테마. 커버 색이 여기서 나오고(course-cover.ts), 장소 추가 시트의 기본 목록도 이걸 본다.
+   * 초안이면 로컬에만 있다가 Done 에서 createCourse 와 함께 저장된다.
+   */
+  const [topics, setTopics] = useState<CourseTopicOption[]>(
+    () => initialData?.topics.map(toTopicOption) ?? []
+  );
+  const [topicSheetOpen, setTopicSheetOpen] = useState(false);
 
   /**
    * Day 목록은 화면이 소유한다. 서버 결과를 그대로 렌더하면 액션이 끝날 때까지 아무 반응이
@@ -499,6 +534,33 @@ export function CourseEditor({
         }
       } catch {
         setIsPublic(!next);
+        showError("Something went wrong. Try again.");
+      }
+    });
+  }
+
+  // ── 테마 ───────────────────────────────────────────────────────────────────
+
+  /**
+   * 고른 테마를 반영한다. 공개 토글과 같은 갈래다 —
+   * 초안이면 로컬에만 두고 Done 에서 createCourse 가 가져간다.
+   */
+  function handleTopicsConfirm(next: CourseTopicOption[]) {
+    const previous = topics;
+    setTopics(next);
+
+    const id = courseIdRef.current;
+    if (!id) return;
+
+    startTopicTransition(async () => {
+      try {
+        const result = await updateCourse(id, { topicIds: next.map((t) => t.id) });
+        if (result.error) {
+          setTopics(previous);
+          showError(courseErrorMessage(result.error));
+        }
+      } catch {
+        setTopics(previous);
         showError("Something went wrong. Try again.");
       }
     });
@@ -764,7 +826,7 @@ export function CourseEditor({
   /**
    * 초안을 실제 코스로 만든다. Done 을 눌렀을 때만 실행되는 유일한 커밋 지점이다.
    *
-   *   createCourse       코스 + Day 1 (둘의 id 를 함께 받는다)
+   *   createCourse       코스 + Day 1 + 테마 (앞 둘의 id 를 함께 받는다)
    *   addCourseDay × N   Day 2..n — 각각의 id 를 받아 아이템을 걸 자리로 쓴다
    *   addCourseItem × M  Day 별로 화면에 보이는 순서 그대로. sortOrder 는 서버가 맨 뒤에 붙인다
    *   updateCourse       공개로 켜 두었으면 마지막에 반영
@@ -773,7 +835,10 @@ export function CourseEditor({
    * 편집기에 붙잡아 두면 로컬 Day 와 서버 Day 가 어긋난 채로 남는다.
    */
   async function materializeDraft(): Promise<void> {
-    const created = await createCourse({ title: trimmedTitle });
+    const created = await createCourse({
+      title: trimmedTitle,
+      topicIds: topics.map((t) => t.id),
+    });
     if (created.error || !created.id) {
       showError(courseErrorMessage(created.error));
       return;
@@ -937,6 +1002,52 @@ export function CourseEditor({
           {metaText}
         </p>
 
+        {/* 테마. 공개 토글과 같은 카드를 쓰고 여는 것만 다르다 —
+            둘 다 "이 여정이 어떤 것인가"를 정하는 줄이라 같은 무게로 선다.
+            고른 것이 없으면 무엇을 고르는 자리인지 문장으로 말하고,
+            고른 뒤에는 그 자리에 배지가 들어서 커버에 들어갈 색을 미리 보여준다. */}
+        <button
+          type="button"
+          onClick={() => setTopicSheetOpen(true)}
+          disabled={topicPending}
+          aria-label="Journey theme"
+          className="mt-[18px] flex w-full items-center gap-3 rounded-[14px] px-4 py-3.5 text-left transition-opacity disabled:opacity-60"
+          style={{ background: PAPER }}
+        >
+          <span className="min-w-0 flex-1">
+            <span className="block text-[13px] font-medium leading-none" style={{ color: INK }}>
+              Theme
+            </span>
+            {topics.length === 0 ? (
+              <span
+                className="mt-1.5 block text-[11px] font-medium leading-[1.3]"
+                style={{ color: SUB }}
+              >
+                Pick the artists or shows this journey follows.
+              </span>
+            ) : (
+              <span
+                className="mt-2 flex flex-wrap gap-1"
+                style={{ "--pill-fs": "0.6875rem" } as React.CSSProperties}
+              >
+                {topics.map((topic) => {
+                  const colors = resolveTopicColors(topic);
+                  return (
+                    <LabelBadge
+                      key={topic.id}
+                      text={topic.nameEn}
+                      background={labelBackground({ text: topic.nameEn, ...colors })}
+                      color={colors.textColorHex}
+                    />
+                  );
+                })}
+              </span>
+            )}
+          </span>
+
+          <ChevronRight className="size-4 flex-none" style={{ color: SUB }} strokeWidth={2.4} />
+        </button>
+
         {/* 카드 전체가 토글이다 — 시안의 46×26 스위치만으로는 터치 타깃이 부족하다.
             shadcn Switch 는 <button> 을 렌더해 이 행 안에 중첩할 수 없어 표시만 직접 그린다. */}
         <button
@@ -945,7 +1056,7 @@ export function CourseEditor({
           aria-checked={isPublic}
           onClick={handleToggleVisibility}
           disabled={visibilityPending}
-          className="mt-[18px] flex w-full items-center gap-3 rounded-[14px] px-4 py-3.5 text-left transition-opacity disabled:opacity-60"
+          className="mt-2.5 flex w-full items-center gap-3 rounded-[14px] px-4 py-3.5 text-left transition-opacity disabled:opacity-60"
           style={{ background: PAPER }}
         >
           <span className="min-w-0 flex-1">
@@ -1197,6 +1308,13 @@ export function CourseEditor({
         />
       )}
 
+      <TopicPickSheet
+        open={topicSheetOpen}
+        onOpenChange={setTopicSheetOpen}
+        selected={topics}
+        onConfirm={handleTopicsConfirm}
+      />
+
       <PlaceAddSheet
         open={sheetDay !== null}
         onOpenChange={(next) => {
@@ -1211,6 +1329,7 @@ export function CourseEditor({
             : []
         }
         anchor={sheetDay ? anchorForDay(sheetDay.id) : null}
+        themes={topics}
         remainingSlots={sheetDay ? MAX_ITEMS_PER_DAY - sheetDay.items.length : 0}
         onPick={(picked) => {
           if (sheetDay) handlePickPlace(sheetDay.id, picked);

@@ -4,12 +4,17 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { getSavedMapPlaces } from "@/lib/map-queries";
+import { getDescendantTopicIds } from "@/lib/topic-queries";
+import { PUBLIC_PLACE_POST_WHERE } from "@/lib/visibility";
 import { z } from "zod";
 
 // ─── 상수 ────────────────────────────────────────────────────────────────────
 
 const MAX_DAYS = 7;
 const MAX_ITEMS_PER_DAY = 20;
+
+/** 테마 장소 목록 상한. 시트 한 탭이 스크롤로 감당하는 만큼 — 더 필요하면 검색이 있다 */
+const TOPIC_PLACE_TAKE = 60;
 
 // ─── Zod 스키마 ──────────────────────────────────────────────────────────────
 
@@ -21,7 +26,25 @@ const titleSchema = z.string().trim().min(1).max(100);
 const descriptionSchema = z.string().trim().max(500).optional();
 
 const isPublicSchema = z.boolean();
-const topicIdsSchema = z.array(z.string().uuid());
+/**
+ * 코스 테마. 상한 3은 커버 때문이다 — coverBackground 가 Topic 색을 순서대로 이어 붙이는데
+ * (course-cover.ts:39) 넷을 넘기면 각 색이 25% 미만으로 눌려 무엇의 색인지 읽히지 않는다.
+ */
+const MAX_TOPICS = 3;
+const topicIdsSchema = z.array(z.string().uuid()).max(MAX_TOPICS);
+
+/**
+ * 코스 라벨은 L2 Topic만 쓴다. 존재·활성·레벨을 한 번에 확인한다.
+ * createCourse·updateCourse 가 같은 규칙을 봐야 해서 한 곳에 둔다.
+ */
+async function topicIdsAreValid(topicIds: string[]): Promise<boolean> {
+  if (topicIds.length === 0) return true;
+  const found = await prisma.topic.findMany({
+    where: { id: { in: topicIds }, isActive: true, level: 2 },
+    select: { id: true },
+  });
+  return found.length === topicIds.length;
+}
 
 // ─── 소유자 검증 헬퍼 ────────────────────────────────────────────────────────
 // 페이지 레벨 가드는 Server Action을 보호하지 못하므로 액션마다 소유자를 확인한다.
@@ -102,12 +125,21 @@ function revalidateCoursePaths(courseId?: string) {
 export async function createCourse(input: {
   title: string;
   description?: string;
+  /** 편집기에서 초안 상태로 골라 둔 테마. Done 을 누를 때 코스와 함께 만들어진다 */
+  topicIds?: string[];
 }): Promise<{ id?: string; dayId?: string; error?: string }> {
   const parsedTitle = titleSchema.safeParse(input.title);
   if (!parsedTitle.success) return { error: "invalid_input" };
 
   const parsedDescription = descriptionSchema.safeParse(input.description);
   if (!parsedDescription.success) return { error: "invalid_input" };
+
+  let topicIds: string[] = [];
+  if (input.topicIds !== undefined) {
+    const parsed = topicIdsSchema.safeParse(input.topicIds);
+    if (!parsed.success) return { error: "invalid_input" };
+    topicIds = [...new Set(parsed.data)];
+  }
 
   const supabase = await createClient();
   const {
@@ -116,6 +148,8 @@ export async function createCourse(input: {
   if (!user) return { error: "unauthenticated" };
 
   try {
+    if (!(await topicIdsAreValid(topicIds))) return { error: "invalid_input" };
+
     const course = await prisma.$transaction(async (tx) => {
       const created = await tx.course.create({
         data: {
@@ -130,6 +164,11 @@ export async function createCourse(input: {
         data: { courseId: created.id, dayNumber: 1 },
         select: { id: true },
       });
+      if (topicIds.length > 0) {
+        await tx.courseTopic.createMany({
+          data: topicIds.map((topicId) => ({ courseId: created.id, topicId })),
+        });
+      }
       return { id: created.id, dayId: day.id };
     });
 
@@ -197,13 +236,8 @@ export async function updateCourse(
     const owner = await assertCourseOwner(parsedId.data, user.id);
     if ("error" in owner) return owner;
 
-    // 코스 라벨은 L2 Topic만 쓴다. 존재·활성·레벨을 한 번에 확인한다.
-    if (topicIds !== undefined && topicIds.length > 0) {
-      const found = await prisma.topic.findMany({
-        where: { id: { in: topicIds }, isActive: true, level: 2 },
-        select: { id: true },
-      });
-      if (found.length !== topicIds.length) return { error: "invalid_input" };
+    if (topicIds !== undefined && !(await topicIdsAreValid(topicIds))) {
+      return { error: "invalid_input" };
     }
 
     await prisma.$transaction(async (tx) => {
@@ -765,6 +799,117 @@ export type CoursePlaceOption = {
   longitude: number | null;
   imageUrl: string | null;
 };
+
+/**
+ * 테마로 고를 수 있는 Topic.
+ *
+ * L2 만 준다 — updateCourse·createCourse 가 L2 만 받는다(topicIdsAreValid).
+ * L2 가 아티스트·작품 한 편에 해당하는 층이라 "이 여정이 무엇을 따라가는가"와 정확히 겹친다.
+ * L0/L1 은 Boy Group·K-Drama 같은 분류라 테마로 쓰면 아무것도 좁히지 못하고,
+ * L3 는 앨범·회차라 여정 한 개보다 잘다.
+ *
+ * 색 필드를 함께 보내는 것은 고르는 자리에서 커버에 들어갈 색을 미리 보여주기 위해서다 —
+ * resolveTopicColors 가 이 모양을 그대로 받는다.
+ */
+export type CourseTopicOption = {
+  id: string;
+  nameEn: string;
+  /** 어느 분류에 속한 것인지 — 같은 이름이 여럿일 때 고르는 데 쓴다 */
+  parentNameEn: string | null;
+  colorHex: string | null;
+  colorHex2: string | null;
+  gradientDir: string;
+  gradientStop: number;
+  textColorHex: string | null;
+};
+
+export async function getCourseTopicOptions(): Promise<CourseTopicOption[]> {
+  try {
+    const topics = await prisma.topic.findMany({
+      where: { isActive: true, level: 2 },
+      orderBy: [{ sortOrder: "asc" }, { nameEn: "asc" }],
+      select: {
+        id: true,
+        nameEn: true,
+        colorHex: true,
+        colorHex2: true,
+        gradientDir: true,
+        gradientStop: true,
+        textColorHex: true,
+        parent: { select: { nameEn: true } },
+      },
+    });
+    return topics.map(({ parent, ...rest }) => ({ ...rest, parentNameEn: parent?.nameEn ?? null }));
+  } catch (e) {
+    console.error("[getCourseTopicOptions] server_error", e);
+    return [];
+  }
+}
+
+/**
+ * 코스 테마에 걸린 장소.
+ *
+ * Place 에는 Topic 관계가 없다. Topic → PostTopic → Post → PostPlace → Place 로 타야 한다.
+ *
+ * getFilteredMapPlaces(map-queries.ts:361)를 쓰지 않는다. 그쪽이 부르는 getFilteredPosts 는
+ * topicIds 를 토픽마다 AND 로 걸어(filter-queries.ts:18-22) "전부 가진 포스트"를 찾는다 —
+ * discover 의 필터는 그게 맞지만 여기서는 테마가 둘이면 거의 0건이 된다.
+ * 코스 쪽은 "테마 중 아무거나"이므로 하위 토픽까지 펼친 합집합에 in 을 한 번만 건다.
+ *
+ * 좌표 없는 장소는 뺀다 — 코스 아이템은 미니맵에 핀으로 선다(CourseMiniMap).
+ */
+export async function getCourseTopicPlaces(topicIds: string[]): Promise<CoursePlaceOption[]> {
+  const parsed = topicIdsSchema.safeParse(topicIds);
+  if (!parsed.success) return [];
+  const ids = [...new Set(parsed.data)];
+  if (ids.length === 0) return [];
+
+  try {
+    // 하위 토픽을 펼친다 — BTS 를 고른 사람은 그 아래 앨범 토픽의 장소도 같은 테마로 본다
+    const expanded = [...new Set((await Promise.all(ids.map(getDescendantTopicIds))).flat())];
+
+    const places = await prisma.place.findMany({
+      where: {
+        latitude: { not: null },
+        longitude: { not: null },
+        postPlaces: {
+          some: {
+            post: {
+              ...PUBLIC_PLACE_POST_WHERE,
+              postTopics: { some: { topicId: { in: expanded } } },
+            },
+          },
+        },
+      },
+      orderBy: [{ isVerified: "desc" }, { createdAt: "desc" }],
+      take: TOPIC_PLACE_TAKE,
+      select: {
+        id: true,
+        nameKo: true,
+        nameEn: true,
+        addressEn: true,
+        addressKo: true,
+        latitude: true,
+        longitude: true,
+        imageUrl: true,
+        placeImages: { where: { isThumbnail: true }, select: { url: true }, take: 1 },
+      },
+    });
+
+    return places.map((place) => ({
+      id: place.id,
+      // Place.nameEn 은 nullable 인데 CourseItem.nameEn 은 NOT NULL — addCourseItem 과 같은 폴백이다
+      nameEn: place.nameEn?.trim() || place.nameKo,
+      address: place.addressEn ?? place.addressKo,
+      latitude: place.latitude,
+      longitude: place.longitude,
+      imageUrl: place.placeImages[0]?.url ?? place.imageUrl,
+    }));
+  } catch (e) {
+    console.error("[getCourseTopicPlaces] server_error", e);
+    return [];
+  }
+}
 
 /**
  * 내가 저장한 장소.
