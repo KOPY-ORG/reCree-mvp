@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Discover · List view</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9ECE3}
+a{color:#111111;text-decoration:none}a:hover{color:#111111}
+</style>
+</helmet>
+<div style="width: 390px; height: 1000px; position: relative; overflow: hidden; background: #E9ECE3; font-family: Geist, 'Helvetica Neue', sans-serif; color: #111111;">
+
+<div style="position: absolute; left: 0; right: 0; top: 0; height: 110px; background: #E9ECE3;">
+<span style="position: absolute; left: 60px; top: 40px; width: 12px; height: 12px; border-radius: 999px; background: #6D3FD6; border: 3px solid #FFFFFF;"></span>
+<span style="position: absolute; left: 250px; top: 60px; width: 12px; height: 12px; border-radius: 999px; background: #6D3FD6; border: 3px solid #FFFFFF;"></span>
+</div>
+
+<div style="position: absolute; left: 0; right: 0; top: 56px; bottom: 0; background: #FFFFFF; border-radius: 24px 24px 0 0; box-shadow: 0 -4px 20px rgba(0,0,0,0.08); display: flex; flex-direction: column; gap: 16px; padding: 10px 16px 0; box-sizing: border-box;">
+<span style="align-self: center; width: 40px; height: 5px; border-radius: 999px; background: #D6D5D0;"></span>
+
+<div style="display: flex; align-items: center; gap: 8px;">
+<a href="DiscoverDistrict.dc.html" aria-label="Back to map" style="width: 40px; height: 40px; border-radius: 999px; display: flex; align-items: center; justify-content: center; background: #F1F0EC;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round"><path d="m15 6-6 6 6 6"></path></svg>
+</a>
+<div style="display: flex; flex-direction: column;">
+<span style="font-size: 12px; color: #6B6B66;">In Seoul</span>
+<h1 style="margin: 0; font-size: 20px; font-weight: 700;">Mapo-gu</h1>
+</div>
+<span style="margin-left: auto; display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border-radius: 999px; background: #6D3FD6; color: #FFFFFF; font-size: 13px; font-weight: 700;">BTS</span>
+</div>
+
+<div style="display: flex; gap: 4px; padding: 4px; background: #F1F0EC; border-radius: 999px;">
+<button type="button" style="flex-grow: 1; height: 38px; border: none; border-radius: 999px; background: #111111; color: #FFFFFF; font-family: inherit; font-size: 14px; font-weight: 600;">Spots</button>
+<button type="button" style="flex-grow: 1; height: 38px; border: none; border-radius: 999px; background: transparent; color: #3A3A36; font-family: inherit; font-size: 14px; font-weight: 600;">ReCreeshots</button>
+<button type="button" style="flex-grow: 1; height: 38px; border: none; border-radius: 999px; background: transparent; color: #3A3A36; font-family: inherit; font-size: 14px; font-weight: 600;">Events</button>
+</div>
+
+<div style="display: flex; align-items: center; justify-content: space-between;">
+<span style="font-size: 13px; color: #6B6B66;">[N] spots in this area</span>
+<button type="button" style="display: flex; align-items: center; gap: 4px; height: 32px; padding: 0 10px; border: 1px solid #E2E1DC; border-radius: 999px; background: #FFFFFF; font-family: inherit; font-size: 13px; font-weight: 600; color: #111111;">
+<span style="width: 7px; height: 7px; border-radius: 999px; background: #E5484D;"></span>Popular now
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"></path></svg>
+</button>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 14px;">
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="6">
+<a href="#" style="display: flex; gap: 12px; align-items: center;">
+<span style="width: 88px; height: 88px; border-radius: 14px; background: {{r.tone}}; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #5E5B53;">[Photo]</span>
+<span style="display: flex; flex-direction: column; gap: 5px; flex-grow: 1;">
+<span style="display: flex; gap: 6px;">
+<span style="font-size: 11px; font-weight: 700; background: #6D3FD6; color: #FFFFFF; padding: 2px 8px; border-radius: 999px;">BTS</span>
+<span style="font-size: 11px; font-weight: 700; background: #F3E14B; padding: 2px 8px; border-radius: 999px;">{{r.kind}}</span>
+</span>
+<span style="font-size: 15px; font-weight: 700;">{{r.title}}</span>
+<span style="font-size: 12px; color: #6B6B66;">[Distance] · [N] saves this week</span>
+</span>
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8A8A84" stroke-width="1.8" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z"></path></svg>
+</a>
+</sc-for>
+</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      rows: [
+        { title: 'World Cup Bridge', kind: 'Spot', tone: '#C9D0D8' },
+        { title: '[Place name]', kind: 'Cafe', tone: '#D6CDBF' },
+        { title: '[Place name]', kind: 'Hansik', tone: '#CBD3C1' },
+        { title: '[Place name]', kind: 'Photo Spot', tone: '#D8CFC4' },
+        { title: '[Place name]', kind: 'Spot', tone: '#DCE3E8' },
+        { title: '[Place name]', kind: 'Cafe', tone: '#E1D8CB' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
