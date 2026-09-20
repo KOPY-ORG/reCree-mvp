@@ -19,6 +19,7 @@ import { FollowFeedSkeleton } from "./_components/FollowFeedSkeleton";
 import { PopularReCreeshotSection } from "./_components/PopularReCreeshotSection";
 import { FestivalSection } from "./_components/FestivalSection";
 import { FestivalSkeleton } from "./_components/FestivalSkeleton";
+import { JourneySection } from "./_components/JourneySection";
 import { FreshDrops } from "./_components/FreshDrops";
 import { getSidoPlaceCounts } from "@/lib/area-queries";
 import { fetchLatestFeed } from "../_actions/feed-actions";
@@ -124,6 +125,9 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
               <FestivalSection />
             </Suspense>
           )}
+
+          {/* 공용 목록이고 단순 orderBy 라 경계를 세우지 않는다 — 페이지와 같이 기다린다 */}
+          {activeTab.kind === "hot" && <JourneySection />}
         </>
       )}
 
