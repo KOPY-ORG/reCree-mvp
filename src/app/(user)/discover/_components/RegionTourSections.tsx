@@ -15,11 +15,14 @@
 // 을 그대로 따른다. 같은 성격의 데이터가 화면마다 다르게 생기지 않게.
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
-import { MapPin } from "lucide-react";
-import { isExternalImage } from "@/lib/image";
 import { TOUR_API_ATTRIBUTION } from "@/lib/tour-api/attribution";
 import { attractionCategoryLabel } from "@/lib/tour-api/category";
+import { CARD_W, TEXT_H, CardImage } from "@/components/tour/CardImage";
+import {
+  FestivalCard,
+  festivalStatusLabel,
+  formatFestivalPeriod,
+} from "@/components/tour/FestivalCard";
 import {
   fetchRegionAttractions,
   fetchRegionFestivals,
@@ -28,68 +31,7 @@ import {
 import type { Attraction, Festival } from "@/lib/tour-api/types";
 import { AttractionDetailSheet } from "@/app/(user)/posts/[slug]/_components/AttractionDetailSheet";
 
-/** C-3b 와 같은 값 — 한 서비스 안에서 관광지 카드는 어디서나 같은 크기다 */
-const CARD_W = "w-[140px]";
-const TEXT_H = "h-[52px]";
-
 type Loadable<T> = T[] | "failed" | null;
-
-// ─── 축제 날짜 · 상태 ─────────────────────────────────────────────────────────
-
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-function monthDay(yyyymmdd: string): string | null {
-  const month = MONTHS[Number(yyyymmdd.slice(4, 6)) - 1];
-  if (!month) return null;
-  return `${month} ${Number(yyyymmdd.slice(6, 8))}`;
-}
-
-/**
- * "20260918" 두 개를 사람이 읽는 한 줄로.
- *
- * 진행중이면 시작일을 버리고 끝나는 날만 쓴다 — "Until Dec 31".
- * 범위로 쓰면 거짓말이 되기 때문이다. searchFestival2 의 진행중 목록은 대부분 상설
- * 프로그램이라 몇 해 전에 시작한 것이 섞인다 (실측: 서울 진행중 12건 중 12건이 연 단위,
- * 그중 "페인터즈"는 2022-11-01 시작). 해를 감춘 "Nov 1 – Dec 31" 은 올해 그 날짜에
- * 시작한 것처럼 읽힌다. 그리고 이미 하고 있는 것에서 알고 싶은 것은 언제까지인가 하나다.
- *
- * 예정이면 범위 그대로.
- *   같은 날   Sep 19
- *   같은 달   Sep 18 – 20
- *   다른 달   Sep 24 – Oct 24
- *
- * 끝나는 해가 올해가 아닐 때만 연도를 붙인다. 30일 안에 시작하는 것만 올라오므로
- * 시작 쪽에 연도가 필요한 경우는 없고, 해를 넘겨 끝나는 것만 "Dec 20 – Jan 5, 2027" 이 된다.
- */
-function formatFestivalPeriod(festival: Festival): string | null {
-  const { startDate, endDate, status } = festival;
-  if (!/^\d{8}$/.test(startDate) || !/^\d{8}$/.test(endDate)) return null;
-
-  const start = monthDay(startDate);
-  const end = monthDay(endDate);
-  if (!start || !end) return null;
-
-  const yearSuffix = endDate.slice(0, 4) === String(new Date().getFullYear()) ? "" : `, ${endDate.slice(0, 4)}`;
-
-  if (status === "ongoing") return `Until ${end}${yearSuffix}`;
-  if (startDate === endDate) return `${start}${yearSuffix}`;
-  if (startDate.slice(0, 6) === endDate.slice(0, 6)) {
-    return `${start} – ${Number(endDate.slice(6, 8))}${yearSuffix}`;
-  }
-  return `${start} – ${end}${yearSuffix}`;
-}
-
-/**
- * 뱃지 글자. 날짜만으로는 "지금 갈 수 있는지"를 세어 봐야 알 수 있다 —
- * 그 한 번의 계산을 없애는 것이 status 의 쓸모다.
- *
- * upcoming 은 startDate > 오늘 이 성립할 때만 붙으므로 daysUntilStart 가 1 이상이다.
- */
-function festivalStatusLabel(festival: Festival): string {
-  if (festival.status === "ongoing") return "Now on";
-  if (festival.daysUntilStart <= 1) return "Tomorrow";
-  return `In ${festival.daysUntilStart} days`;
-}
 
 /**
  * 축제를 상세 시트가 아는 형태로 옮긴다.
@@ -123,33 +65,6 @@ function festivalAsAttraction(festival: Festival): Attraction {
 }
 
 // ─── 카드 ─────────────────────────────────────────────────────────────────────
-
-function CardImage({ url, children }: { url: string | null; children?: React.ReactNode }) {
-  return (
-    <div className="relative">
-      {url ? (
-        /* unoptimized 판정은 C-3b 와 같다 — 등록되지 않은 호스트를 next/image 에
-           그대로 넘기면 이미지 하나가 아니라 페이지가 죽는다 */
-        <Image
-          src={url}
-          alt=""
-          width={140}
-          height={105}
-          unoptimized={isExternalImage(url)}
-          className="aspect-[4/3] w-full rounded-xl bg-muted object-cover"
-        />
-      ) : (
-        <div
-          aria-hidden
-          className="flex aspect-[4/3] w-full items-center justify-center rounded-xl bg-muted"
-        >
-          <MapPin className="size-5 text-muted-foreground" />
-        </div>
-      )}
-      {children}
-    </div>
-  );
-}
 
 /**
  * 아랫줄이 분류다.
@@ -185,53 +100,6 @@ function AttractionCard({
         {category && (
           <p className="mt-[3px] truncate text-[11.5px] font-medium leading-[1.25] text-muted-foreground">
             {category}
-          </p>
-        )}
-      </div>
-    </button>
-  );
-}
-
-/**
- * 축제 카드는 관광지 카드와 두 군데가 다르다.
- *
- *   사진 위 뱃지  상태. 진행중은 브랜드색, 예정은 검정 — 한 줄을 훑으며 "지금 하는 것"만
- *                 골라내는 것이 축제를 보는 유일한 방식이다. 글줄에 섞으면 세어야 한다
- *   아랫줄        기간. 관광지 카드의 분류 자리다
- *
- * 뱃지와 아랫줄을 합쳐 한 줄로 쓰지 않는다. 카드 폭이 140px 이라
- * "Now on · Sep 12 – 21" 은 잘린다.
- */
-function FestivalCard({
-  item,
-  onSelect,
-}: {
-  item: Festival;
-  onSelect: (item: Festival, trigger: HTMLElement) => void;
-}) {
-  const period = formatFestivalPeriod(item);
-  const ongoing = item.status === "ongoing";
-
-  return (
-    <button
-      type="button"
-      onClick={(e) => onSelect(item, e.currentTarget)}
-      className={`${CARD_W} flex-none text-left transition-opacity active:opacity-70`}
-    >
-      <CardImage url={item.imageUrl}>
-        <span
-          className={`absolute left-1.5 top-1.5 rounded-full px-2 py-[3px] text-[10px] font-semibold leading-none ${
-            ongoing ? "bg-brand text-black" : "bg-black/70 text-white"
-          }`}
-        >
-          {festivalStatusLabel(item)}
-        </span>
-      </CardImage>
-      <div className={`mt-2 ${TEXT_H}`}>
-        <p className="line-clamp-2 text-[13px] font-semibold leading-[1.3]">{item.title}</p>
-        {period && (
-          <p className="mt-[3px] truncate text-[11.5px] font-medium leading-[1.25] text-muted-foreground">
-            {period}
           </p>
         )}
       </div>
