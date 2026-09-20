@@ -28,7 +28,7 @@ export type SectionFormData = {
 
 function revalidate() {
   revalidatePath("/admin/home-curation");
-  revalidatePath("/");
+  revalidatePath("/feed");
 }
 
 // ─── 배너 액션 ────────────────────────────────────────────────────────────────

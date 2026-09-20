@@ -32,10 +32,11 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // /admin/* 경로: 비로그인 시 / 리다이렉트
+  // /admin/* 경로: 비로그인 시 /feed 리다이렉트
+  // "/" 로 보내면 (user)/page.tsx 가 다시 /feed 로 튕긴다 — 한 번에 도착시킨다
   if (pathname.startsWith("/admin") && !user) {
     const homeUrl = request.nextUrl.clone();
-    homeUrl.pathname = "/";
+    homeUrl.pathname = "/feed";
     return NextResponse.redirect(homeUrl);
   }
 

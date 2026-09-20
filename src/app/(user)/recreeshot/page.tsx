@@ -1,10 +1,11 @@
 import { prisma } from "@/lib/prisma";
+import { PUBLIC_RECREESHOT_WHERE } from "@/lib/visibility";
 import { HallGrid } from "./_components/HallGrid";
 import { NewReCreeshotFab } from "./_components/NewReCreeshotFab";
 
 export default async function ReCreeshotPage() {
   const shots = await prisma.reCreeshot.findMany({
-    where: { status: "ACTIVE" },
+    where: PUBLIC_RECREESHOT_WHERE,
     orderBy: { createdAt: "desc" },
     select: {
       id: true,

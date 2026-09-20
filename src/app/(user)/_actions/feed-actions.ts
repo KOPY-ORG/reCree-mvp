@@ -3,6 +3,7 @@
 import { getPostsWithLabels, type PostItem } from "@/lib/post-queries";
 import { getCurrentUser } from "@/lib/auth";
 import { getMyFollows } from "@/lib/follow-queries";
+import { PUBLIC_PLACE_POST_WHERE } from "@/lib/visibility";
 
 const DEFAULT_TAKE = 10;
 
@@ -14,7 +15,7 @@ export async function fetchLatestFeed({
   take?: number;
 } = {}): Promise<{ posts: PostItem[]; nextCursor: string | null }> {
   const posts = await getPostsWithLabels(
-    { status: "PUBLISHED", isShop: false },
+    PUBLIC_PLACE_POST_WHERE,
     {
       take,
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],

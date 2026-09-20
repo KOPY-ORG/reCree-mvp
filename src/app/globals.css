@@ -145,12 +145,14 @@ html[data-nav-tucked] .nav-tuckable {
   --palette-gray-400:   #BABABA;
   --palette-gray-100:   #F3F3F3;
   --palette-white:      #FCFCFC;
+  --palette-pink:       #FE72BE;
 
   /* ── Brand ──────────────────────── */
   --brand:              var(--palette-brand);
   --brand-sub2:         var(--palette-brand-sub2);
   --brand-sub3:         var(--palette-brand-sub3);
   --brand-foreground:   var(--palette-black);
+  --highlight:          var(--palette-pink);
 
   /* ── Semantic (shadcn/ui) ───────── */
   --background:           var(--palette-white);
