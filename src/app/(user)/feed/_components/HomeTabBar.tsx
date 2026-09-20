@@ -13,17 +13,8 @@ import { feedTabHref, HOT_TAB, type FeedTab } from "@/lib/feed-tabs";
  */
 export type TabTopic = { id: string; slug: string; nameEn: string };
 
-/**
- * 알약 치수는 인라인 style 로 준다.
- * .pill-badge 는 globals.css 에서 레이어 밖에 정의돼 있어 Tailwind 유틸리티(@layer utilities)
- * 보다 항상 우선한다 — px-3.5 같은 클래스를 덧붙여도 .pill-badge 의 px-2 를 못 이긴다.
- * --pill-py · --pill-fs 는 .pill-badge 가 열어 둔 조절 손잡이다.
- */
-const PILL_SIZE: React.CSSProperties = {
-  ["--pill-py" as string]: "0.5rem",
-  ["--pill-fs" as string]: "var(--text-sm)",
-  paddingInline: "0.875rem",
-};
+/** 알약 치수. .pill-badge 의 배지 기본값(12px · px-2)을 탭이 눌릴 만한 크기로 키운다 */
+const PILL_SIZE = "text-sm py-2 px-3.5";
 
 const SELECTED: React.CSSProperties = {
   background: "var(--primary)",
@@ -51,8 +42,8 @@ function Tab({
       href={href}
       aria-label={ariaLabel}
       aria-current={active ? "page" : undefined}
-      className="pill-badge shrink-0 transition-opacity active:opacity-70"
-      style={{ ...PILL_SIZE, ...(active ? SELECTED : UNSELECTED) }}
+      className={`pill-badge ${PILL_SIZE} shrink-0 transition-opacity active:opacity-70`}
+      style={active ? SELECTED : UNSELECTED}
     >
       {children}
     </Link>
