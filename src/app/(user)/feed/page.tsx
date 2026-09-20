@@ -1,21 +1,18 @@
 import Link from "next/link";
-import { HScrollSection } from "@/components/curation/HScrollSection";
 import { prisma } from "@/lib/prisma";
 import { HomeBannerCarousel } from "../_components/HomeBannerCarousel";
 import { getHomeBanners, toBannerItems } from "@/lib/home-banner-queries";
-import { getPostsWithLabels, getSavedPostIds } from "@/lib/post-queries";
-import { getCuratedSections, getSectionData, getPostMoreHref, type SectionData } from "@/lib/curation-queries";
+import { getSavedPostIds } from "@/lib/post-queries";
+import { getCuratedSections, getSectionData, type SectionData } from "@/lib/curation-queries";
 import type { TagGroupColorMap } from "@/lib/post-labels";
 
-import { PostCard } from "../_components/PostCard";
-import { GuideVideoCard } from "../_components/GuideVideoCard";
 import { getCurrentUser } from "@/lib/auth";
 import { getMyFollows } from "@/lib/follow-queries";
 import { resolveFeedTab } from "@/lib/feed-tabs";
 import { HomeTabBar, type TabTopic } from "./_components/HomeTabBar";
-import { ReCreeshotImage } from "@/components/recreeshot-image";
+import { CuratedSections } from "./_components/CuratedSections";
+import { FreshDrops } from "./_components/FreshDrops";
 import { fetchLatestFeed } from "../_actions/feed-actions";
-import { InfiniteFeed } from "../_components/InfiniteFeed";
 import { FeedbackForm } from "@/components/feedback/FeedbackForm";
 
 // ─── 메인 페이지 ──────────────────────────────────────────────────────────────
@@ -55,35 +52,9 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
 
   const hasBanners = homeBanners.length > 0;
   const hasSections = sectionData.some((d) => d.items.length > 0);
-
-  // ─── 폴백 ───────────────────────────────────────────────────────────────────
-
-  if (!hasBanners && !hasSections) {
-    const fallbackPosts = await getPostsWithLabels(
-      { status: "PUBLISHED", isShop: false },
-      { orderBy: { createdAt: "desc" } }
-    );
-
-    if (fallbackPosts.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center h-[60vh] gap-2 text-center px-4">
-          <p className="text-lg font-semibold">reCree</p>
-          <p className="text-sm text-muted-foreground">No posts yet. Check back soon!</p>
-        </div>
-      );
-    }
-
-    return (
-      <div className="px-4 py-4 max-w-2xl mx-auto">
-        <HomeTabBar activeTab={activeTab} topics={tabTopics} isLoggedIn={!!currentUser} />
-        <div className="grid grid-cols-2 gap-3">
-          {fallbackPosts.map((post, index) => (
-            <PostCard key={post.id} post={post} tagGroupMap={tagGroupMap} isSaved={savedPostIds.has(post.id)} variant="grid" priority={index === 0} />
-          ))}
-        </div>
-      </div>
-    );
-  }
+  // Fresh Drops 가 쓰는 결과를 그대로 본다 — 빈 상태를 알려고 따로 조회하지 않는다
+  const hasLatest = latestFeedResult.posts.length > 0;
+  const isEmpty = !hasBanners && !hasSections && !hasLatest;
 
   // 배너 props 변환
   const bannerItems = toBannerItems(homeBanners, tagGroupMap, savedPostIds);
@@ -92,69 +63,44 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
 
   return (
     <div className="pt-2 pb-4 max-w-2xl mx-auto">
+      {/* 탭바는 어떤 경우에도 남는다. 볼 게 없는 화면일수록 다른 탭으로 갈 길이 필요하다 */}
       <HomeTabBar activeTab={activeTab} topics={tabTopics} isLoggedIn={!!currentUser} />
 
-      {hasBanners && (
-        <div className="mb-4">
-          <HomeBannerCarousel banners={bannerItems} />
+      {isEmpty ? (
+        <div className="flex flex-col items-center justify-center gap-2 py-24 text-center px-4">
+          <p className="text-lg font-semibold">Nothing here yet</p>
+          <p className="text-sm text-muted-foreground">New spots are on the way. Check back soon.</p>
         </div>
+      ) : (
+        <>
+          {hasBanners && (
+            <div className="mb-4">
+              <HomeBannerCarousel banners={bannerItems} />
+            </div>
+          )}
+
+          <CuratedSections
+            sections={sections}
+            sectionData={sectionData}
+            tagGroupMap={tagGroupMap}
+            savedPostIds={savedPostIds}
+            guideVideo={guideVideo}
+          />
+        </>
       )}
 
-      {sections.map((section, i) => {
-        const data = sectionData[i];
-        if (!data || data.items.length === 0) return null;
-
-        if (data.kind === "reCreeshots") {
-          return (
-            <HScrollSection key={section.id} title={section.titleEn}>
-              {guideVideo && (
-                <div className="shrink-0 w-[120px]">
-                  <GuideVideoCard
-                    videoUrl={guideVideo.videoUrl}
-                    thumbnailUrl={guideVideo.thumbnailUrl}
-                    titleEn={guideVideo.titleEn}
-                    className="aspect-[4/5] rounded-lg"
-                  />
-                </div>
-              )}
-              {data.items.map((shot) => (
-                <Link key={shot.id} href={`/recreeshot/${shot.id}`} className="shrink-0 w-[120px] block">
-                  <ReCreeshotImage
-                    shotUrl={shot.imageUrl}
-                    variant="thumb-sm"
-                    className="aspect-[4/5] [filter:drop-shadow(0_3px_5px_rgba(0,0,0,0.18))]"
-                    sizes="120px"
-                  />
-                </Link>
-              ))}
-            </HScrollSection>
-          );
-        }
-
-        return (
-          <HScrollSection key={section.id} title={section.titleEn} moreHref={getPostMoreHref(section)}>
-            {data.items.map((post, index) => (
-              <PostCard key={post.id} post={post} tagGroupMap={tagGroupMap} isSaved={savedPostIds.has(post.id)} priority={index === 0} />
-            ))}
-          </HScrollSection>
-        );
-      })}
       <div className="px-4 mb-4">
         <FeedbackForm source="feed" />
       </div>
 
-      <div className="flex items-center justify-between mb-3 px-4 mt-2">
-        <h2 className="font-bold text-lg">Fresh Drops</h2>
-      </div>
-      <div className="px-4">
-        <InfiniteFeed
+      {hasLatest && (
+        <FreshDrops
           initialPosts={latestFeedResult.posts}
           initialCursor={latestFeedResult.nextCursor}
-          savedIds={[...savedPostIds]}
+          savedPostIds={savedPostIds}
           tagGroupMap={tagGroupMap}
-          fetchFn={fetchLatestFeed}
         />
-      </div>
+      )}
 
       <footer className="px-4 pt-8 pb-6 text-sm text-muted-foreground">
         <div className="flex flex-wrap gap-4 justify-center">
