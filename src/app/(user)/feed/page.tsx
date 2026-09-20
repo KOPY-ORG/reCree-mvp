@@ -1,35 +1,12 @@
 import Link from "next/link";
 import { HScrollSection } from "@/components/curation/HScrollSection";
 import { prisma } from "@/lib/prisma";
-import { HomeBannerCarousel, type BannerItem } from "../_components/HomeBannerCarousel";
+import { HomeBannerCarousel } from "../_components/HomeBannerCarousel";
+import { getHomeBanners, toBannerItems } from "@/lib/home-banner-queries";
 import { getPostsWithLabels, getSavedPostIds } from "@/lib/post-queries";
 import { getCuratedSections, getSectionData, getPostMoreHref, type SectionData } from "@/lib/curation-queries";
-import {
-  selectCardLabels,
-  type LabelTopicInput,
-  type LabelTagInput,
-  type TagGroupColorMap,
-  type ResolvedLabel,
-} from "@/lib/post-labels";
-import type { PlaceTypeLink } from "@/lib/place-types";
+import type { TagGroupColorMap } from "@/lib/post-labels";
 
-/** 홈 배너용 라벨 2개 선택 — PostCard home variant와 같은 규칙(selectCardLabels)을 그대로 쓴다 */
-function resolveBannerLabels(
-  postTopics: { isVisible: boolean; displayOrder: number; topic: LabelTopicInput }[],
-  postTags:   { isVisible: boolean; displayOrder: number; tag:   LabelTagInput }[],
-  placeTypes: readonly PlaceTypeLink[] | undefined,
-  tagGroupMap: TagGroupColorMap,
-): ResolvedLabel[] {
-  return selectCardLabels(
-    {
-      topics: postTopics.filter((t) => t.isVisible).map((t) => t.topic),
-      tags: postTags.filter((t) => t.isVisible).map((t) => t.tag),
-      placeTypes,
-      tagGroupMap,
-    },
-    "home",
-  );
-}
 import { PostCard } from "../_components/PostCard";
 import { GuideVideoCard } from "../_components/GuideVideoCard";
 import { getCurrentUser } from "@/lib/auth";
@@ -64,104 +41,34 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
   }));
   const activeTab = resolveFeedTab(tab, tabTopics);
 
-  const guideVideo = await prisma.guideVideo.findFirst({ where: { isActive: true } });
+  // 서로 의존하지 않는 조회는 한 번에 띄운다. 이벤트 컬렉션만 두 단계다 —
+  // 목록을 받아야 각 컬렉션의 마커를 부를 수 있어 그 안에서 다시 Promise.all 한다.
+  const [homeBanners, sections, tagGroupConfigs, savedPostIds, latestFeedResult, guideVideo, homeEvents] =
+    await Promise.all([
+      getHomeBanners(),
+      getCuratedSections({ showOnHome: true }),
+      prisma.tagGroupConfig.findMany({
+        select: { group: true, displayLabel: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true },
+      }),
+      getSavedPostIds(currentUser?.id ?? null),
+      fetchLatestFeed({}),
+      prisma.guideVideo.findFirst({ where: { isActive: true } }),
+      (async () => {
+        const collections = await getActiveEventCollections();
+        const mapData: Record<string, EventCollectionForMap | null> = Object.fromEntries(
+          await Promise.all(
+            collections.map(async (c) => [c.slug, await getEventCollectionForMap(c.slug)] as const)
+          )
+        );
+        return { collections, mapData };
+      })(),
+    ]);
 
-  const [homeBanners, sections, tagGroupConfigs, savedPostIds, latestFeedResult] = await Promise.all([
-    prisma.homeBanner.findMany({
-      where: { isActive: true, post: { isShop: false } },
-      orderBy: { order: "asc" },
-      select: {
-        id: true,
-        post: {
-          select: {
-            id: true,
-            slug: true,
-            titleEn: true,
-            postImages: {
-              where: { isThumbnail: true },
-              select: { url: true, focalX: true, focalY: true, zoom: true },
-              take: 1,
-            },
-            postTopics: {
-              orderBy: { displayOrder: "asc" },
-              select: {
-                topicId: true,
-                isVisible: true,
-                displayOrder: true,
-                topic: {
-                  select: {
-                    nameEn: true,
-                    colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true,
-                    parent: {
-                      select: {
-                        colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true,
-                        parent: {
-                          select: {
-                            colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true,
-                            parent: { select: { colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true } },
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-            postTags: {
-              orderBy: { displayOrder: "asc" },
-              select: {
-                tagId: true,
-                isVisible: true,
-                displayOrder: true,
-                tag: {
-                  select: {
-                    name: true, slug: true, group: true,
-                    colorHex: true, colorHex2: true, textColorHex: true,
-                  },
-                },
-              },
-            },
-            postPlaces: {
-              take: 1,
-              select: {
-                place: {
-                  select: {
-                    nameEn: true,
-                    nameKo: true,
-                    placePlaceTypes: {
-                      orderBy: { sortOrder: "asc" },
-                      select: {
-                        sortOrder: true,
-                        placeType: { select: { name: true, nameKo: true, category: true, isDefault: true } },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    }),
-    getCuratedSections({ showOnHome: true }),
-    prisma.tagGroupConfig.findMany({
-      select: { group: true, displayLabel: true, colorHex: true, colorHex2: true, gradientDir: true, gradientStop: true, textColorHex: true },
-    }),
-    getSavedPostIds(currentUser?.id ?? null),
-    fetchLatestFeed({}),
-  ]);
-
-  // 이벤트 캐러셀 데이터 — 기존 Promise.all과 독립
-  const homeEventCollections = await getActiveEventCollections();
-  const homeEventMapData: Record<string, EventCollectionForMap | null> = Object.fromEntries(
-    await Promise.all(
-      homeEventCollections.map(async (c) => [c.slug, await getEventCollectionForMap(c.slug)] as const)
-    )
-  );
-  const homeFirstColData = homeEventCollections[0]
-    ? (homeEventMapData[homeEventCollections[0].slug] ?? null)
+  const homeFirstColData = homeEvents.collections[0]
+    ? (homeEvents.mapData[homeEvents.collections[0].slug] ?? null)
     : null;
 
+  // sections 를 받아야 각 섹션의 콘텐츠를 부를 수 있어 여기 남는다
   const sectionData: SectionData[] = await getSectionData(sections);
 
   const tagGroupMap: TagGroupColorMap = new Map(tagGroupConfigs.map((c) => [c.group, c]));
@@ -199,29 +106,7 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
   }
 
   // 배너 props 변환
-  const bannerItems: BannerItem[] = homeBanners.map((b) => {
-    const labels = resolveBannerLabels(
-      b.post.postTopics,
-      b.post.postTags,
-      b.post.postPlaces[0]?.place.placePlaceTypes,
-      tagGroupMap,
-    );
-    return {
-      id: b.post.id,
-      slug: b.post.slug,
-      titleEn: b.post.titleEn,
-      displayName:
-        b.post.postPlaces[0]?.place.nameEn ??
-        b.post.postPlaces[0]?.place.nameKo ??
-        b.post.titleEn,
-      thumbnailUrl: b.post.postImages[0]?.url ?? null,
-      focalX: b.post.postImages[0]?.focalX ?? null,
-      focalY: b.post.postImages[0]?.focalY ?? null,
-      zoom: b.post.postImages[0]?.zoom ?? null,
-      labels,
-      isSaved: savedPostIds.has(b.post.id),
-    };
-  });
+  const bannerItems = toBannerItems(homeBanners, tagGroupMap, savedPostIds);
 
   // ─── 메인 렌더링 ─────────────────────────────────────────────────────────────
 
