@@ -2,9 +2,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { isExternalImage, focalStyle } from "@/lib/image";
 import {
-  resolveTopicColors,
   resolveTagColors,
   labelBackground,
+  buildTopicSlots,
   selectCardLabels,
   selectShopLabels,
   type LabelSlot,
@@ -42,14 +42,8 @@ function resolvePostLabels(
   // shop variant — 멤버 우선 토픽 1 + BEAUTY/ITEM 태그 1. 새 규칙 밖이라 그대로 둔다.
   // 태그 슬롯 displayLabel은 null로 둬 그룹 표시명("Item") 치환을 막고 태그 본래 이름을 쓴다.
   if (variant === "shop") {
-    const topicSlots: LabelSlot[] = post.postTopics.map(({ topic }) => ({
-      group: "TOPIC",
-      name: topic.nameEn,
-      displayLabel: null,
-      colors: resolveTopicColors(topic),
-      slug: topic.slug,
-      level: topic.level,
-    }));
+    // 슬롯 조립은 공용 함수로 — 링크 slug 규칙(level 2 토픽만)을 여기서도 그대로 쓴다
+    const topicSlots: LabelSlot[] = buildTopicSlots(post.postTopics.map(({ topic }) => topic));
     const tagSlots: LabelSlot[] = post.postTags.map(({ tag }) => {
       const gc = tagGroupMap.get(tag.group);
       return { group: tag.group, name: tag.name, displayLabel: null, colors: resolveTagColors(tag, gc) };

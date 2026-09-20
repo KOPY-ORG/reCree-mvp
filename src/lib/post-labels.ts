@@ -140,6 +140,7 @@ export type ResolvedLabel = {
   gradientDir: string;
   gradientStop: number;
   textColorHex: string;
+  /** 있으면 /topics/<slug> 로 링크한다. 토픽 배지만 갖는다 */
   slug?: string;
 };
 
@@ -175,7 +176,13 @@ export type LabelSlot = {
   name: string;
   displayLabel: string | null;
   colors: Omit<ResolvedLabel, "text" | "slug">;
+  /** 규칙 판정용 원본 slug (팬 맥락 태그 식별). 링크와 무관하다 */
   slug?: string;
+  /**
+   * 배지에 걸 링크의 slug. 토픽만 갖는다.
+   * 태그·장소 타입에는 갈 페이지가 없다 — 여기 값을 넣으면 /topics/<태그slug> 로 가 404 가 난다.
+   */
+  linkSlug?: string;
   /** 토픽 계층 레벨 — shop selector의 멤버 우선 선택용. 없으면 배열 순서 폴백 */
   level?: number;
 };
@@ -186,7 +193,7 @@ function finalizeSlots(selected: LabelSlot[]): ResolvedLabel[] {
   return selected.map((slot) => {
     const hasOtherGroup = selected.some((s) => s.group !== slot.group);
     const text = slot.displayLabel && hasOtherGroup ? slot.displayLabel : slot.name;
-    return { text, ...slot.colors, ...(slot.slug ? { slug: slot.slug } : {}) };
+    return { text, ...slot.colors, ...(slot.linkSlug ? { slug: slot.linkSlug } : {}) };
   });
 }
 
@@ -232,6 +239,16 @@ export type LabelTopicInput = ColorNode & {
   level?: number;
 };
 
+/**
+ * 토픽 배지가 걸 링크의 slug. 없으면 링크하지 않는다.
+ *
+ * /topics/[slug] 는 level 2 만 받는다 (topic-queries.getTopicBySlug 의 where).
+ * L0·L1·L3 은 갈 페이지가 없어 링크하지 않는다 — 옛 동작 그대로다.
+ */
+export function topicLinkSlug(topic: LabelTopicInput): string | undefined {
+  return topic.level === 2 ? (topic.slug ?? undefined) : undefined;
+}
+
 /** 태그 슬롯 하나를 만들 수 있는 최소 입력 */
 export type LabelTagInput = {
   name: string;
@@ -262,14 +279,17 @@ export function isFanContextSlot(slot: Pick<LabelSlot, "group" | "slug">): boole
 }
 
 export function buildTopicSlots(topics: LabelTopicInput[]): LabelSlot[] {
-  return topics.map((topic) => ({
-    group: "TOPIC",
-    name: topic.nameEn,
-    displayLabel: null,
-    colors: resolveTopicColors(topic),
-    ...(topic.slug ? { slug: topic.slug } : {}),
-    ...(topic.level !== undefined ? { level: topic.level } : {}),
-  }));
+  return topics.map((topic) => {
+    const linkSlug = topicLinkSlug(topic);
+    return {
+      group: "TOPIC",
+      name: topic.nameEn,
+      displayLabel: null,
+      colors: resolveTopicColors(topic),
+      ...(linkSlug ? { linkSlug } : {}),
+      ...(topic.level !== undefined ? { level: topic.level } : {}),
+    };
+  });
 }
 
 /**
@@ -374,7 +394,7 @@ export function pickDetailLabels(
   const toLabel = (slot: LabelSlot): ResolvedLabel => ({
     text: slot.name,
     ...slot.colors,
-    ...(slot.slug ? { slug: slot.slug } : {}),
+    ...(slot.linkSlug ? { slug: slot.linkSlug } : {}),
   });
   return [
     ...topicSlots.map(toLabel),
@@ -394,14 +414,9 @@ export function selectCardLabels(src: CardLabelSource, variant: "home" | "list")
   );
 }
 
-/**
- * 원본 포스트에서 상세 라벨까지.
- * 토픽 slug 는 level 2 일 때만 넘긴다 — 상세 메타바가 그때만 토픽 링크를 건다.
- */
+/** 원본 포스트에서 상세 라벨까지. 링크는 topicLinkSlug 가 정한다 */
 export function selectDetailLabels(src: CardLabelSource): ResolvedLabel[] {
-  const topicSlots = buildTopicSlots(src.topics).map((slot) =>
-    slot.level === 2 ? slot : { ...slot, slug: undefined },
-  );
+  const topicSlots = buildTopicSlots(src.topics);
   const placeTypeSlots = [...(src.placeTypes ?? [])]
     .sort((a, b) => a.sortOrder - b.sortOrder)
     .map((link) => toPlaceTypeSlot(link.placeType))
