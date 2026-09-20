@@ -3,6 +3,9 @@ import type { TagGroupColorMap } from "@/lib/post-labels";
 import { fetchLatestFeed } from "../../_actions/feed-actions";
 import { InfiniteFeed } from "../../_components/InfiniteFeed";
 
+/** 홈에서만 거는 상한. 여기 닿으면 스크롤해도 더 부르지 않는다 */
+const MAX_ITEMS = 30;
+
 /** 최신 장소 포스트 무한 스크롤. 첫 페이지는 서버가 이미 받아 둔 것을 그대로 넘긴다 */
 export function FreshDrops({
   initialPosts,
@@ -27,6 +30,7 @@ export function FreshDrops({
           savedIds={[...savedPostIds]}
           tagGroupMap={tagGroupMap}
           fetchFn={fetchLatestFeed}
+          maxItems={MAX_ITEMS}
         />
       </div>
     </>
