@@ -248,7 +248,7 @@ export default async function HallDetailPage({
               return (
                 <span
                   key={topic.id}
-                  className="pill-badge text-xs font-medium"
+                  className="pill-badge text-xs"
                   style={{ background: bg, color: c.textColorHex }}
                 >
                   {topic.nameEn}
@@ -263,7 +263,7 @@ export default async function HallDetailPage({
               return (
                 <span
                   key={tag.id}
-                  className="pill-badge text-xs font-medium"
+                  className="pill-badge text-xs"
                   style={{ background: bg, color: c.textColorHex }}
                 >
                   {tag.name}
