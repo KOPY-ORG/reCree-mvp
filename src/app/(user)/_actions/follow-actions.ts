@@ -7,13 +7,13 @@ import { topicIdSchema } from "@/lib/validators/follow";
 
 /**
  * Follow/unfollow 후 영향받는 캐시 경로 무효화.
- * - "/" : 홈 For You 섹션
+ * - "/feed" : 홈 For You 섹션
  * - "/discover" : 디폴트 필터
  * - "/profile/following" : 팔로우 목록
  * - "/topics/[slug]" : 토픽 상세 페이지 (PR-3에서 생성)
  */
 function revalidateFollowPaths() {
-  revalidatePath("/");
+  revalidatePath("/feed");
   revalidatePath("/discover");
   revalidatePath("/profile/following");
   revalidatePath("/topics/[slug]", "page");
