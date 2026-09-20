@@ -515,7 +515,9 @@ export function PlaceAddSheet({
         side="bottom"
         showCloseButton={false}
         aria-describedby={undefined}
-        className="flex max-h-[88vh] flex-col gap-0 rounded-t-2xl p-0"
+        // 시트는 fixed 라 레이아웃의 540px 기둥 밖으로 나간다 — 그 폭을 여기서 다시 건다
+        // ((user)/layout.tsx:20 과 같은 값·같은 방식. AttractionDetailSheet.tsx:266 참고)
+        className="mx-auto flex max-h-[88vh] max-w-[540px] flex-col gap-0 rounded-t-2xl p-0"
       >
         <div className="flex flex-none justify-center pb-1 pt-3">
           <div className="h-1 w-9 rounded-full bg-muted-foreground/25" />
