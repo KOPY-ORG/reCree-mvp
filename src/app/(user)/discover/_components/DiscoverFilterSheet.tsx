@@ -9,7 +9,7 @@ import {
   resolveTagColors,
   labelBackground,
   badgeRingStyle,
-  isFanContextSlot,
+  isFilterableTagSlot,
   DEFAULT_TEXT,
 } from "@/lib/post-labels";
 import type { Level0TopicDeep } from "@/lib/topic-queries";
@@ -70,9 +70,12 @@ export function DiscoverFilterSheet({
   onToggleDistrict,
 }: Props) {
   /**
-   * 시트에 그릴 태그 — 카드 배지와 같은 잣대(isFanContextSlot)로 거른다.
-   * MEDIA 는 그룹 전체가 팬 맥락이고, 나머지 그룹은 FAN_CONTEXT_TAG_SLUGS 에 든 것만 남는다.
+   * 시트에 그릴 태그 — MEDIA 전부 + 팬 맥락 + 분위기(isFilterableTagSlot).
    * 그래서 FOOD·EXPERIENCE·BEAUTY·ITEM 은 통째로, SPOT 은 장소형 5종만 빠진다.
+   *
+   * 분위기 태그는 그룹이 아니라 slug 로 판정하므로, Local·Vintage&Retro 가 지금처럼
+   * SPOT 에 있든 나중에 VIBE 그룹으로 옮겨가든 같은 코드가 돈다 — 섹션 제목은
+   * TagGroupConfig.nameEn 에서 오므로 그룹 이름을 코드에 박지 않는다.
    *
    * DB(Tag.isActive·TagGroupConfig.isVisible)는 건드리지 않는다 — 뺀 태그도 검색·어드민에서는
    * 살아 있어야 하고, 옛 URL(?tags=hansik)이 들어오면 필터는 그대로 걸려야 한다.
@@ -83,7 +86,7 @@ export function DiscoverFilterSheet({
       tagGroups
         .map((group) => ({
           ...group,
-          tags: group.tags.filter((tag) => isFanContextSlot({ group: group.group, slug: tag.slug })),
+          tags: group.tags.filter((tag) => isFilterableTagSlot({ group: group.group, slug: tag.slug })),
         }))
         .filter((group) => group.tags.length > 0),
     [tagGroups],

@@ -7,9 +7,7 @@ import { primaryPlaceType, type PlaceTypeInfo, type PlaceTypeLink } from "@/lib/
 export const K_MEDIA_GROUP = "MEDIA";
 
 /**
- * 팬 맥락 태그 — SPOT 그룹 10개 중 "왜 팬이 이 장소에 가는가"를 말하는 5개.
- * 나머지 5개(nature·attraction·heritage·landmark·shopping)는 장소의 성격이라
- * 이제 장소 타입이 맡는다.
+ * 팬 맥락 태그 — "왜 팬이 이 장소에 가는가"를 말하는 태그.
  *
  * MEDIA 는 그룹 전체가 팬 맥락이라 K_MEDIA_GROUP 으로 식별한다 — 여기 넣지 않는다.
  * group 이 아니라 slug 로 거르는 이유는 SPOT 이 한 그룹 안에서 갈리기 때문이고,
@@ -19,9 +17,15 @@ export const FAN_CONTEXT_TAG_SLUGS = [
   "filming-location",
   "photo-spot",
   "fan-spot",
-  "local",
-  "vintageretro",
 ] as const;
+
+/**
+ * 분위기 태그 — 장소의 성격도, 팬이 가는 이유도 아닌 "어떤 결의 장소인가".
+ *
+ * 지금은 SPOT 그룹에 섞여 있고, 데이터 이전 뒤에는 VIBE 그룹으로 옮겨간다.
+ * 그래서 그룹을 보지 않고 slug 로만 판정한다 — 이전 전후 양쪽에서 같은 코드가 돈다.
+ */
+export const VIBE_TAG_SLUGS = ["local", "vintageretro"] as const;
 
 /**
  * 장소 타입 배지 색. 태그와 달리 PlaceType 에는 색 칸이 없어 카테고리별로 코드가 정한다.
@@ -271,11 +275,21 @@ export type CardLabelSource = {
   tagGroupMap: TagGroupColorMap;
 };
 
-/** MEDIA 그룹 전체 + SPOT 의 팬 맥락 slug 만 배지 후보다 */
+/** MEDIA 그룹 전체 + 팬 맥락 slug. 카드 배지 후보는 이것뿐이다 */
 export function isFanContextSlot(slot: Pick<LabelSlot, "group" | "slug">): boolean {
   if (slot.group === K_MEDIA_GROUP) return true;
   if (!slot.slug) return false;
   return (FAN_CONTEXT_TAG_SLUGS as readonly string[]).includes(slot.slug);
+}
+
+/** 분위기 태그인가. 그룹은 보지 않는다 (VIBE 그룹으로 옮겨가도 그대로 동작한다) */
+export function isVibeSlot(slot: Pick<LabelSlot, "slug">): boolean {
+  return slot.slug !== undefined && (VIBE_TAG_SLUGS as readonly string[]).includes(slot.slug);
+}
+
+/** 필터 시트에 그리는 태그 — MEDIA 전부 + 팬 맥락 + 분위기 */
+export function isFilterableTagSlot(slot: Pick<LabelSlot, "group" | "slug">): boolean {
+  return isFanContextSlot(slot) || isVibeSlot(slot);
 }
 
 export function buildTopicSlots(topics: LabelTopicInput[]): LabelSlot[] {
@@ -337,7 +351,8 @@ export function toPlaceTypeSlot(info: PlaceTypeInfo | null): LabelSlot | null {
  *
  * home  토픽 1 + [팬 맥락 태그 1 → 없으면 대표 장소 타입], 최대 2
  * list  토픽 1 + MEDIA 1 + [SPOT 팬 맥락 1 → 없으면 대표 장소 타입], 최대 3
- * 남는 칸은 예전처럼 잔여 슬롯으로 채운다 — 장소 타입은 하나뿐이라 보충에 쓰지 않는다.
+ * 남는 칸은 잔여 슬롯으로 채우고, 그래도 비면 대표 장소 타입을 뒤에 붙인다.
+ * 장소 타입은 카드 하나에 한 번뿐이다 — 두 번째 이후 타입은 상세에서만 보인다.
  */
 export function pickCardLabels(
   topicSlots: LabelSlot[],
@@ -347,18 +362,29 @@ export function pickCardLabels(
 ): ResolvedLabel[] {
   const fanSlots = tagSlots.filter(isFanContextSlot);
   const selected: LabelSlot[] = [];
+  const cap = variant === "home" ? 2 : 3;
+
+  // 대표 장소 타입은 카드에 최대 한 번이다. 팬 맥락 태그 자리를 대신할 때든,
+  // 다 채우고 남은 칸을 메울 때든 같은 슬롯 하나를 쓴다 — 두 번째 타입은 쓰지 않는다.
+  let placeUsed = false;
+  function fillWithPlaceType(): void {
+    if (placeUsed || !placeTypeSlot || selected.length >= cap) return;
+    selected.push(placeTypeSlot);
+    placeUsed = true;
+  }
 
   if (variant === "home") {
     let ti = 0;
     let fi = 0;
     if (ti < topicSlots.length) selected.push(topicSlots[ti++]);
     if (fi < fanSlots.length) selected.push(fanSlots[fi++]);
-    else if (placeTypeSlot) selected.push(placeTypeSlot);
-    while (selected.length < 2) {
+    else fillWithPlaceType();
+    while (selected.length < cap) {
       if (fi < fanSlots.length) selected.push(fanSlots[fi++]);
       else if (ti < topicSlots.length) selected.push(topicSlots[ti++]);
       else break;
     }
+    fillWithPlaceType();
     return finalizeSlots(selected);
   }
 
@@ -370,19 +396,20 @@ export function pickCardLabels(
   if (ti < topicSlots.length) selected.push(topicSlots[ti++]);
   if (mi < mediaSlots.length) selected.push(mediaSlots[mi++]);
   if (si < spotSlots.length) selected.push(spotSlots[si++]);
-  else if (placeTypeSlot) selected.push(placeTypeSlot);
-  if (selected.length < 3) {
+  else fillWithPlaceType();
+  if (selected.length < cap) {
     const remaining = [...topicSlots.slice(ti), ...mediaSlots.slice(mi), ...spotSlots.slice(si)];
     for (const slot of remaining) {
-      if (selected.length >= 3) break;
+      if (selected.length >= cap) break;
       selected.push(slot);
     }
   }
+  fillWithPlaceType();
   return finalizeSlots(selected);
 }
 
 /**
- * 상세: 토픽 전부 + 팬 맥락 태그 전부 + 장소 타입 전부 (sortOrder 순).
+ * 상세: 토픽 전부 + 팬 맥락 태그 + 분위기 태그 + 장소 타입 전부 (sortOrder 순).
  * 카드와 달리 자르지 않는다. 태그는 displayLabel 로 치환하지 않고 본래 이름을 쓴다.
  */
 export function pickDetailLabels(
@@ -400,6 +427,7 @@ export function pickDetailLabels(
     ...topicSlots.map(toLabel),
     ...fanSlots.filter((s) => s.group === K_MEDIA_GROUP).map(toLabel),
     ...fanSlots.filter((s) => s.group !== K_MEDIA_GROUP).map(toLabel),
+    ...tagSlots.filter(isVibeSlot).map(toLabel),
     ...placeTypeSlots.map(toLabel),
   ];
 }
