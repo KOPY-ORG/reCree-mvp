@@ -5,16 +5,19 @@ import Image from "next/image";
 import { isExternalImage } from "@/lib/image";
 import type { MapPost } from "@/lib/map-queries";
 import { type TagGroupColorMap } from "@/lib/post-labels";
+import type { PlaceTypeLink } from "@/lib/place-types";
 import { PostCarouselCard } from "./PostCarouselCard";
 
 interface Props {
   posts: MapPost[];
   savedPostIds: Set<string>;
   tagGroupMap: TagGroupColorMap;
+  /** 이 캐러셀이 붙은 장소의 타입 — 카드 배지 폴백용 */
+  placeTypes?: readonly PlaceTypeLink[];
   placeImages?: { url: string }[];
 }
 
-export function PostCardCarousel({ posts, savedPostIds, tagGroupMap, placeImages = [] }: Props) {
+export function PostCardCarousel({ posts, savedPostIds, tagGroupMap, placeTypes, placeImages = [] }: Props) {
   const totalItems = posts.length + placeImages.length;
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -62,6 +65,7 @@ export function PostCardCarousel({ posts, savedPostIds, tagGroupMap, placeImages
               post={post}
               isSaved={savedPostIds.has(post.id)}
               tagGroupMap={tagGroupMap}
+              placeTypes={placeTypes}
             />
           </div>
         ))}

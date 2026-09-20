@@ -20,11 +20,14 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { TopicForForm, TagForForm, TagGroupItem } from "./PostForm";
+import type { PlaceTypeLink } from "@/lib/place-types";
 import {
   K_MEDIA_GROUP,
   labelBackground,
-  selectHomeLabels,
-  selectListLabels,
+  cardDisplayLabel,
+  pickCardLabels,
+  pickDetailLabels,
+  toPlaceTypeSlot,
   type LabelSlot,
   type ResolvedLabel,
   type EffectiveColorInfo,
@@ -223,6 +226,8 @@ interface Props {
   topicEffectiveStyleMap: Map<string, React.CSSProperties>;
   topicEffectiveInfoMap: Map<string, EffectiveColorInfo>;
   tagGroups: TagGroupItem[];
+  /** 지금 고른 장소의 타입 — 팬 맥락 태그가 없을 때 대표 타입으로 폴백한다 */
+  placeTypes?: readonly PlaceTypeLink[];
 }
 
 export function LabelVisibilityCard({
@@ -232,6 +237,7 @@ export function LabelVisibilityCard({
   topicEffectiveStyleMap,
   topicEffectiveInfoMap,
   tagGroups,
+  placeTypes,
 }: Props) {
   const sensors = useSensors(useSensor(PointerSensor));
   const topicMap = useMemo(() => new Map(allTopics.map((t) => [t.id, t])), [allTopics]);
@@ -275,7 +281,8 @@ export function LabelVisibilityCard({
         const t = tagMap.get(pt.tagId);
         const background = t ? (t.effectiveColorHex2 ? `linear-gradient(${t.effectiveGradientDir}, ${t.effectiveColorHex}, ${t.effectiveColorHex2} ${t.effectiveGradientStop}%)` : t.effectiveColorHex) : "";
         const color = t?.effectiveTextColorHex ?? "#000";
-        const hint = t ? (tagGroupMap.get(t.group)?.displayLabel ?? undefined) : undefined;
+        // 카드에서 실제로 치환될 때만 힌트를 보여준다 (SPOT 은 치환하지 않는다)
+        const hint = t ? (cardDisplayLabel(t.group, tagGroupMap.get(t.group)?.displayLabel) ?? undefined) : undefined;
         return { id: pt.tagId, isVisible: pt.isVisible, label: t?.name ?? pt.tagId, background, color, hint };
       }),
   [postTags, tagMap, tagGroupMap]);
@@ -314,28 +321,30 @@ export function LabelVisibilityCard({
 
     const kmediaSlots: LabelSlot[] = visibleKmedia.map((pt) => {
       const t = tagMap.get(pt.tagId);
-      return { group: K_MEDIA_GROUP, name: t?.name ?? pt.tagId, displayLabel: null, colors: t ? toTagColors(t) : { colorHex: "#e4e4e7", colorHex2: null, gradientDir: "to bottom", gradientStop: 150, textColorHex: "#000000" } };
+      return { group: K_MEDIA_GROUP, name: t?.name ?? pt.tagId, slug: t?.slug, displayLabel: null, colors: t ? toTagColors(t) : { colorHex: "#e4e4e7", colorHex2: null, gradientDir: "to bottom", gradientStop: 150, textColorHex: "#000000" } };
     });
 
     const otherSlots: LabelSlot[] = visibleOther.map((pt) => {
       const t = tagMap.get(pt.tagId);
-      const displayLabel = t ? (tagGroupMap.get(t.group)?.displayLabel ?? null) : null;
-      return { group: t?.group ?? "OTHER", name: t?.name ?? pt.tagId, displayLabel, colors: t ? toTagColors(t) : { colorHex: "#e4e4e7", colorHex2: null, gradientDir: "to bottom", gradientStop: 150, textColorHex: "#000000" } };
+      const displayLabel = t ? cardDisplayLabel(t.group, tagGroupMap.get(t.group)?.displayLabel) : null;
+      return { group: t?.group ?? "OTHER", name: t?.name ?? pt.tagId, slug: t?.slug, displayLabel, colors: t ? toTagColors(t) : { colorHex: "#e4e4e7", colorHex2: null, gradientDir: "to bottom", gradientStop: 150, textColorHex: "#000000" } };
     });
 
-    // 상세: 모든 visible 라벨 전부 (TOPIC → K_MEDIA → OTHER 순)
-    const detail: ResolvedLabel[] = [
-      ...topicSlots.map((s) => ({ text: s.name, ...s.colors })),
-      ...kmediaSlots.map((s) => ({ text: s.name, ...s.colors })),
-      ...otherSlots.map((s) => ({ text: s.name, ...s.colors })),
-    ];
+    // 사용자 카드와 같은 규칙을 쓴다. 슬롯을 여기서 직접 만드는 이유는 색이 다르기 때문이다 —
+    // 폼은 이미 계산된 effective 색을 들고 있고, 사용자 쪽은 원본 색에서 계산한다.
+    // 고르는 규칙(pickCardLabels·pickDetailLabels)만은 한 벌을 공유한다.
+    const tagSlots = [...kmediaSlots, ...otherSlots];
+    const placeTypeSlots = [...(placeTypes ?? [])]
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((link) => toPlaceTypeSlot(link.placeType))
+      .filter((slot): slot is LabelSlot => slot !== null);
 
     return {
-      home: selectHomeLabels(topicSlots, otherSlots),
-      list: selectListLabels(topicSlots, kmediaSlots, otherSlots),
-      detail,
+      home: pickCardLabels(topicSlots, tagSlots, placeTypeSlots[0] ?? null, "home"),
+      list: pickCardLabels(topicSlots, tagSlots, placeTypeSlots[0] ?? null, "list"),
+      detail: pickDetailLabels(topicSlots, tagSlots, placeTypeSlots),
     };
-  }, [postTopics, postTags, topicMap, tagMap, topicEffectiveInfoMap, tagGroupMap]);
+  }, [postTopics, postTags, topicMap, tagMap, topicEffectiveInfoMap, tagGroupMap, placeTypes]);
 
   // ─── 드래그 핸들러 ──────────────────────────────────────────────────────────
 

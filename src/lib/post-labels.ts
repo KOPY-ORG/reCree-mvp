@@ -1,6 +1,7 @@
 // 포스트 라벨 색상 헬퍼 — 홈·탐색 등 여러 페이지에서 공유
 import type React from "react";
 import type { PlaceCategory } from "@prisma/client";
+import { primaryPlaceType, type PlaceTypeInfo, type PlaceTypeLink } from "@/lib/place-types";
 
 /** K-MEDIA 태그 그룹 PK — 변경 시 DB TagGroupConfig.group과 동기화 */
 export const K_MEDIA_GROUP = "MEDIA";
@@ -190,51 +191,6 @@ function finalizeSlots(selected: LabelSlot[]): ResolvedLabel[] {
 }
 
 /**
- * home variant — 토픽 1 + non-K_MEDIA 태그 1 (최대 2개)
- * 슬롯이 부족하면 상호 보완
- */
-export function selectHomeLabels(
-  topicSlots: LabelSlot[],
-  otherSlots: LabelSlot[],
-): ResolvedLabel[] {
-  const selected: LabelSlot[] = [];
-  let topicUsed = 0, otherUsed = 0;
-  if (topicUsed < topicSlots.length) selected.push(topicSlots[topicUsed++]);
-  else if (otherUsed < otherSlots.length) selected.push(otherSlots[otherUsed++]);
-  if (otherUsed < otherSlots.length) selected.push(otherSlots[otherUsed++]);
-  else if (topicUsed < topicSlots.length) selected.push(topicSlots[topicUsed++]);
-  return finalizeSlots(selected);
-}
-
-/**
- * list variant — 토픽 1 + K_MEDIA 1 + non-K_MEDIA 1, 최대 3개
- * 빈 슬롯은 남은 항목으로 보충
- */
-export function selectListLabels(
-  topicSlots: LabelSlot[],
-  kmediaSlots: LabelSlot[],
-  otherSlots: LabelSlot[],
-): ResolvedLabel[] {
-  const selected: LabelSlot[] = [];
-  let topicUsed = 0, kmediaUsed = 0, otherUsed = 0;
-  if (topicUsed < topicSlots.length)   selected.push(topicSlots[topicUsed++]);
-  if (kmediaUsed < kmediaSlots.length) selected.push(kmediaSlots[kmediaUsed++]);
-  if (otherUsed < otherSlots.length)   selected.push(otherSlots[otherUsed++]);
-  if (selected.length < 3) {
-    const remaining = [
-      ...topicSlots.slice(topicUsed),
-      ...kmediaSlots.slice(kmediaUsed),
-      ...otherSlots.slice(otherUsed),
-    ];
-    for (const slot of remaining) {
-      if (selected.length >= 3) break;
-      selected.push(slot);
-    }
-  }
-  return finalizeSlots(selected);
-}
-
-/**
  * shop variant — 멤버 우선 토픽 1 + shop 카테고리 태그 1, 최대 2개.
  * - 토픽: level 최댓값(=멤버)을 우선 선택. level 동률이면 배열 순서(displayOrder) 앞선 것.
  *         level이 전부 undefined면 배열 첫 번째로 폴백(방어 코드).
@@ -257,4 +213,198 @@ export function selectShopLabels(
   const shopTag = tagSlots.find((s) => shopGroups.includes(s.group));
   if (shopTag) selected.push(shopTag);
   return finalizeSlots(selected);
+}
+
+// ── 카드 라벨 규칙 ────────────────────────────────────────────────────────────
+//
+// 배지는 "왜 팬이 이 장소에 가는가"를 말한다. 그래서 후보에서 장소의 성격을 말하는
+// 태그를 뺀다 — FOOD·EXPERIENCE 그룹 전부와, SPOT 중 팬 맥락 밖의 것
+// (nature·attraction·heritage·landmark·shopping). DB 에는 그대로 있고 배지로만 안 그린다.
+// 그 자리는 장소 타입(PlacePlaceType)이 대신 맡는다.
+
+/** 장소 타입 슬롯의 그룹 키 — 태그 그룹과 겹치지 않는 이름이어야 한다 */
+export const PLACE_TYPE_GROUP = "PLACE_TYPE";
+
+/** 토픽 슬롯 하나를 만들 수 있는 최소 입력 */
+export type LabelTopicInput = ColorNode & {
+  nameEn: string;
+  slug?: string | null;
+  level?: number;
+};
+
+/** 태그 슬롯 하나를 만들 수 있는 최소 입력 */
+export type LabelTagInput = {
+  name: string;
+  group: string;
+  /** 팬 맥락 판정에 쓴다. 없으면 SPOT 태그는 후보에서 빠진다 (옛 캐시 payload 방어) */
+  slug?: string | null;
+  colorHex?: string | null;
+  colorHex2?: string | null;
+  textColorHex?: string | null;
+};
+
+/** 화면마다 모양이 다른 포스트를 여기서 한 번 좁힌다 */
+export type CardLabelSource = {
+  /** isVisible 이 걸러진 뒤 displayOrder 순 */
+  topics: LabelTopicInput[];
+  /** isVisible 이 걸러진 뒤 displayOrder 순 */
+  tags: LabelTagInput[];
+  /** 폴백용 장소 타입. 없으면(장소 없음·옛 캐시) 폴백 없이 태그만으로 그린다 */
+  placeTypes?: readonly PlaceTypeLink[] | null;
+  tagGroupMap: TagGroupColorMap;
+};
+
+/** MEDIA 그룹 전체 + SPOT 의 팬 맥락 slug 만 배지 후보다 */
+export function isFanContextSlot(slot: Pick<LabelSlot, "group" | "slug">): boolean {
+  if (slot.group === K_MEDIA_GROUP) return true;
+  if (!slot.slug) return false;
+  return (FAN_CONTEXT_TAG_SLUGS as readonly string[]).includes(slot.slug);
+}
+
+export function buildTopicSlots(topics: LabelTopicInput[]): LabelSlot[] {
+  return topics.map((topic) => ({
+    group: "TOPIC",
+    name: topic.nameEn,
+    displayLabel: null,
+    colors: resolveTopicColors(topic),
+    ...(topic.slug ? { slug: topic.slug } : {}),
+    ...(topic.level !== undefined ? { level: topic.level } : {}),
+  }));
+}
+
+/**
+ * 카드 배지에서 그룹 표시명(TagGroupConfig.displayLabel)으로 뭉뚱그리지 않는 그룹.
+ *
+ * SPOT 에는 이제 팬 맥락 태그만 남는다. "Spot" 으로 바꿔 버리면 Filming Location 과
+ * Photo Spot 이 화면에서 같은 글자가 돼 서로 구분되지 않는다 — 태그 본래 이름을 쓴다.
+ * DB 의 displayLabel 은 그대로 둔다. 다른 그룹의 치환은 예전대로다.
+ */
+export const NO_DISPLAY_LABEL_GROUPS: readonly string[] = ["SPOT"];
+
+/** 그 그룹이 카드에서 실제로 쓸 표시명. 치환 제외 그룹이면 null */
+export function cardDisplayLabel(group: string, displayLabel: string | null | undefined): string | null {
+  if (NO_DISPLAY_LABEL_GROUPS.includes(group)) return null;
+  return displayLabel ?? null;
+}
+
+export function buildTagSlots(tags: LabelTagInput[], tagGroupMap: TagGroupColorMap): LabelSlot[] {
+  return tags.map((tag) => {
+    const gc = tagGroupMap.get(tag.group);
+    return {
+      group: tag.group,
+      name: tag.name,
+      displayLabel: cardDisplayLabel(tag.group, gc?.displayLabel),
+      colors: resolveTagColors(tag, gc),
+      ...(tag.slug ? { slug: tag.slug } : {}),
+    };
+  });
+}
+
+/** 장소 타입 하나를 슬롯으로. 색은 태그와 달리 카테고리별 상수표에서 온다 */
+export function toPlaceTypeSlot(info: PlaceTypeInfo | null): LabelSlot | null {
+  if (!info) return null;
+  return {
+    group: PLACE_TYPE_GROUP,
+    name: info.name,
+    displayLabel: null,
+    colors: PLACE_CATEGORY_COLORS[info.category] ?? PLACE_CATEGORY_COLORS.OTHER,
+  };
+}
+
+/**
+ * 슬롯에서 카드 라벨을 고른다. 색 계산 방식이 달라 슬롯을 직접 만드는 곳
+ * (어드민 미리보기)도 이 함수를 써서 선택 규칙만은 한 벌로 둔다.
+ *
+ * home  토픽 1 + [팬 맥락 태그 1 → 없으면 대표 장소 타입], 최대 2
+ * list  토픽 1 + MEDIA 1 + [SPOT 팬 맥락 1 → 없으면 대표 장소 타입], 최대 3
+ * 남는 칸은 예전처럼 잔여 슬롯으로 채운다 — 장소 타입은 하나뿐이라 보충에 쓰지 않는다.
+ */
+export function pickCardLabels(
+  topicSlots: LabelSlot[],
+  tagSlots: LabelSlot[],
+  placeTypeSlot: LabelSlot | null,
+  variant: "home" | "list",
+): ResolvedLabel[] {
+  const fanSlots = tagSlots.filter(isFanContextSlot);
+  const selected: LabelSlot[] = [];
+
+  if (variant === "home") {
+    let ti = 0;
+    let fi = 0;
+    if (ti < topicSlots.length) selected.push(topicSlots[ti++]);
+    if (fi < fanSlots.length) selected.push(fanSlots[fi++]);
+    else if (placeTypeSlot) selected.push(placeTypeSlot);
+    while (selected.length < 2) {
+      if (fi < fanSlots.length) selected.push(fanSlots[fi++]);
+      else if (ti < topicSlots.length) selected.push(topicSlots[ti++]);
+      else break;
+    }
+    return finalizeSlots(selected);
+  }
+
+  const mediaSlots = fanSlots.filter((s) => s.group === K_MEDIA_GROUP);
+  const spotSlots = fanSlots.filter((s) => s.group !== K_MEDIA_GROUP);
+  let ti = 0;
+  let mi = 0;
+  let si = 0;
+  if (ti < topicSlots.length) selected.push(topicSlots[ti++]);
+  if (mi < mediaSlots.length) selected.push(mediaSlots[mi++]);
+  if (si < spotSlots.length) selected.push(spotSlots[si++]);
+  else if (placeTypeSlot) selected.push(placeTypeSlot);
+  if (selected.length < 3) {
+    const remaining = [...topicSlots.slice(ti), ...mediaSlots.slice(mi), ...spotSlots.slice(si)];
+    for (const slot of remaining) {
+      if (selected.length >= 3) break;
+      selected.push(slot);
+    }
+  }
+  return finalizeSlots(selected);
+}
+
+/**
+ * 상세: 토픽 전부 + 팬 맥락 태그 전부 + 장소 타입 전부 (sortOrder 순).
+ * 카드와 달리 자르지 않는다. 태그는 displayLabel 로 치환하지 않고 본래 이름을 쓴다.
+ */
+export function pickDetailLabels(
+  topicSlots: LabelSlot[],
+  tagSlots: LabelSlot[],
+  placeTypeSlots: LabelSlot[],
+): ResolvedLabel[] {
+  const fanSlots = tagSlots.filter(isFanContextSlot);
+  const toLabel = (slot: LabelSlot): ResolvedLabel => ({
+    text: slot.name,
+    ...slot.colors,
+    ...(slot.slug ? { slug: slot.slug } : {}),
+  });
+  return [
+    ...topicSlots.map(toLabel),
+    ...fanSlots.filter((s) => s.group === K_MEDIA_GROUP).map(toLabel),
+    ...fanSlots.filter((s) => s.group !== K_MEDIA_GROUP).map(toLabel),
+    ...placeTypeSlots.map(toLabel),
+  ];
+}
+
+/** 원본 포스트에서 카드 라벨까지 — 사용자 화면 네 곳이 쓰는 입구 */
+export function selectCardLabels(src: CardLabelSource, variant: "home" | "list"): ResolvedLabel[] {
+  return pickCardLabels(
+    buildTopicSlots(src.topics),
+    buildTagSlots(src.tags, src.tagGroupMap),
+    toPlaceTypeSlot(primaryPlaceType(src.placeTypes)),
+    variant,
+  );
+}
+
+/**
+ * 원본 포스트에서 상세 라벨까지.
+ * 토픽 slug 는 level 2 일 때만 넘긴다 — 상세 메타바가 그때만 토픽 링크를 건다.
+ */
+export function selectDetailLabels(src: CardLabelSource): ResolvedLabel[] {
+  const topicSlots = buildTopicSlots(src.topics).map((slot) =>
+    slot.level === 2 ? slot : { ...slot, slug: undefined },
+  );
+  const placeTypeSlots = [...(src.placeTypes ?? [])]
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .map((link) => toPlaceTypeSlot(link.placeType))
+    .filter((slot): slot is LabelSlot => slot !== null);
+  return pickDetailLabels(topicSlots, buildTagSlots(src.tags, src.tagGroupMap), placeTypeSlots);
 }

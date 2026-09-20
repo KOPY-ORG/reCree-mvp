@@ -58,6 +58,7 @@ import { SourceTab } from "./SourceTab";
 import { PostImageSection } from "./PostImageSection";
 import { LabelVisibilityCard } from "./LabelVisibilityCard";
 import { AIDraftReviewDialog, type AIDraftData } from "./AIDraftReviewSheet";
+import type { PlaceTypeLink } from "@/lib/place-types";
 import {
   Dialog,
   DialogContent,
@@ -73,6 +74,8 @@ export type TagForForm = {
   id: string;
   name: string;
   nameKo: string;
+  /** 팬 맥락 태그 판정용 (post-labels 의 FAN_CONTEXT_TAG_SLUGS) */
+  slug: string;
   group: string;
   colorHex: string | null;
   colorHex2: string | null;
@@ -125,6 +128,8 @@ export type PlaceForForm = {
   googleMapsUrl: string | null;
   naverMapsUrl: string | null;
   gettingThere: string | null;
+  /** 라벨 미리보기의 대표 장소 타입 폴백용 */
+  placePlaceTypes?: readonly PlaceTypeLink[];
 };
 
 export type PlaceEntry = {
@@ -176,6 +181,7 @@ export type PostInitialData = {
     placeGoogleMapsUrl?: string | null;
     placeNaverMapsUrl?: string | null;
     placeGettingThere?: string | null;
+    placePlaceTypes?: readonly PlaceTypeLink[];
     context: string | null;
     vibe: string[];
     mustTry: string | null;
@@ -279,6 +285,7 @@ export function PostForm({
       googleMapsUrl: pp.placeGoogleMapsUrl ?? null,
       naverMapsUrl: pp.placeNaverMapsUrl ?? null,
       gettingThere: pp.placeGettingThere ?? null,
+      placePlaceTypes: pp.placePlaceTypes,
     },
     contextKo: pp.context ?? "",
     contextEn: (pp.insightEn as { context?: string } | null)?.context ?? "",
@@ -1408,6 +1415,7 @@ export function PostForm({
                 topicEffectiveStyleMap={topicEffectiveStyleMap}
                 topicEffectiveInfoMap={topicEffectiveInfoMap}
                 tagGroups={tagGroups}
+                placeTypes={placeEntries[0]?.place.placePlaceTypes}
               />
 
               {/* 수집 정보 */}

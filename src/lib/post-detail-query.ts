@@ -66,6 +66,7 @@ export async function getPostDetail(
             select: {
               id: true,
               name: true,
+              slug: true,
               group: true,
               colorHex: true,
               colorHex2: true,

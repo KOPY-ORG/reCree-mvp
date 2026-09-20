@@ -6,14 +6,11 @@ import Link from "next/link";
 import { isExternalImage } from "@/lib/image";
 import type { MapPost } from "@/lib/map-queries";
 import {
-  resolveTagColors,
-  resolveTopicColors,
   labelBackground,
-  K_MEDIA_GROUP,
-  selectHomeLabels,
-  type LabelSlot,
+  selectCardLabels,
   type TagGroupColorMap,
 } from "@/lib/post-labels";
+import type { PlaceTypeLink } from "@/lib/place-types";
 import { LabelBadge } from "@/components/LabelBadge";
 import { ScrapButton } from "@/app/(user)/_components/ScrapButton";
 
@@ -21,25 +18,18 @@ interface Props {
   post: MapPost;
   isSaved: boolean;
   tagGroupMap: TagGroupColorMap;
+  /** 이 카드가 떠 있는 장소의 타입 — 팬 맥락 태그가 없을 때 대표 타입으로 폴백한다 */
+  placeTypes?: readonly PlaceTypeLink[];
 }
 
-export function PostCarouselCard({ post, isSaved, tagGroupMap }: Props) {
+export function PostCarouselCard({ post, isSaved, tagGroupMap, placeTypes }: Props) {
   const [localSaved, setLocalSaved] = useState(isSaved);
   const cardImageUrl = post.imageUrl ?? post.images[0] ?? null;
 
-  const topicSlots: LabelSlot[] = post.topics.map((topic) => ({
-    group: "TOPIC",
-    name: topic.nameEn,
-    displayLabel: null,
-    colors: resolveTopicColors(topic),
-  }));
-  const otherSlots: LabelSlot[] = post.tags
-    .filter((tag) => tag.group !== K_MEDIA_GROUP)
-    .map((tag) => {
-      const gc = tagGroupMap.get(tag.group);
-      return { group: tag.group, name: tag.name, displayLabel: gc?.displayLabel ?? null, colors: resolveTagColors(tag, gc) };
-    });
-  const labels = selectHomeLabels(topicSlots, otherSlots);
+  const labels = selectCardLabels(
+    { topics: post.topics, tags: post.tags, placeTypes, tagGroupMap },
+    "home",
+  );
 
   return (
     <Link

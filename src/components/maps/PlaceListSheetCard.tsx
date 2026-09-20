@@ -8,12 +8,8 @@ import { topicMatchesFilter } from "@/lib/map-utils";
 import type { MapPost } from "@/lib/map-queries";
 import type { PlaceTypeLink } from "@/lib/place-types";
 import {
-  resolveTagColors,
-  resolveTopicColors,
   labelBackground,
-  K_MEDIA_GROUP,
-  selectHomeLabels,
-  type LabelSlot,
+  selectCardLabels,
   type TagGroupColorMap,
 } from "@/lib/post-labels";
 import { LabelBadge } from "@/components/LabelBadge";
@@ -58,19 +54,10 @@ export function PlaceListSheetCard({ post, place, isSaved, isFocused, tagGroupMa
         return aM - bM;
       })
     : post.topics;
-  const topicSlots: LabelSlot[] = sortedTopics.map((topic) => ({
-    group: "TOPIC",
-    name: topic.nameEn,
-    displayLabel: null,
-    colors: resolveTopicColors(topic),
-  }));
-  const otherSlots: LabelSlot[] = post.tags
-    .filter((tag) => tag.group !== K_MEDIA_GROUP)
-    .map((tag) => {
-      const gc = tagGroupMap.get(tag.group);
-      return { group: tag.group, name: tag.name, displayLabel: gc?.displayLabel ?? null, colors: resolveTagColors(tag, gc) };
-    });
-  const labels = selectHomeLabels(topicSlots, otherSlots);
+  const labels = selectCardLabels(
+    { topics: sortedTopics, tags: post.tags, placeTypes: place.placePlaceTypes, tagGroupMap },
+    "home",
+  );
 
   return (
     <div

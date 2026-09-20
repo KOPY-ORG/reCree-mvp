@@ -5,14 +5,13 @@ import {
   resolveTopicColors,
   resolveTagColors,
   labelBackground,
-  K_MEDIA_GROUP,
-  selectHomeLabels,
-  selectListLabels,
+  selectCardLabels,
   selectShopLabels,
   type LabelSlot,
   type TagGroupColorMap,
   type ResolvedLabel,
 } from "@/lib/post-labels";
+import type { PlaceTypeLink } from "@/lib/place-types";
 import { LabelBadge } from "@/components/LabelBadge";
 import type { PostItem } from "@/lib/post-queries";
 import { SHOP_TAG_GROUPS } from "../shop/_constants";
@@ -31,6 +30,8 @@ export type LabelablePost = {
   postTags: (Omit<PostItem["postTags"][number], "tag"> & {
     tag: Omit<PostItem["postTags"][number]["tag"], "slug"> & { slug?: string };
   })[];
+  /** 팬 맥락 태그가 없을 때 대표 장소 타입으로 폴백한다. 없으면 폴백 없이 태그만 */
+  postPlaces?: { place: { placePlaceTypes?: readonly PlaceTypeLink[] } }[];
 };
 
 function resolvePostLabels(
@@ -38,18 +39,17 @@ function resolvePostLabels(
   tagGroupMap: TagGroupColorMap,
   variant: "home" | "list" | "shop",
 ): ResolvedLabel[] {
-  const topicSlots: LabelSlot[] = post.postTopics.map(({ topic }) => ({
-    group: "TOPIC",
-    name: topic.nameEn,
-    displayLabel: null,
-    colors: resolveTopicColors(topic),
-    slug: topic.slug,
-    level: topic.level,
-  }));
-
-  // shop variant — 멤버 우선 토픽 1 + BEAUTY/ITEM 태그 1.
+  // shop variant — 멤버 우선 토픽 1 + BEAUTY/ITEM 태그 1. 새 규칙 밖이라 그대로 둔다.
   // 태그 슬롯 displayLabel은 null로 둬 그룹 표시명("Item") 치환을 막고 태그 본래 이름을 쓴다.
   if (variant === "shop") {
+    const topicSlots: LabelSlot[] = post.postTopics.map(({ topic }) => ({
+      group: "TOPIC",
+      name: topic.nameEn,
+      displayLabel: null,
+      colors: resolveTopicColors(topic),
+      slug: topic.slug,
+      level: topic.level,
+    }));
     const tagSlots: LabelSlot[] = post.postTags.map(({ tag }) => {
       const gc = tagGroupMap.get(tag.group);
       return { group: tag.group, name: tag.name, displayLabel: null, colors: resolveTagColors(tag, gc) };
@@ -57,23 +57,15 @@ function resolvePostLabels(
     return selectShopLabels(topicSlots, tagSlots, SHOP_TAG_GROUPS);
   }
 
-  const kmediaSlots: LabelSlot[] = post.postTags
-    .filter(({ tag }) => tag.group === K_MEDIA_GROUP)
-    .map(({ tag }) => {
-      const gc = tagGroupMap.get(tag.group);
-      return { group: tag.group, name: tag.name, displayLabel: null, colors: resolveTagColors(tag, gc) };
-    });
-
-  const otherSlots: LabelSlot[] = post.postTags
-    .filter(({ tag }) => tag.group !== K_MEDIA_GROUP)
-    .map(({ tag }) => {
-      const gc = tagGroupMap.get(tag.group);
-      return { group: tag.group, name: tag.name, displayLabel: gc?.displayLabel ?? null, colors: resolveTagColors(tag, gc) };
-    });
-
-  return variant === "home"
-    ? selectHomeLabels(topicSlots, otherSlots)
-    : selectListLabels(topicSlots, kmediaSlots, otherSlots);
+  return selectCardLabels(
+    {
+      topics: post.postTopics.map(({ topic }) => topic),
+      tags: post.postTags.map(({ tag }) => tag),
+      placeTypes: post.postPlaces?.[0]?.place.placePlaceTypes,
+      tagGroupMap,
+    },
+    variant,
+  );
 }
 
 export function PostBadges({
