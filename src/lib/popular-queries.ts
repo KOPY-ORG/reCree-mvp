@@ -1,6 +1,7 @@
 // 인기 정렬 — 최근 N일 저장 수, 모자라면 전체 기간으로 통째 교체. 서버 전용
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { PUBLIC_PLACE_POST_WHERE, PUBLIC_RECREESHOT_WHERE } from "@/lib/visibility";
 
 /** 최근 저장을 세는 창. 명세 5.1 의 "최근 7일" */
 export const POPULAR_WINDOW_DAYS = 7;
@@ -23,16 +24,6 @@ export type PopularIds = {
   ids: string[];
   period: PopularPeriod;
 };
-
-/**
- * 노출 조건 — 기존 목록 쿼리와 같은 where 를 쓴다.
- *   POST       : feed-actions.ts 의 fetchLatestFeed
- *   RECREESHOT : recreeshot/page.tsx
- * 원본이 인라인 리터럴이라 import 할 수 없어 여기에 같은 값을 둔다.
- * 저쪽이 바뀌면 여기도 바뀌어야 한다.
- */
-const POST_VISIBLE = { status: "PUBLISHED", isShop: false } as const;
-const RECREESHOT_VISIBLE = { status: "ACTIVE" } as const;
 
 /** 정렬에 필요한 최소 필드. 대상 두 종류가 같은 모양을 내야 한 벌로 정렬한다 */
 type Candidate = { id: string; saveCount: number; createdAt: Date };
@@ -59,14 +50,14 @@ async function listVisible(
 
   if (targetType === "POST") {
     return prisma.post.findMany({
-      where: { ...POST_VISIBLE, ...idFilter, ...savedFilter },
+      where: { ...PUBLIC_PLACE_POST_WHERE, ...idFilter, ...savedFilter },
       select,
       ...(orderBy ? { orderBy: [...orderBy] } : {}),
       ...(opts.take ? { take: opts.take } : {}),
     });
   }
   return prisma.reCreeshot.findMany({
-    where: { ...RECREESHOT_VISIBLE, ...idFilter, ...savedFilter },
+    where: { ...PUBLIC_RECREESHOT_WHERE, ...idFilter, ...savedFilter },
     select,
     ...(orderBy ? { orderBy: [...orderBy] } : {}),
     ...(opts.take ? { take: opts.take } : {}),
