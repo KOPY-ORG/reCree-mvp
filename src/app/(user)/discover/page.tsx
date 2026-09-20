@@ -34,6 +34,8 @@ export async function generateMetadata({
   const topics = parseAxis(sp.topics);
   const tags = parseAxis(sp.tags);
   const tagGroups = parseAxis(sp.tagGroups);
+  // 장소 카테고리 칩. 값은 PlaceCategory enum 그대로다 (?category=CAFE)
+  const category = parseAxis(sp.category);
   const region = parseAxis(sp.region);
   // district 는 region 과 쌍일 때만 유효하다 — 혼자 오면 인식하지 않는다 (parseFilterParams 와 같은 규칙)
   const district = region.length ? parseAxis(sp.district) : [];
@@ -43,6 +45,7 @@ export async function generateMetadata({
   if (topics.length) qs.set("topics", topics.join(","));
   if (tags.length) qs.set("tags", tags.join(","));
   if (tagGroups.length) qs.set("tagGroups", tagGroups.join(","));
+  if (category.length) qs.set("category", category.join(","));
   if (region.length) qs.set("region", region.join(","));
   if (district.length) qs.set("district", district.join(","));
   const selfUrl = qs.toString() ? `${BASE_URL}/discover?${qs.toString()}` : `${BASE_URL}/discover`;
@@ -52,15 +55,16 @@ export async function generateMetadata({
     { axis: "topics", values: topics },
     { axis: "tags", values: tags },
     { axis: "tagGroups", values: tagGroups },
+    { axis: "category", values: category },
     { axis: "region", values: region },
     { axis: "district", values: district },
   ].filter((a) => a.values.length > 0);
   const isBase = present.length === 0;
   const single = present.length === 1 && present[0].values.length === 1 ? present[0] : null;
 
-  // region·district는 라벨 조회 없이 index 제외. 단일 topic/tagGroup/tag만 라벨 조회 (별개 경량 쿼리)
+  // region·district·category는 라벨 조회 없이 index 제외. 단일 topic/tagGroup/tag만 라벨 조회 (별개 경량 쿼리)
   let label: string | null = null;
-  if (single && single.axis !== "region" && single.axis !== "district") {
+  if (single && single.axis !== "region" && single.axis !== "district" && single.axis !== "category") {
     const value = single.values[0];
     if (single.axis === "topics") {
       const t = await prisma.topic.findUnique({ where: { slug: value }, select: { nameEn: true } });

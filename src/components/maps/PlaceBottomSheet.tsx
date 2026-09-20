@@ -90,6 +90,7 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
             posts={place.posts}
             savedPostIds={savedPostIds}
             tagGroupMap={tagGroupMap}
+            placeTypes={place.placePlaceTypes}
             placeImages={
               place.placeImages.length > 0
                 ? place.placeImages

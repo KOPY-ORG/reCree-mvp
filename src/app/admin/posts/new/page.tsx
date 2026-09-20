@@ -9,6 +9,7 @@ export default async function NewPostPage() {
         id: true,
         name: true,
         nameKo: true,
+        slug: true,
         group: true,
         colorHex: true,
         colorHex2: true,

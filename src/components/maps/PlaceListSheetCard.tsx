@@ -6,13 +6,10 @@ import { ChevronRight, MapPin } from "lucide-react";
 import { isExternalImage } from "@/lib/image";
 import { topicMatchesFilter } from "@/lib/map-utils";
 import type { MapPost } from "@/lib/map-queries";
+import { primaryPlaceType, type PlaceTypeLink } from "@/lib/place-types";
 import {
-  resolveTagColors,
-  resolveTopicColors,
   labelBackground,
-  K_MEDIA_GROUP,
-  selectHomeLabels,
-  type LabelSlot,
+  selectCardLabels,
   type TagGroupColorMap,
 } from "@/lib/post-labels";
 import { LabelBadge } from "@/components/LabelBadge";
@@ -29,6 +26,8 @@ interface Props {
       nameKo: string;
       parent: { nameEn: string | null; nameKo: string } | null;
     } | null;
+    /** 대표 순서. 캐시된 옛 payload 에는 없을 수 있다 — primaryPlaceType 으로만 읽는다 */
+    placePlaceTypes?: PlaceTypeLink[];
     markerColor?: string;
   };
   isSaved: boolean;
@@ -48,6 +47,10 @@ export function PlaceListSheetCard({ post, place, isSaved, isFocused, tagGroupMa
       (place.area.parent ? ", " + (place.area.parent.nameEn ?? place.area.parent.nameKo) : "")
     : null;
 
+  // "Cafe · Mapo-gu" — 대표 타입이 지역 앞에 붙는다. 둘 중 하나만 있으면 있는 쪽만 쓴다
+  const typeName = primaryPlaceType(place.placePlaceTypes)?.name ?? null;
+  const metaLabel = [typeName, areaLabel].filter(Boolean).join(" · ") || null;
+
   const sortedTopics = matchedTopicIds?.length
     ? [...post.topics].sort((a, b) => {
         const aM = matchedTopicIds.some((id) => topicMatchesFilter(a, id)) ? 0 : 1;
@@ -55,19 +58,10 @@ export function PlaceListSheetCard({ post, place, isSaved, isFocused, tagGroupMa
         return aM - bM;
       })
     : post.topics;
-  const topicSlots: LabelSlot[] = sortedTopics.map((topic) => ({
-    group: "TOPIC",
-    name: topic.nameEn,
-    displayLabel: null,
-    colors: resolveTopicColors(topic),
-  }));
-  const otherSlots: LabelSlot[] = post.tags
-    .filter((tag) => tag.group !== K_MEDIA_GROUP)
-    .map((tag) => {
-      const gc = tagGroupMap.get(tag.group);
-      return { group: tag.group, name: tag.name, displayLabel: gc?.displayLabel ?? null, colors: resolveTagColors(tag, gc) };
-    });
-  const labels = selectHomeLabels(topicSlots, otherSlots);
+  const labels = selectCardLabels(
+    { topics: sortedTopics, tags: post.tags, placeTypes: place.placePlaceTypes, tagGroupMap },
+    "home",
+  );
 
   return (
     <div
@@ -126,10 +120,10 @@ export function PlaceListSheetCard({ post, place, isSaved, isFocused, tagGroupMa
               View on map
             </button>
           )}
-          {areaLabel && (
+          {metaLabel && (
             <div className="flex items-center gap-0.5 flex-1 min-w-0">
               <MapPin className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-              <span className="text-xs text-muted-foreground truncate">{areaLabel}</span>
+              <span className="text-xs text-muted-foreground truncate">{metaLabel}</span>
             </div>
           )}
         </div>

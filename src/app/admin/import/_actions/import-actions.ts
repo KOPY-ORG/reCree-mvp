@@ -2,6 +2,8 @@
 
 import Papa from "papaparse";
 import { prisma } from "@/lib/prisma";
+// 장소 유형은 어드민 폼과 같은 경로로 쓴다 — 이름 대조와 연결 행 생성이 한 곳에 있다
+import { matchPlaceTypeNames, resolvePlaceTypes, writePlacePlaceTypes } from "@/lib/place-type-write";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth";
 import { expandGoogleMapsShortUrl, resolveGoogleMapsUrl, buildStreetViewUrl, buildMapsUrlByCoords } from "@/lib/google-maps-url";
@@ -499,7 +501,26 @@ export async function importSheetRows(rowIds: string[]): Promise<{
       const vibeArr = vibeRaw ? vibeRaw.split(/[,，/]/).map((v) => v.trim()).filter(Boolean) : [];
 
       const mapPinIconRaw = (r["map_pin_icon"] ?? "").trim();
-      const placeTypes = mapPinIconRaw ? mapPinIconRaw.split(/[,，]/).map((t) => t.trim()).filter(Boolean) : [];
+      const rawPlaceTypeNames = mapPinIconRaw
+        ? mapPinIconRaw.split(/[,，]/).map((t) => t.trim()).filter(Boolean)
+        : [];
+      // 시트 값은 사람이 적은 것이라 대소문자·공백을 무시하고 마스터 이름으로 맞춘다.
+      // 마스터에 없는 이름이 하나라도 있으면 그 행은 통째로 거부한다 — 절반만 붙은
+      // 타입으로 장소를 만들면 나중에 무엇이 빠졌는지 알 길이 없다.
+      const matched = await matchPlaceTypeNames(rawPlaceTypeNames);
+      if (matched.unknown.length > 0) {
+        errors.push(
+          `${placeName || googleMapsLink}: map_pin_icon 에 장소 유형 마스터에 없는 이름이 있습니다 — ${matched.unknown.join(", ")}`
+        );
+        continue;
+      }
+      const placeTypes = matched.names;
+      // 빈 map_pin_icon 은 거부하지 않는다 — 타입 없는 장소로 들어오던 기존 동작 그대로다
+      const resolvedTypes = placeTypes.length > 0 ? await resolvePlaceTypes(placeTypes) : { types: [] };
+      if ("error" in resolvedTypes) {
+        errors.push(`${placeName || googleMapsLink}: ${resolvedTypes.error}`);
+        continue;
+      }
 
       const closeOrNotRaw = (r["close_or_not"] ?? "").trim();
       const placeStatus = closeOrNotRaw === "폐업" ? "CLOSED_PERMANENT" : "OPEN";
@@ -578,6 +599,7 @@ export async function importSheetRows(rowIds: string[]): Promise<{
                 isVerified: false,
               },
             });
+            await writePlacePlaceTypes(tx, place.id, resolvedTypes.types);
             placeId = place.id;
           }
         } else {
@@ -600,6 +622,7 @@ export async function importSheetRows(rowIds: string[]): Promise<{
               isVerified: false,
             },
           });
+          await writePlacePlaceTypes(tx, place.id, resolvedTypes.types);
           placeId = place.id;
         }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { X, MapPin } from "lucide-react";
 import { LabelBadge } from "@/components/LabelBadge";
 import { AllBadge } from "@/components/AllBadge";
@@ -8,6 +9,7 @@ import {
   resolveTagColors,
   labelBackground,
   badgeRingStyle,
+  isFilterableTagSlot,
   DEFAULT_TEXT,
 } from "@/lib/post-labels";
 import type { Level0TopicDeep } from "@/lib/topic-queries";
@@ -67,6 +69,29 @@ export function DiscoverFilterSheet({
   stagedDistrict = null,
   onToggleDistrict,
 }: Props) {
+  /**
+   * 시트에 그릴 태그 — MEDIA 전부 + 팬 맥락 + 분위기(isFilterableTagSlot).
+   * 그래서 FOOD·EXPERIENCE·BEAUTY·ITEM 은 통째로, SPOT 은 장소형 5종만 빠진다.
+   *
+   * 분위기 태그는 그룹이 아니라 slug 로 판정하므로, Local·Vintage&Retro 가 지금처럼
+   * SPOT 에 있든 나중에 VIBE 그룹으로 옮겨가든 같은 코드가 돈다 — 섹션 제목은
+   * TagGroupConfig.nameEn 에서 오므로 그룹 이름을 코드에 박지 않는다.
+   *
+   * DB(Tag.isActive·TagGroupConfig.isVisible)는 건드리지 않는다 — 뺀 태그도 검색·어드민에서는
+   * 살아 있어야 하고, 옛 URL(?tags=hansik)이 들어오면 필터는 그대로 걸려야 한다.
+   * 거르는 자리가 여기(시트)인 이유다. facet 칩이 쓰는 tagChipMap 은 전체 목록 그대로다.
+   */
+  const visibleTagGroups = useMemo(
+    () =>
+      tagGroups
+        .map((group) => ({
+          ...group,
+          tags: group.tags.filter((tag) => isFilterableTagSlot({ group: group.group, slug: tag.slug })),
+        }))
+        .filter((group) => group.tags.length > 0),
+    [tagGroups],
+  );
+
   const stagedRegionLabel = regions.find((r) => r.slug === stagedRegion)?.label ?? stagedRegion;
   const stagedDistrictLabel = districts.find((d) => d.slug === stagedDistrict)?.label ?? stagedDistrict;
   const totalSelected = stagedTopicIds.length + stagedTagIds.length + stagedTagGroupKeys.length + (stagedRegion != null ? 1 : 0);
@@ -353,9 +378,8 @@ export function DiscoverFilterSheet({
               );
             })}
 
-            {/* ── 태그 섹션 ── */}
-            {tagGroups
-              .filter((group) => group.tags.length > 0)
+            {/* ── 태그 섹션 — 팬 맥락 태그만 (visibleTagGroups 주석 참고) ── */}
+            {visibleTagGroups
               .map((group) => {
                 const memberTagIds = group.tags.map((t) => t.id);
                 const covered = stagedTagGroupKeys.includes(group.group);

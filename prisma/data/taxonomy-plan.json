@@ -1,0 +1,916 @@
+{
+  "cfb15f96-7f86-4a5a-b843-377f4dce8dc4": [
+    "OTHER/Office"
+  ],
+  "e24a7cb1-b619-4f70-a452-addf32cddffc": [
+    "SHOP/Convenience Store"
+  ],
+  "93217541-34c4-4f1e-9623-f2a2a78d4f49": [
+    "SHOP/Convenience Store"
+  ],
+  "7c1e3c84-20a5-4b5d-b763-335f33501814": [
+    "ATTRACTIONS/Street",
+    "ATTRACTIONS/Nature"
+  ],
+  "1f5c1768-b8b6-495d-866e-0b7997257d6b": [
+    "CAFE/Cafe"
+  ],
+  "4679e88d-607d-4476-a087-89ad724d6d90": [
+    "ATTRACTIONS/Street"
+  ],
+  "9d6a1b18-416e-4d35-bc31-78e4776315bf": [
+    "CAFE/Cafe",
+    "EAT/Restaurant"
+  ],
+  "a0823cc0-8b44-4ed3-ad2b-34caf6d251cf": [
+    "ATTRACTIONS/Museum"
+  ],
+  "ae3d75e8-f7a5-44c6-86ed-aeaa88ce07d7": [
+    "EAT/Korean"
+  ],
+  "e953fd5a-9927-4758-acb0-5df5a231a48b": [
+    "EAT/K-BBQ"
+  ],
+  "8b13cf27-ce44-4809-a94d-fb326677bbc1": [
+    "ATTRACTIONS/Park",
+    "ATTRACTIONS/Nature"
+  ],
+  "c2c7c5f5-de2e-4d95-b226-504390684f2e": [
+    "ENTERTAINMENT/School"
+  ],
+  "b3f2fb46-5c86-444f-937d-6775e655a6ec": [
+    "ATTRACTIONS/Landmark",
+    "ATTRACTIONS/Nature"
+  ],
+  "5f44ba75-5681-4fad-9426-67adf1246054": [
+    "ATTRACTIONS/Museum",
+    "CAFE/Cafe",
+    "ATTRACTIONS/Cultural Space",
+    "ATTRACTIONS/Nature"
+  ],
+  "61638328-2ecf-4d77-bfcf-e20ddf935d21": [
+    "ATTRACTIONS/Landmark",
+    "ATTRACTIONS/Nature"
+  ],
+  "4257f5d9-c6dd-46ec-84db-fd2a1639c815": [
+    "ATTRACTIONS/Landmark"
+  ],
+  "a1bb3f5b-9edf-416b-b985-99932c3f8dce": [
+    "STAY/Guesthouse",
+    "EXPERIENCE/Wellness",
+    "ATTRACTIONS/Nature"
+  ],
+  "512f5b3d-7bf1-438c-b0ca-14918eee6fbe": [
+    "ATTRACTIONS/Landmark",
+    "ATTRACTIONS/Street"
+  ],
+  "98fe25cb-8aa1-4f7e-b717-254560365cb6": [
+    "ENTERTAINMENT/Fan Landmark"
+  ],
+  "c8827bde-78bb-43d1-9ec8-453b22f2d427": [
+    "ENTERTAINMENT/Fan Landmark"
+  ],
+  "5feb54ee-a310-4cf8-9eba-c6027ceaef75": [
+    "ATTRACTIONS/Landmark",
+    "ATTRACTIONS/Village",
+    "ATTRACTIONS/Heritage"
+  ],
+  "6accd832-8f41-4e6c-af31-03ea6675f4fd": [
+    "ATTRACTIONS/Landmark",
+    "ATTRACTIONS/Nature"
+  ],
+  "8ef7e619-f7df-4577-b2d2-d19fa64c600f": [
+    "ATTRACTIONS/Beach",
+    "ATTRACTIONS/Park",
+    "ATTRACTIONS/Nature"
+  ],
+  "b682236d-51bd-4e36-b25a-1fb330469404": [
+    "EAT/Street Food"
+  ],
+  "64ea501e-e42f-4a95-bf82-82a0af29241e": [
+    "EAT/Street Food"
+  ],
+  "1776915d-5367-487a-b5ee-15fa5dba7473": [
+    "EAT/Street Food"
+  ],
+  "21d3cd37-da70-40a3-91ee-822d29e68314": [
+    "EAT/Street Food"
+  ],
+  "73be5abe-e333-4b2c-b5eb-de52d21f7f1d": [
+    "EAT/Street Food"
+  ],
+  "423ef46b-5046-4220-9672-7bc16e5aaec4": [
+    "EAT/Street Food"
+  ],
+  "71392dc8-004f-4329-a674-f7c27c6f720f": [
+    "EAT/Street Food"
+  ],
+  "7efb4f8a-e5ca-48c7-ac4e-17ce13f5e746": [
+    "EAT/Street Food"
+  ],
+  "75ccb653-787c-4b10-af68-de7a9fe407ec": [
+    "EAT/Street Food"
+  ],
+  "58a115d9-254c-4a06-aada-9b11ad96823f": [
+    "EAT/Street Food"
+  ],
+  "dbd7ac3d-f136-48cf-87f3-9b4c106028d3": [
+    "ENTERTAINMENT/Venue",
+    "EXPERIENCE/Activity"
+  ],
+  "f8fdec75-b34e-4f71-8b78-d58dfe4863ac": [
+    "ATTRACTIONS/Cultural Space"
+  ],
+  "942c6135-035a-4d8f-8bc2-bd9cf857d8cd": [
+    "ATTRACTIONS/Park"
+  ],
+  "27ca82d3-ce4f-4ed4-a5d6-3879d3a746f5": [
+    "ATTRACTIONS/Cultural Space"
+  ],
+  "637bec66-dbcd-4e2c-aa52-dd1cca7a700b": [
+    "CAFE/Cafe"
+  ],
+  "ecb576fa-c878-4faa-8b2f-d1fb736184ed": [
+    "CAFE/Dessert"
+  ],
+  "5f864bf2-56d2-43fd-98e0-f3d2234c9533": [
+    "CAFE/Cafe",
+    "ATTRACTIONS/Nature"
+  ],
+  "adc22fca-ddc4-4168-99f6-deea2c17cc4f": [
+    "CAFE/Cafe"
+  ],
+  "5b9464b1-3c58-45cf-b1aa-41772b3af903": [
+    "CAFE/Dessert"
+  ],
+  "776173fe-4546-4bb7-84eb-dca253f4941a": [
+    "ATTRACTIONS/Museum",
+    "ATTRACTIONS/Landmark"
+  ],
+  "8142d79f-8c3c-4eeb-aabb-b252898c4c2c": [
+    "ATTRACTIONS/Cultural Space",
+    "EXPERIENCE/Class"
+  ],
+  "62f9ac43-1629-4441-ac92-d2fe2bfd251b": [
+    "ATTRACTIONS/Landmark",
+    "ATTRACTIONS/Heritage",
+    "ATTRACTIONS/Nature"
+  ],
+  "3770ac6a-5ae7-45d1-8a30-8d03c0c0c7d2": [
+    "ENTERTAINMENT/Venue"
+  ],
+  "63fe731a-606e-48fe-ad08-e41aaaeb82cc": [
+    "ATTRACTIONS/Landmark"
+  ],
+  "cfe3b178-5dc2-4969-9ad0-5b5646503862": [
+    "ATTRACTIONS/Park",
+    "ATTRACTIONS/Heritage",
+    "ATTRACTIONS/Nature"
+  ],
+  "279ef6a6-c07a-4448-99ed-7b08d15783a9": [
+    "SHOP/Market"
+  ],
+  "07220cf6-e00b-4b25-8965-2859f426045c": [
+    "EAT/Street Food"
+  ],
+  "c3c20be8-256f-44b4-ad9f-b26f20296867": [
+    "CAFE/Bakery"
+  ],
+  "73b7e82f-c2f0-49af-ba00-b5e381821198": [
+    "EAT/Noodles"
+  ],
+  "f5344784-2280-4d55-aa92-6653eabaf36a": [
+    "OTHER/Office"
+  ],
+  "d8ad0cf2-07af-4964-b3f5-10f83148e11d": [
+    "CAFE/Cafe",
+    "ATTRACTIONS/Cultural Space"
+  ],
+  "5ec92154-6b7a-4150-8ab6-ae1da329ce80": [
+    "ATTRACTIONS/Beach",
+    "ATTRACTIONS/Nature"
+  ],
+  "d422d39a-1ab2-435c-94d2-02792978e346": [
+    "EAT/K-BBQ"
+  ],
+  "d6b8ea91-6330-4af5-98d9-32b92450310d": [
+    "EAT/K-BBQ"
+  ],
+  "b3fe0732-9e62-4f94-85f5-4d8bc1b9ea66": [
+    "ATTRACTIONS/Street"
+  ],
+  "ba66ad8f-2bd4-475b-b3f4-042cfccec532": [
+    "ATTRACTIONS/Park",
+    "EXPERIENCE/Activity"
+  ],
+  "121d80a6-afeb-4b70-9aab-f0f1b2139bfc": [
+    "ENTERTAINMENT/School"
+  ],
+  "fcc643cf-8373-4895-b304-5becb3778c4d": [
+    "ATTRACTIONS/Landmark",
+    "ATTRACTIONS/Heritage"
+  ],
+  "2c21aa5b-68e2-4cc1-aa02-a6748bf72d3a": [
+    "EAT/Restaurant"
+  ],
+  "72bbba88-68a3-4eb6-a708-d0d0272c9666": [
+    "ATTRACTIONS/Park",
+    "ATTRACTIONS/Heritage",
+    "ATTRACTIONS/Nature"
+  ],
+  "52a36ecc-9aa9-4310-b156-a9daf0e3a381": [
+    "ATTRACTIONS/Landmark"
+  ],
+  "a657ea9f-d4d3-4cfa-a523-b72f513fdb81": [
+    "ATTRACTIONS/Landmark"
+  ],
+  "3e52f7a3-be75-4c3c-9858-99ded0153a38": [
+    "EAT/Restaurant"
+  ],
+  "8c9d225b-7883-443a-9d20-8bc1edf006e1": [
+    "EAT/K-BBQ"
+  ],
+  "fb29e8df-d1a0-456a-812f-e00b81ecab2e": [
+    "OTHER/Office"
+  ],
+  "6a1dcd06-8464-4772-b2bf-444f3284976f": [
+    "EAT/K-BBQ"
+  ],
+  "a3e23e3e-2cec-4e8f-b89d-6c53fd7cdab0": [
+    "ATTRACTIONS/Cultural Space",
+    "ATTRACTIONS/Landmark",
+    "ATTRACTIONS/Village",
+    "ATTRACTIONS/Park",
+    "ATTRACTIONS/Heritage"
+  ],
+  "89c38c0c-0e58-4fdf-8a7e-f7d68bfb3a0d": [
+    "ATTRACTIONS/Park",
+    "ATTRACTIONS/Nature"
+  ],
+  "575684a0-67fa-40bb-a5ef-27ac9c158645": [
+    "EXPERIENCE/Activity",
+    "ATTRACTIONS/Landmark"
+  ],
+  "755ee3f4-2389-4893-af64-956a9b75e0bc": [
+    "BAR/Bar"
+  ],
+  "68c262a7-bb34-4013-88c7-62b799bbf028": [
+    "ENTERTAINMENT/Agency"
+  ],
+  "826b7597-c681-4e8e-8968-365eb59176f8": [
+    "SHOP/Shop"
+  ],
+  "bc987475-b6fa-48d8-bc62-abe151042ee0": [
+    "ATTRACTIONS/Village",
+    "ATTRACTIONS/Landmark"
+  ],
+  "553b089f-f7a4-4995-9774-d2ba6f55bbe3": [
+    "ATTRACTIONS/Street"
+  ],
+  "1de11ce9-01cb-4b3a-aeb0-38ad710bbcfd": [
+    "EAT/Noodles"
+  ],
+  "fd29e98c-2a5b-41b6-855c-5ee8e36a7be1": [
+    "CAFE/Bakery"
+  ],
+  "d0711330-6e60-482f-bdca-a95dadcb03ed": [
+    "EXPERIENCE/Activity"
+  ],
+  "aab7ef77-cec4-4bd6-9189-e22719f91348": [
+    "ATTRACTIONS/Landmark",
+    "ATTRACTIONS/Heritage"
+  ],
+  "c8a19ef3-b2a9-4956-99f4-edf8f0ed43b1": [
+    "OTHER/Airport"
+  ],
+  "5c367b83-6e8a-4d35-b4da-c42c91e3142b": [
+    "EAT/Korean"
+  ],
+  "6501661c-6617-41e9-a80d-d6c109a2c294": [
+    "EAT/Street Food"
+  ],
+  "f0fa2c83-03bc-47b6-bc65-af37f202cba4": [
+    "EAT/Street Food"
+  ],
+  "3e6a636c-bff7-46e9-907f-ced0c44d4312": [
+    "EAT/Street Food"
+  ],
+  "e3900c47-0c7f-4ef5-a286-9e88a5170d05": [
+    "EAT/Street Food"
+  ],
+  "10227de4-80fa-49d3-8e29-a29fcb87dbac": [
+    "ATTRACTIONS/Landmark"
+  ],
+  "c61e6b62-d2b9-4ce0-a617-2410d9bfcca9": [
+    "STAY/Stay"
+  ],
+  "87a56bc9-2b65-4285-96ba-b68279e28546": [
+    "EAT/Restaurant",
+    "SHOP/Convenience Store"
+  ],
+  "377ccbb4-95ab-47ee-9ffd-c12fbc30c215": [
+    "EXPERIENCE/Activity"
+  ],
+  "60554857-daa5-4e31-a427-1358b50eb533": [
+    "ATTRACTIONS/Park",
+    "ATTRACTIONS/Nature"
+  ],
+  "70d851de-0737-4ec9-8aff-2d5b1d794c17": [
+    "ATTRACTIONS/Temple",
+    "ATTRACTIONS/Heritage",
+    "ATTRACTIONS/Nature"
+  ],
+  "348333bf-e3b9-4c7d-84dc-3b3a342dd32b": [
+    "ATTRACTIONS/Beach"
+  ],
+  "89eaa070-3ebd-4453-a405-0acd958c9aed": [
+    "ATTRACTIONS/Landmark",
+    "ATTRACTIONS/Beach"
+  ],
+  "1713c9b8-0513-40ba-8741-1581f6ebeff1": [
+    "ATTRACTIONS/Cultural Space"
+  ],
+  "3103b8a3-cb08-485b-aa41-d33f499f3fc7": [
+    "ATTRACTIONS/Landmark",
+    "ATTRACTIONS/Heritage"
+  ],
+  "19a148cb-b3f6-4a27-9ad3-fac5024d3715": [
+    "EAT/Noodles"
+  ],
+  "5b2ff2ae-1afc-4121-bcac-0037ce3c1847": [
+    "ATTRACTIONS/Landmark",
+    "ATTRACTIONS/Square"
+  ],
+  "c747064f-d22a-40b9-b0ca-76db024b66e1": [
+    "SHOP/Market",
+    "EAT/Street Food"
+  ],
+  "b63e8525-26e6-4e64-a3ac-76b47ca43c64": [
+    "ATTRACTIONS/Landmark",
+    "ATTRACTIONS/Heritage"
+  ],
+  "f73aeed8-c71f-48ed-b8a3-185616c45039": [
+    "ATTRACTIONS/Park"
+  ],
+  "4c737c15-64ea-4958-8dc6-2e0034feecaa": [
+    "ATTRACTIONS/Park"
+  ],
+  "24f4be7f-1753-4d72-b1fb-48d3da4bafd9": [
+    "ATTRACTIONS/Landmark",
+    "ATTRACTIONS/Heritage"
+  ],
+  "98e5a26f-37db-4143-88bb-9d377146339b": [
+    "EAT/K-BBQ"
+  ],
+  "99d16367-06dd-4665-988f-4f608fc70a20": [
+    "ATTRACTIONS/Beach",
+    "ATTRACTIONS/Nature"
+  ],
+  "ba414bd7-18db-4efd-b06a-97297880c6d4": [
+    "ATTRACTIONS/Cultural Space"
+  ],
+  "103181e0-1141-4c18-8968-fc73ecf7974c": [
+    "EXPERIENCE/Activity"
+  ],
+  "df192e25-a22d-4f9f-a476-4cd2e4287a1e": [
+    "ATTRACTIONS/Beach"
+  ],
+  "ffbe6201-fb65-4d24-95dc-eaf3ab0bf5c8": [
+    "ATTRACTIONS/Park",
+    "ATTRACTIONS/Nature"
+  ],
+  "10eff3e0-08d9-4f1b-8078-4bc69596e9f4": [
+    "ATTRACTIONS/Park",
+    "ATTRACTIONS/Nature"
+  ],
+  "2b92962a-24d7-425d-9e1b-b2c997c75ac6": [
+    "ATTRACTIONS/Cultural Space"
+  ],
+  "b473be04-35c9-4899-b3b4-6bea35a13b73": [
+    "EXPERIENCE/Wellness",
+    "ATTRACTIONS/Attraction"
+  ],
+  "9f819b63-6c14-4ec9-b162-16c69a1ab337": [
+    "EAT/Restaurant",
+    "BAR/Pocha"
+  ],
+  "06713173-6e6b-456c-8e43-cf429020d07b": [
+    "ATTRACTIONS/Landmark"
+  ],
+  "82eff505-b063-480f-8f9a-8703e5f03930": [
+    "ATTRACTIONS/Street"
+  ],
+  "ca021db7-1e61-45a9-bd20-aeda428fc72d": [
+    "ATTRACTIONS/Village"
+  ],
+  "f946c38b-8004-492d-b598-18b54c0df94c": [
+    "ATTRACTIONS/Park",
+    "ATTRACTIONS/Nature"
+  ],
+  "2f42c363-3519-452b-9b6f-da1a2eb3375e": [
+    "ENTERTAINMENT/Agency"
+  ],
+  "60e1d6b0-d430-4ec6-baec-15a4faa4501b": [
+    "CAFE/Cafe"
+  ],
+  "8b707949-3e56-46e4-b85c-175636c71be9": [
+    "ATTRACTIONS/Landmark",
+    "ATTRACTIONS/Heritage"
+  ],
+  "c9ad42d9-aa7f-42fa-9dfa-f69f7cc3ddcf": [
+    "ATTRACTIONS/Landmark"
+  ],
+  "5a03d78b-1885-4568-a4c7-7ae6e1270aba": [
+    "ATTRACTIONS/Landmark"
+  ],
+  "28c7b7a3-13c1-4182-a24b-44696f1802b2": [
+    "EAT/Korean"
+  ],
+  "6b02c238-4779-4abe-898e-e3e504e0cd0d": [
+    "ATTRACTIONS/Park"
+  ],
+  "436be326-f8df-45c4-bf66-20e7748f3de4": [
+    "ATTRACTIONS/Park"
+  ],
+  "fa98f5c5-156c-4852-ba2b-a457a2700a45": [
+    "ATTRACTIONS/Beach",
+    "ATTRACTIONS/Park",
+    "ATTRACTIONS/Nature"
+  ],
+  "6d1bb7b1-ed86-452e-9283-61ec2f01ca1d": [
+    "EAT/International"
+  ],
+  "0b359b0e-bccf-4c5a-add5-fa041204e5de": [
+    "EAT/Restaurant"
+  ],
+  "beb3736c-dc2a-4f6a-bde0-37ac50960552": [
+    "ATTRACTIONS/Landmark",
+    "ATTRACTIONS/Nature"
+  ],
+  "2389dd23-bbe6-4a49-ac8c-40367ee20758": [
+    "ATTRACTIONS/Cultural Space"
+  ],
+  "04f4142b-3b3c-477a-95e6-6ac6547d1331": [
+    "SHOP/Shop"
+  ],
+  "073d1c9e-3561-4e3f-91bf-55aa812dafaa": [
+    "ENTERTAINMENT/School",
+    "ATTRACTIONS/Park",
+    "ATTRACTIONS/Nature"
+  ],
+  "a636dca1-8bbc-4ef4-8949-8d77394ab5d2": [
+    "EAT/Restaurant"
+  ],
+  "6bbf1760-f0a2-4528-8968-cc2b63e57f50": [
+    "EXPERIENCE/Class",
+    "EAT/Korean"
+  ],
+  "81e2e89b-90a6-4f33-b942-e5b7737c4dc6": [
+    "ATTRACTIONS/Cultural Space"
+  ],
+  "20d40224-e960-4c1f-8196-063ef6f59b1d": [
+    "ENTERTAINMENT/Agency",
+    "ATTRACTIONS/Cultural Space",
+    "SHOP/Pop-up"
+  ],
+  "0cbcb195-6fb5-4e98-b0d4-61c5d10c19cb": [
+    "ENTERTAINMENT/Venue",
+    "ATTRACTIONS/Nature"
+  ],
+  "9b5e92cf-9ec2-4bf0-a7c6-6d8888ddf680": [
+    "CAFE/Bakery"
+  ],
+  "4653088a-ebb9-4a93-8124-eb92c435e54b": [
+    "CAFE/Bakery"
+  ],
+  "82425f65-1021-41d8-b49e-d45a86a1ae1e": [
+    "CAFE/Bakery"
+  ],
+  "07ff06bb-3383-43c9-9c51-16e16ce6f713": [
+    "CAFE/Bakery"
+  ],
+  "549161b2-0c79-43dc-ad9d-930997e5ae3a": [
+    "CAFE/Bakery"
+  ],
+  "da06ef82-1186-48cf-a3f4-d4817bb63beb": [
+    "CAFE/Bakery"
+  ],
+  "f3d42d43-6d7c-49ac-9844-680c6ebf4d4d": [
+    "EXPERIENCE/Photo Booth"
+  ],
+  "048977d1-c554-4fe2-9020-076686e9b070": [
+    "ATTRACTIONS/Landmark"
+  ],
+  "728cfbae-7fc2-40e8-9657-fe49749cc2c6": [
+    "CAFE/Cafe"
+  ],
+  "1fad9e05-3adc-44b7-8c1a-94768829d752": [
+    "ATTRACTIONS/Landmark",
+    "SHOP/Mall"
+  ],
+  "94714f98-03c7-47fd-a6ab-c17a45204971": [
+    "ATTRACTIONS/Landmark"
+  ],
+  "f11155d0-25cb-4655-b9ff-2e45f62a9b36": [
+    "SHOP/Mall"
+  ],
+  "c5726b70-952c-4361-b77b-f88c0aeb273c": [
+    "ATTRACTIONS/Landmark",
+    "EXPERIENCE/Class"
+  ],
+  "6609c955-f9c9-4446-a1ea-e09994845e98": [
+    "EAT/K-BBQ"
+  ],
+  "d3b28c7e-d7e5-4294-b624-b1f7916f2e0a": [
+    "ATTRACTIONS/Park",
+    "ATTRACTIONS/Nature"
+  ],
+  "526fa47b-60b1-466e-b384-0d5ac73aee4d": [
+    "EAT/Korean"
+  ],
+  "b225778e-c3fa-4994-b160-561a17d2b7f5": [
+    "EAT/Street Food"
+  ],
+  "f1351802-6e0e-46eb-957d-ee43fa224f99": [
+    "ATTRACTIONS/Museum",
+    "EXPERIENCE/Activity"
+  ],
+  "49984986-2776-45bb-96ce-c119c6f57d64": [
+    "CAFE/Cafe"
+  ],
+  "eee295d3-50e8-449e-9a1e-ef73ebe9f684": [
+    "CAFE/Cafe"
+  ],
+  "3ca84534-ebfd-4421-bca5-0d3f5bc90b81": [
+    "SHOP/Shop",
+    "ATTRACTIONS/Cultural Space"
+  ],
+  "eb263358-f51d-45f7-85a5-fd714df2dd7e": [
+    "EXPERIENCE/Activity",
+    "ATTRACTIONS/Landmark"
+  ],
+  "76cd782a-a194-469b-a63e-781e223410ca": [
+    "CAFE/Cafe"
+  ],
+  "714fb081-f8a8-4204-b364-628e0a2d67df": [
+    "SHOP/Pop-up",
+    "ATTRACTIONS/Landmark"
+  ],
+  "044ece8c-266c-49af-aeb2-3b554f97cbb1": [
+    "EAT/Korean"
+  ],
+  "0037930d-de5a-4172-95c4-44c7b8d10b5d": [
+    "EAT/Noodles"
+  ],
+  "70f1bd4c-9e1a-4280-a25b-b72a69106074": [
+    "ATTRACTIONS/Park",
+    "EXPERIENCE/Activity",
+    "ATTRACTIONS/Nature"
+  ],
+  "e8264007-2dae-4ca3-92e3-90b5e7b1fa9c": [
+    "EAT/Street Food"
+  ],
+  "2aed26e4-8de2-41ab-8aef-e57cbbf7a7eb": [
+    "ATTRACTIONS/Landmark"
+  ],
+  "89a2866e-fc98-4658-a5db-bc25cc92062a": [
+    "EXPERIENCE/Activity"
+  ],
+  "a3ee8815-6439-40f5-855d-38dc647635b3": [
+    "ATTRACTIONS/Temple"
+  ],
+  "49fbdf4e-13ac-401b-9cd0-db3c1b72454f": [
+    "EAT/Noodles"
+  ],
+  "dc9b7fa2-afd0-439f-b6e7-057545b07235": [
+    "ATTRACTIONS/Landmark",
+    "ATTRACTIONS/Park",
+    "ATTRACTIONS/Heritage",
+    "ATTRACTIONS/Nature"
+  ],
+  "2cefb210-e75c-4d77-ab89-f996bf7e6536": [
+    "SHOP/Market",
+    "ATTRACTIONS/Street"
+  ],
+  "899d5be5-50af-48ba-ad71-5cad7bbc23f4": [
+    "ATTRACTIONS/Park"
+  ],
+  "d6ba9e35-ab9c-45af-a6af-e7d17eefc8a3": [
+    "ATTRACTIONS/Street"
+  ],
+  "e1fa94eb-2ad6-4104-9f21-14ea06311af4": [
+    "ATTRACTIONS/Museum",
+    "ATTRACTIONS/Heritage",
+    "ATTRACTIONS/Landmark"
+  ],
+  "d293dcb3-1949-4b3e-8c90-92b663937396": [
+    "ATTRACTIONS/Museum"
+  ],
+  "592952d9-0c58-4186-9670-7dff00caa1b8": [
+    "ATTRACTIONS/Landmark"
+  ],
+  "df6c9316-bd2d-472d-a2cf-8b6483a81ccf": [
+    "ATTRACTIONS/Attraction"
+  ],
+  "6b57f263-2c64-48cb-82d0-e83bd065dbaa": [
+    "ATTRACTIONS/Landmark",
+    "ATTRACTIONS/Park",
+    "ATTRACTIONS/Nature"
+  ],
+  "fe49342b-d706-4549-9970-27595c6ee57e": [
+    "ATTRACTIONS/Landmark"
+  ],
+  "2b147692-c482-41ac-9498-b1d86309142c": [
+    "EAT/Korean"
+  ],
+  "7238f622-855d-404c-98df-da97c051ecc2": [
+    "ATTRACTIONS/Cultural Space",
+    "ATTRACTIONS/Heritage",
+    "ATTRACTIONS/Nature"
+  ],
+  "96a99a8d-6cb4-4f32-8b67-9eddf20840ce": [
+    "ENTERTAINMENT/Venue",
+    "ATTRACTIONS/Landmark"
+  ],
+  "a0d77519-8ed5-4dd2-b06a-8752d105c74a": [
+    "ATTRACTIONS/Beach",
+    "ATTRACTIONS/Landmark",
+    "ATTRACTIONS/Nature"
+  ],
+  "af4947b2-97f8-4572-b529-445439d02e38": [
+    "ATTRACTIONS/Cultural Space"
+  ],
+  "22ac2734-2434-4271-aacf-f77bd6e4eb50": [
+    "EXPERIENCE/Activity",
+    "ATTRACTIONS/Landmark"
+  ],
+  "333884d6-4ff3-4359-842e-7626121c9971": [
+    "STAY/Hotel"
+  ],
+  "800a593e-32fd-4931-a7e1-be2ee7547c39": [
+    "STAY/Stay"
+  ],
+  "acb95e70-5604-4fa7-9c92-c9e047322467": [
+    "CAFE/Dessert",
+    "EAT/Restaurant"
+  ],
+  "2c8c98fd-0a01-4394-9535-725ff991cae2": [
+    "CAFE/Dessert",
+    "EAT/Restaurant"
+  ],
+  "8de1ab41-55e4-4943-9e30-ba103478ca19": [
+    "CAFE/Dessert",
+    "EAT/Restaurant"
+  ],
+  "4bae8b48-8872-4097-92e9-1b40274a8a04": [
+    "CAFE/Dessert",
+    "EAT/Restaurant"
+  ],
+  "6627111e-70b1-45ce-a8ae-33c1a63f7b5a": [
+    "EXPERIENCE/Activity"
+  ],
+  "a690059a-e7bc-4786-954f-9aecf6aba26e": [
+    "EXPERIENCE/Activity"
+  ],
+  "72b971f4-4a3e-440f-a527-d90423057e1d": [
+    "EXPERIENCE/Activity"
+  ],
+  "06287a49-0342-480f-8a6f-db851d19c017": [
+    "EXPERIENCE/Activity"
+  ],
+  "aabe9864-f776-4e3c-96e0-abfef192138e": [
+    "EXPERIENCE/Activity"
+  ],
+  "c86a140b-71be-4d49-a56a-67f563720930": [
+    "EXPERIENCE/Activity"
+  ],
+  "bdde8c41-50d3-44fc-9cac-a1c757d8d7c4": [
+    "EXPERIENCE/Activity"
+  ],
+  "d13d873b-8d18-4915-a713-2a7038111d39": [
+    "EXPERIENCE/Activity"
+  ],
+  "04c46d09-cc96-4bb7-9952-0463059ee09b": [
+    "EXPERIENCE/Activity"
+  ],
+  "1afd3586-985c-4d7a-b97e-31afc1b7302e": [
+    "CAFE/Bakery",
+    "CAFE/Dessert"
+  ],
+  "50236423-c42e-4cf5-8b8f-62a1c1415dea": [
+    "ATTRACTIONS/Park",
+    "ATTRACTIONS/Nature"
+  ],
+  "bd068086-f15e-4532-9252-9a7fb6a98c0c": [
+    "SHOP/Shop",
+    "CAFE/Dessert"
+  ],
+  "1ec2fb0a-6fc4-4a61-9ad0-d237b95c6569": [
+    "ATTRACTIONS/Landmark"
+  ],
+  "7d80787a-510e-4169-9b68-961237929e10": [
+    "ATTRACTIONS/Landmark"
+  ],
+  "6b878c08-b8b4-4e79-a8f1-b170fb280fa7": [
+    "ATTRACTIONS/Park"
+  ],
+  "18eec3f9-3e30-4146-bae7-56536c29da8d": [
+    "EAT/Street Food"
+  ],
+  "df6a2ec1-8160-435f-ac71-bbc18c2ee007": [
+    "ATTRACTIONS/Park"
+  ],
+  "d952e2a7-7755-48c4-8cc4-bc5ad447c980": [
+    "EAT/Fried Chicken"
+  ],
+  "ac0f9437-65a1-43c3-ae0a-dfd3981cf27e": [
+    "ATTRACTIONS/Landmark",
+    "EXPERIENCE/Activity"
+  ],
+  "36d70e49-dd87-4423-9074-e07cfc21a3df": [
+    "EAT/Restaurant"
+  ],
+  "be9c4894-c8fe-40d9-a65a-ac89bf55fcfd": [
+    "SHOP/Shop"
+  ],
+  "abdbc68e-1247-42aa-8632-6ef65555dfe0": [
+    "EAT/Seafood"
+  ],
+  "adb9e528-b563-4471-93e6-76fcf2cb8263": [
+    "ATTRACTIONS/Landmark"
+  ],
+  "1a6cd2fd-af47-4a43-a8e5-93ac155d68be": [
+    "ATTRACTIONS/Nature"
+  ],
+  "d228f29c-8876-4806-9eee-9e6bc3762401": [
+    "ATTRACTIONS/Square"
+  ],
+  "411e5b12-eacb-420c-a5d8-4cf7f454fe04": [
+    "EAT/Korean"
+  ],
+  "c1bc3d21-3f2e-4bf9-82ca-7f53cd2c8a2d": [
+    "EAT/K-BBQ"
+  ],
+  "8117c8bd-ba91-4952-bf6c-1e96d60d8e76": [
+    "EAT/Korean"
+  ],
+  "43906627-8859-47b1-aa9d-11a581daf049": [
+    "ATTRACTIONS/Museum"
+  ],
+  "8684ff93-8a75-48d7-a22b-054306f9b053": [
+    "ATTRACTIONS/Landmark",
+    "EXPERIENCE/Activity"
+  ],
+  "55046170-2105-45ea-8def-ad5b60219a81": [
+    "OTHER/Station"
+  ],
+  "eb472745-f9f6-48e4-9c49-ad3488aa1235": [
+    "EXPERIENCE/Activity"
+  ],
+  "7fa46570-21d3-442c-a357-129ca06c56df": [
+    "CAFE/Cafe"
+  ],
+  "138b7f45-9b85-4f78-80a9-c15ddc826526": [
+    "EAT/Street Food"
+  ],
+  "8527437f-d184-47bd-ab1a-d4078b8b0f06": [
+    "ATTRACTIONS/Landmark",
+    "ATTRACTIONS/Heritage"
+  ],
+  "e1cce150-4a13-4382-a607-f8a82c78b457": [
+    "CAFE/Bakery",
+    "CAFE/Dessert"
+  ],
+  "1a3d4133-52bb-4f6b-8e3d-299ebf776cac": [
+    "ATTRACTIONS/Cultural Space"
+  ],
+  "a08d36b6-ea19-4cfa-91f0-514722bd6169": [
+    "EAT/Street Food"
+  ],
+  "b1284fc7-5c77-4f5b-bc60-ac13b97f6f07": [
+    "EAT/International"
+  ],
+  "4714c9b4-2879-44f4-9864-f45c01f1038a": [
+    "ATTRACTIONS/Park",
+    "ATTRACTIONS/Nature"
+  ],
+  "62be8c85-4a16-45f3-b913-e7bec17e6606": [
+    "EXPERIENCE/Activity",
+    "ATTRACTIONS/Landmark"
+  ],
+  "78e63379-3975-40cd-b770-4a46c2724eb7": [
+    "ATTRACTIONS/Park",
+    "ATTRACTIONS/Heritage"
+  ],
+  "5e2f59cd-472c-498d-b862-d87e299ea99f": [
+    "ATTRACTIONS/Cultural Space"
+  ],
+  "90f3d802-c36d-4347-be89-6ceb9b9afe3b": [
+    "ATTRACTIONS/Museum"
+  ],
+  "22dff027-3ec9-4ae3-9a16-cf84b3af5547": [
+    "ENTERTAINMENT/Fan Landmark"
+  ],
+  "cc0ee0f0-f90e-4eac-becd-ba98dd7a6d22": [
+    "ATTRACTIONS/Landmark"
+  ],
+  "3c23643f-a7d1-49ad-b2a6-1965d14b2146": [
+    "ATTRACTIONS/Cultural Space"
+  ],
+  "baad007c-0c31-444c-a14d-7892ebdcf0b1": [
+    "ATTRACTIONS/Cultural Space",
+    "ENTERTAINMENT/Agency",
+    "SHOP/Pop-up"
+  ],
+  "82686d27-5573-4c3a-81aa-8d7050d8b3aa": [
+    "CAFE/Cafe"
+  ],
+  "72c65e3a-2bc1-494d-91a3-550ddc519f21": [
+    "ENTERTAINMENT/Venue"
+  ],
+  "9e780817-9949-4199-b7a2-e0d4b46007fd": [
+    "ATTRACTIONS/Park"
+  ],
+  "8c8e5c0e-6eef-4796-a111-da76b4264227": [
+    "ATTRACTIONS/Beach",
+    "ATTRACTIONS/Nature"
+  ],
+  "344957b2-8b38-400f-a462-0d260acef92d": [
+    "CAFE/Cafe"
+  ],
+  "532c926a-56c3-4abb-bd69-fc142227d0a3": [
+    "CAFE/Cafe",
+    "SHOP/Pop-up"
+  ],
+  "015ae909-e967-4d94-b2d3-ae026dd641f4": [
+    "CAFE/Cafe"
+  ],
+  "034bce3b-8333-4cfb-9ad9-816baa710ff3": [
+    "SHOP/Shop"
+  ],
+  "9d5332ae-5184-44a7-8537-0cf009bc8648": [
+    "ATTRACTIONS/Cultural Space",
+    "EXPERIENCE/Activity"
+  ],
+  "fbabf424-a5ab-410e-b8a3-1833e9dd7312": [
+    "ATTRACTIONS/Landmark"
+  ],
+  "b34d7761-4c6a-4395-a312-ba3af09903d8": [
+    "EXPERIENCE/Activity"
+  ],
+  "24e90da4-414c-429e-b8d9-49884693d68f": [
+    "ATTRACTIONS/Park",
+    "ATTRACTIONS/Nature"
+  ],
+  "0a346847-513d-4509-8b9a-2eed45b5fcc5": [
+    "ATTRACTIONS/Landmark",
+    "ATTRACTIONS/Nature"
+  ],
+  "0c23f07a-d555-4505-82f0-26f4b0f4c6dc": [
+    "OTHER/Office"
+  ],
+  "b33424c6-ac7f-4e2b-b020-11ec8400e73e": [
+    "SHOP/Shop"
+  ],
+  "ed63ccb0-a181-467f-b903-533e42a9931b": [
+    "ENTERTAINMENT/Filming Studio"
+  ],
+  "216b558c-a62d-418d-84a7-2ef9dfd0ce49": [
+    "ENTERTAINMENT/Filming Studio",
+    "ATTRACTIONS/Heritage"
+  ],
+  "35cee0c1-a492-4d42-8431-a5ee5e79a84d": [
+    "EXPERIENCE/Theme Park",
+    "ATTRACTIONS/Landmark"
+  ],
+  "c4a1af7d-9648-4575-9899-70315cbfe899": [
+    "ENTERTAINMENT/School"
+  ],
+  "14537092-0e25-4c05-83d7-e711eb27762e": [
+    "EAT/Noodles"
+  ],
+  "2d1a8e90-d092-4e13-a363-4cacf4522c02": [
+    "EAT/K-BBQ"
+  ],
+  "588fc189-31b1-4d58-91d6-a9236c25b10c": [
+    "EAT/Street Food"
+  ],
+  "13f86666-de2e-440b-8ef6-81de47c8f0da": [
+    "CAFE/Dessert"
+  ],
+  "9f3b74e4-4e77-456b-b596-dc868f832665": [
+    "ATTRACTIONS/Heritage"
+  ],
+  "25548f50-53cc-4ccd-84c1-cfe25e3ebede": [
+    "OTHER/Office"
+  ],
+  "3950e9f2-187a-42e3-96b3-096f04ede916": [
+    "ENTERTAINMENT/School"
+  ],
+  "80d7ae79-e89e-4d99-aa5e-76b49432311d": [
+    "EAT/Street Food"
+  ],
+  "8712b1ef-4fae-4173-9635-0d22d2a3b24e": [
+    "ATTRACTIONS/Cultural Space"
+  ]
+}

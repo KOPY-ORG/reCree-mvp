@@ -125,6 +125,13 @@ export async function searchPlaces(keyword: string) {
         orderBy: { sortOrder: "asc" },
         select: { url: true, isThumbnail: true },
       },
+      placePlaceTypes: {
+        orderBy: { sortOrder: "asc" },
+        select: {
+          sortOrder: true,
+          placeType: { select: { name: true, nameKo: true, category: true, isDefault: true } },
+        },
+      },
     },
     orderBy: { createdAt: "desc" },
     take: 10,
@@ -169,6 +176,13 @@ export async function getPlaceDetail(id: string) {
       placeImages: {
         orderBy: { sortOrder: "asc" },
         select: { url: true, isThumbnail: true },
+      },
+      placePlaceTypes: {
+        orderBy: { sortOrder: "asc" },
+        select: {
+          sortOrder: true,
+          placeType: { select: { name: true, nameKo: true, category: true, isDefault: true } },
+        },
       },
     },
   });
@@ -583,6 +597,7 @@ export async function getPostEditData(id: string) {
         id: true,
         name: true,
         nameKo: true,
+        slug: true,
         group: true,
         colorHex: true,
         colorHex2: true,
