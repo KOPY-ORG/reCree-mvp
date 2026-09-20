@@ -47,12 +47,47 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 // ─── 내부 유틸 ────────────────────────────────────────────────────────────────
 
-/** YYYYMMDD */
+/**
+ * 축제 날짜는 한국 달력으로 읽는다. 서버의 TZ 로 읽으면 안 된다.
+ *
+ * Vercel 이 UTC 로 돌아서, 서버 로컬로 자르면 한국 시간 오전 0~9시 동안 서버는 어제를
+ * 오늘이라고 본다 — 어제 끝난 축제가 진행중으로 남고 오늘 시작하는 것이 "Tomorrow" 가 된다.
+ * 한국에서 열리는 행사를 보는 화면이라 기준 달력은 언제나 서울이다.
+ *
+ * 로케일이 붙인 구분자를 다시 떼어내지 않으려고 formatToParts 로 받는다 —
+ * 런타임마다 다른 것은 배치와 구분자이지 각 조각의 값이 아니다.
+ */
+const SEOUL_YMD = new Intl.DateTimeFormat("en-US", {
+  timeZone: "Asia/Seoul",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/** YYYYMMDD. 서버가 어느 TZ 로 돌든 그 시각의 서울 날짜다 */
 function yyyymmdd(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}${m}${day}`;
+  const parts = SEOUL_YMD.formatToParts(d);
+  const pick = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value ?? "";
+  return `${pick("year").padStart(4, "0")}${pick("month")}${pick("day")}`;
+}
+
+/**
+ * 지금의 서울 날짜. 문자열과 Date 를 함께 낸다.
+ *
+ * Date 를 따로 내는 것은 daysBetween 때문이다. 비교 상대가 parseYmd 가 만든
+ * "로컬 자정" Date 라, 여기서 서울 자정(UTC 서버면 15:00)을 돌려주면 하루 차가
+ * TZ 만큼 어긋난다. 그래서 서울 날짜를 문자열로 먼저 뽑고, 그 날짜의 로컬 자정을 만든다 —
+ * 둘의 시각이 같은 프레임에 놓여 차이가 순수한 날짜 수가 된다.
+ *
+ * 둘을 함께 내는 이유는 따로 뽑으면 자정을 사이에 두고 서로 다른 날이 될 수 있어서다.
+ */
+function seoulToday(): { str: string; date: Date } {
+  const str = yyyymmdd(new Date());
+  return {
+    str,
+    date: new Date(Number(str.slice(0, 4)), Number(str.slice(4, 6)) - 1, Number(str.slice(6, 8))),
+  };
 }
 
 /** "20260915" → 로컬 자정 Date. 형식이 아니면 null */
@@ -666,9 +701,9 @@ async function fetchFestivalRecords(
   regnCd: string,
   signguCds: string[]
 ): Promise<FestivalRecord[]> {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const lookbackStr = yyyymmdd(new Date(today.getTime() - FESTIVAL_LOOKBACK_DAYS * DAY_MS));
+  // 지금에서 180일을 빼고 서울 달력으로 읽는다. 로컬 자정으로 한 번 자른 뒤 빼지 않는 것은
+  // 그 자르기가 서버 TZ 를 끌어들이기 때문이다 — 서울은 DST 가 없어 180×24h 가 정확히 180일이다
+  const lookbackStr = yyyymmdd(new Date(Date.now() - FESTIVAL_LOOKBACK_DAYS * DAY_MS));
 
   /**
    * 코드 하나 몫. 페이지는 순차, 코드끼리는 병렬이다. null 은 첫 페이지부터 실패.
@@ -779,9 +814,9 @@ export async function getFestivals({
   );
   if (records === null) return null;
 
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const todayStr = yyyymmdd(today);
+  // 아래 줄들이 전부 이 하나에 걸려 있다 — 만료 제거 · ongoing/upcoming 판정 · 남은 날짜.
+  // 서버 TZ 가 아니라 서울 달력이다 (seoulToday 참고)
+  const { str: todayStr, date: today } = seoulToday();
 
   const items: Festival[] = [];
   for (const record of records) {
