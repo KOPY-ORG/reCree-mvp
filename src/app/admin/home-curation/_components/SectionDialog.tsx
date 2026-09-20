@@ -147,7 +147,7 @@ function TopicFilterPickerDialog({
   const selectedNode = value ? findNode(roots, value) : null;
 
   function chipCls(isSelected: boolean) {
-    return `pill-badge border text-sm transition-all ${
+    return `pill-badge border transition-all ${
       isSelected ? "ring-2 ring-offset-1 border-transparent" : "text-zinc-500 border-zinc-200 hover:border-zinc-500"
     }`;
   }
@@ -249,7 +249,7 @@ function TopicFilterPickerDialog({
             <button
               type="button"
               onClick={() => { onChange(""); setOpen(false); }}
-              className={`pill-badge border text-sm transition-colors ${
+              className={`pill-badge border transition-colors ${
                 !value ? "bg-zinc-900 text-white border-zinc-900" : "text-zinc-500 border-zinc-200 hover:border-zinc-500"
               }`}
             >
@@ -382,7 +382,7 @@ function TagFilterPickerDialog({
             <button
               type="button"
               onClick={() => { onChange("", ""); setOpen(false); }}
-              className={`pill-badge border text-sm transition-colors ${
+              className={`pill-badge border transition-colors ${
                 !tagValue && !groupValue ? "bg-zinc-900 text-white border-zinc-900" : "text-zinc-500 border-zinc-200 hover:border-zinc-500"
               }`}
             >
@@ -402,7 +402,7 @@ function TagFilterPickerDialog({
                     style={groupValue === g.group && !tagValue
                       ? { background: g.colorHex, color: g.textColorHex }
                       : {}}
-                    className={`pill-badge border text-sm font-semibold transition-all ${
+                    className={`pill-badge border font-semibold transition-all ${
                       groupValue === g.group && !tagValue ? "ring-2 ring-offset-1 border-transparent" : "text-zinc-500 border-zinc-200 hover:border-zinc-500"
                     }`}
                   >
@@ -416,7 +416,7 @@ function TagFilterPickerDialog({
                         type="button"
                         onClick={() => { onChange(t.id, g.group); setOpen(false); }}
                         style={isSelected ? { background: g.colorHex, color: g.textColorHex } : {}}
-                        className={`pill-badge border text-sm transition-all ${
+                        className={`pill-badge border transition-all ${
                           isSelected ? "ring-2 ring-offset-1 border-transparent" : "text-zinc-500 border-zinc-200 hover:border-zinc-500"
                         }`}
                       >
