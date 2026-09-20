@@ -1262,6 +1262,9 @@ export function PlaceForm({
                       <CardTitle className="text-sm font-semibold">장소 유형 <span className="text-destructive">*</span></CardTitle>
                     </CardHeader>
                     <CardContent>
+                      <p className="mb-2 text-xs text-muted-foreground">
+                        처음 고른 타입이 대표 타입입니다.
+                      </p>
                       <div className="flex flex-wrap gap-1.5">
                         {allPlaceTypes.map((pt) => {
                           const isSelected = selectedPlaceTypes.includes(pt.name);

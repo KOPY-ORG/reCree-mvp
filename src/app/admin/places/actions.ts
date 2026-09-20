@@ -32,6 +32,56 @@ export type PlaceFormData = {
   isVerified: boolean;
 };
 
+/**
+ * 폼이 준 이름 배열을 PlaceType 행으로 바꾼다. 배열 순서가 곧 sortOrder 이고 0 번이 대표다.
+ *
+ * id 가 아니라 이름으로 찾는 이유는 Place.placeTypes 가 이름 문자열 배열이기 때문이다 —
+ * 두 저장소가 같은 값을 같은 순서로 들고 있어야 옛 코드와 새 코드가 어긋나지 않는다.
+ */
+async function resolvePlaceTypes(
+  names: string[],
+): Promise<{ error: string } | { types: { id: string; name: string }[] }> {
+  if (names.length === 0) return { error: "장소 유형을 1개 이상 선택해주세요." };
+
+  const duplicated = [...new Set(names.filter((n, i) => names.indexOf(n) !== i))];
+  if (duplicated.length > 0) {
+    return { error: `장소 유형이 중복됐습니다: ${duplicated.join(", ")}` };
+  }
+
+  const rows = await prisma.placeType.findMany({
+    where: { name: { in: names } },
+    select: { id: true, name: true, nameKo: true, category: true, isDefault: true, isActive: true },
+  });
+  const byName = new Map(rows.map((r) => [r.name, r]));
+
+  const unknown = names.filter((n) => !byName.has(n));
+  if (unknown.length > 0) {
+    return { error: `장소 유형 마스터에 없는 이름입니다: ${unknown.join(", ")}` };
+  }
+
+  const selected = names.map((n) => byName.get(n)!);
+
+  const inactive = selected.filter((t) => !t.isActive);
+  if (inactive.length > 0) {
+    return { error: `비활성 장소 유형은 쓸 수 없습니다: ${inactive.map((t) => t.nameKo).join(", ")}` };
+  }
+
+  // 같은 카테고리에 기본값과 구체 타입이 같이 오면 거부한다.
+  // "식당"은 "한식"을 모르는 상태를 뜻하므로, 둘을 함께 붙이면 서로를 부정한다.
+  for (const base of selected.filter((t) => t.isDefault)) {
+    const specific = selected.filter((t) => t.category === base.category && !t.isDefault);
+    if (specific.length > 0) {
+      return {
+        error: `같은 카테고리에서 기본값과 구체 타입을 함께 고를 수 없습니다: ${base.nameKo} + ${specific
+          .map((t) => t.nameKo)
+          .join(", ")}`,
+      };
+    }
+  }
+
+  return { types: selected.map((t) => ({ id: t.id, name: t.name })) };
+}
+
 export async function deletePlace(id: string): Promise<{ error?: string }> {
   try {
     const postCount = await prisma.postPlace.count({ where: { placeId: id } });
@@ -62,33 +112,47 @@ export async function createPlace(
   data: PlaceFormData,
   returnUrl?: string,
 ): Promise<{ error?: string; id?: string }> {
+  const resolved = await resolvePlaceTypes(data.placeTypes);
+  if ("error" in resolved) return { error: resolved.error };
+
   let newId: string | undefined;
   try {
     const streetViewUrl = data.streetViewUrl
       ? await toOfficialStreetViewUrl(data.streetViewUrl)
       : null;
-    const place = await prisma.place.create({
-      data: {
-        nameKo: data.nameKo,
-        nameEn: data.nameEn || null,
-        addressKo: data.addressKo || null,
-        addressEn: data.addressEn || null,
-        areaId: data.areaId || null,
-        placeTypes: data.placeTypes,
-        latitude: data.latitude,
-        longitude: data.longitude,
-        googlePlaceId: data.googlePlaceId || null,
-        googleMapsUrl: data.googleMapsUrl || null,
-        naverMapsUrl: data.naverMapsUrl || null,
-        kakaoMapsUrl: data.kakaoMapsUrl || null,
-        amapUrl: data.amapUrl || null,
-        streetViewUrl,
-        phone: data.phone || null,
-        operatingHours: data.operatingHours?.length ? data.operatingHours : Prisma.DbNull,
-        gettingThere: data.gettingThere || null,
-        status: data.status,
-        isVerified: data.isVerified,
-      },
+    // 이름 배열과 연결 행을 한 트랜잭션에서 쓴다 — 둘이 갈라지면 지도 카테고리가 장소를 놓친다
+    const place = await prisma.$transaction(async (tx) => {
+      const created = await tx.place.create({
+        data: {
+          nameKo: data.nameKo,
+          nameEn: data.nameEn || null,
+          addressKo: data.addressKo || null,
+          addressEn: data.addressEn || null,
+          areaId: data.areaId || null,
+          placeTypes: resolved.types.map((t) => t.name),
+          latitude: data.latitude,
+          longitude: data.longitude,
+          googlePlaceId: data.googlePlaceId || null,
+          googleMapsUrl: data.googleMapsUrl || null,
+          naverMapsUrl: data.naverMapsUrl || null,
+          kakaoMapsUrl: data.kakaoMapsUrl || null,
+          amapUrl: data.amapUrl || null,
+          streetViewUrl,
+          phone: data.phone || null,
+          operatingHours: data.operatingHours?.length ? data.operatingHours : Prisma.DbNull,
+          gettingThere: data.gettingThere || null,
+          status: data.status,
+          isVerified: data.isVerified,
+        },
+      });
+      await tx.placePlaceType.createMany({
+        data: resolved.types.map((t, i) => ({
+          placeId: created.id,
+          placeTypeId: t.id,
+          sortOrder: i,
+        })),
+      });
+      return created;
     });
     newId = place.id;
   } catch (e) {
@@ -104,33 +168,43 @@ export async function updatePlace(
   data: PlaceFormData,
   returnUrl?: string,
 ): Promise<{ error?: string }> {
+  const resolved = await resolvePlaceTypes(data.placeTypes);
+  if ("error" in resolved) return { error: resolved.error };
+
   try {
     const streetViewUrl = data.streetViewUrl
       ? await toOfficialStreetViewUrl(data.streetViewUrl)
       : null;
-    await prisma.place.update({
-      where: { id },
-      data: {
-        nameKo: data.nameKo,
-        nameEn: data.nameEn || null,
-        addressKo: data.addressKo || null,
-        addressEn: data.addressEn || null,
-        areaId: data.areaId || null,
-        placeTypes: data.placeTypes,
-        latitude: data.latitude,
-        longitude: data.longitude,
-        googlePlaceId: data.googlePlaceId || null,
-        googleMapsUrl: data.googleMapsUrl || null,
-        naverMapsUrl: data.naverMapsUrl || null,
-        kakaoMapsUrl: data.kakaoMapsUrl || null,
-        amapUrl: data.amapUrl || null,
-        streetViewUrl,
-        phone: data.phone || null,
-        operatingHours: data.operatingHours?.length ? data.operatingHours : Prisma.DbNull,
-        gettingThere: data.gettingThere || null,
-        status: data.status,
-        isVerified: data.isVerified,
-      },
+    // 연결 행은 지우고 다시 깐다 — 순서가 바뀐 경우까지 한 규칙으로 덮는다
+    await prisma.$transaction(async (tx) => {
+      await tx.place.update({
+        where: { id },
+        data: {
+          nameKo: data.nameKo,
+          nameEn: data.nameEn || null,
+          addressKo: data.addressKo || null,
+          addressEn: data.addressEn || null,
+          areaId: data.areaId || null,
+          placeTypes: resolved.types.map((t) => t.name),
+          latitude: data.latitude,
+          longitude: data.longitude,
+          googlePlaceId: data.googlePlaceId || null,
+          googleMapsUrl: data.googleMapsUrl || null,
+          naverMapsUrl: data.naverMapsUrl || null,
+          kakaoMapsUrl: data.kakaoMapsUrl || null,
+          amapUrl: data.amapUrl || null,
+          streetViewUrl,
+          phone: data.phone || null,
+          operatingHours: data.operatingHours?.length ? data.operatingHours : Prisma.DbNull,
+          gettingThere: data.gettingThere || null,
+          status: data.status,
+          isVerified: data.isVerified,
+        },
+      });
+      await tx.placePlaceType.deleteMany({ where: { placeId: id } });
+      await tx.placePlaceType.createMany({
+        data: resolved.types.map((t, i) => ({ placeId: id, placeTypeId: t.id, sortOrder: i })),
+      });
     });
   } catch (e) {
     console.error("장소 수정 오류:", e);
