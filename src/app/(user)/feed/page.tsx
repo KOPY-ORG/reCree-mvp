@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { Heart } from "lucide-react";
 import { HScrollSection } from "@/components/curation/HScrollSection";
 import { prisma } from "@/lib/prisma";
 import { HomeBannerCarousel, type BannerItem } from "../_components/HomeBannerCarousel";
-import { getPostsWithLabels, getSavedPostIds, type PostItem } from "@/lib/post-queries";
+import { getPostsWithLabels, getSavedPostIds } from "@/lib/post-queries";
 import { getCuratedSections, getSectionData, getPostMoreHref, type SectionData } from "@/lib/curation-queries";
 import {
   selectCardLabels,
@@ -34,8 +33,11 @@ function resolveBannerLabels(
 import { PostCard } from "../_components/PostCard";
 import { GuideVideoCard } from "../_components/GuideVideoCard";
 import { getCurrentUser } from "@/lib/auth";
+import { getMyFollows } from "@/lib/follow-queries";
+import { resolveFeedTab } from "@/lib/feed-tabs";
+import { HomeTabBar, type TabTopic } from "./_components/HomeTabBar";
 import { ReCreeshotImage } from "@/components/recreeshot-image";
-import { fetchLatestFeed, fetchFollowFeed } from "../_actions/feed-actions";
+import { fetchLatestFeed } from "../_actions/feed-actions";
 import { InfiniteFeed } from "../_components/InfiniteFeed";
 import {
   getActiveEventCollections,
@@ -45,42 +47,22 @@ import {
 import { EventVerticalCarousel } from "@/components/maps/EventVerticalCarousel";
 import { FeedbackForm } from "@/components/feedback/FeedbackForm";
 
-// ─── 탭 바 ───────────────────────────────────────────────────────────────────
-
-function TabBar({ activeTab }: { activeTab: "highlights" | "follow" }) {
-  return (
-    <div className="flex border-b border-secondary mb-4">
-      <Link
-        href="/feed"
-        className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors ${
-          activeTab === "highlights"
-            ? "border-foreground text-foreground"
-            : "border-transparent text-muted-foreground hover:text-foreground"
-        }`}
-      >
-        Highlights
-      </Link>
-      <Link
-        href="/feed?tab=follow"
-        className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors ${
-          activeTab === "follow"
-            ? "border-foreground text-foreground"
-            : "border-transparent text-muted-foreground hover:text-foreground"
-        }`}
-      >
-        Following
-      </Link>
-    </div>
-  );
-}
-
 // ─── 메인 페이지 ──────────────────────────────────────────────────────────────
 
 export default async function FeedPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const { tab } = await searchParams;
-  const activeTab = tab === "follow" ? "follow" : "highlights";
 
   const currentUser = await getCurrentUser();
+
+  // 구독 토픽은 탭바가 그리고, ?tab= 해석도 이 목록에 기댄다 — 탭을 그리기 전에 필요하다.
+  // 순서는 getMyFollows 가 정한다 (sortOrder asc → createdAt desc).
+  const follows = currentUser ? await getMyFollows(currentUser.id) : [];
+  const tabTopics: TabTopic[] = follows.map((f) => ({
+    id: f.topic.id,
+    slug: f.topic.slug,
+    nameEn: f.topic.nameEn,
+  }));
+  const activeTab = resolveFeedTab(tab, tabTopics);
 
   const guideVideo = await prisma.guideVideo.findFirst({ where: { isActive: true } });
 
@@ -187,18 +169,9 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
   const hasBanners = homeBanners.length > 0;
   const hasSections = sectionData.some((d) => d.items.length > 0);
 
-  // Follow 탭 첫 페이지 SSR (인증·팔로우 필터는 fetchFollowFeed 내부에서 처리)
-  let followFirstPosts: PostItem[] = [];
-  let followInitialCursor: string | null = null;
-  if (activeTab === "follow") {
-    const followResult = await fetchFollowFeed({});
-    followFirstPosts = followResult.posts;
-    followInitialCursor = followResult.nextCursor;
-  }
-
   // ─── 폴백 ───────────────────────────────────────────────────────────────────
 
-  if (!hasBanners && !hasSections && activeTab !== "follow") {
+  if (!hasBanners && !hasSections) {
     const fallbackPosts = await getPostsWithLabels(
       { status: "PUBLISHED", isShop: false },
       { orderBy: { createdAt: "desc" } }
@@ -215,7 +188,7 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
 
     return (
       <div className="px-4 py-4 max-w-2xl mx-auto">
-        <TabBar activeTab={activeTab} />
+        <HomeTabBar activeTab={activeTab} topics={tabTopics} isLoggedIn={!!currentUser} />
         <div className="grid grid-cols-2 gap-3">
           {fallbackPosts.map((post, index) => (
             <PostCard key={post.id} post={post} tagGroupMap={tagGroupMap} isSaved={savedPostIds.has(post.id)} variant="grid" priority={index === 0} />
@@ -254,139 +227,91 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
 
   return (
     <div className="pt-2 pb-4 max-w-2xl mx-auto">
-      <TabBar activeTab={activeTab} />
+      <HomeTabBar activeTab={activeTab} topics={tabTopics} isLoggedIn={!!currentUser} />
 
-      {activeTab === "follow" ? (
-        !currentUser ? (
-          <div className="flex flex-col items-center justify-center h-[50vh] gap-4 text-center px-4">
-            <Heart className="h-10 w-10 text-muted-foreground" strokeWidth={1.5} />
-            <div className="space-y-1">
-              <p className="text-lg font-semibold">Sign in to follow topics</p>
-              <p className="text-sm text-muted-foreground">
-                Follow K-POP and K-CONTENT topics to see posts here.
-              </p>
-            </div>
-            <Link
-              href="/login"
-              className="mt-2 px-5 py-2.5 rounded-full bg-brand text-black text-sm font-semibold transition-opacity hover:opacity-80"
-            >
-              Sign in
-            </Link>
-          </div>
-        ) : followFirstPosts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-[50vh] gap-4 text-center px-4">
-            <Heart className="h-10 w-10 text-muted-foreground" strokeWidth={1.5} />
-            <div className="space-y-1">
-              <p className="text-lg font-semibold">No posts yet</p>
-              <p className="text-sm text-muted-foreground">
-                Follow topics to see posts here.
-              </p>
-            </div>
-            <Link
-              href="/topics"
-              className="mt-2 px-5 py-2.5 rounded-full bg-brand text-black text-sm font-semibold transition-opacity hover:opacity-80"
-            >
-              Browse Topics
-            </Link>
-          </div>
-        ) : (
-          <div className="px-4">
-            <InfiniteFeed
-              fetchFn={fetchFollowFeed}
-              initialPosts={followFirstPosts}
-              initialCursor={followInitialCursor}
-              savedIds={[...savedPostIds]}
-              tagGroupMap={tagGroupMap}
-            />
-          </div>
-        )
-      ) : (
-        <>
-          {hasBanners && (
-            <div className="mb-4">
-              <HomeBannerCarousel banners={bannerItems} />
-            </div>
-          )}
-
-          {homeFirstColData && (
-            <div className="mb-6">
-              <EventVerticalCarousel
-                title="BTS THE CITY ARIRANG LONDON"
-                events={homeFirstColData.markers}
-                collectionSlug={homeFirstColData.collection.slug}
-                collectionName={homeFirstColData.collection.nameEn}
-              />
-            </div>
-          )}
-
-          {sections.map((section, i) => {
-            const data = sectionData[i];
-            if (!data || data.items.length === 0) return null;
-
-            if (data.kind === "reCreeshots") {
-              return (
-                <HScrollSection key={section.id} title={section.titleEn}>
-                  {guideVideo && (
-                    <div className="shrink-0 w-[120px]">
-                      <GuideVideoCard
-                        videoUrl={guideVideo.videoUrl}
-                        thumbnailUrl={guideVideo.thumbnailUrl}
-                        titleEn={guideVideo.titleEn}
-                        className="aspect-[4/5] rounded-lg"
-                      />
-                    </div>
-                  )}
-                  {data.items.map((shot) => (
-                    <Link key={shot.id} href={`/recreeshot/${shot.id}`} className="shrink-0 w-[120px] block">
-                      <ReCreeshotImage
-                        shotUrl={shot.imageUrl}
-                        variant="thumb-sm"
-                        className="aspect-[4/5] [filter:drop-shadow(0_3px_5px_rgba(0,0,0,0.18))]"
-                        sizes="120px"
-                      />
-                    </Link>
-                  ))}
-                </HScrollSection>
-              );
-            }
-
-            return (
-              <HScrollSection key={section.id} title={section.titleEn} moreHref={getPostMoreHref(section)}>
-                {data.items.map((post, index) => (
-                  <PostCard key={post.id} post={post} tagGroupMap={tagGroupMap} isSaved={savedPostIds.has(post.id)} priority={index === 0} />
-                ))}
-              </HScrollSection>
-            );
-          })}
-          <div className="px-4 mb-4">
-            <FeedbackForm source="feed" />
-          </div>
-
-          <div className="flex items-center justify-between mb-3 px-4 mt-2">
-            <h2 className="font-bold text-lg">Fresh Drops</h2>
-          </div>
-          <div className="px-4">
-            <InfiniteFeed
-              initialPosts={latestFeedResult.posts}
-              initialCursor={latestFeedResult.nextCursor}
-              savedIds={[...savedPostIds]}
-              tagGroupMap={tagGroupMap}
-              fetchFn={fetchLatestFeed}
-            />
-          </div>
-
-          <footer className="px-4 pt-8 pb-6 text-sm text-muted-foreground">
-            <div className="flex flex-wrap gap-4 justify-center">
-              <Link href="/policy/privacy" className="hover:text-foreground underline underline-offset-4">
-                Privacy Policy
-              </Link>
-              <Link href="/policy/terms" className="hover:text-foreground underline underline-offset-4">
-                Terms of Service
-              </Link>
-            </div>
-          </footer>
-        </>
+      {hasBanners && (
+        <div className="mb-4">
+          <HomeBannerCarousel banners={bannerItems} />
+        </div>
       )}
+
+      {homeFirstColData && (
+        <div className="mb-6">
+          <EventVerticalCarousel
+            title="BTS THE CITY ARIRANG LONDON"
+            events={homeFirstColData.markers}
+            collectionSlug={homeFirstColData.collection.slug}
+            collectionName={homeFirstColData.collection.nameEn}
+          />
+        </div>
+      )}
+
+      {sections.map((section, i) => {
+        const data = sectionData[i];
+        if (!data || data.items.length === 0) return null;
+
+        if (data.kind === "reCreeshots") {
+          return (
+            <HScrollSection key={section.id} title={section.titleEn}>
+              {guideVideo && (
+                <div className="shrink-0 w-[120px]">
+                  <GuideVideoCard
+                    videoUrl={guideVideo.videoUrl}
+                    thumbnailUrl={guideVideo.thumbnailUrl}
+                    titleEn={guideVideo.titleEn}
+                    className="aspect-[4/5] rounded-lg"
+                  />
+                </div>
+              )}
+              {data.items.map((shot) => (
+                <Link key={shot.id} href={`/recreeshot/${shot.id}`} className="shrink-0 w-[120px] block">
+                  <ReCreeshotImage
+                    shotUrl={shot.imageUrl}
+                    variant="thumb-sm"
+                    className="aspect-[4/5] [filter:drop-shadow(0_3px_5px_rgba(0,0,0,0.18))]"
+                    sizes="120px"
+                  />
+                </Link>
+              ))}
+            </HScrollSection>
+          );
+        }
+
+        return (
+          <HScrollSection key={section.id} title={section.titleEn} moreHref={getPostMoreHref(section)}>
+            {data.items.map((post, index) => (
+              <PostCard key={post.id} post={post} tagGroupMap={tagGroupMap} isSaved={savedPostIds.has(post.id)} priority={index === 0} />
+            ))}
+          </HScrollSection>
+        );
+      })}
+      <div className="px-4 mb-4">
+        <FeedbackForm source="feed" />
+      </div>
+
+      <div className="flex items-center justify-between mb-3 px-4 mt-2">
+        <h2 className="font-bold text-lg">Fresh Drops</h2>
+      </div>
+      <div className="px-4">
+        <InfiniteFeed
+          initialPosts={latestFeedResult.posts}
+          initialCursor={latestFeedResult.nextCursor}
+          savedIds={[...savedPostIds]}
+          tagGroupMap={tagGroupMap}
+          fetchFn={fetchLatestFeed}
+        />
+      </div>
+
+      <footer className="px-4 pt-8 pb-6 text-sm text-muted-foreground">
+        <div className="flex flex-wrap gap-4 justify-center">
+          <Link href="/policy/privacy" className="hover:text-foreground underline underline-offset-4">
+            Privacy Policy
+          </Link>
+          <Link href="/policy/terms" className="hover:text-foreground underline underline-offset-4">
+            Terms of Service
+          </Link>
+        </div>
+      </footer>
     </div>
   );
 }
