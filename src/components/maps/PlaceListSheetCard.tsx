@@ -58,8 +58,10 @@ export function PlaceListSheetCard({ post, place, isSaved, isFocused, tagGroupMa
         return aM - bM;
       })
     : post.topics;
+  // 장소 타입은 아래 메타 줄(metaLabel)이 이미 적는다 — 배지로 또 넣지 않으려고
+  // placeTypes 를 넘기지 않는다. 그러면 두 칸이 토픽 · 팬 맥락 태그로 채워진다.
   const labels = selectCardLabels(
-    { topics: sortedTopics, tags: post.tags, placeTypes: place.placePlaceTypes, tagGroupMap },
+    { topics: sortedTopics, tags: post.tags, tagGroupMap },
     "home",
   );
 

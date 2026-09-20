@@ -24,7 +24,6 @@ import type { PlaceTypeLink } from "@/lib/place-types";
 import {
   K_MEDIA_GROUP,
   labelBackground,
-  cardDisplayLabel,
   pickCardLabels,
   pickDetailLabels,
   toPlaceTypeSlot,
@@ -226,7 +225,7 @@ interface Props {
   topicEffectiveStyleMap: Map<string, React.CSSProperties>;
   topicEffectiveInfoMap: Map<string, EffectiveColorInfo>;
   tagGroups: TagGroupItem[];
-  /** 지금 고른 장소의 타입 — 팬 맥락 태그가 없을 때 대표 타입으로 폴백한다 */
+  /** 지금 고른 장소의 타입 — 카드 배지의 둘째 칸(대표 장소 타입)에 쓴다 */
   placeTypes?: readonly PlaceTypeLink[];
 }
 
@@ -281,8 +280,8 @@ export function LabelVisibilityCard({
         const t = tagMap.get(pt.tagId);
         const background = t ? (t.effectiveColorHex2 ? `linear-gradient(${t.effectiveGradientDir}, ${t.effectiveColorHex}, ${t.effectiveColorHex2} ${t.effectiveGradientStop}%)` : t.effectiveColorHex) : "";
         const color = t?.effectiveTextColorHex ?? "#000";
-        // 카드에서 실제로 치환될 때만 힌트를 보여준다 (SPOT 은 치환하지 않는다)
-        const hint = t ? (cardDisplayLabel(t.group, tagGroupMap.get(t.group)?.displayLabel) ?? undefined) : undefined;
+        // 카드에서 그룹 표시명으로 치환되는 태그만 힌트를 보여준다
+        const hint = t ? (tagGroupMap.get(t.group)?.displayLabel ?? undefined) : undefined;
         return { id: pt.tagId, isVisible: pt.isVisible, label: t?.name ?? pt.tagId, background, color, hint };
       }),
   [postTags, tagMap, tagGroupMap]);
@@ -326,7 +325,7 @@ export function LabelVisibilityCard({
 
     const otherSlots: LabelSlot[] = visibleOther.map((pt) => {
       const t = tagMap.get(pt.tagId);
-      const displayLabel = t ? cardDisplayLabel(t.group, tagGroupMap.get(t.group)?.displayLabel) : null;
+      const displayLabel = t ? (tagGroupMap.get(t.group)?.displayLabel ?? null) : null;
       return { group: t?.group ?? "OTHER", name: t?.name ?? pt.tagId, slug: t?.slug, displayLabel, colors: t ? toTagColors(t) : { colorHex: "#e4e4e7", colorHex2: null, gradientDir: "to bottom", gradientStop: 150, textColorHex: "#000000" } };
     });
 
