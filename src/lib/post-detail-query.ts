@@ -109,6 +109,13 @@ export async function getPostDetail(
               phone: true,
               operatingHours: true,
               gettingThere: true,
+              placePlaceTypes: {
+                orderBy: { sortOrder: "asc" },
+                select: {
+                  sortOrder: true,
+                  placeType: { select: { name: true, nameKo: true, category: true, isDefault: true } },
+                },
+              },
             },
           },
         },

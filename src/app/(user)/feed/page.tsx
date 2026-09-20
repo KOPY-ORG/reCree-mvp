@@ -137,7 +137,7 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
                 displayOrder: true,
                 tag: {
                   select: {
-                    name: true, group: true,
+                    name: true, slug: true, group: true,
                     colorHex: true, colorHex2: true, textColorHex: true,
                   },
                 },
@@ -146,7 +146,19 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
             postPlaces: {
               take: 1,
               select: {
-                place: { select: { nameEn: true, nameKo: true } },
+                place: {
+                  select: {
+                    nameEn: true,
+                    nameKo: true,
+                    placePlaceTypes: {
+                      orderBy: { sortOrder: "asc" },
+                      select: {
+                        sortOrder: true,
+                        placeType: { select: { name: true, nameKo: true, category: true, isDefault: true } },
+                      },
+                    },
+                  },
+                },
               },
             },
           },

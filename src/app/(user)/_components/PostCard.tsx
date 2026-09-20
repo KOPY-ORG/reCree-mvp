@@ -26,7 +26,11 @@ export type LabelablePost = {
   postTopics: (Omit<PostItem["postTopics"][number], "topic"> & {
     topic: PostItem["postTopics"][number]["topic"] & { level?: number };
   })[];
-  postTags: PostItem["postTags"];
+  // tag.slug 는 optional 이다 — shop 쿼리(getShopPosts·getShopPostsWithLabels)는 slug 를 안 뽑는다.
+  // shop variant 는 BEAUTY/ITEM 태그만 보므로 팬 맥락 식별이 필요 없다.
+  postTags: (Omit<PostItem["postTags"][number], "tag"> & {
+    tag: Omit<PostItem["postTags"][number]["tag"], "slug"> & { slug?: string };
+  })[];
 };
 
 function resolvePostLabels(

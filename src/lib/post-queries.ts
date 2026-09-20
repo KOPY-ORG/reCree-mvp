@@ -2,6 +2,15 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 
+/** 대표 장소 타입을 카드 배지 폴백으로 쓰기 위한 select (map-queries 의 같은 이름과 동일 모양) */
+const placePlaceTypesSelect = {
+  orderBy: { sortOrder: "asc" },
+  select: {
+    sortOrder: true,
+    placeType: { select: { name: true, nameKo: true, category: true, isDefault: true } },
+  },
+} satisfies Prisma.Place$placePlaceTypesArgs;
+
 // PostBadges(홈 라벨 규칙: 대표 토픽1 + 태그1)가 요구하는 topic select 형태 — 여러 쿼리에서 재사용
 const postTopicsSelect = {
   where: { isVisible: true },
@@ -91,13 +100,13 @@ export async function getPostsWithLabels(
         orderBy: { displayOrder: "asc" },
         select: {
           displayOrder: true,
-          tag: { select: { name: true, group: true, colorHex: true, colorHex2: true, textColorHex: true } },
+          tag: { select: { name: true, slug: true, group: true, colorHex: true, colorHex2: true, textColorHex: true } },
         },
       },
       postPlaces: {
         take: 1,
         select: {
-          place: { select: { nameEn: true, nameKo: true } },
+          place: { select: { nameEn: true, nameKo: true, placePlaceTypes: placePlaceTypesSelect } },
         },
       },
     },

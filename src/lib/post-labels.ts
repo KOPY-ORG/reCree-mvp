@@ -1,8 +1,45 @@
 // 포스트 라벨 색상 헬퍼 — 홈·탐색 등 여러 페이지에서 공유
 import type React from "react";
+import type { PlaceCategory } from "@prisma/client";
 
 /** K-MEDIA 태그 그룹 PK — 변경 시 DB TagGroupConfig.group과 동기화 */
 export const K_MEDIA_GROUP = "MEDIA";
+
+/**
+ * 팬 맥락 태그 — SPOT 그룹 10개 중 "왜 팬이 이 장소에 가는가"를 말하는 5개.
+ * 나머지 5개(nature·attraction·heritage·landmark·shopping)는 장소의 성격이라
+ * 이제 장소 타입이 맡는다.
+ *
+ * MEDIA 는 그룹 전체가 팬 맥락이라 K_MEDIA_GROUP 으로 식별한다 — 여기 넣지 않는다.
+ * group 이 아니라 slug 로 거르는 이유는 SPOT 이 한 그룹 안에서 갈리기 때문이고,
+ * name 이 아니라 slug 인 이유는 이름은 어드민에서 바뀌기 때문이다.
+ */
+export const FAN_CONTEXT_TAG_SLUGS = [
+  "filming-location",
+  "photo-spot",
+  "fan-spot",
+  "local",
+  "vintageretro",
+] as const;
+
+/**
+ * 장소 타입 배지 색. 태그와 달리 PlaceType 에는 색 칸이 없어 카테고리별로 코드가 정한다.
+ *
+ * 태그 그룹 색(TagGroupConfig)과 겹치지 않아야 카드에서 둘이 구분된다 —
+ * K-FOOD(#FFE592→#ffae00)·K-SPOT(#ffed94→#ffee33)이 이미 노랑 계열이라
+ * 먹는 것과 명소는 그 둘을 그대로 잇고, 나머지는 비는 색을 쓴다.
+ */
+export const PLACE_CATEGORY_COLORS: Record<PlaceCategory, Omit<ResolvedLabel, "text" | "slug">> = {
+  EAT:         { colorHex: "#FFE592", colorHex2: "#ffae00", gradientDir: "to bottom", gradientStop: 90,  textColorHex: "#000000" },
+  CAFE:        { colorHex: "#FFE592", colorHex2: "#ffae00", gradientDir: "to bottom", gradientStop: 90,  textColorHex: "#000000" },
+  BAR:         { colorHex: "#FFE592", colorHex2: "#ffae00", gradientDir: "to bottom", gradientStop: 90,  textColorHex: "#000000" },
+  ATTRACTIONS: { colorHex: "#ffed94", colorHex2: "#ffee33", gradientDir: "to bottom", gradientStop: 75,  textColorHex: "#000000" },
+  K_CULTURE:   { colorHex: "#B8D4FF", colorHex2: "#6FA8FF", gradientDir: "to bottom", gradientStop: 75,  textColorHex: "#000000" },
+  EXPERIENCE:  { colorHex: "#ff8f66", colorHex2: "#fb5209", gradientDir: "to bottom", gradientStop: 75,  textColorHex: "#FFFFFF" },
+  SHOP:        { colorHex: "#88fbe2", colorHex2: "#00ffc8", gradientDir: "to bottom", gradientStop: 75,  textColorHex: "#000000" },
+  STAY:        { colorHex: "#E2D6FF", colorHex2: "#BFA6FF", gradientDir: "to bottom", gradientStop: 75,  textColorHex: "#000000" },
+  OTHER:       { colorHex: "#E4E4E7", colorHex2: null,      gradientDir: "to bottom", gradientStop: 150, textColorHex: "#000000" },
+};
 
 /** 라벨 렌더링 그룹 우선순위: 토픽(0) → K-MEDIA(1) → 나머지(2) */
 export const labelGroupOrder = (group: string): number =>

@@ -6,6 +6,7 @@ import { ChevronRight, MapPin } from "lucide-react";
 import { isExternalImage } from "@/lib/image";
 import { topicMatchesFilter } from "@/lib/map-utils";
 import type { MapPost } from "@/lib/map-queries";
+import type { PlaceTypeLink } from "@/lib/place-types";
 import {
   resolveTagColors,
   resolveTopicColors,
@@ -29,6 +30,8 @@ interface Props {
       nameKo: string;
       parent: { nameEn: string | null; nameKo: string } | null;
     } | null;
+    /** 대표 순서. 캐시된 옛 payload 에는 없을 수 있다 — primaryPlaceType 으로만 읽는다 */
+    placePlaceTypes?: PlaceTypeLink[];
     markerColor?: string;
   };
   isSaved: boolean;
