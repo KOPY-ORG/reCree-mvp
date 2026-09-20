@@ -9,6 +9,8 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans), var(--font-noto-sans-kr);
   --color-gray-900: var(--palette-gray-900);
+  --color-gray-400: var(--palette-gray-400);
+  --color-gray-200: var(--palette-gray-200);
 
   /* ── Typography Scale ───────────────── */
   /* base: 16px (html 100%) */
@@ -143,6 +145,7 @@ html[data-nav-tucked] .nav-tuckable {
   --palette-gray-800:   #636363;
   --palette-gray-700:   #737373;
   --palette-gray-400:   #BABABA;
+  --palette-gray-200:   #E7E6E1;
   --palette-gray-100:   #F3F3F3;
   --palette-white:      #FCFCFC;
   --palette-pink:       #FE72BE;

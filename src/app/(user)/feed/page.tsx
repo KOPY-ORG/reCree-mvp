@@ -12,7 +12,9 @@ import { resolveFeedTab } from "@/lib/feed-tabs";
 import { type TabTopic } from "./_components/HomeTabBar";
 import { HomeTopBar } from "./_components/HomeTopBar";
 import { CuratedSections } from "./_components/CuratedSections";
+import { KoreaMapCard } from "./_components/KoreaMapCard";
 import { FreshDrops } from "./_components/FreshDrops";
+import { getSidoPlaceCounts } from "@/lib/area-queries";
 import { fetchLatestFeed } from "../_actions/feed-actions";
 import { FeedbackForm } from "@/components/feedback/FeedbackForm";
 
@@ -34,7 +36,7 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
   const activeTab = resolveFeedTab(tab, tabTopics);
 
   // 서로 의존하지 않는 조회는 한 번에 띄운다
-  const [homeBanners, sections, tagGroupConfigs, savedPostIds, latestFeedResult, guideVideo] =
+  const [homeBanners, sections, tagGroupConfigs, savedPostIds, latestFeedResult, guideVideo, sidoCounts] =
     await Promise.all([
       getHomeBanners(),
       getCuratedSections({ showOnHome: true }),
@@ -44,6 +46,7 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
       getSavedPostIds(currentUser?.id ?? null),
       fetchLatestFeed({}),
       prisma.guideVideo.findFirst({ where: { isActive: true } }),
+      getSidoPlaceCounts(),
     ]);
 
   // sections 를 받아야 각 섹션의 콘텐츠를 부를 수 있어 여기 남는다
@@ -78,6 +81,15 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
             <div className="mb-4">
               <HomeBannerCarousel banners={bannerItems} />
             </div>
+          )}
+
+          {/* 본문에 탭 분기가 아직 없다 (E4). 지금은 이 카드에만 조건을 건다 */}
+          {activeTab.kind === "hot" && (
+            <KoreaMapCard
+              counts={sidoCounts.counts}
+              maxCount={sidoCounts.maxCount}
+              accentColor="var(--brand)"
+            />
           )}
 
           <CuratedSections
