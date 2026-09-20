@@ -23,6 +23,11 @@ export default async function EditPlacePage({ params, searchParams }: Props) {
         addressEn: true,
         areaId: true,
         placeTypes: true,
+        // 대표 순서는 연결 행이 들고 있다 — 폼은 이 순서를 그대로 보여준다
+        placePlaceTypes: {
+          orderBy: { sortOrder: "asc" },
+          select: { placeType: { select: { name: true } } },
+        },
         latitude: true,
         longitude: true,
         googlePlaceId: true,
@@ -50,8 +55,8 @@ export default async function EditPlacePage({ params, searchParams }: Props) {
     }),
     prisma.placeType.findMany({
       where: { isActive: true },
-      orderBy: { sortOrder: "asc" },
-      select: { id: true, name: true, nameKo: true },
+      orderBy: [{ category: "asc" }, { sortOrder: "asc" }],
+      select: { id: true, name: true, nameKo: true, category: true, isDefault: true },
     }),
     prisma.area.findMany({
       orderBy: [{ level: "asc" }, { sortOrder: "asc" }],
@@ -71,7 +76,10 @@ export default async function EditPlacePage({ params, searchParams }: Props) {
         operatingHours: (place.operatingHours as string[] | null) ?? null,
         gettingThere: place.gettingThere ?? null,
         areaId: place.areaId ?? null,
-        placeTypes: place.placeTypes,
+        // 연결 행이 있으면 그 순서가 기준이다. 없는 옛 장소만 이름 배열로 되돌아간다
+        placeTypes: place.placePlaceTypes.length
+          ? place.placePlaceTypes.map((l) => l.placeType.name)
+          : place.placeTypes,
       }}
       initialPlaceImages={place.placeImages}
       allPlaceTypes={allPlaceTypes}

@@ -178,6 +178,7 @@ export function TaxonomyTab({
       id: saved.id,
       name: saved.name,
       nameKo: saved.nameKo,
+      slug: saved.slug,
       group: saved.group,
       colorHex: saved.colorHex,
       colorHex2: saved.colorHex2,

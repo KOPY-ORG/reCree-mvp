@@ -31,6 +31,20 @@ enum PlaceStatus {
   CLOSED_PERMANENT
 }
 
+/// 장소 카테고리. PlaceType 에 붙어 있으며 Place 에는 저장하지 않는다 —
+/// 장소의 카테고리는 연결된 PlaceType 들에서 계산한다 (중복 매칭).
+enum PlaceCategory {
+  EAT
+  CAFE
+  BAR
+  ATTRACTIONS
+  ENTERTAINMENT
+  EXPERIENCE
+  SHOP
+  STAY
+  OTHER
+}
+
 enum ReCreeshotStatus {
   ACTIVE
   REPORTED
@@ -289,12 +303,34 @@ model PostSource {
 }
 
 model PlaceType {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name      String   @unique // 영문 key: "cafe", "restaurant", "photo_spot"
+  id        String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String        @unique // 영문 key: "cafe", "restaurant", "photo_spot"
   nameKo    String // 한글: "카페", "레스토랑", "포토스팟"
-  sortOrder Int      @default(0)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
+  category  PlaceCategory @default(OTHER) // 기존 행을 채우기 위한 기본값
+  isDefault Boolean       @default(false) // 그 카테고리의 기본값 타입인가 (카테고리당 1개)
+  sortOrder Int           @default(0)
+  isActive  Boolean       @default(true)
+  createdAt DateTime      @default(now())
+
+  placePlaceTypes PlacePlaceType[]
+
+  @@index([category, sortOrder])
+}
+
+/// Place ↔ PlaceType 연결. sortOrder 0 이 대표 타입이다.
+/// Place.placeTypes(String[]) 는 옛 코드 호환을 위해 그대로 두고 같은 내용을 함께 유지한다.
+model PlacePlaceType {
+  id          String   @id @default(uuid()) @db.Uuid
+  placeId     String   @db.Uuid
+  placeTypeId String   @db.Uuid
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  place     Place     @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  placeType PlaceType @relation(fields: [placeTypeId], references: [id], onDelete: Restrict)
+
+  @@unique([placeId, placeTypeId])
+  @@index([placeId, sortOrder])
 }
 
 model PlaceImage {
@@ -310,20 +346,20 @@ model PlaceImage {
 }
 
 model Area {
-  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  nameKo        String
-  nameEn        String?
-  level         Int      @default(0) // 0=도시, 1=구역
-  parentId      String?  @db.Uuid
-  latitude      Float?
-  longitude     Float?
-  radiusM       Int?
-  lDongRegnCd   String?
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nameKo         String
+  nameEn         String?
+  level          Int      @default(0) // 0=도시, 1=구역
+  parentId       String?  @db.Uuid
+  latitude       Float?
+  longitude      Float?
+  radiusM        Int?
+  lDongRegnCd    String?
   lDongSignguCds String[]
-  sortOrder     Int      @default(0)
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @default(now()) @updatedAt
+  sortOrder      Int      @default(0)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now()) @updatedAt
 
   parent   Area?   @relation("AreaHierarchy", fields: [parentId], references: [id])
   children Area[]  @relation("AreaHierarchy")
@@ -363,12 +399,13 @@ model Place {
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
-  area        Area?        @relation(fields: [areaId], references: [id])
-  postPlaces  PostPlace[]
-  reCreeshots ReCreeshot[]
-  placeImages PlaceImage[]
-  eventPlaces EventPlace[]
-  courseItems CourseItem[]
+  area            Area?            @relation(fields: [areaId], references: [id])
+  postPlaces      PostPlace[]
+  placePlaceTypes PlacePlaceType[]
+  reCreeshots     ReCreeshot[]
+  placeImages     PlaceImage[]
+  eventPlaces     EventPlace[]
+  courseItems     CourseItem[]
 }
 
 model ReCreeshot {

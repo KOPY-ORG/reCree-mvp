@@ -1,6 +1,7 @@
 // Discover 필터 pure 헬퍼 — React 의존성 없음, 클라이언트/서버 무관
 import type { MapPlace, MapPost } from "@/lib/map-queries";
 import { topicMatchesFilter } from "@/lib/map-utils";
+import { placeCategories, type PlaceCategoryChip } from "@/lib/place-types";
 import { getPlaceRegionSlug, getPlaceDistrictSlug } from "@/lib/region-utils";
 
 export function postMatchesFilters(post: MapPost, topicIds: string[], tagIds: string[], tagGroupKeys: string[]): boolean {
@@ -13,15 +14,20 @@ export function postMatchesFilters(post: MapPost, topicIds: string[], tagIds: st
 }
 
 export function placeMatchesFilters(
-  place: Pick<MapPlace, "id" | "posts" | "area">,
+  place: Pick<MapPlace, "id" | "posts" | "area" | "placePlaceTypes">,
   hasPostLevelFilter: boolean,
   matchedPostsByPlaceId: Map<string, MapPost[]>,
   region: string | null,
-  district: string | null
+  district: string | null,
+  placeCategory: PlaceCategoryChip | null
 ): boolean {
   if (region !== null && getPlaceRegionSlug(place.area) !== region) return false;
   // 시군구는 시도를 좁힐 뿐이라 시도 비교 뒤에 온다. 시도에 직접 붙은 장소(세종)는 여기서 빠진다
   if (district !== null && getPlaceDistrictSlug(place.area) !== district) return false;
+  // 카테고리는 장소의 속성이라 포스트를 보기 전에 판정한다. 한 장소가 여러 카테고리를
+  // 가질 수 있어 "포함" 이다 — 카페 겸 상점은 Cafes 와 Shops 양쪽 칩에 걸린다.
+  // 타입이 없는 장소(캐시된 옛 payload 포함)는 빈 목록이라 어느 칩에도 걸리지 않는다.
+  if (placeCategory !== null && !placeCategories(place.placePlaceTypes).includes(placeCategory)) return false;
   if (!hasPostLevelFilter) return true;
   return (matchedPostsByPlaceId.get(place.id)?.length ?? 0) > 0;
 }

@@ -7,6 +7,8 @@ import { Prisma } from "@prisma/client";
 import type { PlaceStatus } from "@prisma/client";
 import { resolveGoogleMapsUrl, toOfficialStreetViewUrl, buildMapsUrlByCoords } from "@/lib/google-maps-url";
 import { makeStorageExtractor, deleteStorageFiles } from "@/lib/storage";
+// 이름 검증과 연결 행 쓰기는 시트 가져오기와 같은 경로를 쓴다 (lib/place-type-write.ts)
+import { resolvePlaceTypes, writePlacePlaceTypes } from "@/lib/place-type-write";
 
 const extractStoragePath = makeStorageExtractor("place-images");
 
@@ -62,33 +64,41 @@ export async function createPlace(
   data: PlaceFormData,
   returnUrl?: string,
 ): Promise<{ error?: string; id?: string }> {
+  const resolved = await resolvePlaceTypes(data.placeTypes);
+  if ("error" in resolved) return { error: resolved.error };
+
   let newId: string | undefined;
   try {
     const streetViewUrl = data.streetViewUrl
       ? await toOfficialStreetViewUrl(data.streetViewUrl)
       : null;
-    const place = await prisma.place.create({
-      data: {
-        nameKo: data.nameKo,
-        nameEn: data.nameEn || null,
-        addressKo: data.addressKo || null,
-        addressEn: data.addressEn || null,
-        areaId: data.areaId || null,
-        placeTypes: data.placeTypes,
-        latitude: data.latitude,
-        longitude: data.longitude,
-        googlePlaceId: data.googlePlaceId || null,
-        googleMapsUrl: data.googleMapsUrl || null,
-        naverMapsUrl: data.naverMapsUrl || null,
-        kakaoMapsUrl: data.kakaoMapsUrl || null,
-        amapUrl: data.amapUrl || null,
-        streetViewUrl,
-        phone: data.phone || null,
-        operatingHours: data.operatingHours?.length ? data.operatingHours : Prisma.DbNull,
-        gettingThere: data.gettingThere || null,
-        status: data.status,
-        isVerified: data.isVerified,
-      },
+    // 이름 배열과 연결 행을 한 트랜잭션에서 쓴다 — 둘이 갈라지면 지도 카테고리가 장소를 놓친다
+    const place = await prisma.$transaction(async (tx) => {
+      const created = await tx.place.create({
+        data: {
+          nameKo: data.nameKo,
+          nameEn: data.nameEn || null,
+          addressKo: data.addressKo || null,
+          addressEn: data.addressEn || null,
+          areaId: data.areaId || null,
+          placeTypes: resolved.types.map((t) => t.name),
+          latitude: data.latitude,
+          longitude: data.longitude,
+          googlePlaceId: data.googlePlaceId || null,
+          googleMapsUrl: data.googleMapsUrl || null,
+          naverMapsUrl: data.naverMapsUrl || null,
+          kakaoMapsUrl: data.kakaoMapsUrl || null,
+          amapUrl: data.amapUrl || null,
+          streetViewUrl,
+          phone: data.phone || null,
+          operatingHours: data.operatingHours?.length ? data.operatingHours : Prisma.DbNull,
+          gettingThere: data.gettingThere || null,
+          status: data.status,
+          isVerified: data.isVerified,
+        },
+      });
+      await writePlacePlaceTypes(tx, created.id, resolved.types);
+      return created;
     });
     newId = place.id;
   } catch (e) {
@@ -104,33 +114,40 @@ export async function updatePlace(
   data: PlaceFormData,
   returnUrl?: string,
 ): Promise<{ error?: string }> {
+  const resolved = await resolvePlaceTypes(data.placeTypes);
+  if ("error" in resolved) return { error: resolved.error };
+
   try {
     const streetViewUrl = data.streetViewUrl
       ? await toOfficialStreetViewUrl(data.streetViewUrl)
       : null;
-    await prisma.place.update({
-      where: { id },
-      data: {
-        nameKo: data.nameKo,
-        nameEn: data.nameEn || null,
-        addressKo: data.addressKo || null,
-        addressEn: data.addressEn || null,
-        areaId: data.areaId || null,
-        placeTypes: data.placeTypes,
-        latitude: data.latitude,
-        longitude: data.longitude,
-        googlePlaceId: data.googlePlaceId || null,
-        googleMapsUrl: data.googleMapsUrl || null,
-        naverMapsUrl: data.naverMapsUrl || null,
-        kakaoMapsUrl: data.kakaoMapsUrl || null,
-        amapUrl: data.amapUrl || null,
-        streetViewUrl,
-        phone: data.phone || null,
-        operatingHours: data.operatingHours?.length ? data.operatingHours : Prisma.DbNull,
-        gettingThere: data.gettingThere || null,
-        status: data.status,
-        isVerified: data.isVerified,
-      },
+    // 연결 행은 지우고 다시 깐다 — 순서가 바뀐 경우까지 한 규칙으로 덮는다
+    await prisma.$transaction(async (tx) => {
+      await tx.place.update({
+        where: { id },
+        data: {
+          nameKo: data.nameKo,
+          nameEn: data.nameEn || null,
+          addressKo: data.addressKo || null,
+          addressEn: data.addressEn || null,
+          areaId: data.areaId || null,
+          placeTypes: resolved.types.map((t) => t.name),
+          latitude: data.latitude,
+          longitude: data.longitude,
+          googlePlaceId: data.googlePlaceId || null,
+          googleMapsUrl: data.googleMapsUrl || null,
+          naverMapsUrl: data.naverMapsUrl || null,
+          kakaoMapsUrl: data.kakaoMapsUrl || null,
+          amapUrl: data.amapUrl || null,
+          streetViewUrl,
+          phone: data.phone || null,
+          operatingHours: data.operatingHours?.length ? data.operatingHours : Prisma.DbNull,
+          gettingThere: data.gettingThere || null,
+          status: data.status,
+          isVerified: data.isVerified,
+        },
+      });
+      await writePlacePlaceTypes(tx, id, resolved.types);
     });
   } catch (e) {
     console.error("장소 수정 오류:", e);

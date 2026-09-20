@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { parseFilterParams, serializeFilterParams, KPOP_NAME } from "@/lib/filter-params";
 import type { FilterState } from "@/lib/filter-params";
+import type { PlaceCategoryChip } from "@/lib/place-types";
 import {
   getPlaceRegionSlug,
   getPlaceRegionLabel,
@@ -57,6 +58,8 @@ export function useDiscoverFilters({
   const [appliedTopicIds, setAppliedTopicIds] = useState<string[]>([]);
   const [appliedTagIds, setAppliedTagIds] = useState<string[]>([]);
   const [appliedTagGroupKeys, setAppliedTagGroupKeys] = useState<string[]>([]);
+  // 칩은 staged 짝이 없다 — 시트 밖에 있고 누르는 즉시 적용이라 applied 하나로 끝난다
+  const [appliedPlaceCategory, setAppliedPlaceCategory] = useState<PlaceCategoryChip | null>(null);
   const [appliedRegion, setAppliedRegion] = useState<string | null>(null);
   const [appliedDistrict, setAppliedDistrict] = useState<string | null>(null);
   const urlFilterInitRef = useRef(false);
@@ -182,6 +185,7 @@ export function useDiscoverFilters({
     if (parsed.topicIds.length > 0) { setAppliedTopicIds(parsed.topicIds); setStagedTopicIds(parsed.topicIds); }
     if (parsed.tagIds.length > 0) { setAppliedTagIds(parsed.tagIds); setStagedTagIds(parsed.tagIds); }
     if (parsed.tagGroupKeys.length > 0) { setAppliedTagGroupKeys(parsed.tagGroupKeys); setStagedTagGroupKeys(parsed.tagGroupKeys); }
+    if (parsed.placeCategory) setAppliedPlaceCategory(parsed.placeCategory);
     if (parsed.region && availableCities.some((c) => c.slug === parsed.region)) {
       setAppliedRegion(parsed.region);
       setStagedRegion(parsed.region);
@@ -195,7 +199,8 @@ export function useDiscoverFilters({
   }, [searchParams, topicTree, tagGroups, availableCities, availableDistricts]);
 
   // ── 파생 ──
-  const hasFilters = appliedTopicIds.length > 0 || appliedTagIds.length > 0 || appliedTagGroupKeys.length > 0 || appliedRegion !== null;
+  const hasFilters = appliedTopicIds.length > 0 || appliedTagIds.length > 0 || appliedTagGroupKeys.length > 0 || appliedRegion !== null || appliedPlaceCategory !== null;
+  // 카테고리는 여기 없다 — 장소를 거를 뿐 포스트 구성을 바꾸지 않아, 마커 색은 토픽 색 그대로다
   const hasPostLevelFilter = appliedTopicIds.length > 0 || appliedTagIds.length > 0 || appliedTagGroupKeys.length > 0;
 
   // ── 핸들러 ──
@@ -203,6 +208,7 @@ export function useDiscoverFilters({
     setAppliedTopicIds(next.topicIds);
     setAppliedTagIds(next.tagIds);
     setAppliedTagGroupKeys(next.tagGroupKeys);
+    setAppliedPlaceCategory(next.placeCategory);
     setAppliedRegion(next.region);
     setAppliedDistrict(next.district);
     const params = serializeFilterParams(next, { topicTree, tagGroups }, new URLSearchParams(searchParams.toString()));
@@ -215,7 +221,7 @@ export function useDiscoverFilters({
 
   const exitResultMode = () => {
     onExitQuery();
-    commitFilters({ topicIds: [], tagIds: [], tagGroupKeys: [], region: null, district: null });
+    commitFilters({ topicIds: [], tagIds: [], tagGroupKeys: [], placeCategory: null, region: null, district: null });
   };
 
   const openFilter = () => {
@@ -227,18 +233,29 @@ export function useDiscoverFilters({
     setIsFilterOpen(true);
   };
   const applyFilters = () => {
-    commitFilters({ topicIds: stagedTopicIds, tagIds: stagedTagIds, tagGroupKeys: stagedTagGroupKeys, region: stagedRegion, district: stagedDistrict });
+    // 칩은 시트가 건드리는 축이 아니라 적용된 값을 그대로 들고 간다 (Reset 도 칩을 지우지 않는다)
+    commitFilters({ topicIds: stagedTopicIds, tagIds: stagedTagIds, tagGroupKeys: stagedTagGroupKeys, placeCategory: appliedPlaceCategory, region: stagedRegion, district: stagedDistrict });
     setIsFilterOpen(false);
     onFiltersApplied();
   };
   const closeFilter = () => setIsFilterOpen(false);
   const resetStaged = () => { setStagedTopicIds([]); setStagedTagIds([]); setStagedTagGroupKeys([]); setStagedRegion(null); setStagedDistrict(null); };
   const removeAppliedTopic = (id: string) =>
-    commitFilters({ topicIds: appliedTopicIds.filter((x) => x !== id), tagIds: appliedTagIds, tagGroupKeys: appliedTagGroupKeys, region: appliedRegion, district: appliedDistrict });
+    commitFilters({ topicIds: appliedTopicIds.filter((x) => x !== id), tagIds: appliedTagIds, tagGroupKeys: appliedTagGroupKeys, placeCategory: appliedPlaceCategory, region: appliedRegion, district: appliedDistrict });
   const removeAppliedTag = (id: string) =>
-    commitFilters({ topicIds: appliedTopicIds, tagIds: appliedTagIds.filter((x) => x !== id), tagGroupKeys: appliedTagGroupKeys, region: appliedRegion, district: appliedDistrict });
+    commitFilters({ topicIds: appliedTopicIds, tagIds: appliedTagIds.filter((x) => x !== id), tagGroupKeys: appliedTagGroupKeys, placeCategory: appliedPlaceCategory, region: appliedRegion, district: appliedDistrict });
   const removeAppliedTagGroup = (key: string) =>
-    commitFilters({ topicIds: appliedTopicIds, tagIds: appliedTagIds, tagGroupKeys: appliedTagGroupKeys.filter((k) => k !== key), region: appliedRegion, district: appliedDistrict });
+    commitFilters({ topicIds: appliedTopicIds, tagIds: appliedTagIds, tagGroupKeys: appliedTagGroupKeys.filter((k) => k !== key), placeCategory: appliedPlaceCategory, region: appliedRegion, district: appliedDistrict });
+  // 칩 탭 — 같은 칩 재탭은 해제. staged 를 거치지 않고 바로 commit 이라 URL 과 목록이 즉시 바뀐다
+  const togglePlaceCategory = (category: PlaceCategoryChip) =>
+    commitFilters({
+      topicIds: appliedTopicIds,
+      tagIds: appliedTagIds,
+      tagGroupKeys: appliedTagGroupKeys,
+      placeCategory: appliedPlaceCategory === category ? null : category,
+      region: appliedRegion,
+      district: appliedDistrict,
+    });
 
   // 그룹(L0/L1) All 토글 — staged에 groupId가 있으면 그것만 제거, 없으면 하위 노드(descendantIds) 전부 제거 후 groupId 추가(collapse)
   const toggleTopicGroup = (groupId: string, descendantIds: string[]) =>
@@ -293,6 +310,7 @@ export function useDiscoverFilters({
     appliedTopicIds,
     appliedTagIds,
     appliedTagGroupKeys,
+    appliedPlaceCategory,
     appliedRegion,
     appliedDistrict,
     hasFilters,
@@ -311,6 +329,7 @@ export function useDiscoverFilters({
     removeAppliedTopic,
     removeAppliedTag,
     removeAppliedTagGroup,
+    togglePlaceCategory,
     toggleTopic,
     toggleTopicGroup,
     toggleTag,

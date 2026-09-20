@@ -2,6 +2,19 @@
 import { prisma } from "@/lib/prisma";
 import { unstable_cache } from "next/cache";
 import { getFilteredPosts } from "@/lib/filter-queries";
+import type { PlaceTypeLink } from "@/lib/place-types";
+
+/**
+ * 장소에 붙은 타입을 대표 순서대로. place select 두 곳(포스트 있는 장소·없는 장소)이 같은
+ * 모양을 내야 groupByPlace 가 한 벌로 처리한다.
+ */
+const placePlaceTypesSelect = {
+  orderBy: { sortOrder: "asc" },
+  select: {
+    sortOrder: true,
+    placeType: { select: { name: true, nameKo: true, category: true, isDefault: true } },
+  },
+} as const;
 
 type TopicColorFields = {
   colorHex: string | null;
@@ -37,6 +50,8 @@ export type MapPost = {
     id: string;
     group: string;
     name: string;
+    /** 팬 맥락 태그 식별용 — 이름은 어드민에서 바뀌지만 slug 는 고정이다 */
+    slug: string;
     colorHex: string | null;
     colorHex2: string | null;
     textColorHex: string | null;
@@ -64,6 +79,8 @@ export type MapPlace = {
   operatingHours: string[] | null;
   area: { id: string; nameKo: string; nameEn: string | null; level: number; parent: { nameKo: string; nameEn: string | null } | null } | null;
   placeImages: { url: string; isThumbnail: boolean; sortOrder: number }[];
+  /** 대표 순서(sortOrder asc). 캐시된 옛 payload 에는 없을 수 있어 헬퍼로만 읽는다 */
+  placePlaceTypes: PlaceTypeLink[];
   posts: MapPost[];
 };
 
@@ -102,6 +119,7 @@ async function fetchPostPlaceRows(where: object) {
             orderBy: { sortOrder: "asc" },
             select: { url: true, isThumbnail: true, sortOrder: true },
           },
+          placePlaceTypes: placePlaceTypesSelect,
         },
       },
       post: {
@@ -176,6 +194,7 @@ async function fetchPostPlaceRows(where: object) {
                   id: true,
                   group: true,
                   name: true,
+                  slug: true,
                   colorHex: true,
                   colorHex2: true,
                   textColorHex: true,
@@ -234,6 +253,7 @@ function groupByPlace(rows: RawPostPlaceRow[]): MapPlace[] {
         operatingHours: place.operatingHours as string[] | null,
         area: place.area ?? null,
         placeImages: place.placeImages,
+        placePlaceTypes: place.placePlaceTypes,
         posts: [mapPost],
       });
     }
@@ -287,6 +307,7 @@ export async function getMapPlacesByIdsWithFallback(ids: string[]): Promise<MapP
         orderBy: { sortOrder: "asc" },
         select: { url: true, isThumbnail: true, sortOrder: true },
       },
+      placePlaceTypes: placePlaceTypesSelect,
     },
   });
 
@@ -309,6 +330,7 @@ export async function getMapPlacesByIdsWithFallback(ids: string[]): Promise<MapP
       operatingHours: p.operatingHours as string[] | null,
       area: p.area ?? null,
       placeImages: p.placeImages,
+      placePlaceTypes: p.placePlaceTypes,
       posts: [],
     }));
 

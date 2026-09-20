@@ -66,6 +66,7 @@ export async function getPostDetail(
             select: {
               id: true,
               name: true,
+              slug: true,
               group: true,
               colorHex: true,
               colorHex2: true,
@@ -109,6 +110,13 @@ export async function getPostDetail(
               phone: true,
               operatingHours: true,
               gettingThere: true,
+              placePlaceTypes: {
+                orderBy: { sortOrder: "asc" },
+                select: {
+                  sortOrder: true,
+                  placeType: { select: { name: true, nameKo: true, category: true, isDefault: true } },
+                },
+              },
             },
           },
         },

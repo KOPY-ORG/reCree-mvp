@@ -6,34 +6,30 @@ import { HomeBannerCarousel, type BannerItem } from "../_components/HomeBannerCa
 import { getPostsWithLabels, getSavedPostIds, type PostItem } from "@/lib/post-queries";
 import { getCuratedSections, getSectionData, getPostMoreHref, type SectionData } from "@/lib/curation-queries";
 import {
-  resolveTopicColors,
-  resolveTagColors,
-  K_MEDIA_GROUP,
-  selectHomeLabels,
-  type LabelSlot,
-  type ColorNode,
+  selectCardLabels,
+  type LabelTopicInput,
+  type LabelTagInput,
   type TagGroupColorMap,
   type ResolvedLabel,
 } from "@/lib/post-labels";
+import type { PlaceTypeLink } from "@/lib/place-types";
 
-/** 홈 배너용 라벨 2개 선택 — PostCard home variant와 동일한 규칙 */
+/** 홈 배너용 라벨 2개 선택 — PostCard home variant와 같은 규칙(selectCardLabels)을 그대로 쓴다 */
 function resolveBannerLabels(
-  postTopics: { isVisible: boolean; displayOrder: number; topic: { nameEn: string; colorHex?: string | null; colorHex2?: string | null; gradientDir?: string; gradientStop?: number; textColorHex?: string | null; parent?: ColorNode | null } }[],
-  postTags:   { isVisible: boolean; displayOrder: number; tag:   { name: string; group: string; colorHex?: string | null; colorHex2?: string | null; textColorHex?: string | null } }[],
+  postTopics: { isVisible: boolean; displayOrder: number; topic: LabelTopicInput }[],
+  postTags:   { isVisible: boolean; displayOrder: number; tag:   LabelTagInput }[],
+  placeTypes: readonly PlaceTypeLink[] | undefined,
   tagGroupMap: TagGroupColorMap,
 ): ResolvedLabel[] {
-  const topicSlots: LabelSlot[] = postTopics
-    .filter((t) => t.isVisible)
-    .map((t) => ({ group: "TOPIC", name: t.topic.nameEn, displayLabel: null, colors: resolveTopicColors(t.topic) }));
-
-  const otherSlots: LabelSlot[] = postTags
-    .filter((t) => t.isVisible && t.tag.group !== K_MEDIA_GROUP)
-    .map((t) => {
-      const gc = tagGroupMap.get(t.tag.group);
-      return { group: t.tag.group, name: t.tag.name, displayLabel: gc?.displayLabel ?? null, colors: resolveTagColors(t.tag, gc) };
-    });
-
-  return selectHomeLabels(topicSlots, otherSlots);
+  return selectCardLabels(
+    {
+      topics: postTopics.filter((t) => t.isVisible).map((t) => t.topic),
+      tags: postTags.filter((t) => t.isVisible).map((t) => t.tag),
+      placeTypes,
+      tagGroupMap,
+    },
+    "home",
+  );
 }
 import { PostCard } from "../_components/PostCard";
 import { GuideVideoCard } from "../_components/GuideVideoCard";
@@ -137,7 +133,7 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
                 displayOrder: true,
                 tag: {
                   select: {
-                    name: true, group: true,
+                    name: true, slug: true, group: true,
                     colorHex: true, colorHex2: true, textColorHex: true,
                   },
                 },
@@ -146,7 +142,19 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
             postPlaces: {
               take: 1,
               select: {
-                place: { select: { nameEn: true, nameKo: true } },
+                place: {
+                  select: {
+                    nameEn: true,
+                    nameKo: true,
+                    placePlaceTypes: {
+                      orderBy: { sortOrder: "asc" },
+                      select: {
+                        sortOrder: true,
+                        placeType: { select: { name: true, nameKo: true, category: true, isDefault: true } },
+                      },
+                    },
+                  },
+                },
               },
             },
           },
@@ -219,7 +227,12 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
 
   // 배너 props 변환
   const bannerItems: BannerItem[] = homeBanners.map((b) => {
-    const labels = resolveBannerLabels(b.post.postTopics, b.post.postTags, tagGroupMap);
+    const labels = resolveBannerLabels(
+      b.post.postTopics,
+      b.post.postTags,
+      b.post.postPlaces[0]?.place.placePlaceTypes,
+      tagGroupMap,
+    );
     return {
       id: b.post.id,
       slug: b.post.slug,

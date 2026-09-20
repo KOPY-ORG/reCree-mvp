@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { Sparkles, Waves, Flame, Lightbulb } from "lucide-react";
 import { LocationCard } from "./_components/LocationCard";
 import { prisma } from "@/lib/prisma";
-import { resolveTopicColors, resolveTagColors, K_MEDIA_GROUP, type ResolvedLabel } from "@/lib/post-labels";
+import { selectDetailLabels, type ResolvedLabel } from "@/lib/post-labels";
 import { MarkdownContent } from "./_components/MarkdownContent";
 import { PostDetailHeader } from "./_components/PostDetailHeader";
 import { BannerCarousel } from "./_components/BannerCarousel";
@@ -126,11 +126,13 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
   // 색상 resolve
   const configMap = new Map(tagGroupConfigs.map((c) => [c.group, c]));
 
-  const labels: ResolvedLabel[] = [
-    ...post.postTopics.map(({ topic }) => ({ text: topic.nameEn, slug: topic.level === 2 ? (topic.slug ?? undefined) : undefined, ...resolveTopicColors(topic) })),
-    ...post.postTags.filter(({ tag }) => tag.group === K_MEDIA_GROUP).map(({ tag }) => ({ text: tag.name, ...resolveTagColors(tag, configMap.get(tag.group)) })),
-    ...post.postTags.filter(({ tag }) => tag.group !== K_MEDIA_GROUP).map(({ tag }) => ({ text: tag.name, ...resolveTagColors(tag, configMap.get(tag.group)) })),
-  ];
+  // 상세: 토픽 전부 + 팬 맥락 태그 + 장소 타입 전부 (sortOrder 순)
+  const labels: ResolvedLabel[] = selectDetailLabels({
+    topics: post.postTopics.map(({ topic }) => topic),
+    tags: post.postTags.map(({ tag }) => tag),
+    placeTypes: post.postPlaces[0]?.place.placePlaceTypes,
+    tagGroupMap: configMap,
+  });
 
   const spotInsight = post.postPlaces[0] ?? null;
   const insightEn = spotInsight?.insightEn as {
