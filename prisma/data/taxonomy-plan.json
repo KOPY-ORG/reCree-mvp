@@ -36,7 +36,7 @@
     "ATTRACTIONS/Nature"
   ],
   "c2c7c5f5-de2e-4d95-b226-504390684f2e": [
-    "K_CULTURE/School"
+    "ENTERTAINMENT/School"
   ],
   "b3f2fb46-5c86-444f-937d-6775e655a6ec": [
     "ATTRACTIONS/Landmark",
@@ -65,10 +65,10 @@
     "ATTRACTIONS/Street"
   ],
   "98fe25cb-8aa1-4f7e-b717-254560365cb6": [
-    "K_CULTURE/Fan Landmark"
+    "ENTERTAINMENT/Fan Landmark"
   ],
   "c8827bde-78bb-43d1-9ec8-453b22f2d427": [
-    "K_CULTURE/Fan Landmark"
+    "ENTERTAINMENT/Fan Landmark"
   ],
   "5feb54ee-a310-4cf8-9eba-c6027ceaef75": [
     "ATTRACTIONS/Landmark",
@@ -115,7 +115,7 @@
     "EAT/Street Food"
   ],
   "dbd7ac3d-f136-48cf-87f3-9b4c106028d3": [
-    "K_CULTURE/Venue",
+    "ENTERTAINMENT/Venue",
     "EXPERIENCE/Activity"
   ],
   "f8fdec75-b34e-4f71-8b78-d58dfe4863ac": [
@@ -157,7 +157,7 @@
     "ATTRACTIONS/Nature"
   ],
   "3770ac6a-5ae7-45d1-8a30-8d03c0c0c7d2": [
-    "K_CULTURE/Venue"
+    "ENTERTAINMENT/Venue"
   ],
   "63fe731a-606e-48fe-ad08-e41aaaeb82cc": [
     "ATTRACTIONS/Landmark"
@@ -204,7 +204,7 @@
     "EXPERIENCE/Activity"
   ],
   "121d80a6-afeb-4b70-9aab-f0f1b2139bfc": [
-    "K_CULTURE/School"
+    "ENTERTAINMENT/School"
   ],
   "fcc643cf-8373-4895-b304-5becb3778c4d": [
     "ATTRACTIONS/Landmark",
@@ -255,7 +255,7 @@
     "BAR/Bar"
   ],
   "68c262a7-bb34-4013-88c7-62b799bbf028": [
-    "K_CULTURE/Agency"
+    "ENTERTAINMENT/Agency"
   ],
   "826b7597-c681-4e8e-8968-365eb59176f8": [
     "SHOP/Shop"
@@ -408,7 +408,7 @@
     "ATTRACTIONS/Nature"
   ],
   "2f42c363-3519-452b-9b6f-da1a2eb3375e": [
-    "K_CULTURE/Agency"
+    "ENTERTAINMENT/Agency"
   ],
   "60e1d6b0-d430-4ec6-baec-15a4faa4501b": [
     "CAFE/Cafe"
@@ -454,7 +454,7 @@
     "SHOP/Shop"
   ],
   "073d1c9e-3561-4e3f-91bf-55aa812dafaa": [
-    "K_CULTURE/School",
+    "ENTERTAINMENT/School",
     "ATTRACTIONS/Park",
     "ATTRACTIONS/Nature"
   ],
@@ -469,12 +469,12 @@
     "ATTRACTIONS/Cultural Space"
   ],
   "20d40224-e960-4c1f-8196-063ef6f59b1d": [
-    "K_CULTURE/Agency",
+    "ENTERTAINMENT/Agency",
     "ATTRACTIONS/Cultural Space",
     "SHOP/Pop-up"
   ],
   "0cbcb195-6fb5-4e98-b0d4-61c5d10c19cb": [
-    "K_CULTURE/Venue",
+    "ENTERTAINMENT/Venue",
     "ATTRACTIONS/Nature"
   ],
   "9b5e92cf-9ec2-4bf0-a7c6-6d8888ddf680": [
@@ -629,7 +629,7 @@
     "ATTRACTIONS/Nature"
   ],
   "96a99a8d-6cb4-4f32-8b67-9eddf20840ce": [
-    "K_CULTURE/Venue",
+    "ENTERTAINMENT/Venue",
     "ATTRACTIONS/Landmark"
   ],
   "a0d77519-8ed5-4dd2-b06a-8752d105c74a": [
@@ -809,7 +809,7 @@
     "ATTRACTIONS/Museum"
   ],
   "22dff027-3ec9-4ae3-9a16-cf84b3af5547": [
-    "K_CULTURE/Fan Landmark"
+    "ENTERTAINMENT/Fan Landmark"
   ],
   "cc0ee0f0-f90e-4eac-becd-ba98dd7a6d22": [
     "ATTRACTIONS/Landmark"
@@ -819,14 +819,14 @@
   ],
   "baad007c-0c31-444c-a14d-7892ebdcf0b1": [
     "ATTRACTIONS/Cultural Space",
-    "K_CULTURE/Agency",
+    "ENTERTAINMENT/Agency",
     "SHOP/Pop-up"
   ],
   "82686d27-5573-4c3a-81aa-8d7050d8b3aa": [
     "CAFE/Cafe"
   ],
   "72c65e3a-2bc1-494d-91a3-550ddc519f21": [
-    "K_CULTURE/Venue"
+    "ENTERTAINMENT/Venue"
   ],
   "9e780817-9949-4199-b7a2-e0d4b46007fd": [
     "ATTRACTIONS/Park"
@@ -873,10 +873,10 @@
     "SHOP/Shop"
   ],
   "ed63ccb0-a181-467f-b903-533e42a9931b": [
-    "K_CULTURE/Filming Studio"
+    "ENTERTAINMENT/Filming Studio"
   ],
   "216b558c-a62d-418d-84a7-2ef9dfd0ce49": [
-    "K_CULTURE/Filming Studio",
+    "ENTERTAINMENT/Filming Studio",
     "ATTRACTIONS/Heritage"
   ],
   "35cee0c1-a492-4d42-8431-a5ee5e79a84d": [
@@ -884,7 +884,7 @@
     "ATTRACTIONS/Landmark"
   ],
   "c4a1af7d-9648-4575-9899-70315cbfe899": [
-    "K_CULTURE/School"
+    "ENTERTAINMENT/School"
   ],
   "14537092-0e25-4c05-83d7-e711eb27762e": [
     "EAT/Noodles"
@@ -905,7 +905,7 @@
     "OTHER/Office"
   ],
   "3950e9f2-187a-42e3-96b3-096f04ede916": [
-    "K_CULTURE/School"
+    "ENTERTAINMENT/School"
   ],
   "80d7ae79-e89e-4d99-aa5e-76b49432311d": [
     "EAT/Street Food"

@@ -35,15 +35,15 @@ export const VIBE_TAG_SLUGS = ["local", "vintageretro"] as const;
  * 먹는 것과 명소는 그 둘을 그대로 잇고, 나머지는 비는 색을 쓴다.
  */
 export const PLACE_CATEGORY_COLORS: Record<PlaceCategory, Omit<ResolvedLabel, "text" | "slug">> = {
-  EAT:         { colorHex: "#FFE592", colorHex2: "#ffae00", gradientDir: "to bottom", gradientStop: 90,  textColorHex: "#000000" },
-  CAFE:        { colorHex: "#FFE592", colorHex2: "#ffae00", gradientDir: "to bottom", gradientStop: 90,  textColorHex: "#000000" },
-  BAR:         { colorHex: "#FFE592", colorHex2: "#ffae00", gradientDir: "to bottom", gradientStop: 90,  textColorHex: "#000000" },
-  ATTRACTIONS: { colorHex: "#ffed94", colorHex2: "#ffee33", gradientDir: "to bottom", gradientStop: 75,  textColorHex: "#000000" },
-  K_CULTURE:   { colorHex: "#B8D4FF", colorHex2: "#6FA8FF", gradientDir: "to bottom", gradientStop: 75,  textColorHex: "#000000" },
-  EXPERIENCE:  { colorHex: "#ff8f66", colorHex2: "#fb5209", gradientDir: "to bottom", gradientStop: 75,  textColorHex: "#FFFFFF" },
-  SHOP:        { colorHex: "#88fbe2", colorHex2: "#00ffc8", gradientDir: "to bottom", gradientStop: 75,  textColorHex: "#000000" },
-  STAY:        { colorHex: "#E2D6FF", colorHex2: "#BFA6FF", gradientDir: "to bottom", gradientStop: 75,  textColorHex: "#000000" },
-  OTHER:       { colorHex: "#E4E4E7", colorHex2: null,      gradientDir: "to bottom", gradientStop: 150, textColorHex: "#000000" },
+  EAT:           { colorHex: "#FFE592", colorHex2: "#ffae00", gradientDir: "to bottom", gradientStop: 90,  textColorHex: "#000000" },
+  CAFE:          { colorHex: "#FFE592", colorHex2: "#ffae00", gradientDir: "to bottom", gradientStop: 90,  textColorHex: "#000000" },
+  BAR:           { colorHex: "#FFE592", colorHex2: "#ffae00", gradientDir: "to bottom", gradientStop: 90,  textColorHex: "#000000" },
+  ATTRACTIONS:   { colorHex: "#ffed94", colorHex2: "#ffee33", gradientDir: "to bottom", gradientStop: 75,  textColorHex: "#000000" },
+  ENTERTAINMENT: { colorHex: "#B8D4FF", colorHex2: "#6FA8FF", gradientDir: "to bottom", gradientStop: 75,  textColorHex: "#000000" },
+  EXPERIENCE:    { colorHex: "#ff8f66", colorHex2: "#fb5209", gradientDir: "to bottom", gradientStop: 75,  textColorHex: "#FFFFFF" },
+  SHOP:          { colorHex: "#88fbe2", colorHex2: "#00ffc8", gradientDir: "to bottom", gradientStop: 75,  textColorHex: "#000000" },
+  STAY:          { colorHex: "#E2D6FF", colorHex2: "#BFA6FF", gradientDir: "to bottom", gradientStop: 75,  textColorHex: "#000000" },
+  OTHER:         { colorHex: "#E4E4E7", colorHex2: null,      gradientDir: "to bottom", gradientStop: 150, textColorHex: "#000000" },
 };
 
 /** 라벨 렌더링 그룹 우선순위: 토픽(0) → K-MEDIA(1) → 나머지(2) */

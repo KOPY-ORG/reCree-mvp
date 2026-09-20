@@ -84,12 +84,12 @@ const TAXONOMY: TypeDef[] = [
   { name: "Street", nameKo: "골목", category: "ATTRACTIONS", isDefault: false },
   { name: "Cultural Space", nameKo: "문화공간", category: "ATTRACTIONS", isDefault: false },
 
-  { name: "Fan Landmark", nameKo: "팬 성지", category: "K_CULTURE", isDefault: true },
-  { name: "Agency", nameKo: "소속사 사옥", category: "K_CULTURE", isDefault: false },
-  { name: "Venue", nameKo: "공연장/스타디움", category: "K_CULTURE", isDefault: false },
-  { name: "Broadcast Station", nameKo: "방송국", category: "K_CULTURE", isDefault: false },
-  { name: "Filming Studio", nameKo: "촬영 세트장", category: "K_CULTURE", isDefault: false },
-  { name: "School", nameKo: "학교", category: "K_CULTURE", isDefault: false },
+  { name: "Fan Landmark", nameKo: "팬 성지", category: "ENTERTAINMENT", isDefault: true },
+  { name: "Agency", nameKo: "소속사 사옥", category: "ENTERTAINMENT", isDefault: false },
+  { name: "Venue", nameKo: "공연장/스타디움", category: "ENTERTAINMENT", isDefault: false },
+  { name: "Broadcast Station", nameKo: "방송국", category: "ENTERTAINMENT", isDefault: false },
+  { name: "Filming Studio", nameKo: "촬영 세트장", category: "ENTERTAINMENT", isDefault: false },
+  { name: "School", nameKo: "학교", category: "ENTERTAINMENT", isDefault: false },
 
   { name: "Activity", nameKo: "액티비티", category: "EXPERIENCE", isDefault: true },
   { name: "Class", nameKo: "클래스", category: "EXPERIENCE", isDefault: false },
