@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { getCourseDetail } from "@/lib/course-queries";
 import { isExternalImage } from "@/lib/image";
+import { TOUR_API_ATTRIBUTION } from "@/lib/tour-api/attribution";
 import { coverBackground, pinColors } from "../_components/course-cover";
 import { CourseBackButton } from "../_components/CourseBackButton";
 import { CourseMiniMap } from "../_components/CourseMiniMap";
@@ -48,6 +49,12 @@ export default async function CourseDetailPage({ params, searchParams }: Props) 
   const requestedDay = Number(day);
   const activeDay = course.days.find((d) => d.dayNumber === requestedDay) ?? course.days[0] ?? null;
   const items = activeDay?.items ?? [];
+
+  // 출처 표기를 그릴지. 판정을 아래 칩(placeId 유무)과 같은 식으로 두는 것이 중요하다 —
+  // 갈리면 "Tourism data" 칩이 붙은 행이 있는데 출처는 없는 화면이 생긴다.
+  // 보고 있는 Day 만 본다. 화면에 없는 Day 의 관광 데이터까지 세면 이 Day 에는
+  // 근거가 없는 문구가 선다
+  const hasTourismItem = items.some((item) => !item.placeId);
 
   // 지역 라벨과 "지도에서 볼 수 있는가"는 CourseItem 스냅샷에 없다 — 필요한 만큼만 따로 읽는다.
   // /discover?place= 는 발행 포스트가 붙은 장소만 지도에 뜨므로(discover/page.tsx:123 → getAllMapPlaces),
@@ -306,6 +313,17 @@ export default async function CourseDetailPage({ params, searchParams }: Props) 
                 <div key={item.id}>{row}</div>
               );
             })
+          )}
+
+          {/* 출처 표기 — 관광 데이터가 이 Day 에 있을 때만. 요강대로 텍스트만 쓴다.
+              목록 바로 아래 한 번으로, 편집기(CourseEditor.tsx)와 같은 자리·같은 글자다 */}
+          {hasTourismItem && (
+            <p
+              className="pt-2.5 text-[10.5px] font-medium leading-none"
+              style={{ color: SUB }}
+            >
+              {TOUR_API_ATTRIBUTION}
+            </p>
           )}
         </div>
       </div>
