@@ -3,12 +3,11 @@
 import { useCallback, useState } from "react";
 
 const STORAGE_KEY = "recree:discover-view";
-const VALID_CONTENT_TABS = ["hot", "list"] as const;
-type ContentTab = "hot" | "list";
 
+// Hot/List 토글이 사라지면서 contentTab 도 같이 빠졌다. 옛 payload 에 그 칸이 남아
+// 있어도 아래 readFromStorage 가 읽지 않고 버린다 — 모르는 칸은 그냥 무시된다.
 interface StoredState {
   query: string;
-  contentTab: ContentTab;
   scrollTop: number;
 }
 
@@ -32,12 +31,6 @@ function readFromStorage(): StoredState | null {
         ? obj.query
         : "";
 
-    const contentTab =
-      typeof obj.contentTab === "string" &&
-      (VALID_CONTENT_TABS as readonly string[]).includes(obj.contentTab)
-        ? (obj.contentTab as ContentTab)
-        : "list";
-
     const scrollTop =
       typeof obj.scrollTop === "number" &&
       Number.isFinite(obj.scrollTop) &&
@@ -45,7 +38,7 @@ function readFromStorage(): StoredState | null {
         ? obj.scrollTop
         : 0;
 
-    return { query, contentTab, scrollTop };
+    return { query, scrollTop };
   } catch {
     return null;
   }
@@ -58,7 +51,7 @@ export function useDiscoverViewState(): DiscoverViewState {
     try {
       sessionStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ query: state.query, contentTab: state.contentTab, scrollTop: state.scrollTop })
+        JSON.stringify({ query: state.query, scrollTop: state.scrollTop })
       );
     } catch {
       // storage 접근 실패 시 조용히 무시

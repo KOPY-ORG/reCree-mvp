@@ -2,8 +2,6 @@
 
 import {
   X,
-  Flame,
-  List as ListIcon,
   Utensils,
   Coffee,
   Martini,
@@ -42,8 +40,6 @@ const CATEGORY_CHIP_ICONS: Record<PlaceCategoryChip, LucideIcon> = {
 };
 
 interface DiscoverSheetHeaderProps {
-  contentTab: "hot" | "list";
-  onContentTabChange: (tab: "hot" | "list") => void;
   placeCount: number;
   isResultMode: boolean;
   isSavedView?: boolean;
@@ -58,8 +54,6 @@ interface DiscoverSheetHeaderProps {
 }
 
 export function DiscoverSheetHeader({
-  contentTab,
-  onContentTabChange,
   placeCount,
   isResultMode,
   isSavedView = false,
@@ -86,7 +80,10 @@ export function DiscoverSheetHeader({
 
   return (
     <div>
-      <div className={`flex items-center px-4 ${isResultMode || isSavedView ? "justify-between pt-2 pb-4" : "justify-center pt-1 pb-3"}`}>
+      {/* Hot/List 토글이 빠지면서 이 줄은 결과 모드·저장 목록에서만 내용을 갖는다.
+          내용이 없으면 줄째로 접는다 — 빈 줄이 남으면 카테고리 칩이 까닭 없이 내려간다 */}
+      {(isResultMode || isSavedView) && (
+      <div className="flex items-center justify-between px-4 pt-2 pb-4">
         {isSavedView ? (
           <>
             <span className="text-lg font-semibold text-foreground">My Maps</span>
@@ -109,40 +106,9 @@ export function DiscoverSheetHeader({
               </button>
             </div>
           </>
-        ) : (
-          <div className="relative flex rounded-full bg-muted p-1 w-48">
-            {/* 슬라이딩 인디케이터 */}
-            <div
-              className="absolute top-1 bottom-1 rounded-full bg-brand transition-transform duration-200 ease-out"
-              style={{
-                width: "calc(50% - 4px)",
-                left: 4,
-                transform: contentTab === "list" ? "translateX(100%)" : "translateX(0)",
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => onContentTabChange("hot")}
-              className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 px-4 py-1.5 text-sm font-semibold ${
-                contentTab === "hot" ? "text-black" : "text-muted-foreground"
-              }`}
-            >
-              <Flame className="w-4 h-4 shrink-0" />
-              Hot
-            </button>
-            <button
-              type="button"
-              onClick={() => onContentTabChange("list")}
-              className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 px-4 py-1.5 text-sm font-semibold ${
-                contentTab === "list" ? "text-black" : "text-muted-foreground"
-              }`}
-            >
-              <ListIcon className="w-4 h-4 shrink-0" />
-              List
-            </button>
-          </div>
-        )}
+        ) : null}
       </div>
+      )}
 
       {/* 카테고리 칩 — 필터를 어떻게 바꾸든 구성이 그대로다. 걸러서 0곳이 되어도 칩은
           남고 빈 상태 문구는 목록 자리에서 받는다. 좁은 폭에서는 가로로 밀린다 */}

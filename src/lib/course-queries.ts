@@ -36,7 +36,8 @@ const courseTopicsSelect = {
 } satisfies Prisma.Course$topicsArgs;
 
 // 목록 payload — Day/아이템 본문은 안 가져오고 개수만 집계한다
-const courseListSelect = {
+/** discover 섹션 액션도 같은 select 와 변환을 쓴다 — 카드가 홈과 다르게 생기지 않게 */
+export const courseListSelect = {
   id: true,
   title: true,
   description: true,
@@ -134,7 +135,7 @@ export type CourseDetail = {
 
 type RawCourseListRow = Prisma.CourseGetPayload<{ select: typeof courseListSelect }>;
 
-function toListItem(row: RawCourseListRow): CourseListItem {
+export function toCourseListItem(row: RawCourseListRow): CourseListItem {
   return {
     id: row.id,
     title: row.title,
@@ -174,7 +175,7 @@ export async function getPublicCourses(options?: {
     take: options?.take ?? DEFAULT_TAKE,
     select: courseListSelect,
   });
-  return rows.map(toListItem);
+  return rows.map(toCourseListItem);
 }
 
 /** 내가 만든 코스 목록. 공개 여부와 무관하게 전부 */
@@ -184,7 +185,7 @@ export async function getMyCourses(userId: string): Promise<CourseListItem[]> {
     orderBy: [{ updatedAt: "desc" }],
     select: courseListSelect,
   });
-  return rows.map(toListItem);
+  return rows.map(toCourseListItem);
 }
 
 /**

@@ -37,6 +37,7 @@ import {
 import type { CourseDetail } from "@/lib/course-queries";
 import { LabelBadge } from "@/components/LabelBadge";
 import { labelBackground, resolveTopicColors } from "@/lib/post-labels";
+import { TOUR_API_ATTRIBUTION } from "@/lib/tour-api/attribution";
 import { PlaceAddSheet, type PickedPlace } from "./PlaceAddSheet";
 import { TopicPickSheet } from "./TopicPickSheet";
 import {
@@ -1135,6 +1136,10 @@ export function CourseEditor({
           // 저장된 코스인데 Day 가 아직 서버에 없는 짧은 구간 — addCourseItem 이 받을 dayId 가 없다.
           // addCourseDay 응답이 오면 진짜 id 로 바뀌면서 바로 풀린다.
           const dayUnsaved = !isDraft && isLocalDay(day.id);
+          // 출처 표기를 그릴지. placeId 가 없는 아이템이 관광 데이터다 — 상세 화면이
+          // "Tourism data" 칩을 붙이는 판정과 같은 것이어야 두 화면이 어긋나지 않는다.
+          // Day 마다 따로 센다. 이 줄은 바로 위 목록에 대한 표기라 목록을 따라간다
+          const dayHasTourismItem = day.items.some((item) => !item.placeId);
           return (
           <section key={day.id} className="px-[18px] pt-6">
             <div className="flex min-h-11 items-center gap-2.5">
@@ -1205,6 +1210,18 @@ export function CourseEditor({
                   </div>
                 </SortableContext>
               </DndContext>
+            )}
+
+            {/* 출처 표기 — 관광 데이터가 이 Day 에 있을 때만. 요강대로 텍스트만 쓴다.
+                목록 바로 아래 한 번으로, 여정 상세([id]/page.tsx)와 같은 자리·같은 글자다.
+                "Add a place" 로 담자마자 서고, 마지막 하나를 빼면 사라진다 */}
+            {dayHasTourismItem && (
+              <p
+                className="mt-2.5 text-[10.5px] font-medium leading-none"
+                style={{ color: SUB }}
+              >
+                {TOUR_API_ATTRIBUTION}
+              </p>
             )}
 
             {/* 장소 추가. Day 마다 따로 둔다 — 어느 날에 담는지가 버튼 위치로 드러나야

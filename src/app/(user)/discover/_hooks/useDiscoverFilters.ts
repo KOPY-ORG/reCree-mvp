@@ -246,6 +246,28 @@ export function useDiscoverFilters({
     commitFilters({ topicIds: appliedTopicIds, tagIds: appliedTagIds.filter((x) => x !== id), tagGroupKeys: appliedTagGroupKeys, placeCategory: appliedPlaceCategory, region: appliedRegion, district: appliedDistrict });
   const removeAppliedTagGroup = (key: string) =>
     commitFilters({ topicIds: appliedTopicIds, tagIds: appliedTagIds, tagGroupKeys: appliedTagGroupKeys.filter((k) => k !== key), placeCategory: appliedPlaceCategory, region: appliedRegion, district: appliedDistrict });
+  /**
+   * 검색바 아래 구독 토픽 칩(DiscoverTopicChips)의 탭 — 같은 칩 재탭은 해제.
+   *
+   * togglePlaceCategory 와 같은 길이다. staged 를 거치지 않고 바로 commit 이라
+   * 누르는 즉시 URL·목록·마커가 바뀐다. 필터 시트의 toggleTopic 은 staged 를 건드려
+   * Apply 를 눌러야 반영되는 것과 대비된다 — 시트는 여러 축을 한꺼번에 고르는 자리고
+   * 칩은 한 축을 즉시 켜고 끄는 자리다.
+   *
+   * 고르는 값은 시트와 같은 appliedTopicIds 라, 칩에서 켠 토픽은 시트를 열면 켜져 있고
+   * 시트에서 끄면 칩도 꺼진다.
+   */
+  const toggleAppliedTopic = (id: string) =>
+    commitFilters({
+      topicIds: appliedTopicIds.includes(id)
+        ? appliedTopicIds.filter((x) => x !== id)
+        : [...appliedTopicIds, id],
+      tagIds: appliedTagIds,
+      tagGroupKeys: appliedTagGroupKeys,
+      placeCategory: appliedPlaceCategory,
+      region: appliedRegion,
+      district: appliedDistrict,
+    });
   // 칩 탭 — 같은 칩 재탭은 해제. staged 를 거치지 않고 바로 commit 이라 URL 과 목록이 즉시 바뀐다
   const togglePlaceCategory = (category: PlaceCategoryChip) =>
     commitFilters({
@@ -329,6 +351,7 @@ export function useDiscoverFilters({
     removeAppliedTopic,
     removeAppliedTag,
     removeAppliedTagGroup,
+    toggleAppliedTopic,
     togglePlaceCategory,
     toggleTopic,
     toggleTopicGroup,

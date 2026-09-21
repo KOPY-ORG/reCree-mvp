@@ -160,11 +160,26 @@ function TourRow<T>({
 export function RegionTourSections({
   regionKey,
   district = null,
+  only,
 }: {
   regionKey: string;
   /** 시군구. null 이면 시도 전체다 */
   district?: string | null;
+  /**
+   * 한 줄만 그린다. 시트가 재편되면서 두 줄이 붙어 있지 않게 됐다 —
+   * 축제는 Journeys 위, 관광지는 장소 목록 바로 위다.
+   *
+   * 컴포넌트를 둘로 쪼개지 않고 인자로 나눈 이유는 셋이 그대로 공유되기 때문이다:
+   * 지역 판정(fetchRegionTourInfo) · 카드가 여는 상세 시트 · 화면 진입 시 호출 시작.
+   * 쪼개면 이 셋이 두 벌이 된다.
+   *
+   * 생략하면 예전처럼 두 줄을 이어 그린다. 그 경로를 쓰는 곳은 지금 없지만,
+   * 이 인자가 "어느 줄인가"만 고르게 두어 기본 동작을 바꾸지 않는다.
+   */
+  only?: "attractions" | "festivals";
 }) {
+  const showAttractions = only === undefined || only === "attractions";
+  const showFestivals = only === undefined || only === "festivals";
   /** null = 아직 모름 · "none" = 코드 없는 지역 */
   const [info, setInfo] = useState<{ label: string } | "none" | null>(null);
 
@@ -172,7 +187,19 @@ export function RegionTourSections({
   const [festivals, setFestivals] = useState<Loadable<Festival>>(null);
   const [attractionAttempt, setAttractionAttempt] = useState(0);
   const [festivalAttempt, setFestivalAttempt] = useState(0);
-  const [started, setStarted] = useState(false);
+  /**
+   * 조회를 시작했는가.
+   *
+   * only 를 받은 경우(시트가 줄을 갈라 배치하는 지금 경로)는 곧바로 시작한다.
+   * 지연 로더는 이 두 줄이 **시트 맨 아래**, 목록 전부를 지나야 닿는 자리에 있을 때
+   * 만든 것이었다. 지금은 목록 앞 여섯 장 바로 뒤라 시트를 연 사람은 거의 다 보게 되고,
+   * 아껴지는 호출이 없다.
+   *
+   * 게다가 관측 대상이 높이 0 인 빈 div 라(info 가 오기 전의 모습) 브라우저가
+   * 교차를 알리지 않는 경우가 있다 — 실제로 이 자리로 옮긴 뒤 두 줄이 영영
+   * 초기화되지 않았다. 켜는 조건을 없애면 그 실패 자체가 사라진다.
+   */
+  const [started, setStarted] = useState(only !== undefined);
 
   /** 시트는 두 줄이 함께 하나만 쓴다 — 카드마다 두면 Dialog 가 서른 개 마운트된다 */
   const [selected, setSelected] = useState<{
@@ -219,7 +246,7 @@ export function RegionTourSections({
   }, [started, regionKey, district]);
 
   useEffect(() => {
-    if (!started) return;
+    if (!started || !showAttractions) return;
     let alive = true;
     fetchRegionAttractions({ regionKey, district }).then((result) => {
       if (alive) setAttractions(result === null ? "failed" : result);
@@ -227,10 +254,10 @@ export function RegionTourSections({
     return () => {
       alive = false;
     };
-  }, [started, regionKey, district, attractionAttempt]);
+  }, [started, showAttractions, regionKey, district, attractionAttempt]);
 
   useEffect(() => {
-    if (!started) return;
+    if (!started || !showFestivals) return;
     let alive = true;
     fetchRegionFestivals({ regionKey, district }).then((result) => {
       if (alive) setFestivals(result === null ? "failed" : result);
@@ -238,7 +265,7 @@ export function RegionTourSections({
     return () => {
       alive = false;
     };
-  }, [started, regionKey, district, festivalAttempt]);
+  }, [started, showFestivals, regionKey, district, festivalAttempt]);
 
   // 코드를 모르는 지역이면 두 줄 다 없다. 부르는 쪽이 지역별로 분기하지 않아도 되게
   // 판단을 여기서 끝낸다 — 지역 코드를 아는 것은 관광 모듈뿐이다.
@@ -250,6 +277,7 @@ export function RegionTourSections({
 
   return (
     <div ref={rootRef}>
+      {showAttractions && (
       <TourRow
         title={`Attractions in ${info.label}`}
         items={attractions}
@@ -265,7 +293,9 @@ export function RegionTourSections({
           />
         )}
       />
+      )}
 
+      {showFestivals && (
       <TourRow
         title={`Festivals in ${info.label}`}
         items={festivals}
@@ -281,6 +311,7 @@ export function RegionTourSections({
           />
         )}
       />
+      )}
 
       <AttractionDetailSheet
         item={selected?.item ?? null}

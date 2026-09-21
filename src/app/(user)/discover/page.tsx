@@ -1,6 +1,7 @@
 import { getSavedPostIds, getSavedEventIds } from "@/lib/post-queries";
 import { getAllMapPlaces } from "@/lib/map-queries";
 import { getCurrentUser } from "@/lib/auth";
+import { getMyFollows } from "@/lib/follow-queries";
 import { getTagGroupsWithTags } from "@/lib/filter-queries";
 import { getLevel0TopicsDeep } from "@/lib/topic-queries";
 import {
@@ -8,7 +9,6 @@ import {
   getEventCollectionForMap,
 } from "@/lib/event-collection-queries";
 import type { EventCollectionForMap } from "@/lib/event-collection-queries";
-import { getCuratedSections, getSectionData } from "@/lib/curation-queries";
 import { ExploreMapView } from "./_components/ExploreMapView";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
@@ -120,10 +120,22 @@ export async function generateMetadata({
 export default async function ExplorePage() {
   const currentUser = await getCurrentUser();
 
+  // 검색바 아래 토픽 칩용. 홈 탭바와 같은 목록·같은 순서다
+  // (getMyFollows: sortOrder asc → createdAt desc). 비로그인은 빈 배열이고,
+  // 그때 칩 줄에는 + 만 선다
+  const follows = currentUser ? await getMyFollows(currentUser.id) : [];
+  const followedTopics = follows.map((f) => ({
+    id: f.topic.id,
+    slug: f.topic.slug,
+    nameEn: f.topic.nameEn,
+  }));
+
   // 칩용 컬렉션 목록을 먼저 받아야 맵데이터 병렬 preload 가능
   const eventCollections = await getActiveEventCollections();
 
-  const [tagGroups, savedPostIds, savedEventIds, allPlaces, topicTree, eventMapDataEntries, curation] =
+  // 큐레이션 섹션은 더 이상 조회하지 않는다. Hot/List 토글이 사라지면서 그것을 그리던
+  // HotTabStub 이 시트에서 빠졌고, 큐레이션은 홈(/feed)에 그대로 남아 있다.
+  const [tagGroups, savedPostIds, savedEventIds, allPlaces, topicTree, eventMapDataEntries] =
     await Promise.all([
       getTagGroupsWithTags(),
       getSavedPostIds(currentUser?.id ?? null),
@@ -136,16 +148,10 @@ export default async function ExplorePage() {
             [c.slug, await getEventCollectionForMap(c.slug)] as const
         )
       ),
-      (async () => {
-        const sections = await getCuratedSections({});
-        const sectionData = await getSectionData(sections);
-        return { sections, sectionData };
-      })(),
     ]);
 
   const eventMapData: Record<string, EventCollectionForMap | null> =
     Object.fromEntries(eventMapDataEntries);
-  const { sections, sectionData } = curation;
 
   const placesWithSaved = allPlaces.map((place) => ({
     ...place,
@@ -160,10 +166,9 @@ export default async function ExplorePage() {
       tagGroups={tagGroups}
       topicTree={topicTree}
       isLoggedIn={!!currentUser}
+      followedTopics={followedTopics}
       eventCollections={eventCollections}
       eventMapData={eventMapData}
-      sections={sections}
-      sectionData={sectionData}
     />
   );
 }
