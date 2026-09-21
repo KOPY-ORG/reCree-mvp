@@ -25,14 +25,27 @@ const CARD_W = "w-[180px]";
  * 사용자와 무관한 공용 목록이고 단순 orderBy 라 <Suspense> 를 쓰지 않는다 —
  * 페이지와 같이 기다린다.
  *
- * 코스가 0건이어도 섹션을 숨기지 않는다. 맨 뒤의 "Create a journey" 카드가 남아
- * 여정 기능이 있다는 것을 그 자리에서 알린다.
+ * Hot 탭에서는 코스가 0건이어도 섹션을 숨기지 않는다. 맨 뒤의 "Create a journey"
+ * 카드가 남아 여정 기능이 있다는 것을 그 자리에서 알린다.
+ * 토픽 탭은 반대다 — 그 토픽의 코스가 없으면 섹션째로 내리고, 있어도 생성 카드는
+ * 붙이지 않는다. 그 줄에 서는 것은 전부 "그 토픽의 것"이어야 한다.
  */
-export async function JourneySection() {
-  const courses = await getPublicCourses({ take: TAKE });
+export async function JourneySection({
+  topicId,
+  title = TITLE,
+}: {
+  /** 있으면 이 토픽이 걸린 코스만. 없으면 전체 */
+  topicId?: string;
+  title?: string;
+} = {}) {
+  const courses = await getPublicCourses({ take: TAKE, topicId });
+
+  if (topicId && courses.length === 0) return null;
 
   return (
-    <HScrollSection title={TITLE} moreHref={MORE_HREF}>
+    // 토픽 탭에서는 More 를 걸지 않는다. /journeys 가 토픽으로 좁히는 길을
+    // 갖고 있지 않아, 눌러 보면 전체 목록이 나온다 — 없는 편이 낫다
+    <HScrollSection title={title} moreHref={topicId ? undefined : MORE_HREF}>
       {courses.map((course) => (
         <div key={course.id} className={`${CARD_W} shrink-0`}>
           <CourseCard course={course} />
@@ -45,15 +58,17 @@ export async function JourneySection() {
         카드 글줄이 몇 줄이든 같은 크기가 된다.
         비로그인이 눌러도 막지 않는다. /journeys/new 가 /login 으로 보낸다 (new/page.tsx:20)
       */}
-      <Link
-        href="/journeys/new"
-        className={`${CARD_W} shrink-0 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-[#E2E2DC] text-center transition-colors hover:border-brand active:opacity-70`}
-      >
-        <span className="flex size-9 items-center justify-center rounded-full bg-brand text-black">
-          <Plus className="size-5" strokeWidth={2.5} />
-        </span>
-        <span className="px-3 text-[13px] font-semibold leading-[1.3]">Create a journey</span>
-      </Link>
+      {!topicId && (
+        <Link
+          href="/journeys/new"
+          className={`${CARD_W} shrink-0 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-[#E2E2DC] text-center transition-colors hover:border-brand active:opacity-70`}
+        >
+          <span className="flex size-9 items-center justify-center rounded-full bg-brand text-black">
+            <Plus className="size-5" strokeWidth={2.5} />
+          </span>
+          <span className="px-3 text-[13px] font-semibold leading-[1.3]">Create a journey</span>
+        </Link>
+      )}
     </HScrollSection>
   );
 }

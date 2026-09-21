@@ -26,24 +26,39 @@ const MIN_FOR_CAROUSEL = 3;
  * 2차 키로 id 를 둬 동점일 때 순서가 매 요청 흔들리지 않게 한다 —
  * dev 만 해도 likeCount 2 가 3건, 4 가 2건이라 동점이 흔하다.
  *
- * 페이지에서 props 를 받지 않고 스스로 조회한다 (FollowFeedSection 과 같은 패턴).
+ * 조회 조건 말고는 페이지에서 props 를 받지 않고 스스로 조회한다
+ * (FollowFeedSection 과 같은 패턴).
  * 다만 사용자와 무관한 공용 목록이고 단순 orderBy 라 <Suspense> 를 쓰지 않는다.
  */
-export async function PopularReCreeshotSection() {
+export async function PopularReCreeshotSection({
+  topicId,
+  title = TITLE,
+}: {
+  /** 있으면 이 토픽이 붙은 리크리샷만. 없으면 전체 */
+  topicId?: string;
+  title?: string;
+} = {}) {
   const shots = await prisma.reCreeshot.findMany({
-    where: { ...PUBLIC_RECREESHOT_WHERE },
+    where: {
+      ...PUBLIC_RECREESHOT_WHERE,
+      ...(topicId ? { reCreeshotTopics: { some: { topicId } } } : {}),
+    },
     orderBy: [{ likeCount: "desc" }, { id: "desc" }],
     take: TAKE,
     select: { id: true, imageUrl: true },
   });
 
-  // 볼 게 모자라면 섹션을 숨기지 않고 통째로 권유로 바꾼다 (명세 5.2).
-  // 숨기면 "여기에 이런 게 생긴다"는 사실조차 전해지지 않는다
-  if (shots.length < MIN_FOR_CAROUSEL) {
+  // 토픽 탭은 그 토픽에 리크리샷이 없으면 섹션째로 내린다. 권유도 내지 않는다 —
+  // "이 토픽에 뭐가 있나"를 보는 자리에 토픽과 무관한 권유가 끼어들 이유가 없다.
+  // 한두 장뿐이어도 그 토픽의 전부이므로 줄로 보여준다. 아래 MIN_FOR_CAROUSEL 은
+  // "전체 중 인기"라는 말이 성립하는지를 묻는 조건이라 토픽 탭에는 해당하지 않는다
+  if (topicId) {
+    if (shots.length === 0) return null;
+  } else if (shots.length < MIN_FOR_CAROUSEL) {
     return (
       <section className="mb-6">
         <div className="flex items-center justify-between mb-3 px-4">
-          <h2 className="font-bold text-lg">{TITLE}</h2>
+          <h2 className="font-bold text-lg">{title}</h2>
         </div>
         <div className="flex flex-col items-center justify-center gap-3 text-center py-10 px-4">
           <p className="text-sm text-muted-foreground">
@@ -61,7 +76,9 @@ export async function PopularReCreeshotSection() {
   }
 
   return (
-    <HScrollSection title={TITLE} moreHref={MORE_HREF}>
+    // 토픽 탭에서는 More 를 걸지 않는다. /recreeshot 이 토픽으로 좁히는 길을
+    // 갖고 있지 않아, 눌러 보면 전체 목록이 나온다 — 없는 편이 낫다
+    <HScrollSection title={title} moreHref={topicId ? undefined : MORE_HREF}>
       {shots.map((shot) => (
         <Link key={shot.id} href={`/recreeshot/${shot.id}`} className="shrink-0 w-[120px] block">
           <ReCreeshotImage

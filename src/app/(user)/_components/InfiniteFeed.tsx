@@ -5,7 +5,7 @@ import { FeedCard } from "./FeedCard";
 import type { PostItem } from "@/lib/post-queries";
 import { type TagGroupColorMap } from "@/lib/post-labels";
 
-type FetchFn = (args: { cursor?: string }) => Promise<{ posts: PostItem[]; nextCursor: string | null }>;
+type FetchFn = (args: { cursor?: string; topicId?: string }) => Promise<{ posts: PostItem[]; nextCursor: string | null }>;
 
 /**
  * 더 부르지 않는 이유. null 이면 계속 부른다.
@@ -28,6 +28,8 @@ interface Props {
   fetchFn: FetchFn;
   /** 이 개수에 닿으면 더 부르지 않는다. 기본은 상한 없음 */
   maxItems?: number;
+  /** 있으면 fetchFn 을 부를 때마다 함께 넘긴다. 첫 페이지는 서버가 이미 걸러 온 것이다 */
+  topicId?: string;
 }
 
 export function InfiniteFeed({
@@ -37,6 +39,7 @@ export function InfiniteFeed({
   tagGroupMap,
   fetchFn,
   maxItems = Infinity,
+  topicId,
 }: Props) {
   const [posts, setPosts] = useState<PostItem[]>(initialPosts);
   const [isLoading, setIsLoading] = useState(false);
@@ -66,7 +69,7 @@ export function InfiniteFeed({
     loadingRef.current = true;
     setIsLoading(true);
     try {
-      const result = await fetchFn({ cursor: cursorRef.current ?? undefined });
+      const result = await fetchFn({ cursor: cursorRef.current ?? undefined, topicId });
       setPosts((prev) => [...prev, ...result.posts].slice(0, maxItems));
       cursorRef.current = result.nextCursor;
       countRef.current = Math.min(countRef.current + result.posts.length, maxItems);
@@ -82,7 +85,7 @@ export function InfiniteFeed({
       loadingRef.current = false;
       setIsLoading(false);
     }
-  }, [fetchFn, maxItems]);
+  }, [fetchFn, maxItems, topicId]);
 
   // loadMore는 fetchFn이 안정적인 참조(server action)일 때 단 한 번만 등록됨
 
