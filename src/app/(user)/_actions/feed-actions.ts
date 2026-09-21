@@ -10,12 +10,22 @@ const DEFAULT_TAKE = 10;
 export async function fetchLatestFeed({
   cursor,
   take = DEFAULT_TAKE,
+  topicId,
 }: {
   cursor?: string;
   take?: number;
+  /**
+   * 있으면 이 토픽이 붙은 포스트만. 하위 토픽까지 펴지 않는다 —
+   * 같은 화면의 fetchFollowFeed 와 같은 규칙이다. 한쪽만 하위를 펴면
+   * 구독 섹션과 토픽 탭이 같은 토픽을 두고 다른 목록을 보여준다.
+   */
+  topicId?: string;
 } = {}): Promise<{ posts: PostItem[]; nextCursor: string | null }> {
   const posts = await getPostsWithLabels(
-    PUBLIC_PLACE_POST_WHERE,
+    {
+      ...PUBLIC_PLACE_POST_WHERE,
+      ...(topicId ? { postTopics: { some: { topicId } } } : {}),
+    },
     {
       take,
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
@@ -40,8 +50,7 @@ export async function fetchFollowFeed({
 
   const posts = await getPostsWithLabels(
     {
-      status: "PUBLISHED",
-      isShop: false,
+      ...PUBLIC_PLACE_POST_WHERE,
       postTopics: { some: { topicId: { in: topicIds } } },
     },
     {

@@ -285,7 +285,7 @@ export function StickerPanel({
     <>
       {/* 장소 검색 시트 */}
       <Sheet open={locationSheetOpen} onOpenChange={(v) => { onLocationSheetChange(v); if (!v) setLocationQuery(""); }}>
-        <SheetContent side="bottom" showCloseButton={false} className="rounded-t-2xl max-h-[85vh] p-0 flex flex-col gap-0">
+        <SheetContent side="bottom" showCloseButton={false} className="mx-auto max-w-[540px] rounded-t-2xl max-h-[85vh] p-0 flex flex-col gap-0">
           <SheetTitle className="sr-only">Search location</SheetTitle>
           <div className="flex justify-center pt-3 pb-1 shrink-0">
             <div className="w-9 h-1 rounded-full bg-muted-foreground/25" />
@@ -350,7 +350,7 @@ export function StickerPanel({
 
       {/* 태그 시트 */}
       <Sheet open={tagSheetOpen} onOpenChange={(v) => { onTagSheetChange(v); if (!v) setThemeSearchQuery(""); }}>
-        <SheetContent side="bottom" showCloseButton={false} className="rounded-t-2xl max-h-[90vh] p-0 flex flex-col gap-0">
+        <SheetContent side="bottom" showCloseButton={false} className="mx-auto max-w-[540px] rounded-t-2xl max-h-[90vh] p-0 flex flex-col gap-0">
           <SheetTitle className="sr-only">Tag</SheetTitle>
           <div className="flex justify-center pt-3 pb-1 shrink-0">
             <div className="w-9 h-1 rounded-full bg-muted-foreground/25" />

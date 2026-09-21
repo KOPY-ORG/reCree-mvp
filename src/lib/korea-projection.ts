@@ -88,14 +88,20 @@ export const SIDO_KEYS = Object.keys(SIDO_PIN) as SidoKey[];
 // ─── 핫스팟 크기 ─────────────────────────────────────────────────────────────
 
 /** 심지. 장소 수와 무관하게 고정이라 "여기에 있다"가 크기에 묻히지 않는다 */
-export const HOTSPOT_CORE_R = 3;
+export const HOTSPOT_CORE_R = 4;
 
-export const HOTSPOT_MIN_R = 4;
-export const HOTSPOT_MAX_R = 12;
+export const HOTSPOT_MIN_R = 6;
+export const HOTSPOT_MAX_R = 15;
 
 /**
  * 후광 반지름. 선형이면 서울 112곳 대 대구 1곳에서 작은 시도가 점으로 사라진다 —
- * 실측 비가 112:1 이라 로그로 눌러 최소 4 · 최대 12 사이에 담는다.
+ * 실측 비가 112:1 이라 로그로 눌러 최소 6 · 최대 15 사이에 담는다.
+ *
+ * 이 범위는 카드가 시도 전부를 찍지 않는다는 전제 위에 있다 (KoreaMapCard 의 상위 N).
+ * 17개를 다 찍으면 수도권 셋이 이 크기에서 한 덩어리로 뭉친다.
+ *
+ * 이 상수는 런타임 핫스팟만 정한다. 윤곽 SVG 생성에는 쓰이지 않으므로
+ * 바꿔도 public/korea.svg · korea-path.ts 를 다시 낼 필요가 없다.
  */
 export function hotspotRadius(count: number, maxCount: number): number {
   if (count <= 0) return 0;

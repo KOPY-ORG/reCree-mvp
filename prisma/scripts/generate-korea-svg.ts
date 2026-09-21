@@ -1,4 +1,9 @@
-// 한반도 윤곽 SVG 생성 — public/korea.svg
+// 한반도 윤곽 생성 — public/korea.svg 와 src/lib/korea-path.ts 를 **함께** 낸다.
+//
+// 같은 경로 문자열을 두 벌로 내는 이유: 런타임이 public/ 을 fs 로 읽으면
+// Vercel 서버리스 번들에 그 파일이 들어간다는 보장이 없어 로컬에서만 되고
+// Preview 에서 ENOENT 로 터진다. 그래서 화면이 쓰는 쪽은 import 되는 .ts 로 낸다.
+// public/korea.svg 는 <img> · 디자인 도구용으로 계속 남긴다.
 //
 // 실행:
 //   dry-run (기본, 파일을 쓰지 않는다):
@@ -30,7 +35,8 @@ const WRITE = process.argv.includes("--write");
 const SOURCE_URL =
   "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_1_states_provinces.geojson";
 
-const OUT_PATH = resolve(process.cwd(), "public/korea.svg");
+const SVG_OUT_PATH = resolve(process.cwd(), "public/korea.svg");
+const TS_OUT_PATH = resolve(process.cwd(), "src/lib/korea-path.ts");
 
 /** 단순화 허용 오차 (SVG 단위). 1 단위 ≈ 2.6km 라 0.4 는 약 1km 다 */
 const SIMPLIFY_EPS = 0.4;
@@ -152,21 +158,35 @@ async function main() {
   console.log(`점 ${ptsIn.toLocaleString()} → ${ptsOut.toLocaleString()} (${((1 - ptsOut / ptsIn) * 100).toFixed(1)}% 감소)`);
   console.log(`허용 오차 ${SIMPLIFY_EPS} 단위 ≈ ${(SIMPLIFY_EPS * KM_PER_UNIT).toFixed(2)}km`);
 
+  // 두 출력이 같은 문자열을 쓴다. 한쪽만 바뀌는 일이 없게 여기서 한 번만 만든다
+  const d = paths.join("");
+
   // 색을 박지 않는다. fill="currentColor" 로 두면 쓰는 쪽이 토큰으로 정한다
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${KOREA_VIEWBOX}" fill="currentColor">` +
-    `<path d="${paths.join("")}"/>` +
+    `<path d="${d}"/>` +
     `</svg>\n`;
 
+  const ts =
+    `// 생성 파일이다. 직접 고치지 말고 스크립트를 다시 돌려라.\n` +
+    `//   npx tsx prisma/scripts/generate-korea-svg.ts --write\n` +
+    `//\n` +
+    `// public/korea.svg 의 <path d> 와 같은 문자열이다. 화면은 이쪽을 import 한다 —\n` +
+    `// public/ 을 런타임에 fs 로 읽으면 서버리스 번들에 들어간다는 보장이 없다.\n` +
+    `// viewBox 는 src/lib/korea-projection.ts 의 KOREA_VIEWBOX 를 쓸 것.\n` +
+    `export const KOREA_PATH_D =\n  "${d}";\n`;
+
   console.log(`\nviewBox ${KOREA_VIEWBOX} (1 단위 ≈ ${KM_PER_UNIT.toFixed(2)}km)`);
-  console.log(`SVG ${(svg.length / 1024).toFixed(1)}KB`);
+  console.log(`SVG ${(svg.length / 1024).toFixed(1)}KB · TS ${(ts.length / 1024).toFixed(1)}KB`);
 
   if (!WRITE) {
     console.log(`\ndry-run 이라 쓰지 않았다. 기록하려면 --write`);
     return;
   }
-  writeFileSync(OUT_PATH, svg, "utf8");
-  console.log(`\n✔ ${OUT_PATH}`);
+  writeFileSync(SVG_OUT_PATH, svg, "utf8");
+  console.log(`\n✔ ${SVG_OUT_PATH}`);
+  writeFileSync(TS_OUT_PATH, ts, "utf8");
+  console.log(`✔ ${TS_OUT_PATH}`);
 }
 
 main().catch((e) => { console.error("ERROR:", e.message); process.exit(1); });

@@ -48,16 +48,36 @@ export type SidoPlaceCounts = {
 
 type Row = { areaNameEn: string; n: bigint };
 
-async function computeSidoPlaceCounts(): Promise<SidoPlaceCounts> {
+async function computeSidoPlaceCounts(topicId: string | null): Promise<SidoPlaceCounts> {
   // Place.areaId 는 보통 시군구(level 1)를 가리킨다. 시도까지 올리려면 parentId 를 한 번
   // 타야 한다. 세종만 시군구가 없어 level 0 에 직접 붙으므로 COALESCE 로 둘 다 받는다.
   // Prisma groupBy 는 관계를 타고 묶지 못해 raw SQL 을 쓴다.
+  //
+  // 토픽은 Place 에 직접 붙지 않는다 — Place → PostPlace → Post → PostTopic 을 타야 한다.
+  // 그 경로를 JOIN 으로 펴면 포스트가 여러 개 걸린 장소가 그 수만큼 세어지므로,
+  // 개수가 아니라 존재만 묻는 EXISTS 로 둔다.
+  //
+  // 토픽이 없을 때도 같은 쿼리를 쓴다. NULL 이면 OR 왼쪽에서 판정이 끝나 EXISTS 를
+  // 평가하지 않는다 — 전체 집계는 이 조인을 붙이기 전과 같은 결과를 낸다.
   const rows = await prisma.$queryRaw<Row[]>`
     SELECT COALESCE(sido."nameEn", a."nameEn") AS "areaNameEn", COUNT(*) AS n
     FROM "Place" pl
     JOIN "Area" a ON a.id = pl."areaId"
     LEFT JOIN "Area" sido ON sido.id = a."parentId"
     WHERE pl."areaId" IS NOT NULL
+      AND (
+        ${topicId}::uuid IS NULL
+        OR EXISTS (
+          SELECT 1
+          FROM "PostPlace" pp
+          JOIN "Post" p ON p.id = pp."postId"
+          JOIN "PostTopic" pt ON pt."postId" = p.id
+          WHERE pp."placeId" = pl.id
+            AND p."status" = 'PUBLISHED'
+            AND p."isShop" = false
+            AND pt."topicId" = ${topicId}::uuid
+        )
+      )
     GROUP BY 1
   `;
 
@@ -79,14 +99,25 @@ async function computeSidoPlaceCounts(): Promise<SidoPlaceCounts> {
   return { counts, maxCount, total, unmapped };
 }
 
-/**
- * 시도별 장소 수. 사용자와 무관한 값만 담는다 —
- * 개인화 값을 넣으면 첫 방문자의 상태가 5분간 모두에게 나간다.
- */
-export const getSidoPlaceCounts = unstable_cache(
+const cachedSidoPlaceCounts = unstable_cache(
   computeSidoPlaceCounts,
   ["sido-place-counts"],
   { revalidate: 300, tags: ["sido-place-counts"] },
 );
+
+/**
+ * 시도별 장소 수. 사용자와 무관한 값만 담는다 —
+ * 개인화 값을 넣으면 첫 방문자의 상태가 5분간 모두에게 나간다.
+ *
+ * topicId 를 주면 그 토픽의 포스트에 붙은 장소만 센다. 없으면 전체다.
+ *
+ * topicId 는 캐시 함수의 **인자로** 넘어간다 — unstable_cache 가 인자를 키에 넣기
+ * 때문이다 (tour-api/translate.ts:134 와 같은 계약). 키를 나누지 않으면 먼저 조회한
+ * 토픽의 숫자가 5분간 다른 모든 탭에 그대로 나간다. 지도는 멀쩡히 그려지고
+ * 숫자만 틀리므로 눈으로 잡기 어렵다.
+ */
+export function getSidoPlaceCounts(topicId: string | null = null): Promise<SidoPlaceCounts> {
+  return cachedSidoPlaceCounts(topicId);
+}
 
 export { computeSidoPlaceCounts };

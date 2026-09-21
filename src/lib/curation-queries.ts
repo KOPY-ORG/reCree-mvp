@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getPostsWithLabels, type PostItem } from "@/lib/post-queries";
 import type { CuratedSection } from "@prisma/client";
 import type { CuratedSectionWithSlug, SectionData } from "@/lib/curation-types";
+import { PUBLIC_PLACE_POST_WHERE } from "@/lib/visibility";
 
 export type { SectionData, CuratedSectionWithSlug } from "@/lib/curation-types";
 export { getPostMoreHref } from "@/lib/curation-types";
@@ -71,8 +72,7 @@ export async function getSectionData(sections: CuratedSection[]): Promise<Sectio
       if (section.postIds.length > 0) {
         const posts = await getPostsWithLabels({
           id: { in: section.postIds },
-          status: "PUBLISHED",
-          isShop: false,
+          ...PUBLIC_PLACE_POST_WHERE,
         });
         const map = new Map(posts.map((p) => [p.id, p]));
         return {
@@ -87,8 +87,7 @@ export async function getSectionData(sections: CuratedSection[]): Promise<Sectio
       // AUTO: 필터 + 자동 정렬
       const items = await getPostsWithLabels(
         {
-          status: "PUBLISHED",
-          isShop: false,
+          ...PUBLIC_PLACE_POST_WHERE,
           ...(section.filterTopicId
             ? { postTopics: { some: { topicId: section.filterTopicId } } }
             : {}),
