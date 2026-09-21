@@ -28,6 +28,13 @@ interface Props {
   districts?: DistrictOption[];
   appliedDistrict?: string | null;
   onRegionChange?: (slug: string | null) => void;
+  /**
+   * 이 줄이 앉는 높이. 검색바 바로 아래(top-[60px])가 기본이고, 구독 토픽 칩 줄이
+   * 그 자리를 쓰면 부르는 쪽이 한 줄만큼 내려 준다 — 두 줄이 겹치지 않게.
+   * 값을 Tailwind 클래스로 받는 이유는 임의값 클래스를 템플릿으로 조립하면
+   * 스캐너가 못 찾아 유틸리티가 생성되지 않기 때문이다 (BottomNav.tsx 와 같은 이유).
+   */
+  topClass?: string;
 }
 
 export function DiscoverActiveFacets({
@@ -49,6 +56,7 @@ export function DiscoverActiveFacets({
   districts = [],
   appliedDistrict = null,
   onRegionChange,
+  topClass = "top-[60px]",
 }: Props) {
   const hasQuery = query.trim() !== "";
   const hasFilters = appliedTopicIds.length > 0 || appliedTagIds.length > 0 || appliedTagGroupKeys.length > 0 || appliedRegion !== null;
@@ -60,7 +68,7 @@ export function DiscoverActiveFacets({
   if (!showEventCollections && !hasQuery && !hasFilters) return null;
 
   return (
-    <div className="absolute top-[60px] inset-x-0 z-[60] px-3 pb-2 space-y-1.5">
+    <div className={`absolute ${topClass} inset-x-0 z-[60] px-3 pb-2 space-y-1.5`}>
       {showEventCollections && (
         <div className="flex gap-2 overflow-x-auto py-[6px] -my-[6px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {eventCollections.map((col) => {
