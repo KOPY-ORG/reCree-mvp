@@ -219,6 +219,70 @@ export function DiscoverFilterSheet({
         <div className="flex-1 overflow-y-auto min-h-0">
           <div className="px-4 pt-4 pb-8 space-y-6 [--pill-py:0.3rem]">
 
+            {/* ── 지역 섹션 ── */}
+            {regions.length > 0 && (
+              <section>
+                <h3 className="text-sm font-bold mb-3">REGION</h3>
+                <div className="flex flex-wrap gap-x-2 gap-y-2.5">
+                  {regions.map((r) => {
+                    const isSelected = stagedRegion === r.slug;
+                    return (
+                      <button
+                        key={r.slug}
+                        type="button"
+                        onClick={() => onToggleRegion?.(r.slug)}
+                        className={`shrink-0 inline-flex items-center gap-1 px-3 h-7 rounded-full bg-white text-xs font-semibold whitespace-nowrap shadow-sm active:opacity-70 transition-all ${
+                          isSelected ? "ring-2 ring-foreground" : ""
+                        }`}
+                      >
+                        <MapPin className="w-3 h-3 shrink-0" />
+                        {r.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* 시군구 — 시도를 고르면 그 아래로 한 단 들어간다.
+                    토픽의 L1 소제목 + L2 칩(분기 C)과 같은 생김새다. 같은 "넓은 것 안의
+                    좁은 것" 이라 다르게 생길 이유가 없다.
+                    시군구가 없는 시도(세종)는 districts 가 비어 줄 자체가 서지 않는다. */}
+                {districts.length > 0 && (
+                  <div className="mt-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <p className="text-xs font-semibold text-muted-foreground">
+                        {stagedRegionLabel}
+                      </p>
+                      {/* All = 시군구 없음 = 시도 전체. 이미 All 이면 누를 것이 없다 */}
+                      <AllBadge
+                        active={stagedDistrict === null}
+                        onClick={() => {
+                          if (stagedDistrict !== null) onToggleDistrict?.(stagedDistrict);
+                        }}
+                        className="shrink-0"
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-x-2 gap-y-2.5">
+                      {districts.map((d) => {
+                        const isSelected = stagedDistrict === d.slug;
+                        return (
+                          <button
+                            key={d.slug}
+                            type="button"
+                            onClick={() => onToggleDistrict?.(d.slug)}
+                            className={`shrink-0 inline-flex items-center px-3 h-7 rounded-full bg-white text-xs font-semibold whitespace-nowrap shadow-sm active:opacity-70 transition-all ${
+                              isSelected ? "ring-2 ring-foreground" : ""
+                            }`}
+                          >
+                            {d.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </section>
+            )}
+
             {/* ── 토픽 섹션 ── */}
             {topicTree.map((root) => {
               const l1s = root.children;
@@ -420,69 +484,6 @@ export function DiscoverFilterSheet({
                 );
               })}
 
-            {/* ── 지역 섹션 ── */}
-            {regions.length > 0 && (
-              <section>
-                <h3 className="text-sm font-bold mb-3">REGION</h3>
-                <div className="flex flex-wrap gap-x-2 gap-y-2.5">
-                  {regions.map((r) => {
-                    const isSelected = stagedRegion === r.slug;
-                    return (
-                      <button
-                        key={r.slug}
-                        type="button"
-                        onClick={() => onToggleRegion?.(r.slug)}
-                        className={`shrink-0 inline-flex items-center gap-1 px-3 h-7 rounded-full bg-white text-xs font-semibold whitespace-nowrap shadow-sm active:opacity-70 transition-all ${
-                          isSelected ? "ring-2 ring-foreground" : ""
-                        }`}
-                      >
-                        <MapPin className="w-3 h-3 shrink-0" />
-                        {r.label}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* 시군구 — 시도를 고르면 그 아래로 한 단 들어간다.
-                    토픽의 L1 소제목 + L2 칩(분기 C)과 같은 생김새다. 같은 "넓은 것 안의
-                    좁은 것" 이라 다르게 생길 이유가 없다.
-                    시군구가 없는 시도(세종)는 districts 가 비어 줄 자체가 서지 않는다. */}
-                {districts.length > 0 && (
-                  <div className="mt-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <p className="text-xs font-semibold text-muted-foreground">
-                        {stagedRegionLabel}
-                      </p>
-                      {/* All = 시군구 없음 = 시도 전체. 이미 All 이면 누를 것이 없다 */}
-                      <AllBadge
-                        active={stagedDistrict === null}
-                        onClick={() => {
-                          if (stagedDistrict !== null) onToggleDistrict?.(stagedDistrict);
-                        }}
-                        className="shrink-0"
-                      />
-                    </div>
-                    <div className="flex flex-wrap gap-x-2 gap-y-2.5">
-                      {districts.map((d) => {
-                        const isSelected = stagedDistrict === d.slug;
-                        return (
-                          <button
-                            key={d.slug}
-                            type="button"
-                            onClick={() => onToggleDistrict?.(d.slug)}
-                            className={`shrink-0 inline-flex items-center px-3 h-7 rounded-full bg-white text-xs font-semibold whitespace-nowrap shadow-sm active:opacity-70 transition-all ${
-                              isSelected ? "ring-2 ring-foreground" : ""
-                            }`}
-                          >
-                            {d.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </section>
-            )}
 
           </div>
         </div>
