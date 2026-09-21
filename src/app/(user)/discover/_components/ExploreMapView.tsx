@@ -20,11 +20,14 @@ import { EventSearchBar } from "./EventSearchBar";
 import { DiscoverFilterSheet } from "./DiscoverFilterSheet";
 import { DiscoverActiveFacets } from "./DiscoverActiveFacets";
 import { DiscoverSheetHeader, CATEGORY_CHIP_ROW_HEIGHT } from "./DiscoverSheetHeader";
+import { DiscoverTopicChips } from "./DiscoverTopicChips";
+import type { TabTopic } from "@/app/(user)/feed/_components/HomeTabBar";
 import { PLACE_CATEGORY_CHIPS, placeCategories, type PlaceCategoryChip } from "@/lib/place-types";
+import { getPlaceRegionSlug } from "@/lib/region-utils";
 import { EventSheetHeader } from "./EventSheetHeader";
 import { EventPeekCarousel } from "./EventPeekCarousel";
-import { HotTabStub } from "./HotTabStub";
-import { RegionTourSections } from "./RegionTourSections";
+import { DiscoverSections } from "./DiscoverSections";
+import { NearHereSection, type RoundedCenter } from "./NearHereSection";
 import { ScrollToTopButton } from "../../_components/ScrollToTopButton";
 import { useRecentSearches } from "../_hooks/useRecentSearches";
 import { useDiscoverViewState } from "../_hooks/useDiscoverViewState";
@@ -39,7 +42,6 @@ import type {
   EventCollectionForMap,
   EventCollectionMapMarker,
 } from "@/lib/event-collection-queries";
-import type { CuratedSectionWithSlug, SectionData } from "@/lib/curation-types";
 
 const CATEGORY_ORDER: string[] = [
   "CONCERT", "LANDMARK_LIGHTING", "PROMOTION", "ACTIVITY",
@@ -59,6 +61,20 @@ function calcEventPassesFilter(
   return matchesSearch && matchesCategory && matchesSaved;
 }
 
+/**
+ * 서버로 나갈 좌표의 정밀도를 떨어뜨린다.
+ *
+ * 소수 둘째 자리는 위도로 약 1.1km 다. 반경 5km 조회의 기준점으로는 차이가 없고,
+ * 집이나 지금 서 있는 자리를 특정하는 데는 쓸 수 없다. Near here 가 서버로 보내는
+ * 값은 이 함수를 거친 것뿐이다 — 원본은 브라우저를 떠나지 않는다.
+ *
+ * 반올림을 부르는 쪽(handleLocateMe)에서 끝내 두는 것이 중요하다. 아래로 내려가는
+ * 값이 처음부터 반올림된 것이라, 실수로 원본을 액션에 넘길 경로가 생기지 않는다.
+ */
+function roundForServer({ lat, lng }: { lat: number; lng: number }) {
+  return { lat: Math.round(lat * 100) / 100, lng: Math.round(lng * 100) / 100 };
+}
+
 type DiscoverSuggestion =
   | { type: "keyword"; text: string }
   | { type: "post"; text: string; placeName: string; placeId: string };
@@ -70,13 +86,13 @@ interface Props {
   tagGroups: TagGroupWithTags[];
   topicTree: Level0TopicDeep[];
   isLoggedIn: boolean;
+  /** 구독 토픽 — 검색바 아래 칩 줄. 비로그인·구독 없음이면 빈 배열이고 + 만 선다 */
+  followedTopics?: TabTopic[];
   eventCollections?: ActiveEventCollection[];
   eventMapData?: Record<string, EventCollectionForMap | null>;
-  sections?: CuratedSectionWithSlug[];
-  sectionData?: SectionData[];
 }
 
-export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], tagGroups, topicTree, isLoggedIn, eventCollections = [], eventMapData = {}, sections, sectionData }: Props) {
+export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], tagGroups, topicTree, isLoggedIn, followedTopics = [], eventCollections = [], eventMapData = {} }: Props) {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -88,7 +104,6 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     selectedPlaceId ? "hidden" : "half"
   );
   const [focusedPlaceIds, setFocusedPlaceIds] = useState<Set<string>>(new Set());
-  const [contentTab, setContentTab] = useState<"hot" | "list">("hot");
   const [query, setQuery] = useState("");
   const [eventQuery, setEventQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -96,10 +111,20 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [locating, setLocating] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  /**
+   * Near here 줄의 기준점. **이미 반올림된 값이다** — 원본 GPS 좌표는 여기 들어오지 않는다.
+   * 버튼을 누르기 전에는 null 이고, 그때 줄 자체가 없다.
+   *
+   * 좌표와 함께 "누를 당시의 조건"을 적어 둔다. 아래 nearHereCenter 가 지금 조건과
+   * 대조해, 그 뒤에 지역을 바꾸거나 필터를 건 적이 있으면 줄을 내린다.
+   */
+  const [nearHere, setNearHere] = useState<{
+    center: RoundedCenter;
+    filterKey: string;
+  } | null>(null);
   const { toast, showToast } = useToast();
   const mapRef = useRef<FocusCameraHandle>(null);
   const listScrollRef = useRef<HTMLDivElement | null>(null);
-  const listScrollMemoRef = useRef<number>(0);
   const { recents, addRecent, removeRecent, clearRecents } = useRecentSearches();
   const { restored, save, clear } = useDiscoverViewState();
 
@@ -132,6 +157,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     removeAppliedTopic,
     removeAppliedTag,
     removeAppliedTagGroup,
+    toggleAppliedTopic,
     togglePlaceCategory,
     toggleTopic,
     toggleTopicGroup,
@@ -151,7 +177,6 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   useEffect(() => {
     if (!restored) return;
     setQuery(restored.query);
-    setContentTab(restored.contentTab);
     clear();
     const top = restored.scrollTop;
     if (top > 0) {
@@ -171,27 +196,8 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   }, [collectionSlug]);
 
   const handlePostNavigate = () => {
-    save({ query, contentTab, scrollTop: listScrollRef.current?.scrollTop ?? 0 });
+    save({ query, scrollTop: listScrollRef.current?.scrollTop ?? 0 });
   };
-
-  const handleContentTabChange = (tab: "hot" | "list") => {
-    if (contentTab === "list" && listScrollRef.current) {
-      listScrollMemoRef.current = listScrollRef.current.scrollTop;
-    }
-    setContentTab(tab);
-  };
-
-  useEffect(() => {
-    if (contentTab !== "list") return;
-    const top = listScrollMemoRef.current;
-    if (top > 0) {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          if (listScrollRef.current) listScrollRef.current.scrollTop = top;
-        });
-      });
-    }
-  }, [contentTab]);
 
   function setSelectedPlaceId(id: string | null) {
     const params = new URLSearchParams(searchParams.toString());
@@ -226,9 +232,14 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setLocating(false);
+        // 원본 좌표. 지도(카메라 · 내 위치 점)에만 쓴다 — 서버로 보내지 않는다
         const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         setUserLocation(coords);
         mapRef.current?.focusCamera(coords);
+        // 지도가 옮겨 간 중심을 소수 둘째 자리로 반올림한 값만 Near here 로 넘긴다.
+        // focusCamera 가 방금 이 좌표로 옮겼으므로 "지도 중심" 이 곧 이 값이고,
+        // 카메라를 되읽는 핸들을 새로 내지 않아도 같은 수가 나온다
+        setNearHere({ center: roundForServer(coords), filterKey: filterKeyRef.current });
       },
       (err) => {
         setLocating(false);
@@ -331,9 +342,101 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   // 지역은 regionKey 가 따로 맡는다. boundsKey 에 두면 지역을 벗을 때도 키가 바뀌어
   // 전국으로 튀는데, 벗을 때는 보던 자리에 그대로 있어야 한다.
   const hasCameraFilters = !isEventMode && (query.trim() !== "" || hasPostLevelFilter);
-  // 이벤트 모드는 EventSearchBar(검색+칩)가 항상 떠 있어 동일한 top reserve가 필요.
-  // 비이벤트는 facet 칩이 떠 있을 때(isResultMode)만 필요. 두 조건의 OR는 새 변수에서만.
-  const needsTopReserve = isEventMode || isResultMode;
+  /**
+   * 지금 걸린 조건을 한 줄로 적은 것. Near here 가 아직 유효한지를 이 값으로 가른다.
+   *
+   * 지역·토픽·태그·카테고리·검색어를 전부 담는다 — 셋 중 무엇이 바뀌어도 값이 달라진다.
+   */
+  const filterKey = [
+    query.trim(),
+    [...appliedTopicIds].sort().join(","),
+    [...appliedTagIds].sort().join(","),
+    [...appliedTagGroupKeys].sort().join(","),
+    appliedPlaceCategory ?? "",
+    appliedRegion ?? "",
+    appliedDistrict ?? "",
+  ].join("|");
+
+  /**
+   * 버튼을 누르는 순간의 filterKey 를 읽기 위한 통로.
+   *
+   * handleLocateMe 는 geolocation 콜백 안에서 값을 읽는데, 그 콜백은 버튼을 누른
+   * 시점의 렌더에 묶여 있다. 좌표가 도착하는 사이에 조건이 바뀌었다면 **도착 시점의**
+   * 조건을 적어야 맞다 — ref 가 그 값을 준다.
+   */
+  const filterKeyRef = useRef(filterKey);
+  filterKeyRef.current = filterKey;
+
+  /**
+   * Near here 에 실제로 넘기는 기준점.
+   *
+   * **"마지막 동작이 내 위치 버튼일 때만" 이 규칙이고, 이 한 줄이 그 규칙이다.**
+   * 버튼을 누른 뒤 지역을 바꾸거나 토픽·카테고리·검색을 걸면 filterKey 가 달라져
+   * null 이 되고 줄이 사라진다. 버튼을 다시 누르면 지금 조건으로 다시 적히므로 다시 뜬다.
+   *
+   * 조건이 바뀔 때 상태를 지우는 effect 를 두지 않는다 — 지우는 자리를 필터 경로마다
+   * 찾아 붙여야 하고(칩·시트·검색·지역 칩이 전부 다른 길이다) 하나라도 빠뜨리면
+   * 그 경로에서만 줄이 남는다. 대조는 한 곳에서 끝난다.
+   */
+  const nearHereCenter = nearHere && nearHere.filterKey === filterKey ? nearHere.center : null;
+
+  /**
+   * 섹션을 그릴지. **판정은 이 한 곳뿐이다** — Near here · 여정 생성 CTA · 목록 분할 ·
+   * DiscoverSections 가 전부 이 값을 본다.
+   *
+   * 토픽(칩·필터 시트) · 태그 · 카테고리 · 검색어 중 하나라도 걸리면 화면의 질문이
+   * "어디로 갈까" 에서 "무엇을 찾는가" 로 바뀐다. 그때는 답이 목록 하나뿐이라
+   * 그 위에 얹힌 줄들이 전부 방해다. 그래서 통째로 접고 목록만 남긴다.
+   *
+   * **지역(region·district)은 예외다.** 지역은 좁히는 조건이 아니라 섹션이 무엇을
+   * 보여줄지 정하는 축이다 — 지역을 고르면 섹션이 사라지는 게 아니라 그 지역 것으로 바뀐다.
+   *
+   * 이벤트 모드는 컬렉션이 화면을 통째로 쓰고, 저장 목록 보기는 "내가 저장한 것"이라는
+   * 약속이 있어 둘 다 접는다.
+   */
+  const showSections =
+    !isEventMode &&
+    !isSavedView &&
+    query.trim() === "" &&
+    appliedTopicIds.length === 0 &&
+    appliedTagIds.length === 0 &&
+    appliedTagGroupKeys.length === 0 &&
+    appliedPlaceCategory === null;
+
+  /**
+   * Near here 축제 줄이 쓸 지역 (NearHereSection 의 NearHereRegion 참고).
+   *
+   * 지금 걸린 지역이 있으면 그 시도를, 없으면 지도 중심에서 가장 가까운 장소의 Area 로
+   * 역산한 시도를 쓴다 (명세 4.7 의 (b) 안). 못 정하면 null 이고 축제 줄은 서지 않는다.
+   *
+   * **언제나 시도 단위다 (district 를 넘기지 않는다).** 거르는 기준이 반경 10km 인데
+   * 시군구로 받으면 그 반경이 구 경계에서 잘린다 — 시청에서 10km 면 종로·중구·용산·마포가
+   * 다 들어오는데 종로구 목록만 받으면 나머지가 통째로 빠진다.
+   * 시도 하나짜리 캐시 항목은 구 단위보다 재사용도 잘 된다.
+   */
+  const nearHereRegion = useMemo(() => {
+    if (appliedRegion) return { regionKey: appliedRegion, district: null };
+    if (!nearHereCenter) return null;
+
+    let best: { slug: string; d2: number } | null = null;
+    for (const place of allPlaces) {
+      const slug = getPlaceRegionSlug(place.area);
+      if (!slug) continue;
+      // 제곱거리로 비교한다 — 가장 가까운 하나만 고르므로 실제 거리가 필요 없다
+      const dLat = place.latitude - nearHereCenter.lat;
+      const dLng = place.longitude - nearHereCenter.lng;
+      const d2 = dLat * dLat + dLng * dLng;
+      if (!best || d2 < best.d2) best = { slug, d2 };
+    }
+    return best ? { regionKey: best.slug, district: null } : null;
+  }, [appliedRegion, nearHereCenter, allPlaces]);
+
+  // 검색바 아래 두 번째 줄이 있는지. 시트가 위로 올라갈 수 있는 한계를 이 값이 정한다.
+  //
+  // 이벤트 모드는 EventSearchBar(검색+칩)가 항상 떠 있다.
+  // 비이벤트는 구독 토픽 칩 줄이 항상 뜬다 — 구독이 0개여도 + 하나가 서기 때문이다.
+  // 그래서 지금은 어느 모드에서도 참이다. 둘 중 한쪽 줄이 접히게 되면 여기가 다시 갈린다.
+  const needsTopReserve = true;
 
   const searchedPlaces = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -527,6 +630,19 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
    * 것이고, InteractiveMap 에 getCenter 를 새로 뚫지 않아도 된다.
    * 목록이 비면 기준점이 없고 CTA 도 그릴 필요가 없다 (그 분기는 빈 상태가 따로 받는다).
    */
+  /**
+   * 섹션이 끼어드는 자리. 목록 앞 여섯 장 뒤다.
+   *
+   * 목록이 먼저 와야 "이 지역에 무엇이 있나" 라는 물음에 바로 답이 되고, 여섯 장이면
+   * 훑고 나서 아래로 더 갈 이유가 생기는 길이다. 여섯 이하면 tail 이 비어 섹션이
+   * 자연히 목록 뒤로 간다 — 따로 분기하지 않는다.
+   */
+  const SECTION_INSERT_AFTER = 6;
+  const headPosts = showSections
+    ? allVisiblePosts.slice(0, SECTION_INSERT_AFTER)
+    : allVisiblePosts;
+  const tailPosts = showSections ? allVisiblePosts.slice(SECTION_INSERT_AFTER) : [];
+
   const journeyAnchor = useMemo(() => {
     const place = allVisiblePosts[0]?.place;
     if (!place) return null;
@@ -736,8 +852,28 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
         />
       )}
 
+      {/* 구독 토픽 칩 — 검색바 바로 아래 한 줄 (명세 4.1). Hot 은 없다.
+          이벤트 모드에서는 화면을 컬렉션이 통째로 쓰므로 접는다.
+
+          facets 와 달리 시트가 full 이어도 남는다. 검색바가 full 에서도 남기 때문이다 —
+          "검색바 아래 한 줄" 인데 검색바만 남고 칩이 사라지면 줄이 통째로 없어진 것처럼
+          보인다. 시트 full 의 윗변(FULL_TOP_WITH_FACETS = 96)에 걸리지 않게
+          칩 줄은 58 에서 시작해 96 에서 끝난다 (DiscoverTopicChips 참고).
+
+          구독이 0개여도 그린다: + 하나가 남아 "구독할 수 있다"를 그 자리에서 말한다 */}
+      {!isEventMode && (
+        <DiscoverTopicChips
+          topics={followedTopics}
+          appliedTopicIds={appliedTopicIds}
+          isLoggedIn={isLoggedIn}
+          onToggleTopic={toggleAppliedTopic}
+        />
+      )}
+
       {!isEventMode && effectiveSheetState !== "full" && (
         <DiscoverActiveFacets
+          /* 토픽 칩 줄이 58~96 을 쓰므로 그 아래에 앉는다 */
+          topClass="top-[98px]"
           query={query}
           appliedTopicIds={appliedTopicIds}
           appliedTagIds={appliedTagIds}
@@ -774,8 +910,6 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
             />
           ) : (
             <DiscoverSheetHeader
-              contentTab={contentTab}
-              onContentTabChange={handleContentTabChange}
               placeCount={filteredPlaces.length}
               isResultMode={isResultMode}
               isSavedView={isSavedView}
@@ -814,28 +948,27 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
               ))}
             </div>
           )
-        ) : (contentTab === "list" || isResultMode || isSavedView) ? (
-          allVisiblePosts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
-              {/* 저장 목록이 비는 이유는 둘이다 — 저장한 게 없거나, 걸러서 남은 게 없거나.
-                  "아직 없다" 는 앞의 경우에만 참이다. 뒤의 경우는 벗을 필터가 있으니 그렇게 말한다 */}
-              <p className="text-sm font-semibold text-foreground">
-                {!isSavedView
-                  ? "No places match your filters"
-                  : isResultMode
-                    ? "No saved places match your filters"
-                    : "No saved places yet"}
-              </p>
-              {(!isSavedView || isResultMode) && (
-                <p className="text-xs text-muted-foreground mt-1.5">Try removing a filter.</p>
-              )}
-            </div>
-          ) : (
-            <div className="px-4 pt-2 pb-4 space-y-2">
+        ) : (
+          <>
+          {/* ── Near here ────────────────────────────────────────────────────
+              내 위치 버튼을 누르기 전에는 아무것도 없다. 기준점이 바뀌면 key 로 새로 만든다 */}
+          {showSections && (
+            <NearHereSection
+              key={nearHereCenter ? `${nearHereCenter.lat},${nearHereCenter.lng}` : "none"}
+              center={nearHereCenter}
+              region={nearHereRegion}
+            />
+          )}
+
+          {/* ── 여정 생성 CTA + 목록 앞 여섯 ─────────────────────────────────
+              CTA 가 목록 첫 줄이라 목록 블록 안에 남는다. 섹션을 접을 때는 CTA 도 같이
+              접는다 — 무엇을 찾는 중인 사람에게 "여기서 여정을 만들라"는 권유는 끼어드는 것이다 */}
+          {allVisiblePosts.length > 0 && (
+            <div className="px-4 pt-2 pb-2 space-y-2">
               {/* 코스 편집기 진입점. 지금 목록에 떠 있는 첫 장소를 기준점으로 넘긴다.
                   Course 에 지역 필드가 없어 "이 동네" 자체는 넘길 수 없다 —
                   넘길 수 있는 건 좌표뿐이고, 그건 Nearby Attractions 기준점으로만 쓰인다. */}
-              {isLoggedIn && journeyAnchor && (
+              {showSections && isLoggedIn && journeyAnchor && (
                 <Link
                   href={journeyAnchor.href}
                   className="flex items-center gap-2.5 rounded-2xl bg-muted px-3.5 py-3 active:opacity-70 transition-opacity"
@@ -853,7 +986,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
                   </span>
                 </Link>
               )}
-              {allVisiblePosts.map(({ post, place }) => (
+              {headPosts.map(({ post, place }) => (
                 <PlaceListSheetCard
                   key={post.id}
                   post={post}
@@ -868,32 +1001,85 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
                 />
               ))}
             </div>
-          )
-        ) : (
-          <HotTabStub
-            eventCollections={eventCollections}
-            eventMapData={eventMapData}
-            sections={sections}
-            sectionData={sectionData}
-            tagGroupMap={tagGroupMap}
-            savedPostIdsSet={savedPostIdsSet}
-          />
+          )}
+
+          {/* ── 섹션 ──────────────────────────────────────────────────────────
+              목록 앞 여섯과 나머지 사이에 낀다. 목록이 여섯 이하면 tail 이 비어
+              자연히 목록 뒤가 된다 */}
+          {showSections && (
+            <DiscoverSections
+              /* 조건이 바뀌면 통째로 새로 만든다 — 섹션들이 이전 결과를 지우는 코드를
+                 따로 갖지 않아도 옛 지역의 카드가 새 제목 아래 남지 않는다 */
+              key={`${appliedRegion ?? ""}/${appliedDistrict ?? ""}/${[...appliedTopicIds].sort().join(",")}`}
+              scope={{
+                regionKey: appliedRegion,
+                district: appliedDistrict,
+                topicIds: appliedTopicIds,
+              }}
+              regionLabel={
+                appliedRegion
+                  ? (availableDistricts.get(appliedRegion) ?? []).find((d) => d.slug === appliedDistrict)?.label
+                    ?? availableCities.find((c) => c.slug === appliedRegion)?.label
+                    ?? null
+                  : null
+              }
+              districts={appliedRegion ? (availableDistricts.get(appliedRegion) ?? []) : []}
+              onSelectDistrict={(slug) =>
+                commitFilters({
+                  topicIds: appliedTopicIds,
+                  tagIds: appliedTagIds,
+                  tagGroupKeys: appliedTagGroupKeys,
+                  placeCategory: appliedPlaceCategory,
+                  region: appliedRegion,
+                  district: slug,
+                })
+              }
+            />
+          )}
+
+          {/* ── 장소 목록 나머지 ───────────────────────────────────────────── */}
+          {allVisiblePosts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
+              {/* 저장 목록이 비는 이유는 둘이다 — 저장한 게 없거나, 걸러서 남은 게 없거나.
+                  "아직 없다" 는 앞의 경우에만 참이다. 뒤의 경우는 벗을 필터가 있으니 그렇게 말한다 */}
+              <p className="text-sm font-semibold text-foreground">
+                {!isSavedView
+                  ? "No places match your filters"
+                  : isResultMode
+                    ? "No saved places match your filters"
+                    : "No saved places yet"}
+              </p>
+              {(!isSavedView || isResultMode) && (
+                <p className="text-xs text-muted-foreground mt-1.5">Try removing a filter.</p>
+              )}
+            </div>
+          ) : tailPosts.length > 0 ? (
+            <div className="px-4 pt-2 pb-4 space-y-2">
+              {tailPosts.map(({ post, place }) => (
+                <PlaceListSheetCard
+                  key={post.id}
+                  post={post}
+                  place={place}
+                  isSaved={savedPostIdsSet.has(post.id)}
+                  isFocused={focusedPlaceIds.has(place.id)}
+                  tagGroupMap={tagGroupMap}
+                  matchedTopicIds={appliedTopicIds}
+                  onCardTap={(placeId) => handleCardTap([placeId])}
+                  onViewPlace={handleSelectPlace}
+                  onPostNavigate={handlePostNavigate}
+                />
+              ))}
+            </div>
+          ) : (
+            /* head 가 이미 전부를 그렸다 — 바닥 여백만 남긴다 */
+            <div className="pb-4" />
+          )}
+          </>
         )}
 
-        {/* 지역 관광 데이터 — 자체 섹션 전부 뒤, 시트 맨 아래다 (시안 :1889-1892).
-            reCree 가 본체이고 관광 데이터는 그 주변 맥락이라는 것이 순서로 표현된 것이라
-            위로 올리지 않는다.
-
-            지역을 고르지 않았으면 그리지 않는다. 지역이 정해지면 hasFilters 가 서서
-            시트는 이미 결과 목록 쪽으로 넘어가 있다 — 이 줄이 Hot 탭에 뜨는 일은 없다.
-            이벤트 모드는 컬렉션이 화면을 통째로 쓰는 상태라 제외한다. */}
-        {!isEventMode && appliedRegion && (
-          <RegionTourSections
-            key={`${appliedRegion}/${appliedDistrict ?? ""}`}
-            regionKey={appliedRegion}
-            district={appliedDistrict}
-          />
-        )}
+        {/* 지역 관광 데이터(Attractions · Festivals)는 여기 있었다. 시트가 재편되면서
+            DiscoverSections 안으로 옮겨 갔다 — Festivals 는 Journeys 위, Attractions 는
+            목록 나머지 바로 위다. 여기 두면 같은 두 줄이 한 화면에 두 번 그려진다 */}
       </PlaceListSheet>
 
       {/* 리스트 맨 위로 버튼 — z-30, 시트 위에 absolute */}

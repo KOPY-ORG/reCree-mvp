@@ -16,12 +16,24 @@ export type TabTopic = { id: string; slug: string; nameEn: string };
 /** 칩 치수 — 높이 32px 은 그대로 두고 글자만 한 단계 낮춘다 */
 const CHIP_SIZE = "text-[15px] h-8";
 
+/**
+ * 칩의 생김새. discover 토픽 칩(DiscoverTopicChips)이 같은 값을 쓴다 —
+ * 두 화면의 토픽 칩은 같은 물건이라 크기·굵기·선택 표시가 갈리면 안 된다.
+ *
+ * 여기 있는 것은 "생김새"뿐이고 "무엇인가"는 갈린다. 홈은 <Link> 로 탭을 바꾸고
+ * discover 는 <button> 으로 필터를 토글한다 — 한쪽은 이동, 한쪽은 조회다.
+ * 그래서 컴포넌트를 통째로 나눠 쓰지 않고 이 세 줄만 나눠 쓴다.
+ */
 /** .pill-badge 는 배지용이라 굵기·크기·여백이 모두 달라 쓰지 않는다 */
-const TAB_BASE =
+export const TOPIC_CHIP_BASE =
   `inline-flex items-center justify-center shrink-0 ${CHIP_SIZE} rounded-full font-medium transition-opacity active:opacity-70`;
 
-const SELECTED = "bg-brand text-foreground";
-const UNSELECTED = "bg-background text-muted-foreground";
+export const TOPIC_CHIP_SELECTED = "bg-brand text-foreground";
+export const TOPIC_CHIP_UNSELECTED = "bg-background text-muted-foreground";
+
+const TAB_BASE = TOPIC_CHIP_BASE;
+const SELECTED = TOPIC_CHIP_SELECTED;
+const UNSELECTED = TOPIC_CHIP_UNSELECTED;
 
 function Tab({
   href,

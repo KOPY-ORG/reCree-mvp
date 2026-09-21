@@ -3,7 +3,6 @@ import { KOREA_PATH_D } from "@/lib/korea-path";
 import {
   KOREA_VIEWBOX,
   SIDO_PIN,
-  HOTSPOT_CORE_R,
   HOTSPOT_MIN_R,
   HOTSPOT_MAX_R,
   hotspotRadius,
@@ -42,7 +41,6 @@ const VARIANTS = {
   brand: {
     landClass: "text-gray-400",
     haloScale: 1,
-    coreScale: 1,
     blur: 2.4,
     opacityMin: 0.45,
     opacityMax: 0.7,
@@ -50,10 +48,9 @@ const VARIANTS = {
   },
   topic: {
     landClass: "text-gray-200",
-    /* 심지와 후광을 같은 배율로 키운다 — 비율이 어긋나면 심지가 번짐을 먹어
-       가장자리가 선으로 보이거나, 반대로 심지가 후광에 묻혀 자리를 잃는다 */
+    /* Hot 탭보다 크게 키운다. 육지를 옅게 물린 만큼 번짐이 그 몫을 받아야
+       "어디가 붐비는가" 가 같은 세기로 읽힌다 */
     haloScale: 1.8,
-    coreScale: 1.8,
     /** 2.4 에서는 가장자리가 선으로 보인다. 이 값부터 경계가 사라진다 */
     blur: 6,
     opacityMin: 0.22,
@@ -213,7 +210,6 @@ export function KoreaMapCard({
       opacity: haloOpacity(baseR, v.opacityMin, v.opacityMax),
     };
   });
-  const coreR = HOTSPOT_CORE_R * v.coreScale;
 
   const topRegions = counts.slice(0, CHIP_REGION_COUNT).map((c) => ({
     key: c.sido,
@@ -284,20 +280,21 @@ export function KoreaMapCard({
 
               <path d={KOREA_PATH_D} fill="currentColor" />
 
+              {/* 후광만 그린다 — 장소 수를 크기로 말한다.
+                  가운데 심지(시도마다 같은 크기의 또렷한 원)가 있었는데 뺐다.
+                  두 겹이 겹치면 핀처럼 읽혀 "정확히 이 지점" 이라고 말하게 되는데,
+                  이 자리는 시도 대표 좌표라 그만큼 정확하지 않다. 번짐만 남기면
+                  "이 근방이 붐빈다" 라는, 이 그림이 실제로 아는 만큼만 말한다 */}
               {hotspots.map((h) => (
-                <g key={h.sido}>
-                  {/* 후광 — 장소 수를 크기로 말한다 */}
-                  <circle
-                    cx={h.x}
-                    cy={h.y}
-                    r={h.r}
-                    fill={fill}
-                    opacity={h.opacity}
-                    filter={`url(#${HALO_FILTER_ID})`}
-                  />
-                  {/* 심지 — 시도마다 크기가 같아 "여기에 있다"가 후광에 묻히지 않는다 */}
-                  <circle cx={h.x} cy={h.y} r={coreR} fill={fill} />
-                </g>
+                <circle
+                  key={h.sido}
+                  cx={h.x}
+                  cy={h.y}
+                  r={h.r}
+                  fill={fill}
+                  opacity={h.opacity}
+                  filter={`url(#${HALO_FILTER_ID})`}
+                />
               ))}
             </svg>
           </Link>
