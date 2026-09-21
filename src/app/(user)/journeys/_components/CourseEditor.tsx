@@ -451,10 +451,35 @@ export function CourseEditor({
 
   // ── 이탈 ───────────────────────────────────────────────────────────────────
 
-  /** CourseBackButton 과 같은 판단 — 히스토리가 없으면 목록으로 */
+  /**
+   * 편집기를 닫는다.
+   *
+   * 편집기는 목적지가 아니라 상세·목록에서 연 한 단계다. 닫은 뒤 히스토리에 그 항목이
+   * 남으면 뒤로가기가 방금 끝낸 편집기로 되돌아가므로 push 는 쓰지 않는다.
+   *
+   * 들어온 길이 있으면 그것을 되짚는다. 상세에서 Edit 으로 들어왔다면 그 상세가 바로
+   * 뒤에 있고, /journeys/new 는 목록·피드·지도 어디서나 열려 한 곳으로 보낼 수 없다.
+   * 되짚을 것이 없을 때만(주소창으로 바로 들어온 경우) 갈 곳을 지정해 replace 한다 —
+   * 여기서도 push 하면 그 항목이 남는다.
+   *
+   * 알려진 한계: 제목을 고치고 곧바로 Done 을 누르면 여기서 낸 이동이 삼켜진다.
+   * updateCourse 가 끝나며 라우터 캐시가 무효화돼 현재 경로가 다시 그려지는데 그 재렌더가
+   * 이동을 먹는다 (push·replace·back 모두, 트랜지션 안팎 모두 같다). 제목을 고치지 않았거나
+   * 저장이 끝난 뒤에 누르면 정상이다. 클라이언트에서 이동 방식을 바꾸는 것으로는 풀리지 않아
+   * 남겨 둔다 — 서버 액션에서 redirect 로 나가는 쪽을 따로 검토해야 한다.
+   */
+  function closeEditor() {
+    if (window.history.length > 1) {
+      router.back();
+      return;
+    }
+    const id = courseIdRef.current;
+    router.replace(id ? `/journeys/${id}` : "/journeys");
+  }
+
+  /** 취소하고 나간다 */
   function exitEditor() {
-    if (window.history.length > 1) router.back();
-    else router.push("/journeys");
+    closeEditor();
   }
 
   /**
@@ -813,8 +838,10 @@ export function CourseEditor({
           showError(courseErrorMessage(result.error));
           return;
         }
-        // 방금 지운 코스의 상세로 돌아가면 안 된다 — 뒤로가기가 아니라 목록으로 보낸다
-        router.push("/journeys");
+        // 방금 지운 코스의 상세로 돌아가면 안 된다 — 뒤로가기가 아니라 목록으로 보낸다.
+        // replace 로 편집기 항목까지 덮지만 그 뒤의 상세 항목은 히스토리에서 지울 수 없다.
+        // 거기서 뒤로가기를 누르면 없는 코스를 열게 되므로 [id]/not-found.tsx 가 받는다.
+        router.replace("/journeys");
       } catch {
         showError("Something went wrong. Try again.");
       }
@@ -886,7 +913,10 @@ export function CourseEditor({
       if (result.error) showError(courseErrorMessage(result.error));
     }
 
-    router.push(`/journeys/${id}`);
+    // push 가 아니라 replace 다. push 하면 /journeys/new 가 히스토리에 남아,
+    // 방금 만든 여정에서 뒤로가기를 눌렀을 때 제목도 장소도 없는 빈 편집기가 나온다 —
+    // 만든 것이 사라진 것처럼 보인다. 초안 화면은 여정이 생긴 순간 더 이상 갈 곳이 아니다.
+    router.replace(`/journeys/${id}`);
   }
 
   function handleDone() {
@@ -906,7 +936,7 @@ export function CourseEditor({
       // 이미 있는 코스 — 제목을 입력하다 blur 없이 눌렀을 수 있어 한 번 통과시킨다
       const ok = await commitTitle();
       if (!ok) return;
-      router.push(`/journeys/${courseIdRef.current}`);
+      closeEditor();
     });
   }
 
