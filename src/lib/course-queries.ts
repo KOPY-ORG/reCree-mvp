@@ -162,9 +162,14 @@ export async function getPublicCourses(options?: {
   // cursor는 시그니처만 받아둔다. 무한 스크롤을 붙일 때
   // cursor: { id }, skip: 1 + orderBy id tiebreaker로 연결한다 (post-queries 패턴).
   cursor?: string;
+  /** 있으면 이 토픽이 걸린 코스만. 없으면 전체 */
+  topicId?: string;
 }): Promise<CourseListItem[]> {
   const rows = await prisma.course.findMany({
-    where: { isPublic: true },
+    where: {
+      isPublic: true,
+      ...(options?.topicId ? { topics: { some: { topicId: options.topicId } } } : {}),
+    },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: options?.take ?? DEFAULT_TAKE,
     select: courseListSelect,

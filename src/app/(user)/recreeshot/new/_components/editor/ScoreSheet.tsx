@@ -36,7 +36,7 @@ export function ScoreSheet({
 }: Props) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="rounded-t-2xl px-0 pt-0 pb-safe max-h-[85vh] overflow-y-auto">
+      <SheetContent side="bottom" className="mx-auto max-w-[540px] rounded-t-2xl px-0 pt-0 pb-safe max-h-[85vh] overflow-y-auto">
         <SheetTitle className="sr-only">Match Score</SheetTitle>
         <div className="mx-auto mt-3 mb-1 w-10 h-1 rounded-full bg-muted/60" />
 

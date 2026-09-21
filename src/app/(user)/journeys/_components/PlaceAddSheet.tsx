@@ -7,6 +7,7 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { isExternalImage } from "@/lib/image";
 import { getPopularPlaces, searchPlaces } from "@/app/(user)/_actions/recreeshot-actions";
 import {
+  getCourseTopicPlaces,
   getSavedCoursePlaces,
   type CoursePlaceOption,
 } from "@/app/(user)/_actions/course-actions";
@@ -71,6 +72,12 @@ interface PlaceAddSheetProps {
   existingPlaceIds: string[];
   /** Nearby 기준 좌표. 없으면 그 탭은 안내만 띄운다 */
   anchor: { lat: number; lng: number; label: string } | null;
+  /**
+   * 코스의 테마. 검색어가 비었을 때 Search 탭이 보여줄 기본 목록을 정한다 —
+   * 테마가 있으면 그 테마의 장소, 없으면 지금까지대로 인기 장소다.
+   * 이름은 머리말에 쓴다.
+   */
+  themes: { id: string; nameEn: string }[];
   /** 이 Day 에 더 담을 수 있는 개수 */
   remainingSlots: number;
   onPick: (place: PickedPlace) => void;
@@ -271,14 +278,16 @@ export function PlaceAddSheet({
   dayNumber,
   existingPlaceIds,
   anchor,
+  themes,
   remainingSlots,
   onPick,
 }: PlaceAddSheetProps) {
   const [tab, setTab] = useState<TabId>("search");
   const [query, setQuery] = useState("");
 
-  // 탭 1
-  const [popular, setPopular] = useState<Row[] | null>(null);
+  // 탭 1 — key 를 함께 들고 있는다. 시트를 닫은 사이에 테마가 바뀌면 받아 둔 목록이
+  // 더 이상 그 테마의 것이 아니라서, 무엇으로 받은 목록인지를 값 옆에 적어 둔다.
+  const [browse, setBrowse] = useState<{ key: string; rows: Row[] } | null>(null);
   const [results, setResults] = useState<Row[]>([]);
   const [searching, setSearching] = useState(false);
 
@@ -299,20 +308,38 @@ export function PlaceAddSheet({
   const anchorKey = anchor ? `${anchor.lat},${anchor.lng}` : null;
   const full = remainingSlots <= 0;
 
+  /** 테마가 없으면 빈 문자열이다 — 그때가 인기 장소를 쓰는 경우다 */
+  const themeKey = themes
+    .map((t) => t.id)
+    .sort()
+    .join(",");
+  const browseRows = browse?.key === themeKey ? browse.rows : null;
+  /** 머리말·빈 상태가 같은 문자열을 쓴다 */
+  const themeNames = themes.map((t) => t.nameEn).join(" · ");
+
   // ── 로딩 ───────────────────────────────────────────────────────────────────
 
-  // 인기 장소는 검색어가 없을 때의 기본 목록이다. 빈 검색창만 있는 탭은 막다른 화면이라
-  // 뭘 검색해야 할지 모르는 사람이 그대로 멈춘다 (StickerPanel 도 같은 자리에 같은 목록을 쓴다).
+  /**
+   * 검색어가 없을 때의 기본 목록. 빈 검색창만 있는 탭은 막다른 화면이라
+   * 뭘 검색해야 할지 모르는 사람이 그대로 멈춘다 (StickerPanel 도 같은 자리에 목록을 쓴다).
+   *
+   * 코스에 테마가 있으면 그 테마의 장소를, 없으면 인기 장소를 쓴다. 탭을 하나 더 두지
+   * 않는다 — 둘은 "무엇부터 보여줄까"라는 같은 질문의 답이고, 테마가 있는 코스에서
+   * 인기 장소는 그 답으로서 테마 장소보다 나을 것이 없다.
+   */
   useEffect(() => {
-    if (!open || popular !== null) return;
+    if (!open || browseRows !== null) return;
     let alive = true;
-    getPopularPlaces().then((rows) => {
-      if (alive) setPopular(rows.map(placeToRow));
+    const source = themeKey
+      ? getCourseTopicPlaces(themeKey.split(",")).then((rows) => rows.map(savedToRow))
+      : getPopularPlaces().then((rows) => rows.map(placeToRow));
+    source.then((rows) => {
+      if (alive) setBrowse({ key: themeKey, rows });
     });
     return () => {
       alive = false;
     };
-  }, [open, popular]);
+  }, [open, browseRows, themeKey]);
 
   useEffect(() => {
     if (!open || tab !== "saved" || saved !== null) return;
@@ -433,19 +460,38 @@ export function PlaceAddSheet({
       return renderRows(results);
     }
 
-    if (popular === null) return <Loading />;
-    if (popular.length === 0) {
-      return <Message title="Nothing to show yet" body="Search for a place by name." />;
+    if (browseRows === null) return <Loading />;
+
+    if (browseRows.length === 0) {
+      // 테마를 걸었는데 비었다면 "아직 없다"가 맞는 말이다 — 검색이 막힌 것이 아니다
+      return themes.length > 0 ? (
+        <Message
+          title={`No spots under ${themeNames} yet`}
+          body="Search for a place by name, or look under Nearby."
+        />
+      ) : (
+        <Message title="Nothing to show yet" body="Search for a place by name." />
+      );
     }
+
     return (
       <>
-        <p
-          className="mb-1.5 px-2 text-[10.5px] font-semibold uppercase tracking-[0.06em]"
-          style={{ color: SUB }}
-        >
-          Popular on reCree
-        </p>
-        {renderRows(popular)}
+        {/* 머리말이 이 목록의 출처를 말한다. 테마 장소와 인기 장소는 같은 자리에 오므로
+            무엇을 보고 있는지 적지 않으면 둘이 구별되지 않는다. */}
+        <div className="mb-1.5 flex items-baseline gap-2 px-2">
+          <p
+            className="min-w-0 flex-1 truncate text-[10.5px] font-semibold uppercase tracking-[0.06em]"
+            style={{ color: SUB }}
+          >
+            {themes.length > 0 ? `From your ${themeNames} theme` : "Popular on reCree"}
+          </p>
+          {themes.length > 0 && (
+            <span className="flex-none text-[10.5px] font-semibold" style={{ color: SUB }}>
+              {browseRows.length} {browseRows.length === 1 ? "spot" : "spots"}
+            </span>
+          )}
+        </div>
+        {renderRows(browseRows)}
       </>
     );
   }
@@ -515,7 +561,9 @@ export function PlaceAddSheet({
         side="bottom"
         showCloseButton={false}
         aria-describedby={undefined}
-        className="flex max-h-[88vh] flex-col gap-0 rounded-t-2xl p-0"
+        // 시트는 fixed 라 레이아웃의 540px 기둥 밖으로 나간다 — 그 폭을 여기서 다시 건다
+        // ((user)/layout.tsx:20 과 같은 값·같은 방식. AttractionDetailSheet.tsx:266 참고)
+        className="mx-auto flex max-h-[88vh] max-w-[540px] flex-col gap-0 rounded-t-2xl p-0"
       >
         <div className="flex flex-none justify-center pb-1 pt-3">
           <div className="h-1 w-9 rounded-full bg-muted-foreground/25" />

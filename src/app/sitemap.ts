@@ -8,7 +8,7 @@ const BASE_URL = "https://recree.io";
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // 정적 페이지
   const staticRoutes: MetadataRoute.Sitemap = [
-    { url: `${BASE_URL}/`, changeFrequency: "daily", priority: 1.0 },
+    { url: `${BASE_URL}/feed`, changeFrequency: "daily", priority: 1.0 },
     { url: `${BASE_URL}/discover`, changeFrequency: "daily", priority: 0.9 },
     { url: `${BASE_URL}/category`, changeFrequency: "weekly", priority: 0.8 },
     { url: `${BASE_URL}/policy/terms`, changeFrequency: "monthly", priority: 0.3 },

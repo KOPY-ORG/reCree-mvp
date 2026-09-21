@@ -18,6 +18,10 @@ export async function getMyFollows(userId: string) {
           textColorHex: true,
           parent: {
             select: {
+              // 조상 이름도 색과 같이 끝까지 받는다 — 토픽 탭 헤더가 쓰는 것은
+              // 바로 위(Boy Group)가 아니라 맨 위 분류다 (BTS → K-POP).
+              // 어느 단계가 맨 위인지는 토픽마다 다르므로 전부 받아 두고 고른다
+              nameEn: true,
               colorHex: true,
               colorHex2: true,
               gradientDir: true,
@@ -25,6 +29,7 @@ export async function getMyFollows(userId: string) {
               textColorHex: true,
               parent: {
                 select: {
+                  nameEn: true,
                   colorHex: true,
                   colorHex2: true,
                   gradientDir: true,
@@ -32,6 +37,7 @@ export async function getMyFollows(userId: string) {
                   textColorHex: true,
                   parent: {
                     select: {
+                      nameEn: true,
                       colorHex: true,
                       colorHex2: true,
                       gradientDir: true,
@@ -46,7 +52,9 @@ export async function getMyFollows(userId: string) {
         },
       },
     },
-    orderBy: { createdAt: "desc" },
+    // sortOrder 는 사용자가 정한 순서, createdAt 은 그 안에서의 tiebreak.
+    // 초기값이 전부 0 인 사용자도 예전과 같은 순서(최신 팔로우 먼저)로 보인다.
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
   });
 }
 

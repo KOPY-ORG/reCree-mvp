@@ -9,6 +9,8 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans), var(--font-noto-sans-kr);
   --color-gray-900: var(--palette-gray-900);
+  --color-gray-400: var(--palette-gray-400);
+  --color-gray-200: var(--palette-gray-200);
 
   /* ── Typography Scale ───────────────── */
   /* base: 16px (html 100%) */
@@ -143,14 +145,17 @@ html[data-nav-tucked] .nav-tuckable {
   --palette-gray-800:   #636363;
   --palette-gray-700:   #737373;
   --palette-gray-400:   #BABABA;
+  --palette-gray-200:   #E7E6E1;
   --palette-gray-100:   #F3F3F3;
   --palette-white:      #FCFCFC;
+  --palette-pink:       #FE72BE;
 
   /* ── Brand ──────────────────────── */
   --brand:              var(--palette-brand);
   --brand-sub2:         var(--palette-brand-sub2);
   --brand-sub3:         var(--palette-brand-sub3);
   --brand-foreground:   var(--palette-black);
+  --highlight:          var(--palette-pink);
 
   /* ── Semantic (shadcn/ui) ───────── */
   --background:           var(--palette-white);
@@ -213,11 +218,13 @@ html[data-nav-tucked] .nav-tuckable {
 
 /* ── 공통 Pill 뱃지 스타일 ── */
 /* --pill-py (기본 py-0.75), --pill-fs (기본 text-xs, 12px) 를 부모에서 오버라이드 가능 */
-.pill-badge {
-  @apply inline-flex items-center gap-1 px-2 rounded-full font-semibold leading-none;
-  padding-top: var(--pill-py, 0.1875rem);
-  padding-bottom: var(--pill-py, 0.1875rem);
-  font-size: var(--pill-fs, var(--text-xs));
+@layer components {
+  .pill-badge {
+    @apply inline-flex items-center gap-1 px-2 rounded-full font-semibold leading-none;
+    padding-top: var(--pill-py, 0.1875rem);
+    padding-bottom: var(--pill-py, 0.1875rem);
+    font-size: var(--pill-fs, var(--text-xs));
+  }
 }
 
 /* ── 공통 앱 헤더 스타일 ── */
