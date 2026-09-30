@@ -22,7 +22,7 @@ export default async function ReCreeshotPage() {
 
   return (
     <>
-      <div className="px-4 py-4 max-w-2xl mx-auto">
+      <div className="px-4 py-4 max-w-2xl mx-auto lg:max-w-none lg:px-10">
         <HallGrid shots={hallShots} />
       </div>
       <NewReCreeshotFab />

@@ -285,10 +285,10 @@ export function StickerPanel({
     <>
       {/* 장소 검색 시트 */}
       <Sheet open={locationSheetOpen} onOpenChange={(v) => { onLocationSheetChange(v); if (!v) setLocationQuery(""); }}>
-        <SheetContent side="bottom" showCloseButton={false} className="mx-auto max-w-[540px] rounded-t-2xl max-h-[85vh] p-0 flex flex-col gap-0">
+        <SheetContent side="bottom" showCloseButton={false} className="mx-auto max-w-[var(--app-col-w)] rounded-t-2xl max-h-[85vh] p-0 flex flex-col gap-0">
           <SheetTitle className="sr-only">Search location</SheetTitle>
           <div className="flex justify-center pt-3 pb-1 shrink-0">
-            <div className="w-9 h-1 rounded-full bg-muted-foreground/25" />
+            <div className="w-9 h-1 rounded-full bg-muted-foreground/25 lg:hidden" />
           </div>
           <div className="px-5 pt-1 pb-3 shrink-0">
             <p className="text-base font-bold">Location</p>
@@ -350,10 +350,10 @@ export function StickerPanel({
 
       {/* 태그 시트 */}
       <Sheet open={tagSheetOpen} onOpenChange={(v) => { onTagSheetChange(v); if (!v) setThemeSearchQuery(""); }}>
-        <SheetContent side="bottom" showCloseButton={false} className="mx-auto max-w-[540px] rounded-t-2xl max-h-[90vh] p-0 flex flex-col gap-0">
+        <SheetContent side="bottom" showCloseButton={false} className="mx-auto max-w-[var(--app-col-w)] rounded-t-2xl max-h-[90vh] p-0 flex flex-col gap-0">
           <SheetTitle className="sr-only">Tag</SheetTitle>
           <div className="flex justify-center pt-3 pb-1 shrink-0">
-            <div className="w-9 h-1 rounded-full bg-muted-foreground/25" />
+            <div className="w-9 h-1 rounded-full bg-muted-foreground/25 lg:hidden" />
           </div>
           <div className="px-5 pt-1 pb-3 shrink-0">
             <p className="text-base font-bold">Add tags</p>
@@ -401,7 +401,7 @@ export function StickerPanel({
                       </div>
                       <p className="flex-1 text-xs font-medium line-clamp-3 leading-snug min-w-0">{title}</p>
                       <div className={`flex-shrink-0 size-5 rounded-full border flex items-center justify-center transition-all ${selected ? "bg-brand border-brand" : "border-border/40 bg-muted/30"}`}>
-                        {selected && <Check className="size-3 text-black" />}
+                        {selected && <Check className="size-3 text-brand-foreground" />}
                       </div>
                     </button>
                   );
@@ -573,7 +573,7 @@ export function StickerPanel({
           </div>
 
           <div className="px-4 pb-6 pt-3 shrink-0">
-            <button type="button" onClick={() => onTagSheetChange(false)} className="w-full py-3 rounded-full font-semibold text-sm bg-brand text-black">
+            <button type="button" onClick={() => onTagSheetChange(false)} className="w-full py-3 rounded-full font-semibold text-sm bg-brand text-brand-foreground">
               Done
             </button>
           </div>

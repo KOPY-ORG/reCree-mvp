@@ -64,7 +64,7 @@ export function EditForm({ id, initialStory, initialTips }: Props) {
           type="button"
           onClick={handleSave}
           disabled={isSaving}
-          className="w-full py-3 rounded-full font-semibold text-sm bg-brand text-black disabled:opacity-40"
+          className="w-full py-3 rounded-full font-semibold text-sm bg-brand text-brand-foreground disabled:opacity-40"
         >
           {isSaving ? "Saving..." : "Save"}
         </button>

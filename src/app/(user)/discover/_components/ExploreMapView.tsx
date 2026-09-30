@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Loader2, LocateFixed, Maximize, Route } from "lucide-react";
 import { useToast } from "../../_hooks/useToast";
+import { useRailLayout } from "../../_hooks/useRailLayout";
 import { dedupeEventMarkers } from "@/lib/event-utils";
 import { EVENT_RED, sortEventMarkers } from "@/lib/event-format";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -125,6 +126,8 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   const { toast, showToast } = useToast();
   const mapRef = useRef<FocusCameraHandle>(null);
   const listScrollRef = useRef<HTMLDivElement | null>(null);
+  // lg 는 장소를 골라도 목록 패널을 유지하고 카드를 지도 위에 띄운다 (useRailLayout 참고)
+  const isRail = useRailLayout();
   const { recents, addRecent, removeRecent, clearRecents } = useRecentSearches();
   const { restored, save, clear } = useDiscoverViewState();
 
@@ -264,6 +267,14 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     if (place) mapRef.current?.focusCamera({ lat: place.latitude, lng: place.longitude });
     setFocusedPlaceIds(new Set());
     setSelectedPlaceId(placeId);
+    // lg: 목록이 옆에 남아 있으므로 고른 장소의 카드가 보이게 굴린다. 목록에 없으면 카드만 뜬다
+    if (isRail) {
+      requestAnimationFrame(() => {
+        listScrollRef.current
+          ?.querySelector(`[data-place-id="${CSS.escape(placeId)}"]`)
+          ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      });
+    }
   };
 
   const handlePlaceClose = () => {
@@ -287,6 +298,28 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     setSelectedPlaceId(null);
     setFocusedPlaceIds(new Set());
   };
+
+  // lg: 목록 카드를 누르면 그 장소를 고른다(지도 이동 + 카드). 다시 누르면 닫는다.
+  // 모바일은 지금처럼 초점만 잡는다 — 고르면 목록 시트가 내려가 버리기 때문이다
+  const handleListCardTap = (placeId: string) => {
+    if (!isRail) {
+      handleCardTap([placeId]);
+      return;
+    }
+    if (selectedPlaceId === placeId) handleMapClick();
+    else handleMarkerClick(placeId);
+  };
+
+  // lg: Esc 로 카드를 닫는다 (X · 지도 빈 곳 클릭과 같다)
+  useEffect(() => {
+    if (!isRail || !selectedPlaceId) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleMapClick();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isRail, selectedPlaceId]);
 
   const selectedPlace = allPlaces.find((p) => p.id === selectedPlaceId) ?? null;
 
@@ -769,7 +802,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     fitEventMarkers({ query: eventQuery, category: selectedCategory, savedOnly: next, savedSet: savedEventIdsSet });
   }
 
-  const effectiveSheetState = selectedPlaceId
+  const effectiveSheetState = selectedPlaceId && !isRail
     ? "hidden"
     : sheetState === "hidden"
       ? "tab-only"
@@ -795,7 +828,11 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
   return (
     // 지도는 100dvh 전체를 쓴다 — 탭바가 그 위에 떠야 반투명·blur 가 의미를 갖는다.
     // 안쪽의 시트·FAB·카드는 각자 var(--bottom-nav-space) 만큼 올라간다.
-    <div className="relative h-[100dvh] overflow-hidden">
+    //
+    // lg: 에어비앤비 검색 화면 배치 — 왼쪽 --discover-panel-w 는 목록 패널(검색 · 칩 · 리스트 · 장소 카드),
+    // 오른쪽은 지도가 나머지 전부를 둥근 카드로 채운다. 드래그 시트가 고정 패널이 될 뿐 상태 · 내용은 모바일과 같다.
+    // lg 는 1440 컨테이너를 쓰지 않는다 — fixed 로 레일 바로 오른쪽부터 화면 끝까지 목록+지도로 채운다
+    <div className="relative h-[100dvh] overflow-hidden lg:fixed lg:inset-y-0 lg:right-0 lg:left-[var(--side-nav-space)] lg:h-auto">
       <InteractiveMap
         ref={mapRef}
         places={isEventMode ? visibleEventMarkers : filteredMarkerPlaces}
@@ -817,7 +854,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
           isResultMode ? new Set(filteredPlaces.map((p) => p.id)) : undefined
         }
         userLocation={userLocation}
-        className="absolute inset-0"
+        className="absolute inset-0 lg:top-3 lg:right-3 lg:bottom-3 lg:left-[calc(var(--discover-panel-w)+12px)] lg:rounded-3xl"
       />
       {!isEventMode && (
         <DiscoverSearchBar
@@ -964,17 +1001,17 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
               CTA 가 목록 첫 줄이라 목록 블록 안에 남는다. 섹션을 접을 때는 CTA 도 같이
               접는다 — 무엇을 찾는 중인 사람에게 "여기서 여정을 만들라"는 권유는 끼어드는 것이다 */}
           {allVisiblePosts.length > 0 && (
-            <div className="px-4 pt-2 pb-2 space-y-2">
+            <div className="px-4 pt-2 pb-2 space-y-2 @min-[600px]:grid @min-[600px]:grid-cols-2 @min-[600px]:gap-2 @min-[600px]:space-y-0">
               {/* 코스 편집기 진입점. 지금 목록에 떠 있는 첫 장소를 기준점으로 넘긴다.
                   Course 에 지역 필드가 없어 "이 동네" 자체는 넘길 수 없다 —
                   넘길 수 있는 건 좌표뿐이고, 그건 Nearby Attractions 기준점으로만 쓰인다. */}
               {showSections && isLoggedIn && journeyAnchor && (
                 <Link
                   href={journeyAnchor.href}
-                  className="flex items-center gap-2.5 rounded-2xl bg-muted px-3.5 py-3 active:opacity-70 transition-opacity"
+                  className="flex items-center gap-2.5 rounded-2xl bg-muted px-3.5 py-3 active:opacity-70 transition-opacity @min-[600px]:col-span-2"
                 >
                   <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand">
-                    <Route className="size-4 text-black" strokeWidth={2.4} />
+                    <Route className="size-4 text-brand-foreground" strokeWidth={2.4} />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-semibold text-foreground">
@@ -993,9 +1030,10 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
                   place={place}
                   isSaved={savedPostIdsSet.has(post.id)}
                   isFocused={focusedPlaceIds.has(place.id)}
+                  isSelected={isRail && selectedPlaceId === place.id}
                   tagGroupMap={tagGroupMap}
                   matchedTopicIds={appliedTopicIds}
-                  onCardTap={(placeId) => handleCardTap([placeId])}
+                  onCardTap={handleListCardTap}
                   onViewPlace={handleSelectPlace}
                   onPostNavigate={handlePostNavigate}
                 />
@@ -1037,6 +1075,9 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
             />
           )}
 
+          {/* 목록 패널이 600 을 넘으면 카드를 2열로 놓는다 (에어비앤비 목록과 같은 밀도).
+              화면 폭(xl)이 아니라 패널 폭(컨테이너 쿼리)으로 가른다 — 1280~1440 에서 패널은 480~540 이라
+              가로형 카드 두 장이 들어가면 제목이 두 단어에서 잘린다. 컨테이너는 lg 시트 스크롤 영역이다 */}
           {/* ── 장소 목록 나머지 ───────────────────────────────────────────── */}
           {allVisiblePosts.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
@@ -1054,7 +1095,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
               )}
             </div>
           ) : tailPosts.length > 0 ? (
-            <div className="px-4 pt-2 pb-4 space-y-2">
+            <div className="px-4 pt-2 pb-4 space-y-2 @min-[600px]:grid @min-[600px]:grid-cols-2 @min-[600px]:gap-2 @min-[600px]:space-y-0">
               {tailPosts.map(({ post, place }) => (
                 <PlaceListSheetCard
                   key={post.id}
@@ -1062,9 +1103,10 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
                   place={place}
                   isSaved={savedPostIdsSet.has(post.id)}
                   isFocused={focusedPlaceIds.has(place.id)}
+                  isSelected={isRail && selectedPlaceId === place.id}
                   tagGroupMap={tagGroupMap}
                   matchedTopicIds={appliedTopicIds}
-                  onCardTap={(placeId) => handleCardTap([placeId])}
+                  onCardTap={handleListCardTap}
                   onViewPlace={handleSelectPlace}
                   onPostNavigate={handlePostNavigate}
                 />
@@ -1082,13 +1124,18 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
             목록 나머지 바로 위다. 여기 두면 같은 두 줄이 한 화면에 두 번 그려진다 */}
       </PlaceListSheet>
 
-      {/* 리스트 맨 위로 버튼 — z-30, 시트 위에 absolute */}
-      <ScrollToTopButton scrollRef={listScrollRef} />
+      {/* 리스트 맨 위로 버튼 — z-30, 시트 위에 absolute.
+          lg 는 목록이 옆 패널이라 이 버튼(화면 오른쪽 아래)이 지도 저작권 표시 위에 얹힌다 — 감춘다 */}
+      <div className="lg:hidden">
+        <ScrollToTopButton scrollRef={listScrollRef} />
+      </div>
 
-      {/* FAB 그룹 — 시트 상단 위 12px에 붙어서 이동, 선택 중이거나 full이면 둘 다 숨김 */}
-      {!selectedPlaceId && (
+      {/* FAB 그룹 — 시트 상단 위 12px에 붙어서 이동, 선택 중이거나 full이면 둘 다 숨김.
+          lg 는 장소 카드가 지도 아래 가운데에 뜨므로 겹치지 않게 지도 오른쪽 위로 옮기고, 선택 중에도 남긴다 */}
+      {(!selectedPlaceId || isRail) && (
         <div
-          className={`absolute right-3 z-[45] flex flex-col gap-3 ${
+          // lg 는 시트가 옆 패널이라 따라 올라갈 윗변이 없다 — 인라인 bottom 을 important 로 풀고 위에 붙인다
+          className={`absolute right-3 z-[45] flex flex-col gap-3 lg:top-7 lg:right-7 lg:bottom-auto! ${
             effectiveSheetState === "full" ? "opacity-0 pointer-events-none" : "opacity-100"
           }`}
           style={{ bottom: `calc(${fabSheetH} + 12px)`, transition: "bottom 300ms ease, opacity 300ms ease" }}

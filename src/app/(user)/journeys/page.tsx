@@ -21,7 +21,7 @@ export default async function JourneysPage() {
           {currentUser && (
             <Link
               href="/journeys/new"
-              className="flex items-center gap-1 pl-2.5 pr-3.5 py-1.5 rounded-full bg-brand text-black text-sm font-semibold transition-opacity hover:opacity-80"
+              className="flex items-center gap-1 pl-2.5 pr-3.5 py-1.5 rounded-full bg-brand text-brand-foreground text-sm font-semibold transition-opacity hover:opacity-80"
             >
               <Plus className="size-4" strokeWidth={2.5} />
               New
@@ -32,7 +32,7 @@ export default async function JourneysPage() {
 
       {currentUser && (
         <section className="pt-4">
-          <h2 className="font-bold text-lg px-4 mb-3">My Journeys</h2>
+          <h2 className="font-bold text-lg px-4 mb-3 lg:px-10">My Journeys</h2>
           {myCourses.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-3 text-center py-10 px-4">
               <p className="text-base font-semibold">No journeys yet</p>
@@ -41,13 +41,13 @@ export default async function JourneysPage() {
               </p>
               <Link
                 href="/journeys/new"
-                className="mt-2 px-5 py-2.5 rounded-full bg-brand text-black text-sm font-semibold"
+                className="mt-2 px-5 py-2.5 rounded-full bg-brand text-brand-foreground text-sm font-semibold"
               >
                 Create your first journey
               </Link>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3 px-4">
+            <div className="grid grid-cols-2 gap-3 px-4 md:grid-cols-3 lg:grid-cols-4 lg:px-10 xl:grid-cols-5">
               {myCourses.map((course) => (
                 <CourseCard key={course.id} course={course} isMine />
               ))}
@@ -57,7 +57,7 @@ export default async function JourneysPage() {
       )}
 
       <section className="pt-6">
-        <h2 className="font-bold text-lg px-4 mb-3">Public Journeys</h2>
+        <h2 className="font-bold text-lg px-4 mb-3 lg:px-10">Public Journeys</h2>
         {publicCourses.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 text-center py-10 px-4">
             <p className="text-base font-semibold">No public journeys yet</p>
@@ -66,7 +66,7 @@ export default async function JourneysPage() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3 px-4">
+          <div className="grid grid-cols-2 gap-3 px-4 md:grid-cols-3 lg:grid-cols-4 lg:px-10 xl:grid-cols-5">
             {publicCourses.map((course) => (
               <CourseCard key={course.id} course={course} />
             ))}

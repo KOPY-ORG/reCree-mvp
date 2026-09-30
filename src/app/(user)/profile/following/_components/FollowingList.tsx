@@ -40,7 +40,7 @@ export function FollowingList({ initialFollows }: FollowingListProps) {
         </p>
         <Link
           href="/topics"
-          className="inline-block px-4 py-2 bg-brand text-black font-semibold rounded-full text-sm"
+          className="inline-block px-4 py-2 bg-brand text-brand-foreground font-semibold rounded-full text-sm"
         >
           Discover topics
         </Link>

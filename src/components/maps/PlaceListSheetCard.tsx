@@ -32,6 +32,8 @@ interface Props {
   };
   isSaved: boolean;
   isFocused?: boolean;
+  /** lg: 지도 위 카드로 고른 장소. 초점과 같은 링만 두르고 "View on map" 은 내지 않는다(이미 지도에 떠 있다) */
+  isSelected?: boolean;
   tagGroupMap: TagGroupColorMap;
   matchedTopicIds?: string[];
   onCardTap: (placeId: string) => void;
@@ -39,7 +41,7 @@ interface Props {
   onPostNavigate?: () => void;
 }
 
-export function PlaceListSheetCard({ post, place, isSaved, isFocused, tagGroupMap, matchedTopicIds, onCardTap, onViewPlace, onPostNavigate }: Props) {
+export function PlaceListSheetCard({ post, place, isSaved, isFocused, isSelected, tagGroupMap, matchedTopicIds, onCardTap, onViewPlace, onPostNavigate }: Props) {
   const cardImageUrl = post.imageUrl ?? post.images[0] ?? null;
 
   const areaLabel = place.area
@@ -67,8 +69,9 @@ export function PlaceListSheetCard({ post, place, isSaved, isFocused, tagGroupMa
 
   return (
     <div
-      className={`relative flex gap-3 items-center bg-white border border-border/40 rounded-2xl px-3 py-3 cursor-pointer active:opacity-70 transition-opacity ${isFocused ? "ring-2 ring-brand" : ""}`}
+      className={`relative flex gap-3 items-center bg-white border border-border/40 rounded-2xl px-3 py-3 cursor-pointer active:opacity-70 transition-opacity ${isFocused || isSelected ? "ring-2 ring-brand" : ""}`}
       onClick={() => onCardTap(place.id)}
+      data-place-id={place.id}
     >
       {/* 스크랩 버튼 — absolute top-right */}
       <div className="absolute -top-1.5 right-3 z-10">

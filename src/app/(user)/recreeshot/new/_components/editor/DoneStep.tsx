@@ -29,7 +29,7 @@ export function DoneStep({ shotPreviewUrl, createdId }: Props) {
         <button
           type="button"
           onClick={() => router.push(`/recreeshot/${createdId}?from=new`)}
-          className="w-full py-3 rounded-full font-semibold text-sm bg-brand text-black"
+          className="w-full py-3 rounded-full font-semibold text-sm bg-brand text-brand-foreground"
         >
           View your recreeshot
         </button>

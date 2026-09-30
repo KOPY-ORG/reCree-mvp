@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { BRAND } from "@/lib/brand";
 
 export default function LoginPage() {
   const [isPending, setIsPending] = useState(false);
@@ -25,7 +26,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm flex flex-col items-center gap-8">
         {/* 로고 */}
         <div className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight">reCree</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{BRAND.name}</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             recreate your travel memories
           </p>
@@ -35,7 +36,7 @@ export default function LoginPage() {
         <button
           onClick={handleGoogleLogin}
           disabled={isPending}
-          className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl font-semibold text-black bg-brand hover:opacity-90 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+          className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl font-semibold text-brand-foreground bg-brand hover:opacity-90 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <GoogleIcon />
           {isPending ? "Redirecting..." : "Continue with Google"}

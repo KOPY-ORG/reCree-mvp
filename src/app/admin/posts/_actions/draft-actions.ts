@@ -52,7 +52,7 @@ function buildAIDraftPrompt(post: PostWithPlace): string {
       : JSON.stringify(place.operatingHours)
     : "정보 없음";
 
-  return `You are a content writer for reCree, a travel guide platform for international K-culture (K-POP, K-Drama) fans.
+  return `You are a content writer for a K-culture fan travel platform that guides international K-culture (K-POP, K-Drama) fans.
 Based on the information below, write an engaging content draft that makes international fans want to visit this place.
 
 ## Place Info

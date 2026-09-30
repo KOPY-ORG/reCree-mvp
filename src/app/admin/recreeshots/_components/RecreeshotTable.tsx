@@ -177,7 +177,7 @@ export function RecreeshotTable({ rows }: { rows: RecreeshotRow[] }) {
                 {/* matchScore */}
                 <td className="px-4 py-3">
                   {row.matchScore != null && row.showBadge ? (
-                    <span className="inline-flex items-center bg-brand text-black text-xs font-bold px-2 py-0.5 rounded-full">
+                    <span className="inline-flex items-center bg-brand text-brand-foreground text-xs font-bold px-2 py-0.5 rounded-full">
                       {Math.round(row.matchScore)}%
                     </span>
                   ) : row.matchScore != null ? (

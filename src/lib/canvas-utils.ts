@@ -1,3 +1,5 @@
+import { BRAND } from "@/lib/brand";
+
 /** 캔버스에 이미지를 object-cover 방식으로 그리기 위한 소스 rect 계산 */
 export function coverRect(natW: number, natH: number, canvasW: number, canvasH: number) {
   const imgAspect = natW / natH;
@@ -24,6 +26,11 @@ export function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
+/** 캔버스는 CSS 변수를 못 읽는다 — :root 에 정의된 실제 색 값을 꺼내 쓴다 */
+function cssColor(name: string): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
 /** 리크리샷 캔버스에 매치 배지를 그립니다 */
 export function drawReCreeshotBadge(
   ctx: CanvasRenderingContext2D,
@@ -40,7 +47,7 @@ export function drawReCreeshotBadge(
   const badgeX = W - badgeW - W * 0.03;
   const badgeY = W * 0.03;
   const grad = ctx.createLinearGradient(badgeX, 0, badgeX + badgeW * 1.5, 0);
-  grad.addColorStop(0, "#D3FD52");
+  grad.addColorStop(0, cssColor("--palette-brand"));
   grad.addColorStop(1, "#ffffff");
   ctx.save();
   ctx.shadowColor = "rgba(0,0,0,0.15)";
@@ -52,7 +59,7 @@ export function drawReCreeshotBadge(
   ctx.fill();
   ctx.restore();
   ctx.save();
-  ctx.fillStyle = "#000000";
+  ctx.fillStyle = cssColor("--palette-on-brand");
   ctx.font = `700 ${fontSize}px -apple-system, Helvetica Neue, sans-serif`;
   ctx.textBaseline = "alphabetic";
   ctx.fillText(badgeText, badgeX + badgePadX, badgeY + padY + fontSize * 0.82);
@@ -72,6 +79,6 @@ export function drawReCreeshotWatermark(
   ctx.shadowColor = "rgba(0, 0, 0, 0.6)";
   ctx.shadowBlur = 3;
   ctx.shadowOffsetY = 2;
-  ctx.fillText("reCree", W - ctx.measureText("reCree").width - W * 0.03, H - W * 0.03);
+  ctx.fillText(BRAND.name, W - ctx.measureText(BRAND.name).width - W * 0.03, H - W * 0.03);
   ctx.restore();
 }

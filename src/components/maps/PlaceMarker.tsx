@@ -37,9 +37,9 @@ export function PlaceMarker({ color, isSelected, isSaved, nameEn, postCount, pla
 
   const inverted = isSelected && invertOnSelect;
   const bodyFill = inverted ? color : (hasGradient ? `url(#${gradientId})` : (gradient?.colorHex ?? color));
-  const glyphFill = inverted ? "#D3FD52" : GLYPH_FILL;
+  const glyphFill = inverted ? "var(--palette-brand)" : GLYPH_FILL;
   const glyphOpacity = inverted ? 1.0 : GLYPH_OPACITY;
-  const countTextFill = inverted ? "#D3FD52" : "#18181b";
+  const countTextFill = inverted ? "var(--palette-brand)" : "#18181b";
 
   return (
     <div
@@ -84,16 +84,15 @@ export function PlaceMarker({ color, isSelected, isSaved, nameEn, postCount, pla
         <ellipse cx="14" cy="35" rx="5" ry="1.8" fill="black" opacity={0.18} />
         <path
           d="M14 0C6.268 0 0 6.268 0 14C0 21.5 14 36 14 36C14 36 28 21.5 28 14C28 6.268 21.732 0 14 0Z"
-          fill={bodyFill}
+          style={{ fill: bodyFill }}
           filter="url(#pin-shadow)"
         />
         {/* 글리프: saved→북마크 / else→동그라미 */}
         {isSaved ? (
           <path
             d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"
-            fill={glyphFill}
+            style={{ fill: glyphFill, stroke: glyphFill }}
             fillOpacity={glyphOpacity}
-            stroke={glyphFill}
             strokeOpacity={glyphOpacity}
             strokeWidth={1.5}
             strokeLinecap="round"
@@ -101,7 +100,7 @@ export function PlaceMarker({ color, isSelected, isSaved, nameEn, postCount, pla
             transform={`translate(${BM_TX}, ${BM_TY}) scale(${BM_SCALE})`}
           />
         ) : (
-          <circle cx={GX} cy={GY} r={GR} fill={glyphFill} fillOpacity={glyphOpacity} />
+          <circle cx={GX} cy={GY} r={GR} style={{ fill: glyphFill }} fillOpacity={glyphOpacity} />
         )}
         {!isSaved && postCount >= 2 && (
           <text
@@ -111,8 +110,7 @@ export function PlaceMarker({ color, isSelected, isSaved, nameEn, postCount, pla
             dominantBaseline="central"
             fontSize={countLabel.length > 1 ? 6.5 : 8}
             fontWeight="700"
-            fill={countTextFill}
-            style={{ pointerEvents: "none" }}
+            style={{ fill: countTextFill, pointerEvents: "none" }}
           >
             {countLabel}
           </text>

@@ -308,14 +308,14 @@ export function AttractionDetailSheet({
           e.preventDefault();
           shownTrigger?.focus({ preventScroll: true });
         }}
-        // 시트는 fixed 라 레이아웃의 540px 기둥 밖으로 나간다 — 그 폭을 여기서 다시 건다.
+        // 시트는 fixed 라 레이아웃 기둥(--app-col-w) 밖으로 나간다 — 그 폭을 여기서 다시 건다.
         // (user)/layout.tsx:20 과 같은 값·같은 방식이고, 탭바(BottomNav.tsx:163)·
         // 맵 탭바(ExploreTabBar.tsx:30)처럼 흐름을 벗어난 것들이 이미 쓰는 방법이다.
         // inset-x-0 위에 max-w 와 mx-auto 를 얹으면 좌우 auto 가 남는 자리를 반씩 먹어 가운데로 간다
-        className="mx-auto flex max-h-[88vh] max-w-[540px] flex-col gap-0 rounded-t-2xl p-0"
+        className="mx-auto flex max-h-[88vh] max-w-[var(--app-col-w)] flex-col gap-0 rounded-t-2xl p-0"
       >
         <div className="flex flex-none justify-center pb-1 pt-3">
-          <div className="h-1 w-9 rounded-full bg-muted-foreground/25" />
+          <div className="h-1 w-9 rounded-full bg-muted-foreground/25 lg:hidden" />
         </div>
 
         <div className="flex flex-none items-start gap-2 px-4 pb-3">

@@ -228,7 +228,7 @@ export function PostComments({
                   type="button"
                   onClick={handleSubmit}
                   disabled={!trimmedBody || pending}
-                  className="px-4 py-1.5 rounded-full text-sm font-medium bg-brand text-black disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+                  className="px-4 py-1.5 rounded-full text-sm font-semibold bg-brand text-brand-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
                 >
                   {pending ? "Posting…" : "Post"}
                 </button>
@@ -239,7 +239,7 @@ export function PostComments({
               <button
                 type="button"
                 onClick={() => setShowLoginDialog(true)}
-                className="px-5 py-2 rounded-full text-sm font-semibold bg-brand text-black hover:opacity-90 active:scale-95 transition-all"
+                className="px-5 py-2 rounded-full text-sm font-semibold bg-brand text-brand-foreground hover:opacity-90 active:scale-95 transition-all"
               >
                 Sign in to comment
               </button>
@@ -275,7 +275,7 @@ export function PostComments({
           </DialogHeader>
           <Link
             href="/login"
-            className="mt-2 w-full py-2.5 rounded-full bg-brand text-black text-sm font-semibold text-center block transition-opacity hover:opacity-80"
+            className="mt-2 w-full py-2.5 rounded-full bg-brand text-brand-foreground text-sm font-semibold text-center block transition-opacity hover:opacity-80"
           >
             Sign in
           </Link>

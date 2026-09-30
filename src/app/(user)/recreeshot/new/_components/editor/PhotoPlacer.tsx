@@ -63,7 +63,7 @@ function FrameCanvasPreview({
               height: pct(slot.height, canvasHeight),
               overflow: "hidden",
               background: d.previewUrl ? "transparent" : (i === 0 ? "var(--palette-brand-sub3)" : "var(--palette-brand-sub2)"),
-              outline: showOutline ? "1.5px dashed #a8cc00" : "none",
+              outline: showOutline ? "1.5px dashed var(--palette-brand)" : "none",
               outlineOffset: "-1px",
               boxSizing: "border-box",
               cursor: d.previewUrl ? "default" : "pointer",
@@ -293,11 +293,11 @@ export function PhotoPlacer({
             width: "100%",
             padding: "14px 0",
             borderRadius: 9999,
-            background: canProceed && !isUploading ? "#D3FD52" : "#e5e5e5",
+            background: canProceed && !isUploading ? "var(--palette-brand)" : "#e5e5e5",
             border: "none",
             fontWeight: 700,
             fontSize: 16,
-            color: canProceed && !isUploading ? "#0b0b0b" : "#aaa",
+            color: canProceed && !isUploading ? "var(--palette-on-brand)" : "#aaa",
             cursor: canProceed && !isUploading ? "pointer" : "default",
           }}
         >

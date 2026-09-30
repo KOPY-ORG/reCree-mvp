@@ -25,6 +25,7 @@ import type { CourseListItem } from "@/lib/course-queries";
 import { deleteAccount } from "../_actions/profile-actions";
 import { signOut } from "@/lib/actions/auth";
 import { showError } from "@/lib/toast";
+import { BRAND } from "@/lib/brand";
 
 /** 프로필에 미리 보여줄 코스 개수. 넘으면 "See all" 로 /journeys 에 넘긴다 */
 const PROFILE_COURSE_LIMIT = 6;
@@ -75,11 +76,12 @@ export function ProfileView({
   }
 
   return (
-    <div className="flex flex-col min-h-full">
+    // lg: 한 사람의 모음이라 1440 전체로 펼치지 않고 읽는 폭에서 멈춘다
+    <div className="flex flex-col min-h-full lg:mx-auto lg:w-full lg:max-w-5xl">
       {/* 자체 헤더 */}
       <header className="app-header">
         <div className="h-12 flex items-center justify-between px-4">
-          <span className="font-bold text-base tracking-tight">reCree</span>
+          <span className="font-bold text-base tracking-tight">{BRAND.name}</span>
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
@@ -177,7 +179,7 @@ export function ProfileView({
               className="flex items-center gap-2.5 rounded-2xl bg-muted px-3.5 py-3.5 transition-opacity active:opacity-70"
             >
               <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand">
-                <Plus className="size-4 text-black" strokeWidth={2.6} />
+                <Plus className="size-4 text-brand-foreground" strokeWidth={2.6} />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-semibold">Create new journey</span>
@@ -220,7 +222,7 @@ export function ProfileView({
           </Link>
         </div>
       ) : (
-        <div className="px-2 grid grid-cols-2 gap-2 bg-background">
+        <div className="px-2 grid grid-cols-2 gap-2 bg-background md:grid-cols-3 lg:grid-cols-4">
           {recreeshots.map((shot) => {
             const isHidden = shot.status === "HIDDEN" || shot.status === "REPORT_HIDDEN";
             return (
@@ -320,7 +322,7 @@ export function ProfileView({
 
       {/* 계정 탈퇴 확인 다이얼로그 */}
       {showDeleteDialog && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-4 pb-8">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-4 pb-8 lg:items-center lg:pb-0">
           <div className="w-full max-w-sm bg-background rounded-2xl overflow-hidden">
             <div className="px-5 pt-6 pb-4 text-center space-y-2">
               <p className="font-bold text-base">Delete account?</p>

@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { LayoutGrid } from "lucide-react";
+import { BRAND } from "@/lib/brand";
 // import { LanguageSelector } from "./LanguageSelector";
 
 export function AppHeader() {
   return (
     <header className="app-header">
       <div className="h-12 flex items-center justify-between px-4">
-        <span className="font-bold text-base tracking-tight">reCree</span>
+        <span className="font-bold text-base tracking-tight">{BRAND.name}</span>
 
         <div className="flex items-center gap-1">
           <Link

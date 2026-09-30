@@ -9,7 +9,7 @@ type Props = (LinkProps | ButtonProps) & {
   children?: React.ReactNode;
 };
 
-const inactiveCls = "bg-brand-sub2 text-brand-foreground border-[0.5px] border-brand active:opacity-70";
+const inactiveCls = "bg-brand-sub2 text-black border-[0.5px] border-brand active:opacity-70";
 const activeCls = "bg-foreground text-background border-foreground";
 
 export function AllBadge({ className, children, ...rest }: Props) {

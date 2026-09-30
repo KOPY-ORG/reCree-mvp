@@ -1,4 +1,5 @@
 import { ExternalLink } from "lucide-react";
+import { BRAND } from "@/lib/brand";
 
 interface Props {
   purchaseUrl: string;
@@ -14,14 +15,14 @@ export function PurchaseButton({ purchaseUrl, isAffiliate }: Props) {
         href={purchaseUrl}
         target="_blank"
         rel="sponsored nofollow noopener noreferrer"
-        className="w-full py-2.5 rounded-full bg-brand text-black text-sm font-semibold text-center flex items-center justify-center gap-1.5 transition-opacity hover:opacity-80"
+        className="w-full py-2.5 rounded-full bg-brand text-brand-foreground text-sm font-semibold text-center flex items-center justify-center gap-1.5 transition-opacity hover:opacity-80"
       >
         View Product
         <ExternalLink className="size-4" />
       </a>
       {isAffiliate && (
         <p className="text-xs text-muted-foreground text-center mt-1.5">
-          If you purchase through this link, reCree may earn a commission.
+          If you purchase through this link, {BRAND.name} may earn a commission.
         </p>
       )}
     </div>

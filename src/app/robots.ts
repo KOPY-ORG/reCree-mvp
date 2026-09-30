@@ -1,4 +1,5 @@
 import { MetadataRoute } from "next";
+import { BRAND } from "@/lib/brand";
 
 export default function robots(): MetadataRoute.Robots {
   const isProduction = process.env.VERCEL_ENV === "production";
@@ -11,6 +12,6 @@ export default function robots(): MetadataRoute.Robots {
 
   return {
     rules: { userAgent: "*", allow: "/" },
-    sitemap: "https://recree.io/sitemap.xml",
+    sitemap: `${BRAND.siteUrl}/sitemap.xml`,
   };
 }

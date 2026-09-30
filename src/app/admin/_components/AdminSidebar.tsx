@@ -23,6 +23,7 @@ import {
   Sticker,
 } from "lucide-react";
 import { signOut } from "@/lib/actions/auth";
+import { BRAND } from "@/lib/brand";
 
 const CONTENT_MENUS = [
   { label: "대시보드", icon: LayoutDashboard, href: "/admin" },
@@ -85,7 +86,7 @@ export function AdminSidebar({ userEmail, userInitial }: AdminSidebarProps) {
         <div className="flex items-center gap-2.5">
           <div className="size-6 rounded bg-brand shrink-0" />
           <p className="font-bold text-sm tracking-tight text-white">
-            reCree Admin
+            {BRAND.name} Admin
           </p>
         </div>
       </div>
@@ -99,10 +100,10 @@ export function AdminSidebar({ userEmail, userInitial }: AdminSidebarProps) {
             <Link
               key={href}
               href={href}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors ${
                 isActive(href)
-                  ? "bg-brand text-brand-foreground"
-                  : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                  ? "bg-brand text-brand-foreground font-semibold"
+                  : "font-medium text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
               }`}
             >
               <Icon className="size-4 shrink-0" />
@@ -118,10 +119,10 @@ export function AdminSidebar({ userEmail, userInitial }: AdminSidebarProps) {
             <Link
               key={href}
               href={href}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors ${
                 isActive(href)
-                  ? "bg-brand text-brand-foreground"
-                  : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                  ? "bg-brand text-brand-foreground font-semibold"
+                  : "font-medium text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
               }`}
             >
               <Icon className="size-4 shrink-0" />
@@ -137,10 +138,10 @@ export function AdminSidebar({ userEmail, userInitial }: AdminSidebarProps) {
             <Link
               key={href}
               href={href}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors ${
                 isActive(href)
-                  ? "bg-brand text-brand-foreground"
-                  : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                  ? "bg-brand text-brand-foreground font-semibold"
+                  : "font-medium text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
               }`}
             >
               <Icon className="size-4 shrink-0" />
@@ -156,10 +157,10 @@ export function AdminSidebar({ userEmail, userInitial }: AdminSidebarProps) {
             <Link
               key={href}
               href={href}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors ${
                 isActive(href)
-                  ? "bg-brand text-brand-foreground"
-                  : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                  ? "bg-brand text-brand-foreground font-semibold"
+                  : "font-medium text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
               }`}
             >
               <Icon className="size-4 shrink-0" />
@@ -175,10 +176,10 @@ export function AdminSidebar({ userEmail, userInitial }: AdminSidebarProps) {
             <Link
               key={href}
               href={href}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors ${
                 isActive(href)
-                  ? "bg-brand text-brand-foreground"
-                  : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                  ? "bg-brand text-brand-foreground font-semibold"
+                  : "font-medium text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
               }`}
             >
               <Icon className="size-4 shrink-0" />

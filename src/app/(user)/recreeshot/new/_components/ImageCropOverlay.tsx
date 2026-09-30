@@ -203,7 +203,7 @@ export function ImageCropOverlay({ file, onConfirm, onClose, cropRatio = DEFAULT
           type="button"
           onClick={handleConfirm}
           disabled={isProcessing || bw === 0}
-          className="px-3 py-1.5 text-sm font-bold text-black bg-brand rounded-full disabled:opacity-40"
+          className="px-3 py-1.5 text-sm font-bold text-brand-foreground bg-brand rounded-full disabled:opacity-40"
         >
           {isProcessing ? "..." : "Done"}
         </button>

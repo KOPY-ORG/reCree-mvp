@@ -36,7 +36,7 @@ export function HomeBannerCarousel({ banners }: { banners: BannerItem[] }) {
           <Link
             key={banner.slug}
             href={`/posts/${banner.slug}`}
-            className={`shrink-0 w-[85%] rounded-xl overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.06)] bg-background${index === banners.length - 1 ? " mr-4" : ""}`}
+            className={`shrink-0 w-[85%] lg:w-[46%] xl:w-[32%] rounded-xl overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.06)] bg-background${index === banners.length - 1 ? " mr-4" : ""}`}
           >
             {/* 사진 영역 */}
             <div className="relative aspect-video overflow-hidden bg-muted">
@@ -48,7 +48,7 @@ export function HomeBannerCarousel({ banners }: { banners: BannerItem[] }) {
                   unoptimized={isExternalImage(banner.thumbnailUrl)}
                   className="object-cover"
                   style={focalStyle(banner.focalX, banner.focalY, banner.zoom)}
-                  sizes="(max-width: 672px) 85vw, 560px"
+                  sizes="(min-width: 1024px) 300px, (max-width: 672px) 85vw, 560px"
                   priority
                 />
               ) : (

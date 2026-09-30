@@ -9,6 +9,7 @@ import type { TagGroupColorMap } from "@/lib/post-labels";
 import { TopicDetailHeader } from "./_components/TopicDetailHeader";
 import { TopicHero } from "./_components/TopicHero";
 import { PostsGrid } from "./_components/PostsGrid";
+import { BRAND } from "@/lib/brand";
 
 type Params = { slug: string };
 
@@ -22,11 +23,11 @@ export async function generateMetadata({
   if (!topic) return {};
 
   return {
-    title: `${topic.nameEn} | reCree`,
-    description: `Discover K-spots related to ${topic.nameEn} on reCree.`,
+    title: topic.nameEn,
+    description: `Discover K-spots related to ${topic.nameEn} on ${BRAND.name}.`,
     openGraph: {
-      title: `${topic.nameEn} | reCree`,
-      description: `Discover K-spots related to ${topic.nameEn} on reCree.`,
+      title: `${topic.nameEn} | ${BRAND.name}`,
+      description: `Discover K-spots related to ${topic.nameEn} on ${BRAND.name}.`,
     },
   };
 }
@@ -84,7 +85,7 @@ export default async function TopicDetailPage({
   );
 
   return (
-    <div className="max-w-2xl mx-auto pb-14">
+    <div className="max-w-2xl mx-auto pb-14 lg:max-w-none">
       <TopicDetailHeader />
       <TopicHero
         topic={topic}
@@ -92,7 +93,7 @@ export default async function TopicDetailPage({
         isLoggedIn={!!user}
         initialFollowerCount={followerCount}
       />
-      <div className="px-4 py-4">
+      <div className="px-4 py-4 lg:px-10">
         <PostsGrid
           posts={posts}
           tagGroupMap={tagGroupMap}

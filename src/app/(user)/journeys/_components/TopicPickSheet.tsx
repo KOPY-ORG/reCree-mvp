@@ -5,7 +5,7 @@
 // 그쪽은 Dialog 에 L0~L3 전부를 트리로 펼치는 편집자 도구이고,
 // 여기는 바텀시트에 L2 만 평평하게 세우는 사용자 화면이다.
 //
-// 껍데기(핸들 · 제목 줄 · max-w-[540px])는 PlaceAddSheet 과 같은 모양을 쓴다.
+// 껍데기(핸들 · 제목 줄 · max-w-[var(--app-col-w)])는 PlaceAddSheet 과 같은 모양을 쓴다.
 // 여정 편집기에서 위로 올라오는 시트가 둘인데 서로 다르게 생길 이유가 없다.
 
 import { useEffect, useMemo, useState } from "react";
@@ -105,10 +105,10 @@ export function TopicPickSheet({ open, onOpenChange, selected, onConfirm }: Topi
         side="bottom"
         showCloseButton={false}
         aria-describedby={undefined}
-        className="mx-auto flex max-h-[88vh] max-w-[540px] flex-col gap-0 rounded-t-2xl p-0"
+        className="mx-auto flex max-h-[88vh] max-w-[var(--app-col-w)] flex-col gap-0 rounded-t-2xl p-0"
       >
         <div className="flex flex-none justify-center pb-1 pt-3">
-          <div className="h-1 w-9 rounded-full bg-muted-foreground/25" />
+          <div className="h-1 w-9 rounded-full bg-muted-foreground/25 lg:hidden" />
         </div>
 
         <div className="flex flex-none items-center gap-2 px-3 pb-1">
@@ -183,7 +183,7 @@ export function TopicPickSheet({ open, onOpenChange, selected, onConfirm }: Topi
               onConfirm(picked);
               onOpenChange(false);
             }}
-            className="h-11 flex-none rounded-full bg-brand px-6 text-[13px] font-semibold text-black transition-opacity active:opacity-70"
+            className="h-11 flex-none rounded-full bg-brand px-6 text-[13px] font-semibold text-brand-foreground transition-opacity active:opacity-70"
           >
             Done
           </button>

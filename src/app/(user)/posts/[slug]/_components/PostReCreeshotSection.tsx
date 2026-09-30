@@ -43,7 +43,7 @@ export function PostReCreeshotSection({ postId, shots, originalImageUrl, isLogge
     <div className="mt-3">
       {/* 섹션 헤더 */}
       <div className="px-4 mb-2 flex items-center justify-between">
-        <p className="text-sm font-bold">How others reCree&apos;d</p>
+        <p className="text-sm font-bold">Fans who&apos;ve been here</p>
         {shots.length > 0 && (
           <span className="text-xs text-muted-foreground">{shots.length} shots</span>
         )}
@@ -90,7 +90,7 @@ export function PostReCreeshotSection({ postId, shots, originalImageUrl, isLogge
           </DialogHeader>
           <Link
             href="/login"
-            className="mt-2 w-full py-2.5 rounded-full bg-brand text-black text-sm font-semibold text-center block transition-opacity hover:opacity-80"
+            className="mt-2 w-full py-2.5 rounded-full bg-brand text-brand-foreground text-sm font-semibold text-center block transition-opacity hover:opacity-80"
           >
             Sign in
           </Link>

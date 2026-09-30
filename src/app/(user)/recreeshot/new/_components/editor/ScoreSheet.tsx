@@ -36,9 +36,9 @@ export function ScoreSheet({
 }: Props) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="mx-auto max-w-[540px] rounded-t-2xl px-0 pt-0 pb-safe max-h-[85vh] overflow-y-auto">
+      <SheetContent side="bottom" className="mx-auto max-w-[var(--app-col-w)] rounded-t-2xl px-0 pt-0 pb-safe max-h-[85vh] overflow-y-auto">
         <SheetTitle className="sr-only">Match Score</SheetTitle>
-        <div className="mx-auto mt-3 mb-1 w-10 h-1 rounded-full bg-muted/60" />
+        <div className="mx-auto mt-3 mb-1 w-10 h-1 rounded-full bg-muted/60 lg:hidden" />
 
         {phase === "idle" && (
           <IdlePhase
@@ -109,7 +109,7 @@ function IdlePhase({
       <button
         type="button"
         onClick={onCalculate}
-        className="w-full py-4 rounded-full bg-brand text-black font-bold text-base flex items-center justify-center gap-2"
+        className="w-full py-4 rounded-full bg-brand text-brand-foreground font-bold text-base flex items-center justify-center gap-2"
       >
         <Sparkles className="size-4" />
         Calculate match
@@ -166,7 +166,7 @@ function ScannedPhoto({ url, delay }: { url: string | null; delay: string }) {
       )}
       {/* 스캔 라인 */}
       <div
-        className="absolute inset-x-0 h-0.5 bg-brand shadow-[0_0_8px_2px_#D3FD52]"
+        className="absolute inset-x-0 h-0.5 bg-brand shadow-[0_0_8px_2px_var(--palette-brand)]"
         style={{
           animation: "scanline 1.6s linear infinite",
           animationDelay: delay,

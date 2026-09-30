@@ -22,7 +22,7 @@ export function ScrapButton({ postId, initialSaved, size = "md", unsavedClassNam
 
   const iconSize = size === "sm" ? "h-4 w-4" : size === "lg" ? "h-6 w-6" : "h-5 w-5";
   const unsavedClass = unsavedClassName ?? "text-muted-foreground hover:text-foreground";
-  const activeSavedStyle = savedStyle ?? { fill: "#D3FD52", stroke: "#D3FD52" };
+  const activeSavedStyle = savedStyle ?? { fill: "var(--palette-brand)", stroke: "var(--palette-brand)" };
 
   function handleClick(e: React.MouseEvent) {
     e.preventDefault();

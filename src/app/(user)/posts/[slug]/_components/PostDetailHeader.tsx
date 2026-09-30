@@ -18,8 +18,9 @@ export function PostDetailHeader({ postId, isLoggedIn }: Props) {
 
   return (
     <>
-      <div className="fixed top-0 left-0 right-0 z-50 h-12">
-        <div className="max-w-[540px] mx-auto h-full flex items-center justify-between px-3">
+      {/* lg: 배너가 헤더 밑으로 들어가지 않으므로 투명 오버레이 대신 .app-header 와 같은 바가 된다 */}
+      <div className="fixed top-0 left-0 right-0 z-50 h-12 lg:left-[var(--side-nav-space)] lg:bg-background/95 lg:backdrop-blur-sm lg:shadow-[0_1px_4px_rgba(0,0,0,0.07)]">
+        <div className="max-w-[var(--app-col-w)] mx-auto h-full flex items-center justify-between px-3 lg:px-6">
         <button
           type="button"
           onClick={() => {
@@ -31,7 +32,7 @@ export function PostDetailHeader({ postId, isLoggedIn }: Props) {
           }}
           className="flex items-center justify-center h-8 w-8"
         >
-          <ArrowLeft className="h-5 w-5 text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]" />
+          <ArrowLeft className="h-5 w-5 text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)] lg:text-foreground lg:drop-shadow-none" />
         </button>
 
         {postId && (
@@ -41,7 +42,7 @@ export function PostDetailHeader({ postId, isLoggedIn }: Props) {
               onClick={() => setMenuOpen((v) => !v)}
               className="flex items-center justify-center h-8 w-8"
             >
-              <MoreVertical className="h-5 w-5 text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]" />
+              <MoreVertical className="h-5 w-5 text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)] lg:text-foreground lg:drop-shadow-none" />
             </button>
 
             {menuOpen && (

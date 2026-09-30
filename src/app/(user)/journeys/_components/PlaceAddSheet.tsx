@@ -14,6 +14,7 @@ import {
 import { fetchNearbyAttractions } from "@/app/(user)/_actions/tour-actions";
 import { TOUR_API_ATTRIBUTION } from "@/lib/tour-api/attribution";
 import { CHIP_BG, INK, LINE, MUTED, PAPER, SUB } from "../_constants";
+import { BRAND } from "@/lib/brand";
 
 // ─── 상수 ────────────────────────────────────────────────────────────────────
 
@@ -483,7 +484,7 @@ export function PlaceAddSheet({
             className="min-w-0 flex-1 truncate text-[10.5px] font-semibold uppercase tracking-[0.06em]"
             style={{ color: SUB }}
           >
-            {themes.length > 0 ? `From your ${themeNames} theme` : "Popular on reCree"}
+            {themes.length > 0 ? `From your ${themeNames} theme` : `Popular on ${BRAND.name}`}
           </p>
           {themes.length > 0 && (
             <span className="flex-none text-[10.5px] font-semibold" style={{ color: SUB }}>
@@ -561,12 +562,12 @@ export function PlaceAddSheet({
         side="bottom"
         showCloseButton={false}
         aria-describedby={undefined}
-        // 시트는 fixed 라 레이아웃의 540px 기둥 밖으로 나간다 — 그 폭을 여기서 다시 건다
+        // 시트는 fixed 라 레이아웃 기둥(--app-col-w) 밖으로 나간다 — 그 폭을 여기서 다시 건다
         // ((user)/layout.tsx:20 과 같은 값·같은 방식. AttractionDetailSheet.tsx:266 참고)
-        className="mx-auto flex max-h-[88vh] max-w-[540px] flex-col gap-0 rounded-t-2xl p-0"
+        className="mx-auto flex max-h-[88vh] max-w-[var(--app-col-w)] flex-col gap-0 rounded-t-2xl p-0"
       >
         <div className="flex flex-none justify-center pb-1 pt-3">
-          <div className="h-1 w-9 rounded-full bg-muted-foreground/25" />
+          <div className="h-1 w-9 rounded-full bg-muted-foreground/25 lg:hidden" />
         </div>
 
         <div className="flex flex-none items-center gap-2 px-3 pb-1">

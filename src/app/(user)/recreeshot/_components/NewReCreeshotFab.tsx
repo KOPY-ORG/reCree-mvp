@@ -3,8 +3,8 @@ import { Plus } from "lucide-react";
 
 export function NewReCreeshotFab() {
   return (
-    <div className="fixed bottom-[var(--bottom-nav-space)] inset-x-0 z-50 h-10 pointer-events-none">
-      <div className="max-w-[540px] mx-auto h-full relative">
+    <div className="fixed bottom-[var(--bottom-nav-space)] inset-x-0 z-50 h-10 pointer-events-none lg:pl-[var(--side-nav-space)]">
+      <div className="max-w-[var(--app-col-w)] mx-auto h-full relative">
         <Link
           href="/recreeshot/new"
           aria-label="New recreeshot"
@@ -17,9 +17,9 @@ export function NewReCreeshotFab() {
             transition-all duration-200
             outline-none
           "
-          style={{ background: "linear-gradient(135deg, rgba(216,255,120,0.92) 0%, rgba(211,253,82,0.92) 100%)" }}
+          style={{ background: "linear-gradient(135deg, color-mix(in srgb, color-mix(in srgb, var(--palette-brand) 80%, white) 92%, transparent) 0%, color-mix(in srgb, var(--palette-brand) 92%, transparent) 100%)" }}
         >
-          <Plus size={20} color="#000000" strokeWidth={2.0} />
+          <Plus size={20} color="var(--palette-on-brand)" strokeWidth={2.0} />
         </Link>
       </div>
     </div>

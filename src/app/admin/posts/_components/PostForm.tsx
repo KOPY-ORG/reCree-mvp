@@ -878,7 +878,7 @@ export function PostForm({
             {!isEmbedded && status !== "PUBLISHED" && (
               <Button
                 size="sm"
-                className="bg-brand text-black hover:bg-brand/90"
+                className="bg-brand text-brand-foreground font-semibold hover:bg-brand/90"
                 disabled={isPending || slugStatus === "checking" || slugStatus === "error" || slugStatus === "invalid"}
                 onClick={() => handleSubmit("PUBLISHED")}
               >

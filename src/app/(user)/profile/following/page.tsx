@@ -6,7 +6,7 @@ import { getMyFollows } from "@/lib/follow-queries";
 import { FollowingList } from "./_components/FollowingList";
 
 export const metadata: Metadata = {
-  title: "Following | reCree",
+  title: "Following",
 };
 
 export default async function FollowingPage() {
@@ -24,7 +24,7 @@ export default async function FollowingPage() {
         </div>
         <Link
           href="/login"
-          className="mt-2 px-5 py-2.5 rounded-full bg-brand text-black text-sm font-semibold transition-opacity hover:opacity-80"
+          className="mt-2 px-5 py-2.5 rounded-full bg-brand text-brand-foreground text-sm font-semibold transition-opacity hover:opacity-80"
         >
           Sign in
         </Link>

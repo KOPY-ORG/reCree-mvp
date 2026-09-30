@@ -77,8 +77,8 @@ export function ScrollToTopButton({ scrollRef }: Props = {}) {
   }
 
   return (
-    <div className="fixed inset-x-0 z-50 h-10 pointer-events-none" style={{ bottom }}>
-      <div className="max-w-[540px] mx-auto h-full relative">
+    <div className="fixed inset-x-0 z-50 h-10 pointer-events-none lg:pl-[var(--side-nav-space)]" style={{ bottom }}>
+      <div className="max-w-[var(--app-col-w)] mx-auto h-full relative">
         <button
           type="button"
           aria-label="맨 위로"
@@ -92,7 +92,7 @@ export function ScrollToTopButton({ scrollRef }: Props = {}) {
             shadow-[0_4px_16px_rgba(0,0,0,0.18)]
             transition-all duration-200
             focus-visible:outline-none focus-visible:ring-2
-            focus-visible:ring-[#D3FD52] focus-visible:ring-offset-1
+            focus-visible:ring-[var(--palette-brand)] focus-visible:ring-offset-1
             ${visible
               ? "opacity-100 translate-y-0 pointer-events-auto"
               : "opacity-0 translate-y-2 pointer-events-none"

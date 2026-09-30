@@ -106,7 +106,7 @@ export function InfiniteFeed({
 
   return (
     <div>
-      <div className="flex flex-col gap-10">
+      <div className="flex flex-col gap-10 lg:grid lg:grid-cols-2 lg:gap-x-6">
         {posts.map((post) => (
           <FeedCard
             key={post.id}
@@ -118,7 +118,7 @@ export function InfiniteFeed({
       </div>
 
       {isLoading && (
-        <div className="flex flex-col gap-10 mt-6">
+        <div className="flex flex-col gap-10 mt-6 lg:grid lg:grid-cols-2 lg:gap-x-6">
           {[0, 1].map((i) => (
             <div key={i} className="animate-pulse">
               <div className="aspect-video rounded-lg bg-muted" />

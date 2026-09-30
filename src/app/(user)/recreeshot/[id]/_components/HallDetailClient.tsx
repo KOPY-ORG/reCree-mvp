@@ -81,7 +81,7 @@ export function HallDetailClient({
           <Heart
             className="size-5"
             strokeWidth={1.5}
-            style={liked ? { fill: "#ef4444", stroke: "#ef4444" } : undefined}
+            style={liked ? { fill: "var(--palette-brand)", stroke: "var(--palette-brand)" } : undefined}
           />
           {likeCount > 0 && (
             <span className="text-sm text-muted-foreground">{likeCount}</span>
@@ -97,7 +97,7 @@ export function HallDetailClient({
           <Bookmark
             className="size-5"
             strokeWidth={1.5}
-            style={saved ? { fill: "#D3FD52", stroke: "#D3FD52" } : undefined}
+            style={saved ? { fill: "var(--palette-brand)", stroke: "var(--palette-brand)" } : undefined}
           />
         </button>
       </div>

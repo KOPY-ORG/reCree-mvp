@@ -32,16 +32,20 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
           {toast.message}
         </div>
       )}
-      <div className="absolute inset-x-4 bottom-[var(--bottom-nav-space)] z-50 bg-white rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.15)] overflow-hidden max-h-[50%]">
+      {/* lg: 지도 영역(패널 오른쪽 12 ~ 화면 오른쪽 12) 폭을 좌우 16 띄워 채운다.
+          바닥은 Google 로고 · 저작권 줄(지도 아래 끝 12 + 높이 ~26) 위로 16 — 54.
+          높이는 지도(루트 - 위아래 12)의 40% 까지 */}
+      <div className="absolute inset-x-4 bottom-[var(--bottom-nav-space)] z-50 bg-white rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.15)] overflow-hidden max-h-[50%] lg:left-[calc(var(--discover-panel-w)+28px)] lg:right-7 lg:bottom-[54px] lg:max-h-[calc((100%-24px)*0.4)] lg:rounded-2xl">
 
-        {/* 헤더 */}
-        <div className="px-5 pt-4 pb-2">
+        {/* 헤더. lg 는 한 줄 — 장소명 · 주소 · 액션 · 닫기. 1행을 lg:contents 로 풀어
+            두 줄의 요소를 한 flex 줄에 세우고 order 로 순서를 맞춘다 */}
+        <div className="px-5 pt-4 pb-2 lg:flex lg:items-center lg:gap-3 lg:pt-3">
           {/* 1행: 장소명(슬라이드) + 아이콘 */}
-          <div className="flex items-center gap-2">
-            <div className="flex-1 overflow-x-auto scrollbar-hide min-w-0">
-              <h2 className="text-lg font-bold whitespace-nowrap">{place.nameEn ?? place.nameKo}</h2>
+          <div className="flex items-center gap-2 lg:contents">
+            <div className="flex-1 overflow-x-auto scrollbar-hide min-w-0 lg:order-1 lg:flex-none lg:max-w-[45%]">
+              <h2 className="text-lg font-bold whitespace-nowrap lg:text-base">{place.nameEn ?? place.nameKo}</h2>
             </div>
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-1.5 shrink-0 lg:order-3">
               {place.googleMapsUrl && (
                 <a href={place.googleMapsUrl} target="_blank" rel="noopener noreferrer" className={iconBtnCls}>
                   <ExternalLink className="size-4" />
@@ -67,8 +71,8 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
           {(() => {
             const address = place.addressEn ?? place.addressKo;
             return address ? (
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-2">
-                <div className="flex-1 overflow-x-auto scrollbar-hide min-w-0">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-2 lg:order-2 lg:mt-0 lg:min-w-0 lg:flex-1">
+                <div className="flex-1 overflow-x-auto scrollbar-hide min-w-0 lg:flex-initial">
                   <span className="whitespace-nowrap">{address}</span>
                 </div>
                 <button
@@ -84,7 +88,7 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
         </div>
 
         {/* 포스트 캐러셀 */}
-        <div className="pt-2 pb-3">
+        <div className="pt-2 pb-3 lg:pt-1 lg:pb-1">
           <PostCardCarousel
             key={place.id}
             posts={place.posts}

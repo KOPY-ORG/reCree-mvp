@@ -331,7 +331,7 @@ function AddPlaceContent({ onSelect, onClose }: Props) {
             type="button"
             onClick={handleAdd}
             disabled={isSaving}
-            className="w-full py-3 rounded-full font-semibold text-sm bg-brand text-black disabled:opacity-40 disabled:cursor-not-allowed"
+            className="w-full py-3 rounded-full font-semibold text-sm bg-brand text-brand-foreground disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {isSaving ? "Adding..." : "Add this place"}
           </button>

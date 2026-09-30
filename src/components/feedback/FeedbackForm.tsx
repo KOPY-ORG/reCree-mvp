@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { submitFeedback } from "@/app/(user)/_actions/feedback-actions";
+import { BRAND } from "@/lib/brand";
 
 type Status = "idle" | "submitting" | "success" | "error";
 
@@ -65,7 +66,7 @@ export function FeedbackForm({ source }: Props) {
     return (
       <div className="flex items-center justify-between gap-4 rounded-xl bg-white shadow-[0_2px_16px_rgba(0,0,0,0.06)] px-4 py-3">
         <p className="text-sm text-muted-foreground">
-          Help us make reCree better — share your thoughts.
+          Help us make {BRAND.name} better — share your thoughts.
         </p>
         <Button
           size="sm"
@@ -144,7 +145,7 @@ export function FeedbackForm({ source }: Props) {
           size="sm"
           onClick={handleSubmit}
           disabled={!canSubmit}
-          className="rounded-full bg-brand text-black hover:bg-brand/90 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="rounded-full bg-brand text-brand-foreground font-semibold hover:bg-brand/90 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {status === "submitting" ? "Sending…" : "Send"}
         </Button>

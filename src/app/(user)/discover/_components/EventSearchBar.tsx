@@ -30,7 +30,7 @@ export function EventSearchBar({
   onSavedToggle,
 }: Props) {
   return (
-    <div className="absolute top-0 inset-x-0 z-[60] px-3 pt-3 pb-2">
+    <div className="absolute top-0 inset-x-0 z-[60] px-3 pt-3 pb-2 lg:right-auto lg:w-[var(--discover-panel-w)]">
       <div className="flex items-center gap-2">
         <div className="flex-1 flex items-center gap-2 bg-white rounded-full px-4 h-10 shadow-md">
           <Search className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -63,7 +63,7 @@ export function EventSearchBar({
           aria-label={savedOnly ? "Show all events" : "Show saved events"}
           onClick={onSavedToggle}
           className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center shadow-md active:opacity-70 transition-colors ${
-            savedOnly ? "bg-brand text-black" : "bg-white text-foreground"
+            savedOnly ? "bg-brand text-brand-foreground" : "bg-white text-foreground"
           }`}
         >
           <Bookmark className="size-5" strokeWidth={1.5} fill={savedOnly ? "currentColor" : "none"} />

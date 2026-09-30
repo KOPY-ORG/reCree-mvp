@@ -117,7 +117,7 @@ export function SavedClient({ posts, shopPosts, recreeshots, tagGroupConfigs, sa
   return (
     <div>
       {/* 탭 바 */}
-      <div className="flex border-b border-secondary sticky top-0 bg-background z-10 max-w-2xl mx-auto overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex border-b border-secondary sticky top-0 bg-background z-10 lg:top-12 max-w-2xl mx-auto overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {TABS.map((t) => (
           <button
             key={t}
@@ -146,7 +146,7 @@ export function SavedClient({ posts, shopPosts, recreeshots, tagGroupConfigs, sa
               </p>
               <Link
                 href="/discover"
-                className="mt-2 px-5 py-2.5 rounded-full bg-brand text-black text-sm font-semibold"
+                className="mt-2 px-5 py-2.5 rounded-full bg-brand text-brand-foreground text-sm font-semibold"
               >
                 Explore events
               </Link>
@@ -178,7 +178,7 @@ export function SavedClient({ posts, shopPosts, recreeshots, tagGroupConfigs, sa
               </p>
               <Link
                 href="/discover?tab=posts"
-                className="mt-2 px-5 py-2.5 rounded-full bg-brand text-black text-sm font-semibold"
+                className="mt-2 px-5 py-2.5 rounded-full bg-brand text-brand-foreground text-sm font-semibold"
               >
                 Explore posts
               </Link>
@@ -202,7 +202,7 @@ export function SavedClient({ posts, shopPosts, recreeshots, tagGroupConfigs, sa
               </p>
               <Link
                 href="/shop"
-                className="mt-2 px-5 py-2.5 rounded-full bg-brand text-black text-sm font-semibold"
+                className="mt-2 px-5 py-2.5 rounded-full bg-brand text-brand-foreground text-sm font-semibold"
               >
                 Explore shop
               </Link>
@@ -226,8 +226,8 @@ export function SavedClient({ posts, shopPosts, recreeshots, tagGroupConfigs, sa
               </p>
             </div>
           ) : (
-            <div className="px-4 py-4">
-            <div className="grid grid-cols-2 gap-2">
+            <div className="px-4 py-4 lg:mx-auto lg:max-w-2xl">
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
               {recreeshots.map((shot) => (
                 <Link
                   key={shot.id}

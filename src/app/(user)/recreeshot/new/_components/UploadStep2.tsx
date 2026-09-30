@@ -124,7 +124,7 @@ export function UploadStep2({
             onShare({ story, tips, showBadge: false });
           }}
           disabled={isSubmitting}
-          className="w-full py-3 rounded-full font-semibold text-sm bg-brand text-black disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+          className="w-full py-3 rounded-full font-semibold text-sm bg-brand text-brand-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
         >
           {isSubmitting ? "Sharing..." : "Share"}
         </button>

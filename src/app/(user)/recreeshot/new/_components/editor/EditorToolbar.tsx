@@ -85,7 +85,7 @@ export function EditorToolbar({
                   key={id}
                   type="button"
                   onClick={() => onTemplateChange(id)}
-                  className={`flex-1 py-2.5 rounded-full text-sm font-bold transition-colors ${isActive ? "bg-brand text-[#0C0D0E] shadow-[0_1px_4px_rgba(0,0,0,.12)]" : "text-[#8A8E94]"}`}
+                  className={`flex-1 py-2.5 rounded-full text-sm font-bold transition-colors ${isActive ? "bg-brand text-brand-foreground shadow-[0_1px_4px_rgba(0,0,0,.12)]" : "text-[#8A8E94]"}`}
                 >
                   {id === "vertical-full" ? "No border" : "Border"}
                 </button>
@@ -231,7 +231,7 @@ function ScoreTabButton({ matchScore, showMatchScore, onPress, onToggle }: {
       >
         <div className="relative">
           <Percent className="size-5" />
-          <span className="absolute -top-1 -right-1.5 bg-brand text-black text-[8px] font-bold w-3.5 h-3.5 rounded-full flex items-center justify-center leading-none">
+          <span className="absolute -top-1 -right-1.5 bg-brand text-brand-foreground text-[8px] font-bold w-3.5 h-3.5 rounded-full flex items-center justify-center leading-none">
             ✓
           </span>
         </div>
@@ -265,7 +265,7 @@ function SheetTabButton({ icon, label, checked, required, onPress }: {
       <div className="relative">
         {icon}
         {checked ? (
-          <span className="absolute -top-1 -right-1.5 bg-brand text-black text-[8px] font-bold w-3.5 h-3.5 rounded-full flex items-center justify-center leading-none">
+          <span className="absolute -top-1 -right-1.5 bg-brand text-brand-foreground text-[8px] font-bold w-3.5 h-3.5 rounded-full flex items-center justify-center leading-none">
             ✓
           </span>
         ) : required ? (
