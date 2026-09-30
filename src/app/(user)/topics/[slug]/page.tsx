@@ -9,6 +9,7 @@ import type { TagGroupColorMap } from "@/lib/post-labels";
 import { TopicDetailHeader } from "./_components/TopicDetailHeader";
 import { TopicHero } from "./_components/TopicHero";
 import { PostsGrid } from "./_components/PostsGrid";
+import { BRAND } from "@/lib/brand";
 
 type Params = { slug: string };
 
@@ -22,11 +23,11 @@ export async function generateMetadata({
   if (!topic) return {};
 
   return {
-    title: `${topic.nameEn} | reCree`,
-    description: `Discover K-spots related to ${topic.nameEn} on reCree.`,
+    title: `${topic.nameEn} | ${BRAND.name}`,
+    description: `Discover K-spots related to ${topic.nameEn} on ${BRAND.name}.`,
     openGraph: {
-      title: `${topic.nameEn} | reCree`,
-      description: `Discover K-spots related to ${topic.nameEn} on reCree.`,
+      title: `${topic.nameEn} | ${BRAND.name}`,
+      description: `Discover K-spots related to ${topic.nameEn} on ${BRAND.name}.`,
     },
   };
 }

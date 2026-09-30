@@ -1,4 +1,5 @@
 import { ExternalLink } from "lucide-react";
+import { BRAND } from "@/lib/brand";
 
 interface Props {
   purchaseUrl: string;
@@ -21,7 +22,7 @@ export function PurchaseButton({ purchaseUrl, isAffiliate }: Props) {
       </a>
       {isAffiliate && (
         <p className="text-xs text-muted-foreground text-center mt-1.5">
-          If you purchase through this link, reCree may earn a commission.
+          If you purchase through this link, {BRAND.name} may earn a commission.
         </p>
       )}
     </div>

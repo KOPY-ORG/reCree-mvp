@@ -25,6 +25,7 @@ import type { CourseListItem } from "@/lib/course-queries";
 import { deleteAccount } from "../_actions/profile-actions";
 import { signOut } from "@/lib/actions/auth";
 import { showError } from "@/lib/toast";
+import { BRAND } from "@/lib/brand";
 
 /** 프로필에 미리 보여줄 코스 개수. 넘으면 "See all" 로 /journeys 에 넘긴다 */
 const PROFILE_COURSE_LIMIT = 6;
@@ -79,7 +80,7 @@ export function ProfileView({
       {/* 자체 헤더 */}
       <header className="app-header">
         <div className="h-12 flex items-center justify-between px-4">
-          <span className="font-bold text-base tracking-tight">reCree</span>
+          <span className="font-bold text-base tracking-tight">{BRAND.name}</span>
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}

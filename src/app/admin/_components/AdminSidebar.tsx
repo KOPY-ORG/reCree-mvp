@@ -23,6 +23,7 @@ import {
   Sticker,
 } from "lucide-react";
 import { signOut } from "@/lib/actions/auth";
+import { BRAND } from "@/lib/brand";
 
 const CONTENT_MENUS = [
   { label: "대시보드", icon: LayoutDashboard, href: "/admin" },
@@ -85,7 +86,7 @@ export function AdminSidebar({ userEmail, userInitial }: AdminSidebarProps) {
         <div className="flex items-center gap-2.5">
           <div className="size-6 rounded bg-brand shrink-0" />
           <p className="font-bold text-sm tracking-tight text-white">
-            reCree Admin
+            {BRAND.name} Admin
           </p>
         </div>
       </div>

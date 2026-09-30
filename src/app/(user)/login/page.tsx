@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { BRAND } from "@/lib/brand";
 
 export default function LoginPage() {
   const [isPending, setIsPending] = useState(false);
@@ -25,7 +26,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm flex flex-col items-center gap-8">
         {/* 로고 */}
         <div className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight">reCree</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{BRAND.name}</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             recreate your travel memories
           </p>

@@ -14,6 +14,7 @@ import {
 import { fetchNearbyAttractions } from "@/app/(user)/_actions/tour-actions";
 import { TOUR_API_ATTRIBUTION } from "@/lib/tour-api/attribution";
 import { CHIP_BG, INK, LINE, MUTED, PAPER, SUB } from "../_constants";
+import { BRAND } from "@/lib/brand";
 
 // ─── 상수 ────────────────────────────────────────────────────────────────────
 
@@ -483,7 +484,7 @@ export function PlaceAddSheet({
             className="min-w-0 flex-1 truncate text-[10.5px] font-semibold uppercase tracking-[0.06em]"
             style={{ color: SUB }}
           >
-            {themes.length > 0 ? `From your ${themeNames} theme` : "Popular on reCree"}
+            {themes.length > 0 ? `From your ${themeNames} theme` : `Popular on ${BRAND.name}`}
           </p>
           {themes.length > 0 && (
             <span className="flex-none text-[10.5px] font-semibold" style={{ color: SUB }}>

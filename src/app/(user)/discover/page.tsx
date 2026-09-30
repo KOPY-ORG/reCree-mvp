@@ -12,8 +12,9 @@ import type { EventCollectionForMap } from "@/lib/event-collection-queries";
 import { ExploreMapView } from "./_components/ExploreMapView";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
+import { BRAND } from "@/lib/brand";
 
-const BASE_URL = "https://recree.io";
+const BASE_URL = BRAND.siteUrl;
 const DEFAULT_TITLE = "K-Culture Map";
 const DEFAULT_DESCRIPTION =
   "Explore K-pop and K-drama filming locations, cafes, and photo spots across Korea.";
@@ -83,9 +84,9 @@ export async function generateMetadata({
 
   const title = label ? `${label} Spots in Korea` : DEFAULT_TITLE;
   const description = label
-    ? `Find ${label} spots across Korea on the reCree map — filming locations, cafes, and photo spots loved by fans.`
+    ? `Find ${label} spots across Korea on the ${BRAND.name} map — filming locations, cafes, and photo spots loved by fans.`
     : DEFAULT_DESCRIPTION;
-  const fullTitle = `${title} | reCree`;
+  const fullTitle = `${title} | ${BRAND.name}`;
 
   const metadata: Metadata = {
     title,
@@ -94,7 +95,7 @@ export async function generateMetadata({
       title: fullTitle,
       description,
       url: selfUrl,
-      siteName: "reCree",
+      siteName: BRAND.name,
       images: [{ url: "/og-default.png", width: 1200, height: 630 }],
       type: "website",
     },

@@ -10,6 +10,7 @@ import { HallDetailClient } from "./_components/HallDetailClient";
 import { HallDetailTopSection } from "./_components/HallDetailTopSection";
 import { HallDetailOwnerDeleteButton } from "./_components/HallDetailOwnerDeleteButton";
 import { HallDetailBackButton } from "./_components/HallDetailBackButton";
+import { BRAND } from "@/lib/brand";
 
 export async function generateMetadata({
   params,
@@ -47,22 +48,22 @@ export async function generateMetadata({
   const description = rawDescription
     ? rawDescription.slice(0, 160)
     : shot.locationName
-      ? `Check out this recreeshot taken at ${shot.locationName} on reCree.`
-      : "Check out this recreeshot on reCree.";
-  const imageUrl = shot.imageUrl ?? "https://recree.io/og-default.png";
+      ? `Check out this recreeshot taken at ${shot.locationName} on ${BRAND.name}.`
+      : `Check out this recreeshot on ${BRAND.name}.`;
+  const imageUrl = shot.imageUrl ?? `${BRAND.siteUrl}/og-default.png`;
 
   return {
     title,
     description,
     openGraph: {
-      title: `${title} | reCree`,
+      title: `${title} | ${BRAND.name}`,
       description,
       images: [{ url: imageUrl, width: 1200, height: 630 }],
       type: "article",
     },
     twitter: {
       card: "summary_large_image",
-      title: `${title} | reCree`,
+      title: `${title} | ${BRAND.name}`,
       description,
       images: [imageUrl],
     },

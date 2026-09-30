@@ -1,3 +1,5 @@
+import { BRAND } from "@/lib/brand";
+
 /** 캔버스에 이미지를 object-cover 방식으로 그리기 위한 소스 rect 계산 */
 export function coverRect(natW: number, natH: number, canvasW: number, canvasH: number) {
   const imgAspect = natW / natH;
@@ -72,6 +74,6 @@ export function drawReCreeshotWatermark(
   ctx.shadowColor = "rgba(0, 0, 0, 0.6)";
   ctx.shadowBlur = 3;
   ctx.shadowOffsetY = 2;
-  ctx.fillText("reCree", W - ctx.measureText("reCree").width - W * 0.03, H - W * 0.03);
+  ctx.fillText(BRAND.name, W - ctx.measureText(BRAND.name).width - W * 0.03, H - W * 0.03);
   ctx.restore();
 }

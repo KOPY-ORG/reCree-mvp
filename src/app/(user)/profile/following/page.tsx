@@ -6,7 +6,7 @@ import { getMyFollows } from "@/lib/follow-queries";
 import { FollowingList } from "./_components/FollowingList";
 
 export const metadata: Metadata = {
-  title: "Following | reCree",
+  title: "Following",
 };
 
 export default async function FollowingPage() {

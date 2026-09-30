@@ -13,6 +13,7 @@ import { EventImage } from "@/components/events/EventImage";
 import { PerkCard } from "@/components/events/PerkCard";
 import { EventScrapButton } from "@/app/(user)/_components/EventScrapButton";
 import { EVENT_RED as ACCENT, getDDay } from "@/lib/event-format";
+import { BRAND } from "@/lib/brand";
 
 // ── 헬퍼 ────────────────────────────────────────────────────────────────────────
 
@@ -206,11 +207,11 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const t = pickTranslation(event.translations, locale, "en");
   const name = t?.name ?? "";
   const description = t?.description?.slice(0, 160) ??
-    `Experience ${name} — an exclusive K-culture event. Discover more on reCree.`;
-  const imageUrl = event.bannerImageUrl ?? "https://recree.io/og-default.png";
-  const pageUrl = `https://recree.io/events/${collectionSlug}/${eventSlug}`;
+    `Experience ${name} — an exclusive K-culture event. Discover more on ${BRAND.name}.`;
+  const imageUrl = event.bannerImageUrl ?? `${BRAND.siteUrl}/og-default.png`;
+  const pageUrl = `${BRAND.siteUrl}/events/${collectionSlug}/${eventSlug}`;
 
-  const fullTitle = `${name} | reCree`;
+  const fullTitle = `${name} | ${BRAND.name}`;
 
   return {
     title: name,
@@ -219,7 +220,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
       title: fullTitle,
       description,
       url: pageUrl,
-      siteName: "reCree",
+      siteName: BRAND.name,
       images: [{ url: imageUrl, width: 1200, height: 630 }],
       type: "article",
     },

@@ -6,6 +6,7 @@ import { Check, ChevronRight } from "lucide-react";
 import { completeOnboarding } from "../_actions/onboarding-actions";
 import { useNicknameCheck } from "@/hooks/use-nickname-check";
 import { NicknameInput } from "@/components/NicknameInput";
+import { BRAND } from "@/lib/brand";
 
 export function OnboardingFlow({
   emailPrefix,
@@ -54,7 +55,7 @@ export function OnboardingFlow({
     <div className="flex flex-col min-h-screen bg-background">
       {/* 헤더 */}
       <div className="flex items-center justify-center h-14 px-4">
-        <span className="font-bold text-base tracking-tight">reCree</span>
+        <span className="font-bold text-base tracking-tight">{BRAND.name}</span>
       </div>
 
       {/* 스텝 인디케이터 (신규 회원만) */}
@@ -68,7 +69,7 @@ export function OnboardingFlow({
       <div className="flex-1 flex flex-col px-6 max-w-sm mx-auto w-full">
         {step === 1 && (
           <>
-            <h1 className="text-2xl font-bold mb-2">Welcome to reCree</h1>
+            <h1 className="text-2xl font-bold mb-2">Welcome to {BRAND.name}</h1>
             <p className="text-sm text-muted-foreground mb-8">
               Before you start, please review and agree to our terms.
             </p>

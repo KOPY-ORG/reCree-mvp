@@ -1,3 +1,5 @@
+import { BRAND } from "@/lib/brand";
+
 // 시안(docs/prototype/reCree Contest.dc.html — journeyView)의 색 토큰.
 // 시안은 Pretendard / Open Sans 를 쓰지만 앱에는 두 폰트가 로드돼 있지 않다
 // (globals.css: --font-sans = Geist Sans → Noto Sans KR).
@@ -28,7 +30,7 @@ export const DANGER = "#F01941";
 export const DANGER_BG = "#FDF0F3";
 
 /** 아이템 출처 칩 — placeId 있음(앱 장소) / 없음(관광 데이터) */
-export const SPOT_CHIP = { bg: "#F4FFD0", fg: "#4A5E06", label: "reCree spot" };
+export const SPOT_CHIP = { bg: "#F4FFD0", fg: "#4A5E06", label: `${BRAND.name} spot` };
 export const TOURISM_CHIP = { bg: "#F2F1EC", fg: "#8E8E8B", label: "Tourism data" };
 
 /**

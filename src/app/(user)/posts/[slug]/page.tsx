@@ -20,6 +20,7 @@ import { PurchaseButton } from "./_components/PurchaseButton";
 import { PostComments } from "./_components/PostComments";
 import { PostViewTracker } from "./_components/PostViewTracker";
 import { NearbyAttractionsSection } from "./_components/NearbyAttractionsSection";
+import { BRAND } from "@/lib/brand";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -55,7 +56,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const placeLabel = place?.nameEn ?? place?.nameKo;
 
   // "ATEEZ Aurora MV Filming Location | Bukhangang Bridge Seoul"
-  // layout.tsx template이 "| reCree" 자동 부착
+  // layout.tsx template이 "| {BRAND.name}" 자동 부착
   const title = placeLabel
     ? `${post.titleEn} | ${placeLabel}`
     : post.titleEn;
@@ -63,12 +64,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description = post.bodyEn
     ? post.bodyEn.slice(0, 160)
     : placeLabel
-      ? `Visit ${placeLabel}, the exact filming location from ${post.titleEn}. Discover iconic K-content spots with reCree.`
-      : "Discover iconic K-content spots with reCree.";
+      ? `Visit ${placeLabel}, the exact filming location from ${post.titleEn}. Discover iconic K-content spots with ${BRAND.name}.`
+      : `Discover iconic K-content spots with ${BRAND.name}.`;
 
-  const imageUrl = post.postImages[0]?.url ?? "https://recree.io/og-default.png";
-  const pageUrl = `https://recree.io/posts/${post.slug}`;
-  const fullTitle = `${title} | reCree`;
+  const imageUrl = post.postImages[0]?.url ?? `${BRAND.siteUrl}/og-default.png`;
+  const pageUrl = `${BRAND.siteUrl}/posts/${post.slug}`;
+  const fullTitle = `${title} | ${BRAND.name}`;
 
   return {
     title,
@@ -77,7 +78,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: fullTitle,
       description,
       url: pageUrl,
-      siteName: "reCree",
+      siteName: BRAND.name,
       images: [{ url: imageUrl, width: 1200, height: 630 }],
       type: "article",
     },
@@ -149,18 +150,18 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
     "@type": "Article",
     "headline": post.titleEn,
     "description": post.bodyEn?.slice(0, 160) ?? (placeLabel
-      ? `Visit ${placeLabel}, the exact filming location from ${post.titleEn}. Discover iconic K-content spots with reCree.`
-      : "Discover iconic K-content spots with reCree."),
+      ? `Visit ${placeLabel}, the exact filming location from ${post.titleEn}. Discover iconic K-content spots with ${BRAND.name}.`
+      : `Discover iconic K-content spots with ${BRAND.name}.`),
     "image": bannerImages.map((img) => ({
       "@type": "ImageObject",
       "url": img.url,
       "contentUrl": img.url,
     })),
-    "url": `https://recree.io/posts/${post.slug}`,
+    "url": `${BRAND.siteUrl}/posts/${post.slug}`,
     "publisher": {
       "@type": "Organization",
-      "name": "reCree",
-      "url": "https://recree.io",
+      "name": BRAND.name,
+      "url": BRAND.siteUrl,
     },
     ...(spotInsight && {
       "about": {
