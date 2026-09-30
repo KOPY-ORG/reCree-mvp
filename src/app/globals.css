@@ -139,8 +139,8 @@ html[data-nav-tucked] .nav-tuckable {
   /* ── Raw Palette ────────────────── */
   --palette-brand:      #FF004F;
   --palette-on-brand:   #FFFFFF;
-  --palette-brand-sub2: #E7FFB3;
-  --palette-brand-sub3: #F9FFE3;
+  --palette-brand-sub2: #FFD6E2;
+  --palette-brand-sub3: #FFF0F4;
   --palette-black:      #000000;
   --palette-gray-900:   #3F3D3D;
   --palette-gray-800:   #636363;

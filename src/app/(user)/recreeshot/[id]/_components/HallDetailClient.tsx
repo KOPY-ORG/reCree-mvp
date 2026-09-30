@@ -81,7 +81,7 @@ export function HallDetailClient({
           <Heart
             className="size-5"
             strokeWidth={1.5}
-            style={liked ? { fill: "#ef4444", stroke: "#ef4444" } : undefined}
+            style={liked ? { fill: "var(--palette-brand)", stroke: "var(--palette-brand)" } : undefined}
           />
           {likeCount > 0 && (
             <span className="text-sm text-muted-foreground">{likeCount}</span>
