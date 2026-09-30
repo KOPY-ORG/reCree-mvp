@@ -347,7 +347,7 @@ export function AIDraftReviewDialog({
               type="button"
               variant="outline"
               size="sm"
-              className="bg-brand text-black hover:bg-brand/90 border-0"
+              className="bg-brand text-brand-foreground font-semibold hover:bg-brand/90 border-0"
               onClick={handleApplyAll}
             >
               모두 적용

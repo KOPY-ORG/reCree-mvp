@@ -137,7 +137,8 @@ html[data-nav-tucked] .nav-tuckable {
   --sheet-scroll-pb: var(--bottom-nav-space);
 
   /* ── Raw Palette ────────────────── */
-  --palette-brand:      #D3FD52;
+  --palette-brand:      #FF004F;
+  --palette-on-brand:   #FFFFFF;
   --palette-brand-sub2: #E7FFB3;
   --palette-brand-sub3: #F9FFE3;
   --palette-black:      #000000;
@@ -154,7 +155,7 @@ html[data-nav-tucked] .nav-tuckable {
   --brand:              var(--palette-brand);
   --brand-sub2:         var(--palette-brand-sub2);
   --brand-sub3:         var(--palette-brand-sub3);
-  --brand-foreground:   var(--palette-black);
+  --brand-foreground:   var(--palette-on-brand);
   --highlight:          var(--palette-pink);
 
   /* ── Semantic (shadcn/ui) ───────── */

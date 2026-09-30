@@ -117,7 +117,7 @@ export function OnboardingFlow({
               type="button"
               onClick={handleAgree}
               disabled={!agreed || isPending}
-              className="w-full py-3.5 rounded-xl font-semibold text-sm bg-brand text-black disabled:opacity-30 transition-opacity"
+              className="w-full py-3.5 rounded-xl font-semibold text-sm bg-brand text-brand-foreground disabled:opacity-30 transition-opacity"
             >
               {isPending ? "Please wait..." : "Continue"}
             </button>
@@ -169,7 +169,7 @@ export function OnboardingFlow({
               type="button"
               onClick={handleSubmit}
               disabled={!canSubmit}
-              className="w-full py-3.5 rounded-xl font-semibold text-sm bg-brand text-black disabled:opacity-30 transition-opacity"
+              className="w-full py-3.5 rounded-xl font-semibold text-sm bg-brand text-brand-foreground disabled:opacity-30 transition-opacity"
             >
               {isPending ? "Setting up..." : "Get Started"}
             </button>

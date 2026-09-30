@@ -36,7 +36,7 @@ export default function LoginPage() {
         <button
           onClick={handleGoogleLogin}
           disabled={isPending}
-          className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl font-semibold text-black bg-brand hover:opacity-90 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+          className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl font-semibold text-brand-foreground bg-brand hover:opacity-90 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <GoogleIcon />
           {isPending ? "Redirecting..." : "Continue with Google"}

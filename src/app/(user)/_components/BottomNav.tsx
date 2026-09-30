@@ -56,7 +56,7 @@ const SURFACE: React.CSSProperties = {
 };
 
 const MUTED = "var(--palette-gray-800)";
-const ACTIVE = "var(--palette-black)";
+const ACTIVE = "var(--palette-on-brand)";
 
 /** 칸 하나. 48 정사각이라 활성 표시가 정확히 원이 된다 */
 function NavItem({

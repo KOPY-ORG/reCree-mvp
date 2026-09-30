@@ -15,7 +15,7 @@ export function PurchaseButton({ purchaseUrl, isAffiliate }: Props) {
         href={purchaseUrl}
         target="_blank"
         rel="sponsored nofollow noopener noreferrer"
-        className="w-full py-2.5 rounded-full bg-brand text-black text-sm font-semibold text-center flex items-center justify-center gap-1.5 transition-opacity hover:opacity-80"
+        className="w-full py-2.5 rounded-full bg-brand text-brand-foreground text-sm font-semibold text-center flex items-center justify-center gap-1.5 transition-opacity hover:opacity-80"
       >
         View Product
         <ExternalLink className="size-4" />

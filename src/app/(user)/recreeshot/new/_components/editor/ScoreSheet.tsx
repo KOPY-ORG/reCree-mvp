@@ -109,7 +109,7 @@ function IdlePhase({
       <button
         type="button"
         onClick={onCalculate}
-        className="w-full py-4 rounded-full bg-brand text-black font-bold text-base flex items-center justify-center gap-2"
+        className="w-full py-4 rounded-full bg-brand text-brand-foreground font-bold text-base flex items-center justify-center gap-2"
       >
         <Sparkles className="size-4" />
         Calculate match
@@ -166,7 +166,7 @@ function ScannedPhoto({ url, delay }: { url: string | null; delay: string }) {
       )}
       {/* 스캔 라인 */}
       <div
-        className="absolute inset-x-0 h-0.5 bg-brand shadow-[0_0_8px_2px_#D3FD52]"
+        className="absolute inset-x-0 h-0.5 bg-brand shadow-[0_0_8px_2px_var(--palette-brand)]"
         style={{
           animation: "scanline 1.6s linear infinite",
           animationDelay: delay,

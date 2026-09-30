@@ -23,7 +23,7 @@ export async function generateMetadata({
   if (!topic) return {};
 
   return {
-    title: `${topic.nameEn} | ${BRAND.name}`,
+    title: topic.nameEn,
     description: `Discover K-spots related to ${topic.nameEn} on ${BRAND.name}.`,
     openGraph: {
       title: `${topic.nameEn} | ${BRAND.name}`,

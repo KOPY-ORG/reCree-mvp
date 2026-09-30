@@ -58,7 +58,7 @@ export function LanguageSelector() {
               key={code}
               onClick={() => select(code)}
               className={`w-full px-3 py-2 text-sm text-left hover:bg-muted transition-colors ${
-                current === code ? "bg-brand text-black font-medium" : ""
+                current === code ? "bg-brand text-brand-foreground font-semibold" : ""
               }`}
             >
               {label}

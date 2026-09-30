@@ -146,7 +146,7 @@ export function SavedClient({ posts, shopPosts, recreeshots, tagGroupConfigs, sa
               </p>
               <Link
                 href="/discover"
-                className="mt-2 px-5 py-2.5 rounded-full bg-brand text-black text-sm font-semibold"
+                className="mt-2 px-5 py-2.5 rounded-full bg-brand text-brand-foreground text-sm font-semibold"
               >
                 Explore events
               </Link>
@@ -178,7 +178,7 @@ export function SavedClient({ posts, shopPosts, recreeshots, tagGroupConfigs, sa
               </p>
               <Link
                 href="/discover?tab=posts"
-                className="mt-2 px-5 py-2.5 rounded-full bg-brand text-black text-sm font-semibold"
+                className="mt-2 px-5 py-2.5 rounded-full bg-brand text-brand-foreground text-sm font-semibold"
               >
                 Explore posts
               </Link>
@@ -202,7 +202,7 @@ export function SavedClient({ posts, shopPosts, recreeshots, tagGroupConfigs, sa
               </p>
               <Link
                 href="/shop"
-                className="mt-2 px-5 py-2.5 rounded-full bg-brand text-black text-sm font-semibold"
+                className="mt-2 px-5 py-2.5 rounded-full bg-brand text-brand-foreground text-sm font-semibold"
               >
                 Explore shop
               </Link>

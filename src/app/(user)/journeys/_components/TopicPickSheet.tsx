@@ -183,7 +183,7 @@ export function TopicPickSheet({ open, onOpenChange, selected, onConfirm }: Topi
               onConfirm(picked);
               onOpenChange(false);
             }}
-            className="h-11 flex-none rounded-full bg-brand px-6 text-[13px] font-semibold text-black transition-opacity active:opacity-70"
+            className="h-11 flex-none rounded-full bg-brand px-6 text-[13px] font-semibold text-brand-foreground transition-opacity active:opacity-70"
           >
             Done
           </button>

@@ -401,7 +401,7 @@ export function StickerPanel({
                       </div>
                       <p className="flex-1 text-xs font-medium line-clamp-3 leading-snug min-w-0">{title}</p>
                       <div className={`flex-shrink-0 size-5 rounded-full border flex items-center justify-center transition-all ${selected ? "bg-brand border-brand" : "border-border/40 bg-muted/30"}`}>
-                        {selected && <Check className="size-3 text-black" />}
+                        {selected && <Check className="size-3 text-brand-foreground" />}
                       </div>
                     </button>
                   );
@@ -573,7 +573,7 @@ export function StickerPanel({
           </div>
 
           <div className="px-4 pb-6 pt-3 shrink-0">
-            <button type="button" onClick={() => onTagSheetChange(false)} className="w-full py-3 rounded-full font-semibold text-sm bg-brand text-black">
+            <button type="button" onClick={() => onTagSheetChange(false)} className="w-full py-3 rounded-full font-semibold text-sm bg-brand text-brand-foreground">
               Done
             </button>
           </div>

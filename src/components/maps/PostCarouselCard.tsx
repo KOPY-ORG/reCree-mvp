@@ -65,12 +65,12 @@ export function PostCarouselCard({ post, isSaved, tagGroupMap, placeTypes }: Pro
           </p>
         </div>
         {/* 스크랩 버튼 — 우상단 */}
-        <div className={`absolute top-2 right-2 flex items-center justify-center w-7 h-7 rounded-full shadow ${localSaved ? "bg-[#D3FD52]" : "bg-white"}`}>
+        <div className={`absolute top-2 right-2 flex items-center justify-center w-7 h-7 rounded-full shadow ${localSaved ? "bg-[var(--palette-brand)]" : "bg-white"}`}>
           <ScrapButton
             postId={post.id}
             initialSaved={isSaved}
             size="sm"
-            savedStyle={{ fill: "black", stroke: "black" }}
+            savedStyle={{ fill: "var(--palette-on-brand)", stroke: "var(--palette-on-brand)" }}
             onSaveChange={setLocalSaved}
           />
         </div>

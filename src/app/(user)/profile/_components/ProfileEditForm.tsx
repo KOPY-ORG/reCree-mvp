@@ -115,7 +115,7 @@ export function ProfileEditForm({
           onClick={() => fileInputRef.current?.click()}
           className="relative group"
         >
-          <div className="size-24 rounded-full bg-brand flex items-center justify-center text-black text-2xl font-bold overflow-hidden">
+          <div className="size-24 rounded-full bg-brand flex items-center justify-center text-brand-foreground text-2xl font-bold overflow-hidden">
             {imagePreview ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={imagePreview} alt="Profile" className="size-24 object-cover" />
@@ -196,7 +196,7 @@ export function ProfileEditForm({
           type="button"
           onClick={handleSave}
           disabled={isSaving || nicknameStatus === "taken" || nicknameStatus === "checking"}
-          className="w-full py-3 rounded-lg bg-brand text-black text-sm font-semibold disabled:opacity-50 transition-opacity"
+          className="w-full py-3 rounded-lg bg-brand text-brand-foreground text-sm font-semibold disabled:opacity-50 transition-opacity"
         >
           {isSaving ? "Saving..." : "Save changes"}
         </button>

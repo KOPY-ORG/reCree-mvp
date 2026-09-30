@@ -26,10 +26,10 @@ const CHIP_SIZE = "text-[15px] h-8";
  */
 /** .pill-badge 는 배지용이라 굵기·크기·여백이 모두 달라 쓰지 않는다 */
 export const TOPIC_CHIP_BASE =
-  `inline-flex items-center justify-center shrink-0 ${CHIP_SIZE} rounded-full font-medium transition-opacity active:opacity-70`;
+  `inline-flex items-center justify-center shrink-0 ${CHIP_SIZE} rounded-full transition-opacity active:opacity-70`;
 
-export const TOPIC_CHIP_SELECTED = "bg-brand text-foreground";
-export const TOPIC_CHIP_UNSELECTED = "bg-background text-muted-foreground";
+export const TOPIC_CHIP_SELECTED = "bg-brand text-brand-foreground font-semibold";
+export const TOPIC_CHIP_UNSELECTED = "bg-background text-muted-foreground font-medium";
 
 const TAB_BASE = TOPIC_CHIP_BASE;
 const SELECTED = TOPIC_CHIP_SELECTED;

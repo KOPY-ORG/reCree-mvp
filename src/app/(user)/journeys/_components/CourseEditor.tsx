@@ -989,7 +989,7 @@ export function CourseEditor({
             // 제목이 없으면 끝낼 수 없다 — 두 갈래에서 같은 규칙이다.
             // 저장이 도는 중에도 막는다. 나가는 길은 ← 가 따로 있다.
             disabled={!canFinish || isBusy}
-            className="flex h-11 flex-none items-center gap-1.5 rounded-full bg-brand pl-3.5 pr-4 text-sm font-semibold text-black transition-opacity disabled:opacity-40"
+            className="flex h-11 flex-none items-center gap-1.5 rounded-full bg-brand pl-3.5 pr-4 text-sm font-semibold text-brand-foreground transition-opacity disabled:opacity-40"
           >
             {titlePending ? (
               <Loader2 className="size-4 animate-spin" />

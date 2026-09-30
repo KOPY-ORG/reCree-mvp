@@ -194,7 +194,7 @@ function MapContent({
       {places.map((place) => {
         const isSelected = selectedPlaceId === place.id || (focusedPlaceIds?.has(place.id) ?? false);
         const isHighlighted = highlightedIds?.has(place.id) ?? false;
-        const color = place.markerColor ?? "#D3FD52";
+        const color = place.markerColor ?? "var(--palette-brand)";
         return (
           <AdvancedMarker
             key={place.id}

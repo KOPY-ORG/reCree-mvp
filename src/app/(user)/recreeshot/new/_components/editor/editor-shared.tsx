@@ -46,11 +46,11 @@ export function StepNextButton({ label, onClick, disabled }: {
           width: "100%",
           padding: "14px 0",
           borderRadius: 9999,
-          background: disabled ? "#e5e5e5" : "#D3FD52",
+          background: disabled ? "#e5e5e5" : "var(--palette-brand)",
           border: "none",
           fontWeight: 700,
           fontSize: 16,
-          color: disabled ? "#aaa" : "#0b0b0b",
+          color: disabled ? "#aaa" : "var(--palette-on-brand)",
           cursor: disabled ? "default" : "pointer",
         }}
       >

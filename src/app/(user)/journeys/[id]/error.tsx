@@ -21,7 +21,7 @@ export default function CourseDetailError({
       <button
         type="button"
         onClick={reset}
-        className="mt-2 px-5 py-2.5 rounded-full bg-brand text-black text-sm font-semibold transition-opacity hover:opacity-80"
+        className="mt-2 px-5 py-2.5 rounded-full bg-brand text-brand-foreground text-sm font-semibold transition-opacity hover:opacity-80"
       >
         Try again
       </button>

@@ -63,7 +63,7 @@ export async function JourneySection({
           href="/journeys/new"
           className={`${CARD_W} shrink-0 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-[#E2E2DC] text-center transition-colors hover:border-brand active:opacity-70`}
         >
-          <span className="flex size-9 items-center justify-center rounded-full bg-brand text-black">
+          <span className="flex size-9 items-center justify-center rounded-full bg-brand text-brand-foreground">
             <Plus className="size-5" strokeWidth={2.5} />
           </span>
           <span className="px-3 text-[13px] font-semibold leading-[1.3]">Create a journey</span>

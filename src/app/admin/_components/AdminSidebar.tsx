@@ -100,10 +100,10 @@ export function AdminSidebar({ userEmail, userInitial }: AdminSidebarProps) {
             <Link
               key={href}
               href={href}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors ${
                 isActive(href)
-                  ? "bg-brand text-brand-foreground"
-                  : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                  ? "bg-brand text-brand-foreground font-semibold"
+                  : "font-medium text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
               }`}
             >
               <Icon className="size-4 shrink-0" />
@@ -119,10 +119,10 @@ export function AdminSidebar({ userEmail, userInitial }: AdminSidebarProps) {
             <Link
               key={href}
               href={href}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors ${
                 isActive(href)
-                  ? "bg-brand text-brand-foreground"
-                  : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                  ? "bg-brand text-brand-foreground font-semibold"
+                  : "font-medium text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
               }`}
             >
               <Icon className="size-4 shrink-0" />
@@ -138,10 +138,10 @@ export function AdminSidebar({ userEmail, userInitial }: AdminSidebarProps) {
             <Link
               key={href}
               href={href}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors ${
                 isActive(href)
-                  ? "bg-brand text-brand-foreground"
-                  : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                  ? "bg-brand text-brand-foreground font-semibold"
+                  : "font-medium text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
               }`}
             >
               <Icon className="size-4 shrink-0" />
@@ -157,10 +157,10 @@ export function AdminSidebar({ userEmail, userInitial }: AdminSidebarProps) {
             <Link
               key={href}
               href={href}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors ${
                 isActive(href)
-                  ? "bg-brand text-brand-foreground"
-                  : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                  ? "bg-brand text-brand-foreground font-semibold"
+                  : "font-medium text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
               }`}
             >
               <Icon className="size-4 shrink-0" />
@@ -176,10 +176,10 @@ export function AdminSidebar({ userEmail, userInitial }: AdminSidebarProps) {
             <Link
               key={href}
               href={href}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors ${
                 isActive(href)
-                  ? "bg-brand text-brand-foreground"
-                  : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                  ? "bg-brand text-brand-foreground font-semibold"
+                  : "font-medium text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
               }`}
             >
               <Icon className="size-4 shrink-0" />

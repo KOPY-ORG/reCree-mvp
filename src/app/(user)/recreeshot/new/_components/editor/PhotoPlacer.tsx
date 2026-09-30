@@ -293,11 +293,11 @@ export function PhotoPlacer({
             width: "100%",
             padding: "14px 0",
             borderRadius: 9999,
-            background: canProceed && !isUploading ? "#D3FD52" : "#e5e5e5",
+            background: canProceed && !isUploading ? "var(--palette-brand)" : "#e5e5e5",
             border: "none",
             fontWeight: 700,
             fontSize: 16,
-            color: canProceed && !isUploading ? "#0b0b0b" : "#aaa",
+            color: canProceed && !isUploading ? "var(--palette-on-brand)" : "#aaa",
             cursor: canProceed && !isUploading ? "pointer" : "default",
           }}
         >

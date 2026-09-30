@@ -87,7 +87,7 @@ export function GuideVideoClient({ videos }: Props) {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="px-5 py-2 bg-brand text-black text-sm font-semibold rounded-lg disabled:opacity-40"
+            className="px-5 py-2 bg-brand text-brand-foreground text-sm font-semibold rounded-lg disabled:opacity-40"
           >
             {isSubmitting ? "저장 중..." : "저장"}
           </button>

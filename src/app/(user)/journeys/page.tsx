@@ -21,7 +21,7 @@ export default async function JourneysPage() {
           {currentUser && (
             <Link
               href="/journeys/new"
-              className="flex items-center gap-1 pl-2.5 pr-3.5 py-1.5 rounded-full bg-brand text-black text-sm font-semibold transition-opacity hover:opacity-80"
+              className="flex items-center gap-1 pl-2.5 pr-3.5 py-1.5 rounded-full bg-brand text-brand-foreground text-sm font-semibold transition-opacity hover:opacity-80"
             >
               <Plus className="size-4" strokeWidth={2.5} />
               New
@@ -41,7 +41,7 @@ export default async function JourneysPage() {
               </p>
               <Link
                 href="/journeys/new"
-                className="mt-2 px-5 py-2.5 rounded-full bg-brand text-black text-sm font-semibold"
+                className="mt-2 px-5 py-2.5 rounded-full bg-brand text-brand-foreground text-sm font-semibold"
               >
                 Create your first journey
               </Link>

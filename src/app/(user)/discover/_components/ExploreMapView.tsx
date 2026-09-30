@@ -974,7 +974,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
                   className="flex items-center gap-2.5 rounded-2xl bg-muted px-3.5 py-3 active:opacity-70 transition-opacity"
                 >
                   <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand">
-                    <Route className="size-4 text-black" strokeWidth={2.4} />
+                    <Route className="size-4 text-brand-foreground" strokeWidth={2.4} />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-semibold text-foreground">

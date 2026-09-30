@@ -145,7 +145,7 @@ export function FeedbackForm({ source }: Props) {
           size="sm"
           onClick={handleSubmit}
           disabled={!canSubmit}
-          className="rounded-full bg-brand text-black hover:bg-brand/90 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="rounded-full bg-brand text-brand-foreground font-semibold hover:bg-brand/90 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {status === "submitting" ? "Sending…" : "Send"}
         </Button>

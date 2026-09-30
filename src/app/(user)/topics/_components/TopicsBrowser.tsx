@@ -408,7 +408,7 @@ function FollowingRow({
         onClick={() => onUnfollow(item)}
         disabled={isPending}
         aria-label={`Unfollow ${item.nameEn}`}
-        className="flex h-8 flex-none items-center gap-1 rounded-full bg-brand px-3 text-xs font-bold text-black transition-opacity active:opacity-70 disabled:opacity-50"
+        className="flex h-8 flex-none items-center gap-1 rounded-full bg-brand px-3 text-xs font-bold text-brand-foreground transition-opacity active:opacity-70 disabled:opacity-50"
       >
         <Check className="size-3.5" strokeWidth={2.6} />
         Following

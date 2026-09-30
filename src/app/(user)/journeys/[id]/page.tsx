@@ -126,7 +126,7 @@ export default async function CourseDetailPage({ params, searchParams }: Props) 
               {isMine && !course.isPublic && (
                 <span
                   className="rounded-md px-2 py-[5px] text-[9.5px] font-semibold leading-none"
-                  style={{ background: "#D3FD52", color: INK }}
+                  style={{ background: "var(--palette-brand)", color: "var(--palette-on-brand)" }}
                 >
                   Private
                 </span>

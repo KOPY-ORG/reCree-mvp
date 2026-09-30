@@ -8,7 +8,7 @@ export default async function GuideVideoPage() {
 
   return (
     <div className="p-8 max-w-2xl">
-      <h1 className="text-xl font-bold text-brand-foreground mb-6">가이드 영상 관리</h1>
+      <h1 className="text-xl font-bold text-black mb-6">가이드 영상 관리</h1>
       <GuideVideoClient videos={videos} />
     </div>
   );

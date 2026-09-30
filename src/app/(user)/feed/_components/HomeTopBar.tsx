@@ -1,9 +1,10 @@
+import { BrandLogo } from "@/components/BrandLogo";
 import { HomeSearchBar } from "./HomeSearchBar";
 import { HomeTabBar, type TabTopic } from "./HomeTabBar";
 import type { FeedTab } from "@/lib/feed-tabs";
 
 /**
- * 홈 상단 고정 덩어리 — 검색바 + 탭바.
+ * 홈 상단 고정 덩어리 — [로고 + 검색바] + 탭바.
  *
  * 둘은 한 덩어리로 붙어 있어야 한다. 따로 붙이면 스크롤 중에 사이가 벌어진다.
  * 홈에는 헤더가 없어(ConditionalHeader 의 NO_HEADER_PATHS) top-0 이 비어 있다.
@@ -31,8 +32,11 @@ export function HomeTopBar({
 }) {
   return (
     <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm pt-[calc(env(safe-area-inset-top,0px)+16px)] pb-5">
-      <div className="px-5">
-        <HomeSearchBar />
+      <div className="px-5 flex items-center gap-3">
+        <BrandLogo className="shrink-0" />
+        <div className="flex-1 min-w-0">
+          <HomeSearchBar />
+        </div>
       </div>
       <div className="mt-4">
         <HomeTabBar activeTab={activeTab} topics={topics} isLoggedIn={isLoggedIn} />

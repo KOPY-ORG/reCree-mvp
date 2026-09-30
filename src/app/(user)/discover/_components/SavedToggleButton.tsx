@@ -40,7 +40,7 @@ export function SavedToggleButton({ isLoggedIn }: Props) {
         onClick={toggle}
         aria-label={isSavedView ? "Show all places" : "Show saved places"}
         className={`z-30 flex items-center justify-center size-10 rounded-full shadow-md active:opacity-70 transition-colors ${
-          isSavedView ? "bg-brand text-black" : "bg-white text-foreground"
+          isSavedView ? "bg-brand text-brand-foreground" : "bg-white text-foreground"
         }`}
       >
         <Bookmark className="size-5" strokeWidth={1.5} fill={isSavedView ? "currentColor" : "none"} />
@@ -57,7 +57,7 @@ export function SavedToggleButton({ isLoggedIn }: Props) {
           </DialogHeader>
           <Link
             href="/login"
-            className="mt-2 w-full py-2.5 rounded-full bg-brand text-black text-sm font-semibold text-center block transition-opacity hover:opacity-80"
+            className="mt-2 w-full py-2.5 rounded-full bg-brand text-brand-foreground text-sm font-semibold text-center block transition-opacity hover:opacity-80"
           >
             Sign in
           </Link>

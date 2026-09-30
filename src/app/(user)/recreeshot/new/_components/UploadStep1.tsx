@@ -168,9 +168,9 @@ export function UploadStep1({
               <div className="relative flex items-center justify-center">
                 <span
                   className="absolute inline-flex size-36 rounded-full animate-ping"
-                  style={{ backgroundColor: "rgba(211,253,82,0.15)" }}
+                  style={{ backgroundColor: "color-mix(in srgb, var(--palette-brand) 15%, transparent)" }}
                 />
-                <div className="relative flex flex-col items-center leading-tight" style={{ color: "#D3FD52", textShadow: "0 0 40px rgba(211,253,82,0.6)" }}>
+                <div className="relative flex flex-col items-center leading-tight" style={{ color: "var(--palette-brand)", textShadow: "0 0 40px color-mix(in srgb, var(--palette-brand) 60%, transparent)" }}>
                   <span className="text-4xl font-black tracking-tight">AI</span>
                   <span className="text-4xl font-black tracking-tight">Scoring</span>
                 </div>
@@ -198,7 +198,7 @@ export function UploadStep1({
       {scoreMessage && previewScore !== null && (
         <div className="flex items-center gap-3 px-1">
           <div className="flex-shrink-0 size-16 rounded-full bg-black flex items-center justify-center shadow-md">
-            <span className="text-xl font-black tracking-tight leading-none" style={{ color: "#D3FD52" }}>
+            <span className="text-xl font-black tracking-tight leading-none" style={{ color: "var(--palette-brand)" }}>
               {Math.round(previewScore)}%
             </span>
           </div>
@@ -248,7 +248,7 @@ export function UploadStep1({
         type="button"
         onClick={buttonAction}
         disabled={buttonDisabled}
-        className="w-full py-3 rounded-full font-semibold text-sm bg-brand text-black disabled:opacity-40 disabled:cursor-not-allowed transition-opacity shrink-0"
+        className="w-full py-3 rounded-full font-semibold text-sm bg-brand text-brand-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-opacity shrink-0"
       >
         {buttonLabel}
       </button>

@@ -35,7 +35,7 @@ export function ExploreTabBar({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
               onClick={() => switchTab(t)}
               className={`px-6 py-1.5 rounded-full text-sm font-semibold transition-all capitalize ${
                 tab === t
-                  ? "bg-brand text-black"
+                  ? "bg-brand text-brand-foreground"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -66,7 +66,7 @@ export function ExploreTabBar({ isLoggedIn = false }: { isLoggedIn?: boolean }) 
         </DialogHeader>
         <Link
           href="/login"
-          className="mt-2 w-full py-2.5 rounded-full bg-brand text-black text-sm font-semibold text-center block transition-opacity hover:opacity-80"
+          className="mt-2 w-full py-2.5 rounded-full bg-brand text-brand-foreground text-sm font-semibold text-center block transition-opacity hover:opacity-80"
         >
           Sign in
         </Link>

@@ -90,7 +90,7 @@ export function PostReCreeshotSection({ postId, shots, originalImageUrl, isLogge
           </DialogHeader>
           <Link
             href="/login"
-            className="mt-2 w-full py-2.5 rounded-full bg-brand text-black text-sm font-semibold text-center block transition-opacity hover:opacity-80"
+            className="mt-2 w-full py-2.5 rounded-full bg-brand text-brand-foreground text-sm font-semibold text-center block transition-opacity hover:opacity-80"
           >
             Sign in
           </Link>

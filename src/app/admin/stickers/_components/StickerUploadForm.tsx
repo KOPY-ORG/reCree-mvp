@@ -92,7 +92,7 @@ export function StickerUploadForm() {
       <button
         type="submit"
         disabled={!file || !name.trim() || isUploading}
-        className="shrink-0 px-4 py-2 rounded-lg bg-brand text-black text-sm font-semibold disabled:opacity-40"
+        className="shrink-0 px-4 py-2 rounded-lg bg-brand text-brand-foreground text-sm font-semibold disabled:opacity-40"
       >
         {isUploading ? "업로드 중..." : "추가"}
       </button>

@@ -151,7 +151,7 @@ export function TemplateSelector({ selected, onSelect, onNext }: Props) {
               >
                 {isSelected && (
                   <div className="absolute top-2 right-2 z-10 size-5 rounded-full bg-brand flex items-center justify-center">
-                    <Check className="size-3 text-black" strokeWidth={3} />
+                    <Check className="size-3 text-brand-foreground" strokeWidth={3} />
                   </div>
                 )}
 
@@ -171,7 +171,7 @@ export function TemplateSelector({ selected, onSelect, onNext }: Props) {
         <button
           type="button"
           onClick={onNext}
-          className="w-full py-3 rounded-full font-semibold text-sm bg-brand text-black"
+          className="w-full py-3 rounded-full font-semibold text-sm bg-brand text-brand-foreground"
         >
           Next
         </button>

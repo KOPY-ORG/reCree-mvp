@@ -32,7 +32,7 @@ export default async function AdminLayout({
           </div>
           <Link
             href="/"
-            className="inline-flex items-center justify-center px-4 py-2 rounded-md text-sm font-medium bg-brand text-brand-foreground hover:opacity-90 transition-opacity"
+            className="inline-flex items-center justify-center px-4 py-2 rounded-md text-sm font-semibold bg-brand text-brand-foreground hover:opacity-90 transition-opacity"
           >
             홈으로 돌아가기
           </Link>
