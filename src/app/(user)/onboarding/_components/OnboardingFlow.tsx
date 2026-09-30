@@ -52,7 +52,8 @@ export function OnboardingFlow({
     !isPending;
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
+    // data-narrow-layout — lg 에서도 좁은 기둥을 쓴다. 만드는 흐름이다 (globals.css)
+    <div data-narrow-layout className="flex flex-col min-h-screen bg-background">
       {/* 헤더 */}
       <div className="flex items-center justify-center h-14 px-4">
         <span className="font-bold text-base tracking-tight">{BRAND.name}</span>

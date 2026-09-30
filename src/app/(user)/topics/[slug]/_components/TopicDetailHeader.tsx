@@ -7,8 +7,8 @@ export function TopicDetailHeader() {
   const router = useRouter();
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 h-12">
-      <div className="max-w-[540px] mx-auto h-full flex items-center px-3">
+    <div className="fixed top-0 left-0 right-0 z-50 h-12 lg:left-[var(--side-nav-space)]">
+      <div className="max-w-[var(--app-col-w)] mx-auto h-full flex items-center px-3">
         <button
           type="button"
           onClick={() => router.back()}

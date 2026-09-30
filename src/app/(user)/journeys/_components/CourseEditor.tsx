@@ -966,7 +966,8 @@ export function CourseEditor({
       : placeLabel;
 
   return (
-    <div className="flex min-h-full flex-col">
+    // data-narrow-layout — lg 에서도 좁은 기둥을 쓴다. 만드는 흐름이다 (globals.css)
+    <div data-narrow-layout className="flex min-h-full flex-col">
       {/* ── 헤더 ──────────────────────────────────────────────────────────── */}
       <header className="app-header">
         <div className="flex h-14 items-center gap-1 px-1.5">

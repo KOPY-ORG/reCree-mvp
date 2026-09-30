@@ -32,7 +32,7 @@ export function EventPeekCarousel({ events, collectionSlug, collectionName, save
   const isMulti = events.length > 1;
 
   return (
-    <div className="absolute inset-x-0 bottom-4 z-50">
+    <div className="absolute inset-x-0 bottom-4 z-50 lg:left-[calc(var(--discover-panel-w)+12px)] lg:right-3">
       {/* 닫기 버튼 */}
       <div className="flex justify-end px-4 mb-2">
         <button

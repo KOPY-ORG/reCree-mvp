@@ -76,9 +76,17 @@ function NavItem({
       href={href}
       aria-label={label}
       aria-current={active ? "page" : undefined}
-      className="relative flex flex-none items-center justify-center rounded-full transition-transform active:scale-95"
+      className="group relative flex flex-none items-center justify-center rounded-full transition-transform active:scale-95 lg:focus-visible:outline-none lg:focus-visible:ring-2 lg:focus-visible:ring-foreground"
       style={{ width: BOTTOM_NAV_ITEM, height: BOTTOM_NAV_ITEM }}
     >
+      {/* lg 레일에서만 쓰는 이름표. 모바일은 라벨을 없앤 이유(10px)가 그대로라 띄우지 않는다 */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute left-full top-1/2 ml-4 hidden -translate-y-1/2 whitespace-nowrap rounded-full bg-foreground px-3 py-1.5 text-sm font-medium text-background shadow-md lg:group-hover:block lg:group-focus-visible:block"
+      >
+        {label}
+      </span>
+
       {/* 라임 원을 배경이 아니라 별도 요소로 둔다. 활성이 될 때만 마운트되므로
           애니메이션이 "그때 한 번" 재생된다 — 배경색이면 다시 재생할 방법이 없다. */}
       {active && (
@@ -112,10 +120,10 @@ function NavItem({
  * Tailwind 가 스캔하지 못해 유틸리티가 아예 생성되지 않는다.
  * 리터럴로 두면 상수를 고쳐도 화면이 안 바뀌는 이중 관리가 된다.
  */
-function Pill({ children }: { children: React.ReactNode }) {
+function Pill({ children, railClassName }: { children: React.ReactNode; railClassName: string }) {
   return (
     <div
-      className="pointer-events-auto flex items-center rounded-full"
+      className={`pointer-events-auto flex items-center rounded-full ${railClassName}`}
       style={{ ...SURFACE, gap: BOTTOM_NAV_ITEM_GAP, padding: BOTTOM_NAV_PAD }}
     >
       {children}
@@ -146,10 +154,11 @@ export function BottomNav({ isLoggedIn, profileImageUrl }: Props) {
   return (
     // pointer-events-none 이 가운데 빈 공간을 통과시킨다. 알약만 auto 로 되살린다.
     // nav-tuckable 은 지도 시트가 끝까지 올라왔을 때의 퇴장을 맡는다 (globals.css).
-    <div
-      className="nav-tuckable pointer-events-none fixed inset-x-0 z-40"
-      style={{ bottom: "var(--bottom-nav-bottom)" }}
-    >
+    //
+    // lg 에서는 같은 두 알약을 90° 세워 왼쪽 레일로 쓴다. 폭은 --side-nav-space(20+58+20),
+    // 위 알약 = 홈 · 지도, 아래 알약 = recreeshot · shop · profile. 모바일의 좌우 양끝 배치를 위아래로 옮긴 것이다.
+    // bottom 을 인라인 style 에서 클래스로 옮긴 건 lg: 로 덮기 위해서다 — 값은 같다.
+    <div className="nav-tuckable pointer-events-none fixed inset-x-0 bottom-[var(--bottom-nav-bottom)] z-40 lg:inset-x-auto lg:top-0 lg:bottom-0 lg:left-0 lg:w-[var(--side-nav-space)]">
       {/* 아이콘 획을 깎는 필터. 아바타에는 걸지 않는다 — 사진은 깎을 획이 없다.
           한 번만 정의하고 다섯 아이콘이 id 로 참조한다. */}
       <svg aria-hidden className="absolute size-0" focusable="false">
@@ -160,10 +169,11 @@ export function BottomNav({ isLoggedIn, profileImageUrl }: Props) {
 
       <nav
         aria-label="Main"
-        className="nav-rise mx-auto flex max-w-[540px] items-center justify-between px-5"
+        className="nav-rise mx-auto flex max-w-[var(--app-col-w)] items-center justify-between px-5 lg:h-full lg:max-w-none lg:flex-col-reverse lg:px-0 lg:py-5"
       >
-        <Pill>{LEFT_TABS.map(render)}</Pill>
-        <Pill>{RIGHT_TABS.map(render)}</Pill>
+        {/* flex-col-reverse — DOM 순서(왼→오)를 지키면서 lg 에서는 오른쪽 알약이 위로 간다 */}
+        <Pill railClassName="lg:flex-col-reverse">{LEFT_TABS.map(render)}</Pill>
+        <Pill railClassName="lg:flex-col">{RIGHT_TABS.map(render)}</Pill>
       </nav>
     </div>
   );

@@ -71,6 +71,11 @@ function SheetContent({
             "data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top inset-x-0 top-0 h-auto border-b",
           side === "bottom" &&
             "data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom inset-x-0 bottom-0 h-auto border-t",
+          // lg: 바텀시트는 화면 가운데 대화상자가 된다. inset-0 + m-auto + h-fit 으로 가운데 맞춘다 —
+          // translate 로 맞추면 slide 애니메이션의 translate 와 겹쳐 열리는 순간 튄다.
+          // 호출부의 max-w · rounded-t 는 lg 값이 뒤에 생성돼 덮는다.
+          side === "bottom" &&
+            "lg:inset-0 lg:m-auto lg:h-fit lg:w-[560px] lg:max-w-[calc(100vw-4rem)] lg:rounded-2xl lg:border-0 lg:data-[state=open]:slide-in-from-bottom-8 lg:data-[state=closed]:slide-out-to-bottom-8 lg:data-[state=open]:fade-in-0 lg:data-[state=closed]:fade-out-0 lg:data-[state=open]:duration-200 lg:data-[state=closed]:duration-150",
           className
         )}
         {...props}
