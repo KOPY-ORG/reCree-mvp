@@ -63,7 +63,7 @@ function FrameCanvasPreview({
               height: pct(slot.height, canvasHeight),
               overflow: "hidden",
               background: d.previewUrl ? "transparent" : (i === 0 ? "var(--palette-brand-sub3)" : "var(--palette-brand-sub2)"),
-              outline: showOutline ? "1.5px dashed #a8cc00" : "none",
+              outline: showOutline ? "1.5px dashed var(--palette-brand)" : "none",
               outlineOffset: "-1px",
               boxSizing: "border-box",
               cursor: d.previewUrl ? "default" : "pointer",
