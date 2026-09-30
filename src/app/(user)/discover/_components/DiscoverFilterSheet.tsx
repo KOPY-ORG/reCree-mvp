@@ -100,7 +100,7 @@ export function DiscoverFilterSheet({
     <>
       {/* 딤 overlay — 항상 마운트, opacity 전환 */}
       <div
-        className={`absolute inset-0 z-[64] bg-black/40 transition-opacity duration-300 ${
+        className={`absolute inset-0 z-[64] bg-black/40 transition-opacity duration-300 lg:right-auto lg:w-[var(--discover-panel-w)] ${
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
         onClick={onClose}
@@ -108,7 +108,7 @@ export function DiscoverFilterSheet({
 
       {/* 시트 본체 — 항상 마운트, translateY 전환 */}
       <div
-        className={`absolute top-12 inset-x-0 bottom-0 z-[65] bg-background rounded-t-2xl flex flex-col shadow-[0_-4px_24px_rgba(0,0,0,0.12)] transition-transform duration-300 ease-in-out ${
+        className={`absolute top-12 inset-x-0 bottom-0 z-[65] bg-background rounded-t-2xl flex flex-col shadow-[0_-4px_24px_rgba(0,0,0,0.12)] transition-transform duration-300 ease-in-out lg:right-auto lg:w-[var(--discover-panel-w)] ${
           isOpen ? "translate-y-0" : "translate-y-full"
         }`}
       >

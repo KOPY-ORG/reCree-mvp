@@ -1,6 +1,6 @@
 export default function ShopLoading() {
   return (
-    <div className="grid grid-cols-2 gap-3 px-4 pt-4">
+    <div className="grid grid-cols-2 gap-3 px-4 pt-4 md:grid-cols-3 lg:grid-cols-4 lg:px-10 xl:grid-cols-5">
       {Array.from({ length: 6 }).map((_, i) => (
         <div key={i} className="space-y-2">
           <div className="aspect-[4/3] rounded-lg bg-muted animate-pulse" />

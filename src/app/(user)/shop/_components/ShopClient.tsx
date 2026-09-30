@@ -54,7 +54,7 @@ export function ShopClient({ posts, shopTags, tagGroupConfigs }: Props) {
   return (
     <div>
       {/* 그룹 탭 */}
-      <div className="flex border-b border-secondary sticky top-0 bg-background z-10">
+      <div className="flex border-b border-secondary sticky top-0 bg-background z-10 lg:top-12">
         {SHOP_TAG_GROUPS.map((group) => (
           <button
             key={group}
@@ -73,7 +73,7 @@ export function ShopClient({ posts, shopTags, tagGroupConfigs }: Props) {
       </div>
 
       {/* 태그 칩 */}
-      <div className="flex gap-2 overflow-x-auto px-4 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex gap-2 overflow-x-auto px-4 py-3 lg:px-10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <button
           type="button"
           onClick={() => setSelectedTagId(null)}
@@ -98,13 +98,13 @@ export function ShopClient({ posts, shopTags, tagGroupConfigs }: Props) {
       </div>
 
       {/* 2열 그리드 */}
-      <div className="px-4 pb-8">
+      <div className="px-4 pb-8 lg:px-10">
         {filteredPosts.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-[40vh] text-center">
             <p className="text-sm text-muted-foreground">No products yet</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {filteredPosts.map((post) => (
               <ShopCard key={post.id} post={post} tagGroupMap={tagGroupMap} />
             ))}

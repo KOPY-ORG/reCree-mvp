@@ -85,7 +85,7 @@ export default async function TopicDetailPage({
   );
 
   return (
-    <div className="max-w-2xl mx-auto pb-14">
+    <div className="max-w-2xl mx-auto pb-14 lg:max-w-none">
       <TopicDetailHeader />
       <TopicHero
         topic={topic}
@@ -93,7 +93,7 @@ export default async function TopicDetailPage({
         isLoggedIn={!!user}
         initialFollowerCount={followerCount}
       />
-      <div className="px-4 py-4">
+      <div className="px-4 py-4 lg:px-10">
         <PostsGrid
           posts={posts}
           tagGroupMap={tagGroupMap}

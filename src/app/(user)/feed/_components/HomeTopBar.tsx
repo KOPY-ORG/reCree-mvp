@@ -32,13 +32,14 @@ export function HomeTopBar({
 }) {
   return (
     <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm pt-[calc(env(safe-area-inset-top,0px)+16px)] pb-5">
-      <div className="px-5 flex items-center gap-3">
+      <div className="px-5 flex items-center gap-3 lg:px-10 lg:gap-6">
         <BrandLogo className="shrink-0" />
-        <div className="flex-1 min-w-0">
+        {/* lg: 검색창이 1000px 넘게 늘어나지 않게 읽기 좋은 폭에서 멈춘다 */}
+        <div className="flex-1 min-w-0 lg:max-w-xl">
           <HomeSearchBar />
         </div>
       </div>
-      <div className="mt-4">
+      <div className="mt-4 lg:px-5">
         <HomeTabBar activeTab={activeTab} topics={topics} isLoggedIn={isLoggedIn} />
       </div>
     </div>

@@ -76,7 +76,8 @@ export function ProfileView({
   }
 
   return (
-    <div className="flex flex-col min-h-full">
+    // lg: 한 사람의 모음이라 1440 전체로 펼치지 않고 읽는 폭에서 멈춘다
+    <div className="flex flex-col min-h-full lg:mx-auto lg:w-full lg:max-w-5xl">
       {/* 자체 헤더 */}
       <header className="app-header">
         <div className="h-12 flex items-center justify-between px-4">
@@ -221,7 +222,7 @@ export function ProfileView({
           </Link>
         </div>
       ) : (
-        <div className="px-2 grid grid-cols-2 gap-2 bg-background">
+        <div className="px-2 grid grid-cols-2 gap-2 bg-background md:grid-cols-3 lg:grid-cols-4">
           {recreeshots.map((shot) => {
             const isHidden = shot.status === "HIDDEN" || shot.status === "REPORT_HIDDEN";
             return (
@@ -321,7 +322,7 @@ export function ProfileView({
 
       {/* 계정 탈퇴 확인 다이얼로그 */}
       {showDeleteDialog && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-4 pb-8">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-4 pb-8 lg:items-center lg:pb-0">
           <div className="w-full max-w-sm bg-background rounded-2xl overflow-hidden">
             <div className="px-5 pt-6 pb-4 text-center space-y-2">
               <p className="font-bold text-base">Delete account?</p>

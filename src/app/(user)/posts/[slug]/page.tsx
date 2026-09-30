@@ -172,8 +172,21 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
     }),
   };
 
+  const hasBanner = bannerImages.length > 0;
+
+  // 모바일 간격 보정 (아래 두 열 래퍼 주석 참고). 모두 모바일에서만 의미가 있고 lg 는 gap 이 간격을 맡는다.
+  // SourceSection · ImageCreditSection 이 스스로 null 을 돌려주는 조건과 같은 식이어야 한다.
+  const hasSource = post.postSources.some((s) => s.sourceType === "PRIMARY");
+  const hasTail =
+    post.postImages.some((img) => !!img.creditText) || !!post.source;
+  // Source(mb-6 = 24) 뒤에 크레딧(mt-2) · 출처(mt-6)가 오면 예전에는 둘이 겹쳐 24 였다 → 뒤쪽 첫 마진을 지운다
+  const sourceGapFix = hasSource ? "[&>:first-child]:mt-0" : "";
+  // Source 가 두 열의 마지막이면 그 mb-6 이 아래 Nearby(mt-6) · 댓글(mt-8)과 겹치던 것을 → 지워서 뒤쪽 마진만 남긴다.
+  // 크레딧이 마지막일 때(mb-4)는 order-7 래퍼의 [&>:last-child]:mb-0 이 같은 일을 한다
+  const tailGapFix = hasSource && !hasTail ? "[&>section]:mb-0" : "";
+
   return (
-    <article className="pb-8 max-w-2xl mx-auto">
+    <article className="pb-8 max-w-2xl mx-auto lg:max-w-none">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -186,9 +199,29 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
         </div>
       )}
 
-      {/* 배너 캐러셀 — 헤더(h-12) 높이만큼 위로 올려 풀블리드 (미리보기엔 헤더 없으므로 margin 제거) */}
-      {bannerImages.length > 0 && (
-        <div className={isPreview ? "" : "-mt-12"}>
+      {/* lg: 두 열. 왼쪽 7 = 사진 → 제목 블록 → 위치 카드 → From the Source, 오른쪽 5 = 나머지(구매 · 인사이트 ·
+          recreeshot · Story · 크레딧 · 출처) 원래 순서. 왼쪽이 길어 sticky 없이 양쪽이 자연 스크롤한다.
+          배너가 없으면 왼쪽이 비므로 한 줄로 둔다.
+
+          블록은 전부 한 번만 렌더한다(지도 iframe · h1 이 두 벌 생기지 않게). 그래서 DOM 은 lg 의 두 열 모양이고,
+          모바일은 두 열 래퍼를 display: contents 로 풀어 조각들을 이 flex 열의 형제로 만든 뒤 order 로 원래 순서
+          (사진 1 → 제목 2 → 구매·인사이트 3 → 위치 4 → recreeshot·Story 5 → Source 6 → 크레딧·출처 7)를 되돌린다.
+
+          flex 항목 사이에서는 마진이 겹치지(collapse) 않는다. 모바일 간격이 그대로이려면 겹치던 자리를 손봐야 하는데,
+          조각 경계에서 양쪽 마진이 모두 있는 곳은 Source(mb-6) 뒤 두 군데뿐이다 — 아래 sourceGapFix · tailGapFix */}
+      <div
+        className={
+          hasBanner
+            ? "flex flex-col lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start lg:gap-6 lg:px-6 lg:pt-20"
+            : "flex flex-col lg:mx-auto lg:max-w-2xl lg:pt-4"
+        }
+      >
+      {/* 왼쪽 열 */}
+      <div className={hasBanner ? "contents lg:flex lg:min-w-0 lg:flex-col lg:gap-5" : "contents"}>
+      {/* 배너 캐러셀 — 헤더(h-12) 높이만큼 위로 올려 풀블리드 (미리보기엔 헤더 없으므로 margin 제거).
+          lg 는 헤더가 불투명 바라 올리지 않고, 사진은 둥근 카드로 붙어 있다 */}
+      {hasBanner && (
+        <div className={`order-1 lg:order-none lg:mx-4 lg:mt-0 lg:overflow-hidden lg:rounded-2xl ${isPreview ? "" : "-mt-12"}`}>
           <BannerCarousel images={bannerImages}>
             <OriginalSourceCards
               images={originalImages}
@@ -198,8 +231,10 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
         </div>
       )}
 
+      {/* 제목 블록 — 토픽·태그 칩 · 제목 · 부제 · 좋아요·댓글·공유·저장 */}
+      <div className={hasBanner ? "order-2 lg:order-none" : "order-2"}>
       {/* 배너 없을 때 소스 이미지 카드 (뱃지 위) */}
-      {bannerImages.length === 0 && (
+      {!hasBanner && (
         <OriginalSourceCards
           images={originalImages}
           originalLinkUrls={originalLinkUrls}
@@ -234,7 +269,34 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
         initialLikeCount={post.likeCount}
         commentCount={post.commentCount}
       />
+      </div>
 
+      {/* Location 카드. lg 는 간격을 열의 gap 이 맡는다 */}
+      {spotInsight && (
+        <div className={hasBanner ? "order-4 lg:order-none lg:[&>*]:mt-0" : "order-4"}>
+          <LocationCard
+            placeId={spotInsight.place.id}
+            nameEn={spotInsight.place.nameEn}
+            nameKo={spotInsight.place.nameKo}
+            addressEn={spotInsight.place.addressEn}
+            latitude={spotInsight.place.latitude ? Number(spotInsight.place.latitude) : null}
+            longitude={spotInsight.place.longitude ? Number(spotInsight.place.longitude) : null}
+            googleMapsUrl={spotInsight.place.googleMapsUrl}
+            naverMapsUrl={spotInsight.place.naverMapsUrl ?? null}
+            streetViewUrl={spotInsight.place.streetViewUrl ?? null}
+          />
+        </div>
+      )}
+
+      <div className={`${hasBanner ? "order-6 lg:order-none lg:[&>*]:my-0" : "order-6"} ${tailGapFix}`}>
+      {/* From the Source */}
+      <SourceSection sources={post.postSources.map((s) => ({ ...s, platform: s.platform as SourcePlatform | null }))} />
+      </div>
+      </div>
+
+      {/* 오른쪽 열. 첫 블록의 위 마진은 lg 에서 지워 사진과 윗선을 맞춘다 */}
+      <div className={hasBanner ? "contents lg:block lg:min-w-0 lg:[&>div:first-child>:first-child]:mt-0" : "contents"}>
+      <div className={hasBanner ? "order-3 lg:order-none" : "order-3"}>
       {/* 구매 버튼 (shop 포스트) */}
       {post.isShop && post.purchaseUrl && (
         <PurchaseButton purchaseUrl={post.purchaseUrl} isAffiliate={post.isAffiliate} />
@@ -301,22 +363,9 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
           </div>
         </div>
       )}
+      </div>
 
-      {/* Location 카드 */}
-      {spotInsight && (
-        <LocationCard
-          placeId={spotInsight.place.id}
-          nameEn={spotInsight.place.nameEn}
-          nameKo={spotInsight.place.nameKo}
-          addressEn={spotInsight.place.addressEn}
-          latitude={spotInsight.place.latitude ? Number(spotInsight.place.latitude) : null}
-          longitude={spotInsight.place.longitude ? Number(spotInsight.place.longitude) : null}
-          googleMapsUrl={spotInsight.place.googleMapsUrl}
-          naverMapsUrl={spotInsight.place.naverMapsUrl ?? null}
-          streetViewUrl={spotInsight.place.streetViewUrl ?? null}
-        />
-      )}
-
+      <div className={hasBanner ? "order-5 lg:order-none" : "order-5"}>
       {/* How others reCree'd + Tips (shop 포스트는 숨김) */}
       {!post.isShop && (
         <PostReCreeshotSection
@@ -339,10 +388,9 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
           </div>
         </div>
       )}
+      </div>
 
-      {/* From the Source */}
-      <SourceSection sources={post.postSources.map((s) => ({ ...s, platform: s.platform as SourcePlatform | null }))} />
-
+      <div className={`${hasBanner ? "order-7 lg:order-none" : "order-7"} ${sourceGapFix} [&>:last-child]:mb-0`}>
       {/* Photo Credits */}
       <ImageCreditSection
         credits={post.postImages
@@ -356,6 +404,12 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
           Source: {post.source}
         </p>
       )}
+      </div>
+      </div>
+      </div>
+
+      {/* lg: 아래 두 블록은 두 단 밑에서 전체 폭으로 이어진다. 댓글은 읽기 폭으로 좁힌다 */}
+      <div className="lg:px-6">
 
       {/* Nearby Attractions (시안 :885) — 실패 · 0건 · 좌표 없음 · shop 일 때 사라지는
           유일한 블록이라 꼬리에 둔다. 없어져도 위로 붙는 것이 댓글 하나뿐이고,
@@ -382,6 +436,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
         currentUserNickname={currentUser?.nickname ?? null}
         currentUserProfileImageUrl={currentUser?.profileImageUrl ?? null}
       />
+      </div>
     </article>
   );
 }

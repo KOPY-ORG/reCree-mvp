@@ -44,7 +44,7 @@ export function DiscoverTopicChips({
       aria-label="Followed topics"
       /* 58 + 칩 높이 32 + pb 6 = 96. 시트 full 의 윗변(PlaceListSheet 의
          FULL_TOP_WITH_FACETS)과 정확히 맞물려, 시트를 끝까지 올려도 겹치지 않는다 */
-      className="absolute top-[58px] inset-x-0 z-[60] overflow-x-auto px-3 pb-1.5 scrollbar-hide"
+      className="absolute top-[58px] inset-x-0 z-[60] overflow-x-auto px-3 pb-1.5 scrollbar-hide lg:right-auto lg:w-[var(--discover-panel-w)]"
     >
       <div className="flex items-center gap-2">
         {topics.map((topic) => {
