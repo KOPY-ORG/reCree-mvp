@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { isExternalImage, focalStyle } from "@/lib/image";
 import { Play, Camera, Link2 } from "lucide-react";
+import { youTubeThumbnail } from "./youtube-source";
 
 interface OriginalImage {
   id: string;
@@ -17,6 +18,8 @@ interface OriginalImage {
 interface Props {
   images: OriginalImage[];
   originalLinkUrls?: string[];
+  // 출처가 유튜브인 게시글은 저장된 장면 이미지 대신 그 영상의 공식 썸네일을 보여준다 (DB 값은 그대로)
+  youTubeVideoId?: string | null;
   className?: string;
 }
 
@@ -66,7 +69,34 @@ function DomainFallback({ url }: { url: string }) {
   );
 }
 
-function SourceCard({ image, onClick }: { image: OriginalImage; onClick?: () => void }) {
+// next/image 최적화를 거치지 않는다 (Vercel 이미지 한도).
+// maxresdefault 가 없으면 i.ytimg 는 404 와 함께 120px 회색 이미지를 주므로, 오류와 120px 둘 다 hqdefault 로 넘긴다
+function YouTubeThumbnail({ videoId, alt }: { videoId: string; alt: string }) {
+  const imgRef = useRef<HTMLImageElement>(null);
+  const hq = youTubeThumbnail(videoId, "hqdefault");
+  const fallbackIfMissing = (img: HTMLImageElement) => {
+    if (img.src !== hq && img.complete && img.naturalWidth <= 120) img.src = hq;
+  };
+
+  // 하이드레이션 전에 로드가 끝나면 onLoad · onError 를 놓치므로 마운트 시점에도 확인한다
+  useEffect(() => {
+    if (imgRef.current) fallbackIfMissing(imgRef.current);
+  });
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      ref={imgRef}
+      src={youTubeThumbnail(videoId, "maxresdefault")}
+      alt={alt}
+      className="absolute inset-0 size-full object-cover"
+      onLoad={(e) => fallbackIfMissing(e.currentTarget)}
+      onError={(e) => fallbackIfMissing(e.currentTarget)}
+    />
+  );
+}
+
+function SourceCard({ image, youTubeVideoId, onClick }: { image: OriginalImage; youTubeVideoId?: string | null; onClick?: () => void }) {
   const [error, setError] = useState(false);
   const shortDomain = getShortDomain(image.url);
 
@@ -75,7 +105,9 @@ function SourceCard({ image, onClick }: { image: OriginalImage; onClick?: () => 
       className="relative w-18 sm:w-24 md:w-32 lg:w-40 aspect-[4/3] rounded-lg shadow-md overflow-hidden shrink-0 cursor-pointer ring-1 ring-white/60"
       onClick={onClick}
     >
-      {error ? (
+      {youTubeVideoId ? (
+        <YouTubeThumbnail videoId={youTubeVideoId} alt="youtube" />
+      ) : error ? (
         <DomainFallback url={image.url} />
       ) : (
         <Image
@@ -93,7 +125,7 @@ function SourceCard({ image, onClick }: { image: OriginalImage; onClick?: () => 
   );
 }
 
-export function OriginalSourceCards({ images, originalLinkUrls, className }: Props) {
+export function OriginalSourceCards({ images, originalLinkUrls, youTubeVideoId, className }: Props) {
   if (images.length === 0) return null;
 
   return (
@@ -103,7 +135,7 @@ export function OriginalSourceCards({ images, originalLinkUrls, className }: Pro
         const handleClick = clickUrl
           ? () => window.open(clickUrl, "_blank")
           : undefined;
-        return <SourceCard key={img.id} image={img} onClick={handleClick} />;
+        return <SourceCard key={img.id} image={img} youTubeVideoId={youTubeVideoId} onClick={handleClick} />;
       })}
     </div>
   );

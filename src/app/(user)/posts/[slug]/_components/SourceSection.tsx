@@ -40,10 +40,11 @@ export function SourceSection({ sources }: Props) {
     <section className="px-4 mt-8 mb-6">
       <h2 className="text-base font-bold mb-3">From the Source</h2>
       <div className="space-y-3">
-        {visibleSources.map((source) =>
+        {visibleSources.map((source, i) =>
           isYouTube(source) ? (
             <div key={source.id}>
-              <YouTubeEmbed url={source.url} />
+              {/* 유튜브가 맨 위로 정렬되므로 맨 위 하나만 자동재생 */}
+              <YouTubeEmbed url={source.url} autoplay={i === 0} />
               {source.sourceDetail && (
                 <p className="mt-1 text-center text-[11px] text-muted-foreground/70 italic">
                   {source.sourceDetail}

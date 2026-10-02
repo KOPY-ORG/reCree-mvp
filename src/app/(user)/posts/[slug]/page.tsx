@@ -7,6 +7,7 @@ import { MarkdownContent } from "./_components/MarkdownContent";
 import { PostDetailHeader } from "./_components/PostDetailHeader";
 import { BannerCarousel } from "./_components/BannerCarousel";
 import { OriginalSourceCards } from "./_components/OriginalSourceCards";
+import { parseYouTubeSource } from "./_components/youtube-source";
 import { SourceSection } from "./_components/SourceSection";
 import { ImageCreditSection } from "./_components/ImageCreditSection";
 import { PostMetaBar } from "./_components/PostMetaBar";
@@ -122,6 +123,12 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
   const originalLinkUrls = post.postSources
     .filter((s) => s.isOriginalLink)
     .map((s) => s.url);
+  // 출처 유튜브가 있으면 소스 카드 이미지를 맨 위 유튜브(SourceSection 의 자동재생 영상) 썸네일로 바꿔 보여준다
+  const sourceYouTubeVideoId =
+    post.postSources
+      .filter((s) => s.sourceType === "PRIMARY")
+      .map((s) => parseYouTubeSource(s.url))
+      .find((s) => s !== null)?.videoId ?? null;
 
   // 색상 resolve
   const configMap = new Map(tagGroupConfigs.map((c) => [c.group, c]));
@@ -231,6 +238,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
             <OriginalSourceCards
               images={originalImages}
               originalLinkUrls={originalLinkUrls}
+              youTubeVideoId={sourceYouTubeVideoId}
             />
           </BannerCarousel>
         </div>
@@ -241,6 +249,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
         <OriginalSourceCards
           images={originalImages}
           originalLinkUrls={originalLinkUrls}
+          youTubeVideoId={sourceYouTubeVideoId}
           className={`px-4 pb-1 flex gap-2 ${isPreview ? "pt-3" : "pt-14"}`}
         />
       )}
