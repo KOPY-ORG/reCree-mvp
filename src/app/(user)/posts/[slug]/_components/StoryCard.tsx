@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
+import { MessageSquareMore } from "lucide-react";
 import { MarkdownContent } from "./MarkdownContent";
 
 interface Props {
@@ -30,7 +31,11 @@ export function StoryCard({ body }: Props) {
   return (
     <div className="surface-card mx-4 overflow-hidden">
       <div className="px-4 pt-4 pb-3">
-        <p className="text-sm font-bold">Story</p>
+        {/* 이야기를 들려주는 말풍선(MessageSquareMore). Fan To-Do 의 별과 같은 크기 · 색 */}
+        <div className="flex items-center gap-1.5">
+          <MessageSquareMore className="size-4 shrink-0 text-foreground" strokeWidth={2} aria-hidden="true" />
+          <p className="text-sm font-bold">Story</p>
+        </div>
       </div>
       <div className="px-4 pb-4">
         <div
