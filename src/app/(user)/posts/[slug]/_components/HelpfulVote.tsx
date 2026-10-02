@@ -42,23 +42,18 @@ export function HelpfulVote({ postId, initialVoted, initialCount }: Props) {
 
   return (
     <>
-      <div className="surface-card mx-4 flex items-center justify-between gap-3 px-4 py-4">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-foreground">Was this helpful?</p>
-          {count > 0 && (
-            <p className="mt-0.5 text-xs text-muted-foreground" aria-live="polite">
-              {count} {count === 1 ? "fan" : "fans"} found this helpful
-            </p>
-          )}
-        </div>
+      {/* 카드가 아니라 버튼으로 보이게 — 그림자 없이 윤곽선만 있는 알약, 통째로 누른다(press-scale).
+          눌린 상태는 라임으로 채우고 윤곽선도 라임 (라임 위 글자 · 아이콘은 검정). 숫자는 알약 아래 */}
+      <div className="mx-4 flex flex-col items-center gap-2">
         <button
           type="button"
           onClick={handleClick}
           disabled={pending}
-          aria-label={voted ? "Remove helpful vote" : "Mark as helpful"}
           aria-pressed={voted}
-          className={`press-scale flex size-11 shrink-0 items-center justify-center rounded-full transition-colors disabled:opacity-60 ${
-            voted ? "bg-brand text-brand-foreground" : "bg-muted text-gray-900"
+          className={`press-scale flex h-12 items-center gap-2 rounded-full border px-5 text-sm font-semibold transition-colors disabled:opacity-60 ${
+            voted
+              ? "border-brand bg-brand text-brand-foreground"
+              : "border-border bg-background text-foreground"
           }`}
         >
           <ThumbsUp
@@ -67,7 +62,13 @@ export function HelpfulVote({ postId, initialVoted, initialCount }: Props) {
             fill={voted ? "currentColor" : "none"}
             aria-hidden="true"
           />
+          Was this helpful?
         </button>
+        {count > 0 && (
+          <p className="text-xs text-muted-foreground" aria-live="polite">
+            {count} {count === 1 ? "fan" : "fans"} found this helpful
+          </p>
+        )}
       </div>
 
       {toast && (
