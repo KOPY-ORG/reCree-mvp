@@ -7,8 +7,8 @@ interface Props {
 }
 
 // Spot Insight 에서 Must-try 만 떼어 낸 강조 카드. 2줄을 넘으면 접고 Show more 로 펼친다.
-// 화면 제목은 "Do It Like Them" — 데이터 필드 이름(mustTry)은 그대로다.
-// 다른 카드와 같은 표면(surface-card)에 바탕만 브랜드 연두(brand-sub3)를 깔아 강조를 남긴다
+// 화면 제목은 "Fan To-Do" — 데이터 필드 이름(mustTry)은 그대로다.
+// 다른 카드(surface-card)와 달리 메모(포스트잇) 모양이다 — 그림자 없는 연한 라임 종이에 오른쪽 위가 접혀 있다 (.memo-card)
 export function MustTryCard({ text }: Props) {
   const textRef = useRef<HTMLParagraphElement>(null);
   const [expanded, setExpanded] = useState(false);
@@ -26,8 +26,8 @@ export function MustTryCard({ text }: Props) {
   }, [expanded]);
 
   return (
-    <div className="surface-card mx-4 bg-brand-sub3 px-4 py-4">
-      <p className="text-sm font-bold text-foreground">Do It Like Them</p>
+    <div className="memo-card mx-4 px-4 py-4">
+      <p className="text-sm font-bold text-foreground">Fan To-Do</p>
       <p
         ref={textRef}
         className={`mt-1.5 text-sm text-gray-900 leading-relaxed ${expanded ? "" : "line-clamp-2"}`}

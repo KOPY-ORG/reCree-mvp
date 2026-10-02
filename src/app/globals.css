@@ -284,6 +284,27 @@ html[data-nav-tucked] {
     box-shadow: var(--shadow-card);
   }
 
+  /* ── 메모(포스트잇) 카드 — 상세 Fan To-Do ── */
+  /* 그림자 없이 연한 라임 종이. 오른쪽 위 모서리를 잘라내고(clip-path) 그 자리에 접힌 면(::after)을 그린다.
+     접힌 면은 브랜드 라임과 종이색을 반씩 섞은 진한 라임이라 종이 뒷면처럼 보인다. 기울이지 않는다 */
+  .memo-card {
+    --memo-fold: 18px;
+    position: relative;
+    background: var(--brand-sub3);
+    border-radius: 6px;
+    clip-path: polygon(0 0, calc(100% - var(--memo-fold)) 0, 100% var(--memo-fold), 100% 100%, 0 100%);
+  }
+  .memo-card::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: var(--memo-fold);
+    height: var(--memo-fold);
+    background: linear-gradient(to bottom left, transparent 50%, color-mix(in srgb, var(--brand) 55%, var(--brand-sub3)) 50%);
+    border-bottom-left-radius: 4px;
+  }
+
   /* ── 누름 반응 — 영상·사진 위에 뜬 아이콘 버튼처럼 opacity 로는 눌림이 안 보이는 곳 ── */
   .press-scale {
     transition: transform 160ms var(--ease-out-strong);
@@ -294,8 +315,8 @@ html[data-nav-tucked] {
 }
 
 /* ── 사진 위 버튼 (docs/design/surface.md) ── */
-/* 누르는 영역은 44, 보이는 원은 32 — 원은 ::before 로 그려 버튼 안 구조(아이콘 하나)를 건드리지 않는다.
-   검정 30% + 아주 약한 blur 에 흰 아이콘. 테두리 · 빛 반사 없이 가볍게 */
+/* 누르는 영역은 44, 보이는 원은 40(카메라와 같은 크기) — 원은 ::before 로 그려 버튼 안 구조(아이콘 하나)를 건드리지 않는다.
+   검정 18% + blur 12 로 뒤 사진이 비치게, 흰 아이콘은 원의 절반(20). 테두리 · 빛 반사 없이 가볍게 */
 @layer components {
   .photo-action {
     position: relative;
@@ -310,17 +331,15 @@ html[data-nav-tucked] {
   .photo-action::before {
     content: "";
     position: absolute;
-    width: 32px;
-    height: 32px;
-    border-radius: 9999px;
-    background: rgba(0, 0, 0, 0.3);
-    /* -webkit- 접두사는 빌드(lightningcss)가 붙인다. 둘 다 적으면 표준 쪽이 지워져 Chrome 에서 blur 가 안 먹는다 */
-    backdrop-filter: blur(5px);
-  }
-  /* recreeshot 추가(카메라) — 사진 아래쪽의 주 행동이라 원을 더 크고(40) 진하게 둔다 */
-  .photo-action-camera::before {
     width: 40px;
     height: 40px;
+    border-radius: 9999px;
+    background: rgba(0, 0, 0, 0.18);
+    /* -webkit- 접두사는 빌드(lightningcss)가 붙인다. 둘 다 적으면 표준 쪽이 지워져 Chrome 에서 blur 가 안 먹는다 */
+    backdrop-filter: blur(12px);
+  }
+  /* recreeshot 추가(카메라) — 사진 아래쪽의 주 행동이라 원을 더 진하게 둔다 */
+  .photo-action-camera::before {
     background: rgba(40, 40, 46, 0.72);
     backdrop-filter: blur(8px);
   }
@@ -329,7 +348,7 @@ html[data-nav-tucked] {
   }
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
     .photo-action::before {
-      background: rgba(0, 0, 0, 0.4);
+      background: rgba(0, 0, 0, 0.35);
     }
     .photo-action-camera::before {
       background: rgba(40, 40, 46, 0.85);

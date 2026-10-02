@@ -59,8 +59,8 @@ export function PostDetailHeader({ postId, isLoggedIn, isSaved = false, titleEn 
     ? "fixed top-0 left-0 right-0 z-50 h-14 lg:absolute lg:inset-x-0 lg:top-0"
     : "fixed top-0 left-0 right-0 z-50 h-14 lg:top-[var(--top-nav-space)] lg:bg-background/95 lg:backdrop-blur-sm lg:shadow-[0_1px_4px_rgba(0,0,0,0.07)]";
   const inner = onPhoto
-    ? "max-w-[var(--app-col-w)] mx-auto h-full flex items-center justify-between px-1.5 lg:max-w-none"
-    : "max-w-[var(--app-col-w)] mx-auto h-full flex items-center justify-between px-1.5 lg:max-w-[73rem] lg:px-4";
+    ? "max-w-[var(--app-col-w)] mx-auto h-full flex items-center justify-between px-2.5 lg:max-w-none"
+    : "max-w-[var(--app-col-w)] mx-auto h-full flex items-center justify-between px-2.5 lg:max-w-[73rem] lg:px-5";
 
   return (
     <>
@@ -82,7 +82,7 @@ export function PostDetailHeader({ postId, isLoggedIn, isSaved = false, titleEn 
           </button>
 
           {postId && (
-            <div className="relative flex items-center">
+            <div className="relative flex items-center gap-1">
               <button type="button" onClick={handleShare} aria-label="Share" className={ROUND}>
                 <Share2 className={ICON} strokeWidth={2} aria-hidden="true" />
               </button>
@@ -108,7 +108,7 @@ export function PostDetailHeader({ postId, isLoggedIn, isSaved = false, titleEn 
               {menuOpen && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                  <div className="absolute top-11 right-1.5 z-20 bg-white/80 backdrop-blur-md rounded-xl shadow-md overflow-hidden min-w-[160px]">
+                  <div className="absolute top-11 right-0.5 z-20 bg-white/80 backdrop-blur-md rounded-xl shadow-md overflow-hidden min-w-[160px]">
                     <button
                       type="button"
                       onClick={() => { setMenuOpen(false); if (!isLoggedIn) { showError("Please sign in to report content."); return; } setReportOpen(true); }}
