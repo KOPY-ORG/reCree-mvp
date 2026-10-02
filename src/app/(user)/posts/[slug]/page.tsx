@@ -15,6 +15,7 @@ import type { SourcePlatform } from "@/types";
 import { PostReCreeshotSection } from "./_components/PostReCreeshotSection";
 import { getPostDetail } from "@/lib/post-detail-query";
 import { PostActionBar } from "./_components/PostActionBar";
+import { PostMoreMenu } from "./_components/PostMoreMenu";
 import { LikeSaveButtons } from "./_components/LikeSaveButtons";
 import { PostLikeProvider } from "./_components/PostLikeProvider";
 import { PurchaseButton } from "./_components/PurchaseButton";
@@ -214,8 +215,8 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
   // 모바일은 두 열 래퍼를 display: contents 로 풀어 블록들을 바깥 flex 열의 형제로 만든 뒤 order 로 순서를 되돌린다.
   //   모바일: 사진 1 → 칩 · 제목 2 → Fan To-Do 3 → 구매 4 → 출처(유튜브 → 나머지) 5 → Story 6 → 위치 7 → recreeshot 8
   //          → 주변 관광지 9 → 댓글 10 → 좋아요 · 저장 · 도움이 됐어요 11 → 사진 크레딧 12
-  //   lg   : 왼쪽 = 미디어(유튜브, 없으면 사진) → 사진 줄(유튜브 글만) → Fan To-Do → Story → 주변 관광지 → 댓글 → 좋아요 줄 → 사진 크레딧
-  //          오른쪽 = 칩 · 제목 · 아이콘 줄 → 구매 → 위치 → 출처 카드(유튜브 밖) → recreeshot
+  //   lg   : 왼쪽 = 미디어(유튜브, 없으면 사진) → 사진 줄(유튜브 글만) → Fan To-Do → Story → 주변 관광지 → 댓글 → 사진 크레딧
+  //          오른쪽 = 칩 · 제목 · 아이콘 줄 → 구매 → 위치 → 출처 카드(유튜브 밖) → recreeshot → 좋아요 줄
   // 왼쪽 미디어 칸을 채울 것(유튜브 · 사진)이 없으면 lg 에서도 두 열을 풀어 모바일 순서 그대로 한 줄로 둔다.
   // 블록 사이 간격은 모바일은 각 블록의 위 마진이(붙어 있는 블록은 0), lg 는 각 열의 gap 이 맡는다 —
   // 칩 · 제목 · Fan To-Do 는 모바일에서 사진에 붙어 있지만 lg 에서는 다른 열이라 gap 하나로는 둘 다 맞출 수 없다.
@@ -346,15 +347,6 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
         />
       </div>
 
-      {/* 좋아요 · 저장(로그인 필요) · 도움이 됐어요(로그인 없이) 한 줄 — 댓글 바로 아래. 미리보기에선 숨김 */}
-      {!isPreview && (
-        <div className={`${order(11)} ${gap}`}>
-          <HelpfulVote postId={post.id} initialVoted={isHelpfulByMe}>
-            <LikeSaveButtons postId={post.id} isSaved={isSaved} isLoggedIn={!!currentUser} />
-          </HelpfulVote>
-        </div>
-      )}
-
       {/* 사진 크레딧 — 페이지 맨 아래. 없으면 컴포넌트가 null 이라 래퍼도 숨긴다 */}
       {credits.length > 0 && (
         <div className={`${order(12)} ${gap} ${block}`}>
@@ -367,12 +359,13 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
       <div className={column("lg:gap-5")}>
       {/* 토픽 · 태그 칩 + 아이콘 줄 + 제목. 한 격자라 모바일과 lg 의 배치가 다르다 —
           모바일: 칩(왼쪽에서 줄바꿈) | 댓글 · 저장(첫 줄 높이에 맞춰 오른쪽) / 제목
-          lg   : 칩 / 제목 / 좋아요 · 댓글 · 저장 · 공유 · 더보기 (PostActionBar 가 3행에 선다).
+          lg   : 칩 | 더보기(PostMoreMenu, lg 전용) / 제목 / 좋아요 · 저장 · 댓글 · 공유 (PostActionBar 가 3행에 선다).
           아이콘 칸(42)이 아이콘(24)보다 커서 아래로 남는 9 만큼 lg 에서 블록 아래를 당긴다 */}
-      <div className={`${order(2)} mt-0 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2 px-4 pt-3 pb-2 lg:grid-cols-1 lg:pt-0 lg:pb-0 ${twoCol ? "lg:-mb-2.5" : ""}`}>
+      <div className={`${order(2)} mt-0 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2 px-4 pt-3 pb-2 lg:pt-0 lg:pb-0 ${twoCol ? "lg:-mb-2.5" : ""}`}>
         <PostMetaBar labels={labels} />
         <PostActionBar postId={post.id} isSaved={isSaved} isLoggedIn={!!currentUser} titleEn={post.titleEn} />
-        <div className="col-span-2 space-y-1 pt-2 lg:col-span-1 lg:row-start-2 lg:pt-[11px]">
+        <PostMoreMenu postId={post.id} isLoggedIn={!!currentUser} />
+        <div className="col-span-2 space-y-1 pt-2 lg:row-start-2 lg:pt-[11px]">
           {headline && (
             <p className="text-xl font-bold leading-tight lg:text-[28px] lg:leading-[1.2]">
               {headline}
@@ -436,6 +429,15 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
             originalImageUrl={originalImages[0]?.url ?? null}
             isLoggedIn={!!currentUser}
           />
+        </div>
+      )}
+
+      {/* 좋아요 · 저장(로그인 필요) · 도움이 됐어요(로그인 없이) 한 줄. 모바일은 댓글 바로 아래, lg 는 오른쪽 열 맨 아래. 미리보기에선 숨김 */}
+      {!isPreview && (
+        <div className={`${order(11)} ${gap}`}>
+          <HelpfulVote postId={post.id} initialVoted={isHelpfulByMe}>
+            <LikeSaveButtons postId={post.id} isSaved={isSaved} isLoggedIn={!!currentUser} />
+          </HelpfulVote>
         </div>
       )}
       </div>

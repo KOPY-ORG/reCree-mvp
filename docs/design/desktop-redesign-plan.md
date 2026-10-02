@@ -230,9 +230,10 @@ y=88  │ ┌ 미디어 칸 16:9 (780) ──────────┐  40  �
       │ Story (lg 는 접지 않음)                  │ │ [ View on Map ] 라임│ │ │
       │ Nearby Attractions (3장 폭)              │ │ [Google][NAVER]     │ │ │
       │ Comments                                 │ │ [Street View] (URL) │ │ │
-      │ ♡ Like · ⌑ Save · 👍 Helpful?            │ └────────────────────┘ │ │
-      │ Photo Credits                            │ 출처 카드(유튜브 밖)   │ │
+      │ Photo Credits                            │ └────────────────────┘ │ │
+      │                                          │ 출처 카드(유튜브 밖)   │ │
       │                                          │ recreeshot             │ │
+      │                                          │ ♡ Like ⌑ Save 👍 Helpful│ │
       └──────────────────────────────────────────┴────────────────────────┘
 ```
 
@@ -243,13 +244,14 @@ y=88  │ ┌ 미디어 칸 16:9 (780) ──────────┐  40  �
 - 미디어 칸: 유튜브 출처가 있으면 `YouTubeEmbed`(지금 동작 그대로). 없으면 `BannerCarousel` 이 16:9 캐러셀이 된다(늘 보이는 흰 화살표 40, 점, 카메라)
 - 유튜브 글은 영상 아래(간격 16) `BannerCarousel` 이 가로 사진 줄이 된다 — 약 2.5장, 좌우 화살표로 한 장씩 스크롤, 라벨 없음
 - 사진 위 뒤로가기 · 공유 · 저장 · 더보기, 원본 장면 PIP 카드는 lg 에서 숨는다
-- Fan To-Do → Story → Nearby Attractions → 댓글 → 좋아요 · 저장 · 도움이 됐어요 → Photo Credits. 블록 사이 28
+- Fan To-Do → Story → Nearby Attractions → 댓글 → Photo Credits. 블록 사이 28
 
 **오른쪽 열** (블록 사이 20)
 - 칩 → 장소 이름 → 부제 → 아이콘 줄(좋아요 · 댓글 · 저장 · 공유 · 더보기). 모바일 칩 옆 댓글 · 저장과 같은 컴포넌트(`PostActionBar`)가 lg 에서 3행으로 내려간다
 - 지도 카드(`LocationCard`): 라임 아이콘 + 이름 + 주소 / 지도 / 전체 폭 View on Map / Google Maps · NAVER Map 반반 / Street View(URL 있을 때만)
 - 출처 카드: 유튜브가 아닌 출처(인스타그램 · X · Netflix 등)만, 44 아이콘 칸의 한 줄 카드
 - recreeshot: 있으면 "How others reCree'd" + 가로 캐러셀(맨 앞 Add), 없으면 제목 없이 가로형 Add recreeshot 카드
+- 맨 아래 좋아요 · 저장 · 도움이 됐어요 알약 줄 (모바일은 댓글 바로 아래 그대로)
 - shop 글은 아이콘 줄 아래 구매 버튼, 위치 · recreeshot 없음
 
 **한 번만 렌더 · 상태 공유**
