@@ -269,8 +269,8 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
       <PostActionBar
         postId={post.id}
         initialLiked={isLikedByMe}
-        initialLikeCount={post.likeCount}
-        commentCount={post.commentCount}
+        initialLikeCount={post._count.likes}
+        commentCount={post._count.comments}
       />
 
       {/* 구매 버튼 (shop 포스트) */}
@@ -354,7 +354,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
         <PostComments
           postId={post.id}
           initialComments={comments}
-          initialCommentCount={post.commentCount}
+          initialCommentCount={post._count.comments}
           currentUserId={currentUser?.id ?? null}
           currentUserRole={currentUser?.role ?? null}
           currentUserNickname={currentUser?.nickname ?? null}

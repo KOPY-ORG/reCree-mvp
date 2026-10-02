@@ -11,7 +11,11 @@ export async function getPostDetail(
 
   const post = await prisma.post.findUnique({
     where: { slug },
+    // 저장된 likeCount · commentCount 는 계정 삭제(cascade) 때 줄지 않아 실제보다 커진다.
+    // 화면 숫자는 그때그때 센다(_count). 저장 칼럼은 여기서 아예 빼 실수로 읽지 못하게 한다
+    omit: { likeCount: true, commentCount: true },
     include: {
+      _count: { select: { likes: true, comments: true } },
       postTopics: {
         where: { isVisible: true },
         orderBy: [{ topic: { level: "asc" } }, { displayOrder: "asc" }],
