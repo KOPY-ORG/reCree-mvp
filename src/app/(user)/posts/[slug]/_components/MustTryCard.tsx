@@ -27,7 +27,7 @@ export function MustTryCard({ text }: Props) {
 
   return (
     <div className="memo-card mx-4 px-4 py-4">
-      <p className="text-sm font-bold text-foreground">Fan To-Do</p>
+      <p className="text-sm font-semibold text-foreground">Fan To-Do</p>
       <p
         ref={textRef}
         className={`mt-1.5 text-sm text-gray-900 leading-relaxed ${expanded ? "" : "line-clamp-2"}`}
