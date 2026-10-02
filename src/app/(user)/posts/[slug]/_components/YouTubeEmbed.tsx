@@ -14,9 +14,7 @@ interface Props {
 // YouTube IFrame API 중 여기서 쓰는 것만
 interface YTPlayer {
   playVideo(): void;
-  pauseVideo(): void;
   unMute(): void;
-  getPlayerState(): number;
   destroy(): void;
 }
 
@@ -31,11 +29,9 @@ interface YTNamespace {
       playerVars: Record<string, string | number>;
       events: {
         onReady: () => void;
-        onStateChange: (e: { data: number }) => void;
       };
     }
   ) => YTPlayer;
-  PlayerState: { PLAYING: number; PAUSED: number };
 }
 
 declare global {
@@ -121,10 +117,6 @@ export function YouTubeEmbed({ url, autoplay = false }: Props) {
     if (!container) return;
 
     let cancelled = false;
-    let visible = false;
-    // 사용자가 직접 멈춘 영상은 다시 보여도 이어 재생하지 않는다
-    let pausedByUser = false;
-    let pausingByObserver = false;
     let observer: IntersectionObserver | null = null;
 
     const createPlayer = async () => {
@@ -150,15 +142,6 @@ export function YouTubeEmbed({ url, autoplay = false }: Props) {
           onReady: () => {
             if (cancelled) return;
             setReady(true);
-            if (!visible) playerRef.current?.pauseVideo();
-          },
-          onStateChange: (e) => {
-            if (e.data === YT.PlayerState.PAUSED) {
-              pausedByUser = !pausingByObserver;
-              pausingByObserver = false;
-            } else if (e.data === YT.PlayerState.PLAYING) {
-              pausedByUser = false;
-            }
           },
         },
       });
@@ -166,21 +149,14 @@ export function YouTubeEmbed({ url, autoplay = false }: Props) {
 
     const cancelWait = afterPageLoad(() => {
       if (cancelled) return;
+      // 처음 화면에 들어올 때 플레이어를 만들고, 그 뒤로는 보는지 여부를 따지지 않는다 —
+      // 스크롤로 화면 밖에 나가도 멈추지 않고 페이지에 있는 동안 계속 재생한다(소리 켠 채 글을 읽을 수 있게).
+      // 멈춤은 사용자가 플레이어에서 누를 때뿐이고, 그 영상을 다시 틀지 않는다. 페이지를 떠나면 아래 정리에서 플레이어를 없앤다
       observer = new IntersectionObserver(
         ([entry]) => {
-          visible = entry.isIntersecting;
-          const player = playerRef.current;
-          if (!player) {
-            // 처음 화면에 들어올 때 플레이어를 만든다
-            if (visible) void createPlayer();
-            return;
-          }
-          if (visible) {
-            if (!pausedByUser) player.playVideo();
-          } else if (player.getPlayerState() === window.YT?.PlayerState.PLAYING) {
-            pausingByObserver = true;
-            player.pauseVideo();
-          }
+          if (!entry.isIntersecting) return;
+          observer?.disconnect();
+          void createPlayer();
         },
         { threshold: 0.5 }
       );
