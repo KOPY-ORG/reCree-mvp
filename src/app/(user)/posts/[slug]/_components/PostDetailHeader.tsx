@@ -86,14 +86,13 @@ export function PostDetailHeader({ postId, isLoggedIn, isSaved = false, titleEn 
               <button type="button" onClick={handleShare} aria-label="Share" className={ROUND}>
                 <Share2 className={ICON} strokeWidth={2} aria-hidden="true" />
               </button>
-              {/* 저장되면 아이콘만 라임으로 채운다 — 원 색은 그대로 (ScrapButton 기본 savedStyle) */}
+              {/* 저장되면 아이콘만 라임으로 채운다 — 원 색은 그대로. 좋아요 줄의 저장 버튼과 상태가 함께 바뀐다 */}
               <ScrapButton
                 postId={postId}
                 initialSaved={isSaved}
                 size="md"
                 className={`${ROUND} disabled:opacity-60`}
                 unsavedClassName="text-white"
-                strokeWidth={2}
               />
               <button
                 type="button"

@@ -302,14 +302,13 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
         </div>
       )}
 
-      {/* 좋아요 · 댓글 · 저장 */}
+      {/* 좋아요 · 댓글 · 저장 (아이콘만) */}
       <PostActionBar
         postId={post.id}
         initialLiked={isLikedByMe}
         initialLikeCount={post._count.likes}
         commentCount={post._count.comments}
         isSaved={isSaved}
-        saveLabel={spotInsight && !post.isShop ? "Save this place" : "Save"}
       />
 
       {/* 구매 버튼 (shop 포스트) */}

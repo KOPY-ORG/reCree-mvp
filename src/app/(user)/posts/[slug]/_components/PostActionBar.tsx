@@ -12,9 +12,11 @@ interface Props {
   initialLikeCount: number;
   commentCount: number;
   isSaved: boolean;
-  /** 저장 버튼 글자. 장소 글은 "Save this place", 그 밖은 "Save" */
-  saveLabel: string;
 }
+
+/** 세 버튼 공통 — 누르는 칸 44, 숫자가 붙으면 옆으로 늘어난다. 누르면 살짝 줄어든다 */
+const ACTION = "press-scale flex h-11 min-w-11 items-center justify-center gap-1.5 rounded-full px-2.5 transition-colors";
+const ICON = "size-6";
 
 export function PostActionBar({
   postId,
@@ -22,7 +24,6 @@ export function PostActionBar({
   initialLikeCount,
   commentCount,
   isSaved,
-  saveLabel,
 }: Props) {
   const [liked, setLiked] = useState(initialLiked);
   const [likeCount, setLikeCount] = useState(initialLikeCount);
@@ -59,51 +60,43 @@ export function PostActionBar({
 
   return (
     <>
-      <div className="flex items-center justify-between gap-4 px-4 py-2">
-      <div className="flex items-center gap-4">
+      {/* 좋아요 → 댓글 → 저장, 아이콘만 오른쪽 정렬. 아이콘 24 · 누르는 칸 44(좌우 10 여백).
+          마지막 칸의 여백만큼 줄을 오른쪽으로 밀어 북마크 아이콘이 본문 오른쪽 끝(px-4)에 맞는다 */}
+      <div className="flex items-center justify-end gap-1 px-4 py-1 -mr-2.5">
         <button
           type="button"
           onClick={handleLike}
           disabled={pending}
           aria-label={liked ? "Unlike" : "Like"}
           aria-pressed={liked}
-          className="flex items-center gap-1.5 transition-colors disabled:opacity-60"
+          className={`${ACTION} text-muted-foreground disabled:opacity-60`}
         >
           <Heart
             aria-hidden="true"
-            className="size-5 text-muted-foreground"
+            className={ICON}
             strokeWidth={1.5}
             style={liked ? { fill: "#ef4444", stroke: "#ef4444" } : undefined}
           />
-          {likeCount > 0 && (
-            <span className="text-sm text-muted-foreground">{likeCount}</span>
-          )}
+          {likeCount > 0 && <span className="text-sm">{likeCount}</span>}
         </button>
 
         <button
           type="button"
           onClick={handleCommentScroll}
           aria-label="Go to comments"
-          className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
+          className={`${ACTION} text-muted-foreground hover:text-foreground`}
         >
-          <MessageCircle className="size-5" strokeWidth={1.5} aria-hidden="true" />
-          {commentCount > 0 && (
-            <span className="text-sm">{commentCount}</span>
-          )}
+          <MessageCircle className={ICON} strokeWidth={1.5} aria-hidden="true" />
+          {commentCount > 0 && <span className="text-sm">{commentCount}</span>}
         </button>
-      </div>
 
-        {/* 저장 — 아이콘만으로는 무엇을 하는지 덜 분명해 글자를 붙인 알약. 사진 위 저장 버튼과 상태가 함께 바뀐다.
-            저장되면 북마크를 라임으로 채우고 검정 테두리 (회색 면 위 라임은 테두리가 있어야 보인다) */}
+        {/* 저장되면 북마크를 라임으로 채운다 (윤곽선도 라임 — ScrapButton 기본 savedStyle). 사진 위 저장 버튼과 상태가 함께 바뀐다 */}
         <ScrapButton
           postId={postId}
           initialSaved={isSaved}
-          size="sm"
-          label={{ saved: "Saved", unsaved: saveLabel }}
-          className="press-scale flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-muted px-3.5 text-sm font-medium text-foreground disabled:opacity-60"
-          unsavedClassName="text-foreground"
-          strokeWidth={2}
-          savedStyle={{ fill: "var(--brand)", stroke: "var(--foreground)" }}
+          size="lg"
+          className={`${ACTION} disabled:opacity-60`}
+          unsavedClassName="text-muted-foreground"
         />
       </div>
 

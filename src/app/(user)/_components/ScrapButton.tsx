@@ -15,17 +15,14 @@ interface Props {
   onSaveChange?: (saved: boolean) => void;
   /** 버튼 자체의 모양. 없으면 아이콘만 있는 기본 버튼 */
   className?: string;
-  strokeWidth?: number;
-  /** 아이콘 옆에 글자를 붙인다 (예: Save this place / Saved) */
-  label?: { saved: string; unsaved: string };
 }
 
-// 같은 화면에 같은 글의 저장 버튼이 둘 이상일 수 있다 (상세의 사진 위 · 좋아요 줄).
+// 같은 화면에 같은 글의 저장 버튼이 둘 있을 수 있다 (상세의 사진 위 · 좋아요 줄).
 // 한쪽에서 바뀌면 이 이벤트로 나머지도 같은 상태가 된다
 const SCRAP_CHANGE = "scrap-change";
 type ScrapChange = CustomEvent<{ postId: string; saved: boolean }>;
 
-export function ScrapButton({ postId, initialSaved, size = "md", unsavedClassName, savedStyle, strokeLinejoin = "round", onSaveChange, className, strokeWidth = 1.5, label }: Props) {
+export function ScrapButton({ postId, initialSaved, size = "md", unsavedClassName, savedStyle, strokeLinejoin = "round", onSaveChange, className }: Props) {
   const [saved, setSaved] = useState(initialSaved);
   const [isPending, startTransition] = useTransition();
   const { toast, showToast } = useToast();
@@ -81,19 +78,17 @@ export function ScrapButton({ postId, initialSaved, size = "md", unsavedClassNam
         type="button"
         onClick={handleClick}
         disabled={isPending}
-        // 글자가 보이면 그 글자가 이름이다 — 화면 글자와 읽히는 이름이 어긋나지 않게
-        aria-label={label ? undefined : saved ? "Remove from saved" : "Save"}
+        aria-label={saved ? "Remove from saved" : "Save"}
         aria-pressed={saved}
         className={className ?? "transition-colors disabled:opacity-60"}
       >
         <Bookmark
           aria-hidden="true"
           className={`${iconSize} ${saved ? "" : unsavedClass}`}
-          strokeWidth={strokeWidth}
+          strokeWidth={1.5}
           strokeLinejoin={strokeLinejoin}
           style={saved ? activeSavedStyle : undefined}
         />
-        {label && <span>{saved ? label.saved : label.unsaved}</span>}
       </button>
 
       {toast && (
