@@ -186,7 +186,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
 
   // 블록은 전부 한 번만 렌더한다(유튜브 iframe · 지도 · h1 이 두 벌 생기지 않게). 그래서 DOM 은 lg 의 두 열 모양이고,
   // 모바일은 두 열 래퍼를 display: contents 로 풀어 블록들을 바깥 flex 열의 형제로 만든 뒤 order 로 순서를 되돌린다.
-  //   모바일: 사진·제목 1 → 출처 2 → Must-try 3 → Story 4 → 위치 5 → recreeshot 6 → 주변 관광지 7 → 댓글 8
+  //   모바일: 사진·제목 1 → Must-try 2 → 출처 3 → Story 4 → 위치 5 → recreeshot 6 → 주변 관광지 7 → 댓글 8
   //   lg   : 왼쪽 = 사진·제목 → 출처 → 위치, 오른쪽 = Must-try → Story → recreeshot → 주변 관광지 → 댓글
   // 배너가 없으면 lg 에서도 왼쪽이 비므로 두 열을 풀어 모바일 순서 그대로 한 줄로 둔다.
   // 블록 사이 간격은 바깥 열(과 lg 의 각 열)의 gap 이 맡고, 각 블록의 위아래 마진은 래퍼에서 지운다.
@@ -279,9 +279,9 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
       )}
       </div>
 
-      {/* From the Source(유튜브가 맨 위) · 사진 크레딧 · 출처 문구 */}
+      {/* From the Source(유튜브가 맨 위) · 사진 크레딧 · 출처 문구. 모바일에서는 Must-try 아래 */}
       {hasAttribution && (
-        <div className={`${order[1]} flex flex-col gap-3 ${block}`}>
+        <div className={`${order[2]} flex flex-col gap-3 ${block}`}>
           <SourceSection sources={post.postSources.map((s) => ({ ...s, platform: s.platform as SourcePlatform | null }))} />
           <ImageCreditSection credits={credits} />
           {post.source && (
@@ -313,7 +313,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
       {/* 오른쪽 열 */}
       <div className={column}>
       {mustTry && (
-        <div className={order[2]}>
+        <div className={order[1]}>
           <MustTryCard text={mustTry} />
         </div>
       )}
