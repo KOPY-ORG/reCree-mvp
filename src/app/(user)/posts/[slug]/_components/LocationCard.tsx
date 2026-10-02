@@ -5,8 +5,8 @@ import type { MarkerGradient } from "@/lib/map-utils";
 
 // 지도 미리보기 기하. 구글 임베드는 왼쪽 위에 "Maps ↗" 링크를 그리는데 iframe 안이라 지울 수 없다 —
 // iframe 을 위로 CROP 만큼 올려 그 띠만 잘라낸다. 아래쪽(구글 로고 · 저작권 표기)은 약관상 남겨야 해서 자르지 않는다.
-// 마커는 discover 와 같은 선택 상태(1.3배 + 이름표)라 위로 80px 가까이 필요하다.
-// 그래서 장소를 상자 높이의 62% 지점에 두도록 지도 가운데를 장소보다 북쪽으로 옮긴다
+// 마커는 discover 와 같은 선택 상태(1.3배)다. 이름표는 카드 제목이 장소 이름이라 띄우지 않는다.
+// 핀(약 55px)이 위로 서므로 장소를 상자 높이의 62% 지점에 두도록 지도 가운데를 장소보다 북쪽으로 옮긴다
 const MAP_H = 150;
 const CROP = 48;
 const ZOOM = 15;
@@ -52,7 +52,7 @@ export function LocationCard({ placeId, nameEn, nameKo, addressEn, latitude, lon
           <MapPin className="size-[18px] text-brand-foreground" strokeWidth={2} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold text-foreground">{displayName}</p>
+          <p className="text-base font-semibold leading-snug text-foreground">{displayName}</p>
           {addressEn && (
             <p className="text-xs text-muted-foreground mt-0.5">{addressEn}</p>
           )}
@@ -80,7 +80,7 @@ export function LocationCard({ placeId, nameEn, nameKo, addressEn, latitude, lon
             referrerPolicy="no-referrer-when-downgrade"
             title={displayName}
           />
-          {/* discover 지도의 그 마커(PlaceMarker), 선택된 상태. 아래 끝이 장소에 닿도록 놓는다 —
+          {/* discover 지도의 그 마커(PlaceMarker), 선택된 상태 · 이름표 없이. 아래 끝이 장소에 닿도록 놓는다 —
               discover 의 AdvancedMarker 도 마커의 아래 가운데를 좌표에 맞춘다 */}
           <div
             className="pointer-events-none absolute left-1/2 -translate-x-1/2 -translate-y-full"
@@ -95,6 +95,7 @@ export function LocationCard({ placeId, nameEn, nameKo, addressEn, latitude, lon
               nameEn={displayName}
               postCount={marker.postCount}
               placeId={`location-${placeId}`}
+              showLabel={false}
             />
           </div>
           <Link
