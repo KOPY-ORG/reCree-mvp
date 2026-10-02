@@ -117,7 +117,7 @@ export function SavedClient({ posts, shopPosts, recreeshots, tagGroupConfigs, sa
   return (
     <div>
       {/* 탭 바 */}
-      <div className="flex border-b border-secondary sticky top-0 bg-background z-10 lg:top-12 max-w-2xl mx-auto overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex border-b border-secondary sticky top-0 bg-background z-10 lg:top-[calc(var(--top-nav-space)+3rem)] max-w-2xl mx-auto overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {TABS.map((t) => (
           <button
             key={t}

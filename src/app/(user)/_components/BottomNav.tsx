@@ -79,10 +79,10 @@ function NavItem({
       className="group relative flex flex-none items-center justify-center rounded-full transition-transform active:scale-95 lg:focus-visible:outline-none lg:focus-visible:ring-2 lg:focus-visible:ring-foreground"
       style={{ width: BOTTOM_NAV_ITEM, height: BOTTOM_NAV_ITEM }}
     >
-      {/* lg 레일에서만 쓰는 이름표. 모바일은 라벨을 없앤 이유(10px)가 그대로라 띄우지 않는다 */}
+      {/* lg 상단 바에서만 쓰는 이름표(칸 아래). 모바일은 라벨을 없앤 이유(10px)가 그대로라 띄우지 않는다 */}
       <span
         aria-hidden
-        className="pointer-events-none absolute left-full top-1/2 ml-4 hidden -translate-y-1/2 whitespace-nowrap rounded-full bg-foreground px-3 py-1.5 text-sm font-medium text-background shadow-md lg:group-hover:block lg:group-focus-visible:block"
+        className="pointer-events-none absolute left-1/2 top-full mt-2 hidden -translate-x-1/2 whitespace-nowrap rounded-full bg-foreground px-3 py-1.5 text-sm font-medium text-background shadow-md lg:group-hover:block lg:group-focus-visible:block"
       >
         {label}
       </span>
@@ -120,10 +120,11 @@ function NavItem({
  * Tailwind 가 스캔하지 못해 유틸리티가 아예 생성되지 않는다.
  * 리터럴로 두면 상수를 고쳐도 화면이 안 바뀌는 이중 관리가 된다.
  */
-function Pill({ children, railClassName }: { children: React.ReactNode; railClassName: string }) {
+function Pill({ children, barClassName }: { children: React.ReactNode; barClassName: string }) {
   return (
+    // lg 는 바 자체가 표면이라 알약의 흰 바탕 · 테두리 · 그림자를 지운다. 인라인 style 이라 ! 로 덮는다
     <div
-      className={`pointer-events-auto flex items-center rounded-full ${railClassName}`}
+      className={`pointer-events-auto flex items-center rounded-full lg:border-transparent! lg:bg-transparent! lg:shadow-none! ${barClassName}`}
       style={{ ...SURFACE, gap: BOTTOM_NAV_ITEM_GAP, padding: BOTTOM_NAV_PAD }}
     >
       {children}
@@ -155,10 +156,13 @@ export function BottomNav({ isLoggedIn, profileImageUrl }: Props) {
     // pointer-events-none 이 가운데 빈 공간을 통과시킨다. 알약만 auto 로 되살린다.
     // nav-tuckable 은 지도 시트가 끝까지 올라왔을 때의 퇴장을 맡는다 (globals.css).
     //
-    // lg 에서는 같은 두 알약을 90° 세워 왼쪽 레일로 쓴다. 폭은 --side-nav-space(20+58+20),
-    // 위 알약 = 홈 · 지도, 아래 알약 = recreeshot · shop · profile. 모바일의 좌우 양끝 배치를 위아래로 옮긴 것이다.
+    // lg 에서는 화면 위 가로 바가 된다 (docs/design/desktop-layout.md §15 원칙 1). 높이는 --top-nav-space,
+    // 로고 · 홈 · 지도 왼쪽, recreeshot · shop · profile 오른쪽. 표면은 .app-header 와 같다.
     // bottom 을 인라인 style 에서 클래스로 옮긴 건 lg: 로 덮기 위해서다 — 값은 같다.
-    <div className="nav-tuckable pointer-events-none fixed inset-x-0 bottom-[var(--bottom-nav-bottom)] z-40 lg:inset-x-auto lg:top-0 lg:bottom-0 lg:left-0 lg:w-[var(--side-nav-space)]">
+    <div
+      data-main-nav
+      className="nav-tuckable pointer-events-none fixed inset-x-0 bottom-[var(--bottom-nav-bottom)] z-40 lg:pointer-events-auto lg:top-0 lg:bottom-auto lg:h-[var(--top-nav-space)] lg:bg-background/95 lg:shadow-[0_1px_4px_rgba(0,0,0,0.07)] lg:backdrop-blur-sm"
+    >
       {/* 아이콘 획을 깎는 필터. 아바타에는 걸지 않는다 — 사진은 깎을 획이 없다.
           한 번만 정의하고 다섯 아이콘이 id 로 참조한다. */}
       <svg aria-hidden className="absolute size-0" focusable="false">
@@ -169,11 +173,14 @@ export function BottomNav({ isLoggedIn, profileImageUrl }: Props) {
 
       <nav
         aria-label="Main"
-        className="nav-rise mx-auto flex max-w-[var(--app-col-w)] items-center justify-between px-5 lg:h-full lg:max-w-none lg:flex-col-reverse lg:px-0 lg:py-5"
+        className="nav-rise mx-auto flex max-w-[var(--app-col-w)] items-center justify-between px-5 lg:h-full lg:justify-start lg:gap-6 lg:px-10"
       >
-        {/* flex-col-reverse — DOM 순서(왼→오)를 지키면서 lg 에서는 오른쪽 알약이 위로 간다 */}
-        <Pill railClassName="lg:flex-col-reverse">{LEFT_TABS.map(render)}</Pill>
-        <Pill railClassName="lg:flex-col">{RIGHT_TABS.map(render)}</Pill>
+        {/* DOM 순서(모바일 왼→오)는 그대로 두고 lg 는 order 로 다시 놓는다 — 로고 · 홈/지도 | … | recreeshot · shop · profile */}
+        <Pill barClassName="lg:order-3 lg:ml-auto lg:flex-row-reverse">{LEFT_TABS.map(render)}</Pill>
+        <Pill barClassName="lg:order-2">{RIGHT_TABS.map(render)}</Pill>
+        <Link href="/feed" className="hidden text-xl font-bold tracking-tight lg:order-1 lg:block">
+          reCree
+        </Link>
       </nav>
     </div>
   );

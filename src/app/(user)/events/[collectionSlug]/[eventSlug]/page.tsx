@@ -281,11 +281,11 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
     // lg: 왼쪽 포스터(sticky) · 오른쪽 정보 두 단. 포스터가 1:1 이라 5:6 이면 두 단 높이가 비슷하게 시작한다
     <div
      
-      className="lg:mx-auto lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start lg:gap-10 lg:px-10 lg:pt-8"
+      className="lg:mx-auto lg:max-w-[73rem] lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start lg:gap-10 lg:px-10 lg:pt-8"
       style={{ background: "#F4F5F7", minHeight: "100dvh" }}
     >
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
-      <div className="relative w-full lg:sticky lg:top-8 lg:overflow-hidden lg:rounded-3xl">
+      <div className="relative w-full lg:sticky lg:top-[calc(var(--top-nav-space)+2rem)] lg:overflow-hidden lg:rounded-3xl">
         <EventImage
           src={event.bannerImageUrl}
           alt={eventName}

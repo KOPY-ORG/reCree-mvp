@@ -19,8 +19,8 @@ export function PostDetailHeader({ postId, isLoggedIn }: Props) {
   return (
     <>
       {/* lg: 배너가 헤더 밑으로 들어가지 않으므로 투명 오버레이 대신 .app-header 와 같은 바가 된다 */}
-      <div className="fixed top-0 left-0 right-0 z-50 h-12 lg:left-[var(--side-nav-space)] lg:bg-background/95 lg:backdrop-blur-sm lg:shadow-[0_1px_4px_rgba(0,0,0,0.07)]">
-        <div className="max-w-[var(--app-col-w)] mx-auto h-full flex items-center justify-between px-3 lg:px-6">
+      <div className="fixed top-0 left-0 right-0 z-50 h-12 lg:top-[var(--top-nav-space)] lg:bg-background/95 lg:backdrop-blur-sm lg:shadow-[0_1px_4px_rgba(0,0,0,0.07)]">
+        <div className="max-w-[var(--app-col-w)] mx-auto h-full flex items-center justify-between px-3 lg:max-w-[73rem] lg:px-6">
         <button
           type="button"
           onClick={() => {

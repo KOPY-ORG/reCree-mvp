@@ -73,13 +73,13 @@ export const BOTTOM_NAV_GAP = 12;
 export const BOTTOM_NAV_SPACE = BOTTOM_NAV_INSET + BOTTOM_NAV_PILL_H + BOTTOM_NAV_GAP; // 90
 
 /**
- * lg(≥1024) 에서 탭바가 가져가는 세로 공간. 알약이 왼쪽 레일로 옮겨 가서
+ * lg(≥1024) 에서 탭바가 가져가는 세로 공간. 알약이 상단 바로 옮겨 가서
  * 떠 있는 요소가 바닥에서 띄우는 24 만 남는다 (globals.css 의 lg --bottom-nav-space 와 짝).
  */
 export const BOTTOM_NAV_SPACE_LG = 24;
 
 /**
- * lg 레이아웃(왼쪽 레일 · 지도 옆 패널)인지.
+ * lg 레이아웃(상단 바 · 지도 옆 패널)인지.
  *
  * 렌더에는 쓰지 않는다 — SSR 과 첫 페인트가 어긋난다. 화면 배치는 전부 lg: 클래스가 맡고,
  * 이 함수는 지도 카메라 여백 · 시트 스냅처럼 이벤트 · effect 안에서 도는 JS 계산에만 쓴다.

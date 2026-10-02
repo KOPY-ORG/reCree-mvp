@@ -230,7 +230,7 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
 
         <aside className="hidden lg:block">
           {/* 상단 바(HomeTopBar) 아래에 붙는다 */}
-          <div className="sticky top-[124px] pr-4">{mapCard("stacked")}</div>
+          <div className="sticky top-[calc(var(--top-nav-space)+124px)] pr-4">{mapCard("stacked")}</div>
         </aside>
       </div>
     </div>

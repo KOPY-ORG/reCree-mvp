@@ -184,8 +184,9 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
   // 크레딧이 마지막일 때(mb-4)는 order-7 래퍼의 [&>:last-child]:mb-0 이 같은 일을 한다
   const tailGapFix = hasSource && !hasTail ? "[&>section]:mb-0" : "";
 
+  // lg: 상세는 1440 으로 퍼지지 않고 1120(+ 좌우 24)에서 멈춘다 — desktop-layout.md §15 원칙 4. 헤더와 같은 값
   return (
-    <article className="pb-8 max-w-2xl mx-auto lg:max-w-none">
+    <article className="pb-8 max-w-2xl mx-auto lg:max-w-[73rem]">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

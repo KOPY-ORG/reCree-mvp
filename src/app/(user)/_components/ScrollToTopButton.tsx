@@ -77,7 +77,7 @@ export function ScrollToTopButton({ scrollRef }: Props = {}) {
   }
 
   return (
-    <div className="fixed inset-x-0 z-50 h-10 pointer-events-none lg:pl-[var(--side-nav-space)]" style={{ bottom }}>
+    <div className="fixed inset-x-0 z-50 h-10 pointer-events-none" style={{ bottom }}>
       <div className="max-w-[var(--app-col-w)] mx-auto h-full relative">
         <button
           type="button"

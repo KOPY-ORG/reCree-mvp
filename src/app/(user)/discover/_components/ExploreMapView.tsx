@@ -831,8 +831,8 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
     //
     // lg: 에어비앤비 검색 화면 배치 — 왼쪽 --discover-panel-w 는 목록 패널(검색 · 칩 · 리스트 · 장소 카드),
     // 오른쪽은 지도가 나머지 전부를 둥근 카드로 채운다. 드래그 시트가 고정 패널이 될 뿐 상태 · 내용은 모바일과 같다.
-    // lg 는 1440 컨테이너를 쓰지 않는다 — fixed 로 레일 바로 오른쪽부터 화면 끝까지 목록+지도로 채운다
-    <div className="relative h-[100dvh] overflow-hidden lg:fixed lg:inset-y-0 lg:right-0 lg:left-[var(--side-nav-space)] lg:h-auto">
+    // lg 는 1440 컨테이너를 쓰지 않는다 — fixed 로 상단 바 아래 화면 전체를 목록+지도로 채운다
+    <div className="relative h-[100dvh] overflow-hidden lg:fixed lg:inset-x-0 lg:top-[var(--top-nav-space)] lg:bottom-0 lg:h-auto">
       <InteractiveMap
         ref={mapRef}
         places={isEventMode ? visibleEventMarkers : filteredMarkerPlaces}

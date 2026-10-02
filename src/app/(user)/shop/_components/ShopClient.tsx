@@ -54,7 +54,7 @@ export function ShopClient({ posts, shopTags, tagGroupConfigs }: Props) {
   return (
     <div>
       {/* 그룹 탭 */}
-      <div className="flex border-b border-secondary sticky top-0 bg-background z-10 lg:top-12">
+      <div className="flex border-b border-secondary sticky top-0 bg-background z-10 lg:top-[calc(var(--top-nav-space)+3rem)]">
         {SHOP_TAG_GROUPS.map((group) => (
           <button
             key={group}
