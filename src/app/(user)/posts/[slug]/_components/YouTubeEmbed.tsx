@@ -28,7 +28,7 @@ interface YTNamespace {
       videoId: string;
       width: string;
       height: string;
-      playerVars: Record<string, number>;
+      playerVars: Record<string, string | number>;
       events: {
         onReady: () => void;
         onStateChange: (e: { data: number }) => void;
@@ -93,8 +93,11 @@ function prefersNoAutoplay(): boolean {
   );
 }
 
+// 영어 자막을 기본으로 켜고 플레이어 UI 도 영어로. 자동재생 · 눌러서 재생 두 경로 공통
+const CAPTION_PARAMS = { cc_load_policy: "1", cc_lang_pref: "en", hl: "en" };
+
 function embedSrc({ videoId, start }: YouTubeSource): string {
-  const params = new URLSearchParams({ playsinline: "1", rel: "0" });
+  const params = new URLSearchParams({ playsinline: "1", rel: "0", ...CAPTION_PARAMS });
   if (start > 0) params.set("start", String(start));
   return `https://www.youtube-nocookie.com/embed/${videoId}?${params}`;
 }
@@ -140,6 +143,7 @@ export function YouTubeEmbed({ url, autoplay = false }: Props) {
           mute: 1,
           playsinline: 1,
           rel: 0,
+          ...CAPTION_PARAMS,
           ...(source.start > 0 && { start: source.start }),
         },
         events: {
