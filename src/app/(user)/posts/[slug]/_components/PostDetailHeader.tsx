@@ -86,6 +86,7 @@ export function PostDetailHeader({ postId, isLoggedIn, isSaved = false, titleEn 
               <ScrapButton
                 postId={postId}
                 initialSaved={isSaved}
+                isLoggedIn={!!isLoggedIn}
                 size="md"
                 className={`${ROUND} disabled:opacity-60`}
                 unsavedClassName="text-white"

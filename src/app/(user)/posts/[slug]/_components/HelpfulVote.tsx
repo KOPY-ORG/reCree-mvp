@@ -4,71 +4,66 @@ import { useState, useTransition } from "react";
 import { ThumbsUp } from "lucide-react";
 import { toggleHelpfulVote } from "@/app/(user)/_actions/post-interaction-actions";
 import { useToast } from "@/app/(user)/_hooks/useToast";
+import { SwapLabel } from "@/app/(user)/_components/SwapLabel";
 
 interface Props {
   postId: string;
   initialVoted: boolean;
-  initialCount: number;
+  /** 같은 줄에서 이 버튼 앞에 놓을 버튼들 (상세의 좋아요 · 저장) */
+  children?: React.ReactNode;
 }
 
+/**
+ * 알약 모양 — 좋아요 · 저장(LikeSaveButtons)도 같이 쓴다.
+ * 윤곽선은 늘 있고, 눌리면 바탕이 흰색, 윤곽선이 아이콘과 같은 색이 된다 (색은 버튼마다 붙인다).
+ * 글자는 SwapLabel 로 바꿔 눌러도 폭이 변하지 않는다
+ */
+export const VOTE_PILL = "press-scale flex h-12 shrink-0 items-center gap-1.5 rounded-full border px-4 text-sm font-semibold text-foreground transition-colors disabled:opacity-60";
+export const VOTE_PILL_IDLE = "border-border bg-background";
+export const VOTE_PILL_ON = "bg-white";
+
 // 게시글 맨 아래 "도움이 됐어요". 로그인 없이 누르고, 같은 기기에서 다시 누르면 취소된다.
-// 좋아요(하트)와는 별개다. 눌린 상태는 엄지 버튼을 reCree 라임으로 채운다 (라임 위는 검정).
-// 숫자는 먼저 바꿔 보여주고(서버 응답을 기다리지 않는다) 실패하면 되돌린다
-export function HelpfulVote({ postId, initialVoted, initialCount }: Props) {
+// 좋아요(하트)와는 별개다. 눌린 상태는 엄지를 파란색으로 채우고 글자가 Thanks! 로 바뀐다.
+// 먼저 바꿔 보여주고(서버 응답을 기다리지 않는다) 실패하면 되돌린다
+export function HelpfulVote({ postId, initialVoted, children }: Props) {
   const [voted, setVoted] = useState(initialVoted);
-  const [count, setCount] = useState(initialCount);
   const [pending, startTransition] = useTransition();
   const { toast, showToast } = useToast();
 
   function handleClick() {
-    const prev = { voted, count };
-    const next = { voted: !voted, count: Math.max(0, count + (voted ? -1 : 1)) };
-    setVoted(next.voted);
-    setCount(next.count);
+    const prevVoted = voted;
+    setVoted(!prevVoted);
 
     startTransition(async () => {
       const result = await toggleHelpfulVote(postId);
       if (result.error) {
-        setVoted(prev.voted);
-        setCount(prev.count);
+        setVoted(prevVoted);
         showToast(result.error === "rate_limited" ? "Too many tries. Please wait a moment." : "Something went wrong");
         return;
       }
-      // 다른 사람의 투표가 그사이 더해졌을 수 있어 서버 숫자로 맞춘다
       setVoted(result.voted);
-      setCount(result.count);
     });
   }
 
   return (
     <>
-      {/* 카드가 아니라 버튼으로 보이게 — 그림자 없이 윤곽선만 있는 알약, 통째로 누른다(press-scale).
-          눌린 상태는 라임으로 채우고 윤곽선도 라임 (라임 위 글자 · 아이콘은 검정). 숫자는 알약 아래 */}
-      <div className="mx-4 flex flex-col items-center gap-2">
+      <div className="mx-4 flex items-center justify-center gap-2">
+        {children}
         <button
           type="button"
           onClick={handleClick}
           disabled={pending}
           aria-pressed={voted}
-          className={`press-scale flex h-12 items-center gap-2 rounded-full border px-5 text-sm font-semibold transition-colors disabled:opacity-60 ${
-            voted
-              ? "border-brand bg-brand text-brand-foreground"
-              : "border-border bg-background text-foreground"
-          }`}
+          className={`${VOTE_PILL} ${voted ? `${VOTE_PILL_ON} border-blue-500` : VOTE_PILL_IDLE}`}
         >
           <ThumbsUp
             className="size-5"
             strokeWidth={1.75}
-            fill={voted ? "currentColor" : "none"}
+            style={voted ? { fill: "var(--color-blue-500)", stroke: "var(--color-blue-500)" } : undefined}
             aria-hidden="true"
           />
-          Was this helpful?
+          <SwapLabel on={voted} onText="Thanks!" offText="Helpful?" />
         </button>
-        {count > 0 && (
-          <p className="text-xs text-muted-foreground" aria-live="polite">
-            {count} {count === 1 ? "fan" : "fans"} found this helpful
-          </p>
-        )}
       </div>
 
       {toast && (

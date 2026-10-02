@@ -15,6 +15,7 @@ import type { SourcePlatform } from "@/types";
 import { PostReCreeshotSection } from "./_components/PostReCreeshotSection";
 import { getPostDetail } from "@/lib/post-detail-query";
 import { PostActionBar } from "./_components/PostActionBar";
+import { LikeSaveButtons } from "./_components/LikeSaveButtons";
 import { PurchaseButton } from "./_components/PurchaseButton";
 import { PostComments } from "./_components/PostComments";
 import { PostViewTracker } from "./_components/PostViewTracker";
@@ -282,11 +283,11 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
         />
       )}
 
-      {/* 토픽 · 태그 칩 + 좋아요 · 댓글 · 저장 */}
+      {/* 토픽 · 태그 칩 + 댓글 · 저장 */}
       {/* 칩은 왼쪽에서 줄바꿈하고, 아이콘은 첫 줄 높이에 맞춰 오른쪽에 남는다 */}
       <div className="flex items-start gap-2 px-4 pt-3 pb-2">
         <PostMetaBar labels={labels} />
-        <PostActionBar postId={post.id} initialLiked={isLikedByMe} isSaved={isSaved} />
+        <PostActionBar postId={post.id} isSaved={isSaved} isLoggedIn={!!currentUser} />
       </div>
 
       {/* 제목 */}
@@ -392,10 +393,12 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
         />
       </div>
 
-      {/* 도움이 됐어요 — 댓글 바로 아래. 로그인 없이 누른다 (미리보기에선 숨김) */}
+      {/* 좋아요 · 저장(로그인 필요) · 도움이 됐어요(로그인 없이) 한 줄 — 댓글 바로 아래. 미리보기에선 숨김 */}
       {!isPreview && (
         <div className={order[8]}>
-          <HelpfulVote postId={post.id} initialVoted={isHelpfulByMe} initialCount={post._count.helpfulVotes} />
+          <HelpfulVote postId={post.id} initialVoted={isHelpfulByMe}>
+            <LikeSaveButtons postId={post.id} initialLiked={isLikedByMe} isSaved={isSaved} isLoggedIn={!!currentUser} />
+          </HelpfulVote>
         </div>
       )}
 
