@@ -21,6 +21,10 @@ import { PostViewTracker } from "./_components/PostViewTracker";
 import { NearbyAttractionsSection } from "./_components/NearbyAttractionsSection";
 import { MustTryCard } from "./_components/MustTryCard";
 import { StoryCard } from "./_components/StoryCard";
+import { ViewOnMapButton } from "./_components/ViewOnMapButton";
+import { getAllMapPlaces } from "@/lib/map-queries";
+import { getSavedPostIds } from "@/lib/post-queries";
+import { getTopicMarkerColor, getTopicMarkerGradient } from "@/lib/map-utils";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -178,6 +182,21 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
     .filter((img): img is typeof img & { creditText: string } => !!img.creditText)
     .map((img) => img.creditText);
   const hasAttribution = hasSource || !!post.source;
+  // 위치 카드 마커는 discover 지도와 같은 마커다. 색 · 개수 · 저장 표시를 discover 와 같은 데이터로 정해야
+  // 두 화면의 같은 장소가 같은 핀이 된다 — discover 가 쓰는 캐시(getAllMapPlaces, 60초)에서 이 장소를 꺼낸다
+  const hasLocation =
+    !!spotInsight && spotInsight.place.latitude !== null && spotInsight.place.longitude !== null;
+  const [mapPlaces, savedPostIds] = hasLocation
+    ? await Promise.all([getAllMapPlaces(), getSavedPostIds(currentUser?.id ?? null)])
+    : [[], new Set<string>()];
+  const mapPlace = hasLocation ? mapPlaces.find((p) => p.id === spotInsight.place.id) : undefined;
+  const locationMarker = {
+    color: (mapPlace && getTopicMarkerColor(mapPlace.posts)) ?? "#D3FD52",
+    gradient: mapPlace ? getTopicMarkerGradient(mapPlace.posts) : undefined,
+    postCount: mapPlace?.posts.length ?? 1,
+    isSaved: mapPlace?.posts.some((p) => savedPostIds.has(p.id)) ?? false,
+  };
+
   const showNearby =
     !post.isShop &&
     !!spotInsight &&
@@ -324,6 +343,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
             googleMapsUrl={spotInsight.place.googleMapsUrl}
             naverMapsUrl={spotInsight.place.naverMapsUrl ?? null}
             streetViewUrl={spotInsight.place.streetViewUrl ?? null}
+            marker={locationMarker}
           />
         </div>
       )}
@@ -383,6 +403,8 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
       )}
       </div>
       </div>
+      {/* 모바일: 하단 내비게이션 위에 뜨는 View on Map. 위치가 있는 글에서만. lg 는 위치 카드 안 버튼으로 대신한다 */}
+      {hasLocation && !isPreview && <ViewOnMapButton placeId={spotInsight.place.id} />}
     </article>
   );
 }

@@ -99,6 +99,8 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
 
   const isSavedView = searchParams.get("saved") === "1";
   const selectedPlaceId = searchParams.get("place");
+  // 다른 화면에서 장소를 지정해 들어온 경우(게시글 → View on Map) 그 장소 — 첫 카메라만 쓰고 이후엔 바뀌지 않는다
+  const [entryPlaceId] = useState(() => searchParams.get("place"));
   const collectionSlug = searchParams.get("collection");
 
   const [sheetState, setSheetState] = useState<PlaceListSheetState>(
@@ -850,6 +852,7 @@ export function ExploreMapView({ allPlaces, savedPostIds, savedEventIds = [], ta
         regionKey={
           !isEventMode && appliedRegion ? `${appliedRegion}/${appliedDistrict ?? ""}` : null
         }
+        initialFocusPlaceId={isEventMode ? null : entryPlaceId}
         highlightedIds={
           isResultMode ? new Set(filteredPlaces.map((p) => p.id)) : undefined
         }
