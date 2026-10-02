@@ -4,13 +4,13 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { MarkdownContent } from "./MarkdownContent";
 
 interface Props {
-  subtitle: string;
   body: string;
 }
 
 // 본문 카드. 4줄(14px × 행간 1.8)을 넘으면 접고 Read more 로 펼친다 — MustTryCard 와 같은 방식.
-// 마크다운은 문단이 여럿이라 line-clamp 가 듣지 않아 높이로 자르고, 끝을 마스크로 흐린다
-export function StoryCard({ subtitle, body }: Props) {
+// 마크다운은 문단이 여럿이라 line-clamp 가 듣지 않아 높이로 자른다.
+// 접혀 있을 때는 .story-folded 가 문단 간격을 없애 빈 줄 없이 실제 글 4줄이 보이고, 마지막 한 줄만 아래로 흐려진다
+export function StoryCard({ body }: Props) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState(false);
   const [clamped, setClamped] = useState(false);
@@ -31,15 +31,16 @@ export function StoryCard({ subtitle, body }: Props) {
     <div className="surface-card mx-4 overflow-hidden">
       <div className="px-4 pt-4 pb-3">
         <p className="text-sm font-bold">Story</p>
-        <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
       </div>
       <div className="px-4 pb-4">
         <div
           className={
             expanded
               ? undefined
-              : `max-h-[calc(0.875rem*1.8*4)] overflow-hidden ${
-                  clamped ? "[mask-image:linear-gradient(to_bottom,black_60%,transparent)]" : ""
+              : `story-folded max-h-[calc(0.875rem*1.8*4)] overflow-hidden ${
+                  clamped
+                    ? "[mask-image:linear-gradient(to_bottom,black_calc(100%_-_0.875rem*1.8),rgb(0_0_0/0.15))]"
+                    : ""
                 }`
           }
         >

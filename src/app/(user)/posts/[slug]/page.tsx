@@ -141,7 +141,6 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
 
   const placeLabel = spotInsight?.place.nameEn ?? spotInsight?.place.nameKo;
   const headline = placeLabel ?? (post.isShop && post.subtitle ? post.subtitle : null);
-  const storySubtitle = post.isShop ? "The full story behind this product" : "The full story behind this spot";
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Article",
@@ -321,7 +320,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
       {/* 본문 */}
       {post.bodyEn && (
         <div className={order[3]}>
-          <StoryCard subtitle={storySubtitle} body={post.bodyEn} />
+          <StoryCard body={post.bodyEn} />
         </div>
       )}
 
