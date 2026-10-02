@@ -17,9 +17,19 @@ interface BannerImage {
 interface Props {
   images: BannerImage[];
   children?: React.ReactNode;
+  /**
+   * lg 모양. 모바일 · md 는 어느 쪽이든 지금의 4:3 한 장씩 캐러셀이다.
+   * - "media": 왼쪽 열 맨 위 16:9 미디어 칸 (유튜브 출처가 없는 글)
+   * - "strip": 유튜브 영상 아래 가로 사진 줄. 약 2.5장이 보이고 화살표로 한 장씩 넘긴다 (유튜브 출처가 있는 글)
+   */
+  lgLayout?: "media" | "strip";
 }
 
-export function BannerCarousel({ images, children }: Props) {
+/** lg 판정 — 화살표가 한 장씩 넘길지(모바일 캐러셀), 줄을 스크롤할지(lg strip) 정한다. globals.css 의 lg(64rem)와 같은 값 */
+const LG_QUERY = "(min-width: 64rem)";
+
+export function BannerCarousel({ images, children, lgLayout = "media" }: Props) {
+  const strip = lgLayout === "strip";
   const total = images.length;
 
   // 1장이면 단순 표시
@@ -35,6 +45,7 @@ export function BannerCarousel({ images, children }: Props) {
   const [loadedMap, setLoadedMap] = useState<Record<string, boolean>>({});
   const [errorMap, setErrorMap] = useState<Record<string, boolean>>({});
   const touchStartX = useRef<number | null>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
 
   // 실제 dot 인덱스 (0-based)
   const dotIndex = single ? 0 : pos === 0 ? total - 1 : pos === total + 1 ? 0 : pos - 1;
@@ -46,8 +57,18 @@ export function BannerCarousel({ images, children }: Props) {
     else setTransitioning(false);
   }
 
-  function next() { if (!transitioning) goTo(pos + 1); }
-  function prev() { if (!transitioning) goTo(pos - 1); }
+  // lg strip 은 트랙이 스크롤 상자가 된다 — 화살표는 사진 한 장(+ 간격)만큼 스크롤한다
+  function scrollStrip(dir: 1 | -1): boolean {
+    const track = trackRef.current;
+    if (!strip || !track || !window.matchMedia(LG_QUERY).matches) return false;
+    const slide = track.querySelector<HTMLElement>("[data-strip-slide]");
+    const step = slide ? slide.offsetWidth + parseFloat(getComputedStyle(track).columnGap || "0") : track.clientWidth / 2;
+    track.scrollBy({ left: dir * step, behavior: "smooth" });
+    return true;
+  }
+
+  function next() { if (scrollStrip(1)) return; if (!transitioning) goTo(pos + 1); }
+  function prev() { if (scrollStrip(-1)) return; if (!transitioning) goTo(pos - 1); }
 
   // 트랜지션 끝 후 클론에서 실제 위치로 순간 이동
   function onTransitionEnd() {
@@ -76,15 +97,43 @@ export function BannerCarousel({ images, children }: Props) {
 
   const trackTotal = track.length;
 
+  // lg 클래스. 모바일 클래스는 그대로 두고 lg 에서만 덮는다
+  const lg = strip
+    ? {
+        // 바탕 · 비율을 풀고 사진 카드들만 남긴다. 트랙이 스크롤 상자 — 인라인 폭 · 이동을 덮는다
+        frame: "lg:aspect-auto lg:bg-transparent",
+        track: "lg:h-auto lg:w-full! lg:transform-none! lg:gap-4 lg:overflow-x-auto lg:snap-x lg:snap-mandatory lg:[scrollbar-width:none]",
+        // 2.5장이 보이는 폭 — 간격 16 두 개를 뺀 나머지를 2.5 로 나눈다
+        slide: "lg:h-auto lg:w-[calc((100%-2rem)/2.5)]! lg:shrink-0 lg:aspect-[4/3] lg:snap-start lg:overflow-hidden lg:rounded-[14px] lg:bg-muted",
+        // 앞뒤 복제(무한 루프용)는 줄에서 뺀다
+        clone: "lg:hidden",
+        arrowSide: { prev: "lg:left-3", next: "lg:right-3" },
+        // 3장부터 넘칠 것이 생긴다
+        arrowHide: total < 3 ? "lg:hidden" : "",
+        overlay: "lg:hidden",
+      }
+    : {
+        frame: "lg:aspect-video",
+        track: "",
+        slide: "",
+        clone: "",
+        arrowSide: { prev: "lg:left-4", next: "lg:right-4" },
+        arrowHide: "",
+        overlay: "",
+      };
+  // 화살표 — 모바일 · md 는 마우스를 올렸을 때만 보이는 검은 원, lg 는 늘 보이는 흰 원 40
+  const arrowLg = "lg:size-10 lg:bg-white/95 lg:text-foreground lg:opacity-100 lg:shadow-md lg:hover:bg-white";
+
   return (
     <div
-      className="group relative w-full aspect-[4/3] bg-muted overflow-hidden select-none touch-pan-y"
+      className={`group relative w-full aspect-[4/3] bg-muted overflow-hidden select-none touch-pan-y ${lg.frame}`}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
       {/* 슬라이드 트랙 */}
       <div
-        className={animated ? "flex h-full transition-transform duration-300 ease-in-out" : "flex h-full"}
+        ref={trackRef}
+        className={`${animated ? "flex h-full transition-transform duration-300 ease-in-out" : "flex h-full"} ${lg.track}`}
         style={{
           width: `${trackTotal * 100}%`,
           transform: `translateX(-${pos * (100 / trackTotal)}%)`,
@@ -92,7 +141,12 @@ export function BannerCarousel({ images, children }: Props) {
         onTransitionEnd={onTransitionEnd}
       >
         {track.map((img, i) => (
-          <div key={`${img.id}-${i}`} className="relative h-full" style={{ width: `${100 / trackTotal}%` }}>
+          <div
+            key={`${img.id}-${i}`}
+            data-strip-slide={strip ? "" : undefined}
+            className={`relative h-full ${lg.slide} ${!single && (i === 0 || i === trackTotal - 1) ? lg.clone : ""}`}
+            style={{ width: `${100 / trackTotal}%` }}
+          >
             {errorMap[img.id] ? (
               <div className="w-full h-full flex items-center justify-center bg-muted">
                 <ImageIcon className="h-8 w-8 text-muted-foreground" />
@@ -108,7 +162,7 @@ export function BannerCarousel({ images, children }: Props) {
                   fill
                   className="object-cover"
                   style={focalStyle(img.focalX, img.focalY, img.zoom)}
-                  sizes="(min-width: 672px) 672px, 100vw"
+                  sizes={strip ? "(min-width: 1024px) 320px, (min-width: 672px) 672px, 100vw" : "(min-width: 1024px) 800px, (min-width: 672px) 672px, 100vw"}
                   priority={i === 1}
                   unoptimized={isExternalImage(img.url)}
                   onLoad={() => setLoadedMap((m) => ({ ...m, [img.id]: true }))}
@@ -122,8 +176,9 @@ export function BannerCarousel({ images, children }: Props) {
 
       {/* 위 · 아래 스크림 — 사진 위 버튼이 밝은 사진에서도 떠 보이게. 가장자리만 어둡히고 사진 가운데는 건드리지 않는다.
           위: 사진 높이의 28%, 가장 진한 곳 검정 40%. 아래: 원본 장면 카드 · 카메라 쪽이라 22%, 검정 18% 로 아주 옅게 */}
-      <div className="absolute inset-x-0 top-0 h-[28%] bg-gradient-to-b from-black/40 to-transparent pointer-events-none z-10" />
-      <div className="absolute inset-x-0 bottom-0 h-[22%] bg-gradient-to-t from-black/[0.18] to-transparent pointer-events-none z-10" />
+      {/* lg 는 사진 위 버튼이 없어(상단 바 · 제목 아래 아이콘 줄이 맡는다) 위 스크림을 뺀다 */}
+      <div className="absolute inset-x-0 top-0 h-[28%] bg-gradient-to-b from-black/40 to-transparent pointer-events-none z-10 lg:hidden" />
+      <div className={`absolute inset-x-0 bottom-0 h-[22%] bg-gradient-to-t from-black/[0.18] to-transparent pointer-events-none z-10 ${lg.overlay}`} />
 
       {/* 화살표 버튼 (데스크톱, 2장 이상) */}
       {total >= 2 && (
@@ -131,7 +186,7 @@ export function BannerCarousel({ images, children }: Props) {
           <button
             type="button"
             onClick={prev}
-            className="hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 z-20 items-center justify-center w-9 h-9 rounded-full bg-black/40 text-white opacity-0 hover:opacity-100 group-hover:opacity-100 transition-opacity hover:bg-black/60"
+            className={`hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 z-20 items-center justify-center w-9 h-9 rounded-full bg-black/40 text-white opacity-0 hover:opacity-100 group-hover:opacity-100 transition-opacity hover:bg-black/60 ${arrowLg} ${lg.arrowSide.prev} ${lg.arrowHide}`}
             aria-label="이전 이미지"
           >
             <ChevronLeft className="h-5 w-5" />
@@ -139,7 +194,7 @@ export function BannerCarousel({ images, children }: Props) {
           <button
             type="button"
             onClick={next}
-            className="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 z-20 items-center justify-center w-9 h-9 rounded-full bg-black/40 text-white opacity-0 hover:opacity-100 group-hover:opacity-100 transition-opacity hover:bg-black/60"
+            className={`hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 z-20 items-center justify-center w-9 h-9 rounded-full bg-black/40 text-white opacity-0 hover:opacity-100 group-hover:opacity-100 transition-opacity hover:bg-black/60 ${arrowLg} ${lg.arrowSide.next} ${lg.arrowHide}`}
             aria-label="다음 이미지"
           >
             <ChevronRight className="h-5 w-5" />
@@ -152,7 +207,7 @@ export function BannerCarousel({ images, children }: Props) {
 
       {/* dot indicator — 몇 번째 사진인지는 점이 말한다. 우측 하단은 recreeshot 추가 버튼 자리라 숫자 카운터는 두지 않는다 */}
       {total >= 2 && (
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1 z-10">
+        <div className={`absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1 z-10 ${lg.overlay}`}>
           {images.map((_, i) => (
             <button
               key={i}

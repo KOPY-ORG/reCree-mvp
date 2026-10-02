@@ -401,20 +401,30 @@ html[data-nav-tucked] {
 
 /* ── Story 접힌 미리보기 ── */
 /* 접혀 있을 때는 문단 · 제목 · 목록 사이 간격을 없애 실제 글이 4줄 보이게 한다 (StoryCard).
-   제목도 본문과 같은 크기 · 행간으로 맞춰 줄 높이가 일정하다. 펼치면 원래 간격으로 돌아간다 */
-.story-folded .post-body .wmde-markdown * {
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
+   제목도 본문과 같은 크기 · 행간으로 맞춰 줄 높이가 일정하다. 펼치면 원래 간격으로 돌아간다.
+   lg 는 접지 않으므로 lg 미만에서만 듣는다 */
+@media (width < 64rem) {
+  .story-folded .post-body .wmde-markdown * {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+  }
+  .story-folded .post-body .wmde-markdown h1,
+  .story-folded .post-body .wmde-markdown h2,
+  .story-folded .post-body .wmde-markdown h3,
+  .story-folded .post-body .wmde-markdown li {
+    font-size: 0.875rem !important;
+    line-height: 1.8 !important;
+  }
+  .story-folded .post-body .wmde-markdown hr {
+    display: none;
+  }
 }
-.story-folded .post-body .wmde-markdown h1,
-.story-folded .post-body .wmde-markdown h2,
-.story-folded .post-body .wmde-markdown h3,
-.story-folded .post-body .wmde-markdown li {
-  font-size: 0.875rem !important;
-  line-height: 1.8 !important;
-}
-.story-folded .post-body .wmde-markdown hr {
-  display: none;
+/* lg Story 본문 — 넓은 왼쪽 열에서 읽는 글자 크기 16 */
+@media (min-width: 64rem) {
+  .story-body .post-body .wmde-markdown {
+    font-size: 1rem !important;
+    line-height: 1.75 !important;
+  }
 }
 .post-body .wmde-markdown strong {
   font-weight: 700 !important;

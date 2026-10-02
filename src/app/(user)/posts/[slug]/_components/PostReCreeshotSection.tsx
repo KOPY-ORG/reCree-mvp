@@ -28,15 +28,15 @@ export function PostReCreeshotSection({ postId, shots, originalImageUrl, isLogge
         <button
           type="button"
           onClick={handleAdd}
-          className="surface-card mx-4 flex w-[calc(100%-2rem)] items-center gap-3 px-4 py-4 text-left transition-opacity active:opacity-70"
+          className="surface-card mx-4 flex w-[calc(100%-2rem)] items-center gap-3 px-4 py-4 text-left transition-opacity active:opacity-70 lg:gap-3.5 lg:px-[18px] lg:hover:opacity-80"
         >
           {/* 점선 상자 대신 면 원 안의 카메라 — 위아래 카드와 같은 표면에서 "추가" 를 말한다 */}
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted lg:size-11">
             <Camera className="size-5 text-foreground" />
           </span>
           <span className="min-w-0">
-            <span className="block text-sm font-semibold">Add recreeshot</span>
-            <span className="mt-0.5 block text-xs text-muted-foreground">
+            <span className="block text-sm font-semibold lg:text-[15px] lg:font-bold">Add recreeshot</span>
+            <span className="mt-0.5 block text-xs text-muted-foreground lg:text-[13px] lg:leading-[1.4]">
               Share your recreation photo and compare it with the original.
             </span>
           </span>
@@ -44,13 +44,13 @@ export function PostReCreeshotSection({ postId, shots, originalImageUrl, isLogge
       ) : (
       <>
       {/* 섹션 헤더 */}
-      <div className="px-4 mb-2 flex items-center justify-between">
-        <p className="text-sm font-bold">How others reCree&apos;d</p>
-        <span className="text-xs text-muted-foreground">{shots.length} shots</span>
+      <div className="px-4 mb-2 flex items-center justify-between lg:mb-3">
+        <p className="text-sm font-bold lg:text-lg">How others reCree&apos;d</p>
+        <span className="text-xs text-muted-foreground lg:text-sm">{shots.length} shots</span>
       </div>
 
       {/* 가로 스크롤 */}
-      <div className="flex gap-2.5 overflow-x-auto px-4 pb-1 scrollbar-hide">
+      <div className="flex gap-2.5 overflow-x-auto px-4 pb-1 scrollbar-hide lg:gap-3">
         {/* Add 버튼 */}
         <button
           type="button"

@@ -206,7 +206,7 @@ export function YouTubeEmbed({ url, autoplay = false }: Props) {
 
   if (mode === "tap") {
     return (
-      <div className="relative aspect-video rounded-xl overflow-hidden w-full">
+      <div className="relative aspect-video rounded-xl overflow-hidden w-full lg:rounded-[20px]">
         <iframe
           src={embedSrc(source)}
           className="w-full h-full border-0"
@@ -222,7 +222,7 @@ export function YouTubeEmbed({ url, autoplay = false }: Props) {
   }
 
   return (
-    <div className="relative aspect-video rounded-xl overflow-hidden w-full">
+    <div className="relative aspect-video rounded-xl overflow-hidden w-full lg:rounded-[20px]">
       <div ref={containerRef} className="absolute inset-0 [&>iframe]:size-full" />
       {skeleton}
       {/* 아이콘만 둔 반투명 원. 브랜드 라임 90% + blur 로 영상이 살짝 비친다. 라임 위 아이콘은 검정.

@@ -27,15 +27,15 @@ export function MustTryCard({ text }: Props) {
   }, [expanded]);
 
   return (
-    <div className="memo-card mx-4 px-4 py-4">
+    <div className="memo-card mx-4 px-4 py-4 lg:px-6 lg:py-5">
       {/* 팬이 즐기는 가벼운 미션이라 별(Star). 라임 종이 위라 검정, 제목 글자 크기에 맞춘 16 */}
       <div className="flex items-center gap-1.5">
         <Star className="size-4 shrink-0 text-foreground" strokeWidth={2} aria-hidden="true" />
-        <p className="text-sm font-semibold text-foreground">Fan To-Do</p>
+        <p className="text-sm font-semibold text-foreground lg:text-base lg:font-bold">Fan To-Do</p>
       </div>
       <p
         ref={textRef}
-        className={`mt-1.5 text-sm text-gray-900 leading-relaxed ${expanded ? "" : "line-clamp-2"}`}
+        className={`mt-1.5 text-sm text-gray-900 leading-relaxed lg:mt-2 lg:text-base ${expanded ? "" : "line-clamp-2"}`}
       >
         {text}
       </p>

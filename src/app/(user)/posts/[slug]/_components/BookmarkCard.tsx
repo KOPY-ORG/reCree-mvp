@@ -22,10 +22,16 @@ function tidyQuotes(text: string): string {
   return text.replace(/["“”＂]{2,}/g, '"');
 }
 
+/**
+ * lg — 오른쪽 열(350~380) 폭에 맞춘 한 줄 카드. 왼쪽 칸은 카드 높이를 채우는 띠 대신 44 둥근 네모가 된다.
+ * 모바일 모양은 그대로다
+ */
+const LG_THUMB = "lg:ml-3.5 lg:size-11 lg:self-center lg:rounded-xl";
+
 function PlatformFallback({ platform }: { platform?: SourcePlatform }) {
   const p = platform?.toUpperCase();
 
-  const base = "w-20 shrink-0 self-stretch flex items-center justify-center";
+  const base = `w-20 shrink-0 self-stretch flex items-center justify-center ${LG_THUMB}`;
   if (p === "YOUTUBE") {
     return <div className={`${base} bg-red-600`}><Play className="h-6 w-6 text-white fill-white" /></div>;
   }
@@ -64,7 +70,7 @@ export function BookmarkCard({ url, platform, sourceDetail }: Props) {
   } catch {}
 
   if (loading) {
-    return <div className="h-20 rounded-[var(--radius-card)] animate-pulse bg-muted" />;
+    return <div className="h-20 rounded-[var(--radius-card)] animate-pulse bg-muted lg:h-[72px]" />;
   }
 
   return (
@@ -73,7 +79,7 @@ export function BookmarkCard({ url, platform, sourceDetail }: Props) {
       target="_blank"
       rel="noopener noreferrer"
       // 왼쪽 썸네일 · 플랫폼 칸은 카드가 자르는 모서리(20px)를 그대로 따라간다 — 칸에 따로 모서리를 주지 않는다
-      className="surface-card flex flex-row overflow-hidden min-h-20 transition-opacity active:opacity-70"
+      className="surface-card flex flex-row overflow-hidden min-h-20 transition-opacity active:opacity-70 lg:min-h-[72px] lg:items-center lg:hover:opacity-80"
     >
       {/* 좌측 썸네일 */}
       {og?.thumbnailUrl && !imgError ? (
@@ -81,7 +87,7 @@ export function BookmarkCard({ url, platform, sourceDetail }: Props) {
         <img
           src={og.thumbnailUrl}
           alt={og.title ?? ""}
-          className="w-20 shrink-0 self-stretch object-cover"
+          className={`w-20 shrink-0 self-stretch object-cover ${LG_THUMB}`}
           onError={() => setImgError(true)}
         />
       ) : (
@@ -90,22 +96,23 @@ export function BookmarkCard({ url, platform, sourceDetail }: Props) {
 
       {/* 우측 텍스트 */}
       <div className="flex-1 px-3 py-2.5 min-w-0">
-        <p className="text-[10px] text-gray-400 uppercase tracking-wide truncate">{hostname}</p>
+        <p className="text-[10px] text-gray-400 uppercase tracking-wide truncate lg:hidden">{hostname}</p>
         {og?.title && (
           <p
-            className="text-[13px] font-medium text-foreground mt-0.5 leading-snug overflow-hidden"
+            className="text-[13px] font-medium text-foreground mt-0.5 leading-snug overflow-hidden lg:mt-0 lg:text-sm lg:font-semibold lg:[-webkit-line-clamp:1]!"
             style={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 2 }}
           >
             {tidyQuotes(og.title)}
           </p>
         )}
         {og?.description && (
-          <p className="text-[12px] text-gray-500 mt-0.5 truncate">{tidyQuotes(og.description)}</p>
+          <p className="text-[12px] text-gray-500 mt-0.5 truncate lg:text-[13px]">{tidyQuotes(og.description)}</p>
         )}
         {sourceDetail && (
           <p className="text-[11px] text-muted-foreground/70 mt-1 leading-snug italic">{sourceDetail}</p>
         )}
       </div>
+      <ExternalLink className="mr-4 hidden size-4 shrink-0 text-muted-foreground lg:block" aria-hidden="true" />
     </a>
   );
 }

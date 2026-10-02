@@ -35,8 +35,11 @@ interface Props {
  */
 const TEXT_H = "h-[52px]";
 
-/** 리크리샷 카드(PostReCreeshotSection.tsx:58)와 같은 폭 — 한 화면의 가로 줄 둘이 같은 리듬으로 움직인다 */
-const CARD_W = "w-[140px]";
+/**
+ * 리크리샷 카드(PostReCreeshotSection.tsx:58)와 같은 폭 — 한 화면의 가로 줄 둘이 같은 리듬으로 움직인다.
+ * lg 는 두 줄이 다른 열에 있어 이 줄만 왼쪽 열 폭에 3장이 딱 들어가게 한다 (간격 16 두 개를 뺀 나머지의 1/3). 넘치면 지금처럼 가로 스크롤
+ */
+const CARD_W = "w-[140px] lg:w-[calc((100%-2rem)/3)]";
 
 function AttractionCard({
   item,
@@ -163,8 +166,8 @@ export function NearbyAttractionsSection({ lat, lng, placeLabel }: Props) {
   return (
     <section ref={sectionRef} className="mt-6">
       <div className="px-4 mb-2">
-        <p className="text-sm font-bold">Nearby Attractions</p>
-        <p className="text-xs text-muted-foreground mt-0.5">Around {placeLabel}</p>
+        <p className="text-sm font-bold lg:text-lg">Nearby Attractions</p>
+        <p className="text-xs text-muted-foreground mt-0.5 lg:text-sm">Around {placeLabel}</p>
       </div>
 
       {failed ? (
@@ -188,7 +191,7 @@ export function NearbyAttractionsSection({ lat, lng, placeLabel }: Props) {
         <>
           {/* 가로 스크롤은 PostReCreeshotSection.tsx:53 과 같은 형태 —
               같은 화면의 두 줄이 같은 여백·같은 스크롤바 처리로 움직인다 */}
-          <div className="flex gap-2.5 overflow-x-auto px-4 pb-1 scrollbar-hide">
+          <div className="flex gap-2.5 overflow-x-auto px-4 pb-1 scrollbar-hide lg:gap-4">
             {items === null
               ? [0, 1, 2].map((i) => <SkeletonCard key={i} />)
               : items.map((item) => (

@@ -127,7 +127,8 @@ export function OriginalSourceCards({ images, originalLinkUrls, className }: Pro
   if (images.length === 0) return null;
 
   return (
-    <div className={className ?? "absolute bottom-3 left-3 sm:bottom-4 sm:left-4 flex gap-2 sm:gap-3 z-10"}>
+    // lg 에서는 숨긴다 — 영상은 왼쪽 열 미디어 칸이, 그 밖의 출처는 오른쪽 열 출처 카드가 보여 준다
+    <div className={`${className ?? "absolute bottom-3 left-3 sm:bottom-4 sm:left-4 flex gap-2 sm:gap-3 z-10"} lg:hidden`}>
       {images.map((img, i) => {
         const clickUrl = img.linkUrl ?? originalLinkUrls?.[i] ?? null;
         // 카드가 유튜브를 열면 저장된 장면 이미지 대신 그 영상의 공식 썸네일을 보여준다 (DB 값은 그대로)

@@ -7,61 +7,29 @@ import { showError } from "@/lib/toast";
 import { canGoBackInApp } from "@/lib/in-app-history";
 import { ReportDialog } from "@/components/ReportDialog";
 import { ScrapButton } from "@/app/(user)/_components/ScrapButton";
-import { useToast } from "@/app/(user)/_hooks/useToast";
+import { useSharePost } from "./useSharePost";
 
 interface Props {
   postId?: string;
   isLoggedIn?: boolean;
   isSaved?: boolean;
   titleEn?: string;
-  /**
-   * 사진(배너) 안에 렌더됐는가. 모바일은 어느 쪽이든 화면 위에 고정돼 뜬다.
-   * lg 는 사진이 왼쪽 열 카드라 — true 면 사진 위쪽에 붙고, false(사진 없는 글)면 지금처럼 바가 된다
-   */
-  onPhoto?: boolean;
 }
 
 /** 사진 위 버튼 하나. 뒤로가기 · 공유 · 저장 · 더보기가 같은 원을 쓴다 (카메라는 BannerReCreeshotButton) */
 const ROUND = "photo-action press-scale focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white";
 const ICON = "size-5";
 
-export function PostDetailHeader({ postId, isLoggedIn, isSaved = false, titleEn = "", onPhoto = false }: Props) {
+export function PostDetailHeader({ postId, isLoggedIn, isSaved = false, titleEn = "" }: Props) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
-  const { toast, showToast } = useToast();
+  const { share: handleShare, toast } = useSharePost(titleEn);
 
-  async function handleShare() {
-    const url = window.location.href;
-
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: titleEn, url });
-      } catch {
-        // 사용자 취소 등 — 무시
-      }
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(url);
-      showToast("Link copied!");
-      return;
-    } catch {
-      // HTTP 등 clipboard 불가 → prompt fallback
-    }
-
-    prompt("Copy this link:", url);
-  }
-
-  // 모바일: 화면 위에 고정된 투명 줄. 사진을 지나 본문 위에서도 버튼이 떠 있다.
-  // lg + 사진 위: 사진 카드 위쪽에 붙는다(absolute). lg + 사진 없음: .app-header 와 같은 바
-  const frame = onPhoto
-    ? "fixed top-0 left-0 right-0 z-50 h-14 lg:absolute lg:inset-x-0 lg:top-0"
-    : "fixed top-0 left-0 right-0 z-50 h-14 lg:top-[var(--top-nav-space)] lg:bg-background/95 lg:backdrop-blur-sm lg:shadow-[0_1px_4px_rgba(0,0,0,0.07)]";
-  const inner = onPhoto
-    ? "max-w-[var(--app-col-w)] mx-auto h-full flex items-center justify-between px-2.5 lg:max-w-none"
-    : "max-w-[var(--app-col-w)] mx-auto h-full flex items-center justify-between px-2.5 lg:max-w-[73rem] lg:px-5";
+  // 모바일 전용 — 화면 위에 고정된 투명 줄. 사진을 지나 본문 위에서도 버튼이 떠 있다.
+  // lg 는 상단 바가 있어 뒤로가기가 필요 없고, 공유 · 저장 · 더보기는 제목 아래 아이콘 줄(PostActionBar)이 맡는다
+  const frame = "fixed top-0 left-0 right-0 z-50 h-14 lg:hidden";
+  const inner = "max-w-[var(--app-col-w)] mx-auto h-full flex items-center justify-between px-2.5";
 
   return (
     <>

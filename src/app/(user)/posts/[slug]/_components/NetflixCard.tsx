@@ -15,10 +15,11 @@ export function NetflixCard({ url, sourceDetail }: Props) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="surface-card flex flex-row overflow-hidden min-h-20 transition-opacity active:opacity-70"
+      className="surface-card flex flex-row overflow-hidden min-h-20 transition-opacity active:opacity-70 lg:min-h-[72px] lg:items-center lg:hover:opacity-80"
     >
       {/* 좌측 */}
-      <div className="w-20 shrink-0 self-stretch flex items-center justify-center bg-black">
+      {/* lg 는 BookmarkCard 와 같은 44 둥근 네모 */}
+      <div className="w-20 shrink-0 self-stretch flex items-center justify-center bg-black lg:ml-3.5 lg:size-11 lg:self-center lg:rounded-xl">
         <svg viewBox="0 0 24 24" className="h-7 w-7" fill="#DC211E">
           <polygon points="5,3 21,12 5,21" />
         </svg>
