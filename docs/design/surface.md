@@ -31,7 +31,7 @@
 | `--radius-card` | `20px` | `.surface-card` |
 | `ease-out-strong` | `cubic-bezier(.23,1,.32,1)` | 누름 · 사라짐 |
 | `.surface-card` | 배경 + 20px + `shadow-card` | 상세의 Story · 위치 · recreeshot 추가 · 댓글 · 출처 링크(Bookmark · Netflix) |
-| `.memo-card` | 연한 라임(`brand-sub3`) 종이, 그림자 없음, 오른쪽 위 18px 접힘(`brand` 55% + `brand-sub3`) | 상세 Fan To-Do |
+| `.memo-card` | 연한 라임(`brand-sub3` 에 검정 3%) 종이, 그림자 없음, 오른쪽 위 18px 접힘(`brand` 55% + `brand-sub3`) | 상세 Fan To-Do |
 | `.press-scale` | 160ms, `:active` scale .94, 모션 줄이기에서 끔 | 유튜브 소리 켜기 버튼 |
 | `.photo-action` | 누르는 칸 44 · 보이는 원 32, 검정 30% + blur 5, 흰 아이콘 20 | 상세 사진 위 뒤로가기 · 공유 · 저장 · 더보기 |
 | `.photo-action-camera` | 원 40, 회색 `rgba(40,40,46,.72)` + blur 8 | 상세 사진 우측 하단 recreeshot 추가 |
