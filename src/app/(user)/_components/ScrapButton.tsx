@@ -4,6 +4,8 @@ import { useEffect, useTransition, useState } from "react";
 import { Bookmark } from "lucide-react";
 import { toggleScrap } from "../_actions/scrap-actions";
 import { useToast } from "../_hooks/useToast";
+import { LoginPromptDialog } from "./LoginPromptDialog";
+import { SwapLabel } from "./SwapLabel";
 
 interface Props {
   postId: string;
@@ -15,7 +17,16 @@ interface Props {
   onSaveChange?: (saved: boolean) => void;
   /** 버튼 자체의 모양. 없으면 아이콘만 있는 기본 버튼 */
   className?: string;
+  /** 상태별로 className 뒤에 덧붙는 버튼 모양 (바탕 · 테두리처럼 둘 중 하나만 있어야 하는 것) */
+  stateClassName?: { saved: string; unsaved: string };
   strokeWidth?: number;
+  /** 아이콘 옆 글자. 없으면 아이콘만. 눌러도 버튼 폭이 변하지 않는다(SwapLabel) */
+  label?: { saved: string; unsaved: string };
+  /**
+   * 넘기면 비로그인일 때 상태를 바꾸지 않고 로그인 안내창을 띄운다 (게시글 상세).
+   * 넘기지 않으면 먼저 바꿔 보이고 서버가 거절하면 되돌리며 토스트를 띄운다
+   */
+  isLoggedIn?: boolean;
 }
 
 // 같은 화면에 같은 글의 저장 버튼이 둘 있을 수 있다 (상세의 사진 위 · 좋아요 줄).
@@ -23,8 +34,9 @@ interface Props {
 const SCRAP_CHANGE = "scrap-change";
 type ScrapChange = CustomEvent<{ postId: string; saved: boolean }>;
 
-export function ScrapButton({ postId, initialSaved, size = "md", unsavedClassName, savedStyle, strokeLinejoin = "round", onSaveChange, className, strokeWidth = 1.5 }: Props) {
+export function ScrapButton({ postId, initialSaved, size = "md", unsavedClassName, savedStyle, strokeLinejoin = "round", onSaveChange, className, stateClassName, strokeWidth = 1.5, label, isLoggedIn }: Props) {
   const [saved, setSaved] = useState(initialSaved);
+  const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [isPending, startTransition] = useTransition();
   const { toast, showToast } = useToast();
 
@@ -50,6 +62,11 @@ export function ScrapButton({ postId, initialSaved, size = "md", unsavedClassNam
   function handleClick(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
+
+    if (isLoggedIn === false) {
+      setShowLoginDialog(true);
+      return;
+    }
 
     apply(!saved);
 
@@ -79,9 +96,9 @@ export function ScrapButton({ postId, initialSaved, size = "md", unsavedClassNam
         type="button"
         onClick={handleClick}
         disabled={isPending}
-        aria-label={saved ? "Remove from saved" : "Save"}
+        aria-label={label ? undefined : saved ? "Remove from saved" : "Save"}
         aria-pressed={saved}
-        className={className ?? "transition-colors disabled:opacity-60"}
+        className={`${className ?? "transition-colors disabled:opacity-60"} ${stateClassName ? (saved ? stateClassName.saved : stateClassName.unsaved) : ""}`}
       >
         <Bookmark
           aria-hidden="true"
@@ -90,7 +107,15 @@ export function ScrapButton({ postId, initialSaved, size = "md", unsavedClassNam
           strokeLinejoin={strokeLinejoin}
           style={saved ? activeSavedStyle : undefined}
         />
+        {label && <SwapLabel on={saved} onText={label.saved} offText={label.unsaved} />}
       </button>
+
+      <LoginPromptDialog
+        open={showLoginDialog}
+        onOpenChange={setShowLoginDialog}
+        title="Sign in to save"
+        description="Keep the spots you want to visit in one place."
+      />
 
       {toast && (
         <div className="fixed bottom-[var(--bottom-nav-space)] left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-black/50 text-white text-sm whitespace-nowrap shadow-lg pointer-events-none">
