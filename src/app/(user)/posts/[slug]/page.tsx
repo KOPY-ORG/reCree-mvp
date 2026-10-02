@@ -216,7 +216,8 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
   //   모바일: 사진 1 → 칩 · 제목 2 → Fan To-Do 3 → 구매 4 → 출처(유튜브 → 나머지) 5 → Story 6 → 위치 7 → recreeshot 8
   //          → 주변 관광지 9 → 댓글 10 → 좋아요 · 저장 · 도움이 됐어요 11 → 사진 크레딧 12
   //   lg   : 왼쪽 = 미디어(유튜브, 없으면 사진) → 사진 줄(유튜브 글만) → Fan To-Do → Story → 주변 관광지 → 댓글 → 사진 크레딧
-  //          오른쪽 = 칩 · 제목 · 아이콘 줄 → 구매 → 위치 → 출처 카드(유튜브 밖) → recreeshot → 좋아요 줄
+  //          (칩 · 더보기 줄은 미디어 다음 — 유튜브 글은 사진 줄 다음)
+  //          오른쪽 = 제목 · 아이콘 줄 → 구매 → 위치 → 출처 카드(유튜브 밖) → recreeshot → 좋아요 줄
   // 왼쪽 미디어 칸을 채울 것(유튜브 · 사진)이 없으면 lg 에서도 두 열을 풀어 모바일 순서 그대로 한 줄로 둔다.
   // 블록 사이 간격은 모바일은 각 블록의 위 마진이(붙어 있는 블록은 0), lg 는 각 열의 gap 이 맡는다 —
   // 칩 · 제목 · Fan To-Do 는 모바일에서 사진에 붙어 있지만 lg 에서는 다른 열이라 gap 하나로는 둘 다 맞출 수 없다.
@@ -224,7 +225,10 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
   const twoCol = !!youTube || hasBanner;
   const ORDER = ["order-1", "order-2", "order-3", "order-4", "order-5", "order-6",
                  "order-7", "order-8", "order-9", "order-10", "order-11", "order-12"];
-  const order = (n: number) => (twoCol ? `${ORDER[n - 1]} lg:order-none` : ORDER[n - 1]);
+  // 모바일 바깥 틀은 2칸 격자다 — 칩(1fr) 옆에 댓글 · 저장(auto)이 서고, 나머지 블록은 두 칸을 다 쓴다(SPAN).
+  // 칩과 아이콘 줄이 lg 에서 서로 다른 열로 갈리므로 한 블록 안 격자로는 둘 다 맞출 수 없다
+  const SPAN = "col-span-2 min-w-0";
+  const order = (n: number) => `${SPAN} ${twoCol ? `${ORDER[n - 1]} lg:order-none` : ORDER[n - 1]}`;
   const gap = twoCol ? "mt-6 lg:mt-0" : "mt-6";
   const column = (lgGap: string) => (twoCol ? `contents lg:flex lg:min-w-0 lg:flex-col ${lgGap}` : "contents");
   const block = "[&>*]:mt-0 [&>*]:mb-0";
@@ -253,8 +257,8 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
       <div
         className={
           twoCol
-            ? "flex flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_382px] lg:items-start lg:gap-x-2 lg:px-8 lg:pt-6 min-[87.5rem]:grid-cols-[minmax(0,1fr)_412px]"
-            : "flex flex-col lg:mx-auto lg:max-w-2xl lg:pt-4"
+            ? "grid grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,1fr)_382px] lg:items-start lg:gap-x-2 lg:px-8 lg:pt-6 min-[87.5rem]:grid-cols-[minmax(0,1fr)_412px]"
+            : "grid grid-cols-[minmax(0,1fr)_auto] lg:mx-auto lg:max-w-2xl lg:pt-4"
         }
       >
       {/* 왼쪽 열 */}
@@ -278,9 +282,12 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
               {!isPreview && (
                 <PostDetailHeader postId={post.id} isLoggedIn={!!currentUser} isSaved={isSaved} titleEn={post.titleEn} />
               )}
+              {/* 원본 장면 카드 — 왼쪽 아래. lg 는 사진이 미디어 칸일 때만(영상 글의 사진 줄에서는 숨긴다).
+                  lg 줄 폭은 가운데 점 앞(50% − 64)에서 멈추고 카드가 그 안에서 줄어든다. 화살표(세로 가운데) · 카메라(오른쪽 아래)와는 자리가 갈린다 */}
               <OriginalSourceCards
                 images={originalImages}
                 originalLinkUrls={originalLinkUrls}
+                className={`absolute bottom-3 left-3 sm:bottom-4 sm:left-4 flex gap-2 sm:gap-3 z-10 ${youTube ? "lg:hidden" : "lg:max-w-[calc(50%-4rem)]"}`}
               />
               {/* recreeshot 추가 — 아래 recreeshot 섹션과 같은 조건(shop 은 숨김). 미리보기에선 누를 일이 없다.
                   lg 사진 줄에서는 뺀다 — 오른쪽 열 recreeshot 카드가 맡는다 */}
@@ -307,6 +314,15 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
           />
         </div>
       )}
+
+      {/* 토픽 · 태그 칩 + 더보기. 모바일은 풀려서(contents) 칩이 바깥 격자 첫 칸, 같은 줄 둘째 칸에 댓글 · 저장(오른쪽 열 DOM)이 선다.
+          lg 는 왼쪽 열 미디어 바로 아래 한 줄 — 칩(넘치면 줄바꿈) | 더보기(PostMoreMenu, lg 전용) */}
+      <div className={`${order(2)} contents lg:flex lg:items-start lg:gap-x-2 lg:px-4`}>
+        <div className="order-2 col-start-1 min-w-0 self-start pl-4 pt-3 lg:order-none lg:flex-1 lg:p-0">
+          <PostMetaBar labels={labels} />
+        </div>
+        <PostMoreMenu postId={post.id} isLoggedIn={!!currentUser} />
+      </div>
 
       {/* Fan To-Do — 모바일은 제목 바로 아래에 붙는다. 값이 없으면 카드도 없다 */}
       {mustTry && (
@@ -357,15 +373,14 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
 
       {/* 오른쪽 열 */}
       <div className={column("lg:gap-5")}>
-      {/* 토픽 · 태그 칩 + 아이콘 줄 + 제목. 한 격자라 모바일과 lg 의 배치가 다르다 —
-          모바일: 칩(왼쪽에서 줄바꿈) | 댓글 · 저장(첫 줄 높이에 맞춰 오른쪽) / 제목
-          lg   : 칩 | 더보기(PostMoreMenu, lg 전용) / 제목 / 좋아요 · 저장 · 댓글 · 공유 (PostActionBar 가 3행에 선다).
+      {/* 제목 + 아이콘 줄. 모바일은 풀려서(contents) 아이콘 줄이 칩 옆(둘째 칸), 제목이 다음 줄 두 칸이 된다 —
+          자동 배치는 뒤로 돌아가지 않으므로 DOM 은 아이콘 줄이 먼저다. lg 는 오른쪽 열 맨 위 — 제목 / 좋아요 · 저장 · 댓글 · 공유.
           아이콘 칸(42)이 아이콘(24)보다 커서 아래로 남는 9 만큼 lg 에서 블록 아래를 당긴다 */}
-      <div className={`${order(2)} mt-0 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2 px-4 pt-3 pb-2 lg:pt-0 lg:pb-0 ${twoCol ? "lg:-mb-2.5" : ""}`}>
-        <PostMetaBar labels={labels} />
-        <PostActionBar postId={post.id} isSaved={isSaved} isLoggedIn={!!currentUser} titleEn={post.titleEn} />
-        <PostMoreMenu postId={post.id} isLoggedIn={!!currentUser} />
-        <div className="col-span-2 space-y-1 pt-2 lg:row-start-2 lg:pt-[11px]">
+      <div className={`${order(2)} contents lg:flex lg:flex-col lg:px-4 ${twoCol ? "lg:-mb-2.5" : ""}`}>
+        <div className="order-2 col-start-2 self-start pt-3 pr-4 pl-2 lg:order-2 lg:p-0">
+          <PostActionBar postId={post.id} isSaved={isSaved} isLoggedIn={!!currentUser} titleEn={post.titleEn} />
+        </div>
+        <div className="order-2 col-span-2 min-w-0 space-y-1 px-4 pt-2 pb-2 lg:order-1 lg:p-0">
           {headline && (
             <p className="text-xl font-bold leading-tight lg:text-[28px] lg:leading-[1.2]">
               {headline}

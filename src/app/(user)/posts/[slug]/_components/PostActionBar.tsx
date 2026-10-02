@@ -21,7 +21,7 @@ export const ICON = "size-6";
 export const STROKE = 1.75;
 
 // 모바일: 토픽 칩 줄의 오른쪽 끝 — 댓글 → 저장 (좋아요는 게시글 아래 LikeSaveButtons).
-// lg: 제목 아래 한 줄 — 좋아요 → 저장 → 댓글 → 공유 (order 로 바꾼다. DOM 은 모바일 순서). 더보기는 칩 줄 오른쪽(PostMoreMenu).
+// lg: 오른쪽 열 제목 아래 한 줄 — 좋아요 → 저장 → 댓글 → 공유 (order 로 바꾼다. DOM 은 모바일 순서). 더보기는 왼쪽 열 칩 줄 오른쪽(PostMoreMenu).
 // 사진 위 버튼(PostDetailHeader)은 lg 에서 숨는다.
 // 좋아요는 PostLikeProvider, 저장은 ScrapButton 의 scrap-change 이벤트로 다른 버튼과 상태가 함께 바뀐다
 export function PostActionBar({ postId, isSaved, isLoggedIn, titleEn }: Props) {
@@ -35,7 +35,7 @@ export function PostActionBar({ postId, isSaved, isLoggedIn, titleEn }: Props) {
   return (
     // 누르는 칸(44)이 칩(약 21)보다 커서 위아래로 넘치게 두어 칩 줄 높이를 늘리지 않는다.
     // 마지막 칸의 여백만큼 바깥으로 밀어 아이콘이 본문 끝에 맞는다 — 모바일은 오른쪽 끝, lg 는 왼쪽 끝
-    <div className="-my-2.5 -mr-2.5 flex shrink-0 items-center lg:col-span-2 lg:row-start-3 lg:my-0 lg:-ml-[9px] lg:mr-0 lg:justify-self-start">
+    <div className="-my-2.5 -mr-2.5 flex shrink-0 items-center lg:my-0 lg:-ml-[9px] lg:mr-0">
       <button
         type="button"
         onClick={toggle}

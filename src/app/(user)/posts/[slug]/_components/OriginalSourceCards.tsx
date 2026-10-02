@@ -100,7 +100,8 @@ function SourceCard({ image, youTubeVideoId, onClick }: { image: OriginalImage; 
 
   return (
     <div
-      className="relative w-18 sm:w-24 md:w-32 lg:w-40 aspect-[4/3] rounded-lg shadow-md overflow-hidden shrink-0 cursor-pointer ring-1 ring-white/60"
+      // lg 는 16:9 미디어 칸 위라 사진이 4:3 보다 낮다 — 128 로 줄이고, 카드가 많으면 줄 폭(가운데 점 앞까지) 안에서 비율째 줄어든다
+      className="relative w-18 sm:w-24 md:w-32 aspect-[4/3] rounded-lg shadow-md overflow-hidden shrink-0 cursor-pointer ring-1 ring-white/60 lg:min-w-0 lg:shrink"
       onClick={onClick}
     >
       {youTubeVideoId ? (
@@ -115,7 +116,7 @@ function SourceCard({ image, youTubeVideoId, onClick }: { image: OriginalImage; 
           unoptimized={isExternalImage(image.url)}
           className="object-cover"
           style={focalStyle(image.focalX, image.focalY, image.zoom)}
-          sizes="(min-width: 1024px) 160px, (min-width: 768px) 128px, (min-width: 640px) 96px, 72px"
+          sizes="(min-width: 768px) 128px, (min-width: 640px) 96px, 72px"
           onError={() => setError(true)}
         />
       )}
@@ -127,8 +128,8 @@ export function OriginalSourceCards({ images, originalLinkUrls, className }: Pro
   if (images.length === 0) return null;
 
   return (
-    // lg 에서는 숨긴다 — 영상은 왼쪽 열 미디어 칸이, 그 밖의 출처는 오른쪽 열 출처 카드가 보여 준다
-    <div className={`${className ?? "absolute bottom-3 left-3 sm:bottom-4 sm:left-4 flex gap-2 sm:gap-3 z-10"} lg:hidden`}>
+    // lg 표시 여부는 부르는 쪽이 정한다 — 사진 미디어 칸 위에만 띄우고, 영상이 미디어 칸인 글에서는 숨긴다
+    <div className={className ?? "absolute bottom-3 left-3 sm:bottom-4 sm:left-4 flex gap-2 sm:gap-3 z-10"}>
       {images.map((img, i) => {
         const clickUrl = img.linkUrl ?? originalLinkUrls?.[i] ?? null;
         // 카드가 유튜브를 열면 저장된 장면 이미지 대신 그 영상의 공식 썸네일을 보여준다 (DB 값은 그대로)
