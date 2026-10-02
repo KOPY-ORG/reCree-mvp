@@ -291,8 +291,8 @@ html[data-nav-tucked] {
   .memo-card {
     --memo-fold: 18px;
     position: relative;
-    /* brand-sub3 그대로는 흰 바탕 위에서 너무 쨍해 명도만 3% 낮춘다 (색상 · 채도는 그대로) */
-    background: color-mix(in srgb, var(--brand-sub3) 97%, black);
+    /* brand-sub3 그대로는 흰 바탕 위에서 너무 쨍해 명도만 1.5% 낮춘다 (색상 · 채도는 그대로) */
+    background: color-mix(in srgb, var(--brand-sub3) 98.5%, black);
     border-radius: 6px;
     clip-path: polygon(0 0, calc(100% - var(--memo-fold)) 0, 100% var(--memo-fold), 100% 100%, 0 100%);
   }
