@@ -21,7 +21,7 @@ export function LocationCard({ placeId, nameEn, nameKo, addressEn, latitude, lon
     : null;
 
   return (
-    <div className="mx-4 mt-3 rounded-2xl border border-secondary bg-white overflow-hidden">
+    <div className="surface-card mx-4 mt-3 overflow-hidden">
       {/* 장소 정보 헤더 */}
       <div className="px-4 pt-4 pb-3 flex items-start gap-2.5">
         <MapPin className="h-5 w-5 shrink-0 mt-0.5 text-brand drop-shadow-[0_1px_1px_rgba(0,0,0,0.08)]" strokeWidth={2} />
@@ -59,7 +59,7 @@ export function LocationCard({ placeId, nameEn, nameKo, addressEn, latitude, lon
               href={googleMapsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-secondary text-sm font-medium text-foreground hover:bg-secondary transition-colors"
+              className="flex-1 flex items-center justify-center gap-1.5 h-10 rounded-full bg-muted text-sm font-medium text-foreground transition-opacity active:opacity-70"
             >
               <ExternalLink className="h-4 w-4" strokeWidth={1.5} />
               Google Maps
@@ -70,7 +70,7 @@ export function LocationCard({ placeId, nameEn, nameKo, addressEn, latitude, lon
               href={naverMapsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-secondary text-sm font-medium text-foreground hover:bg-secondary transition-colors"
+              className="flex-1 flex items-center justify-center gap-1.5 h-10 rounded-full bg-muted text-sm font-medium text-foreground transition-opacity active:opacity-70"
             >
               <ExternalLink className="h-4 w-4" strokeWidth={1.5} />
               Naver Maps
@@ -81,7 +81,7 @@ export function LocationCard({ placeId, nameEn, nameKo, addressEn, latitude, lon
               href={streetViewUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-secondary text-sm font-medium text-foreground hover:bg-secondary transition-colors"
+              className="flex-1 flex items-center justify-center gap-1.5 h-10 rounded-full bg-muted text-sm font-medium text-foreground transition-opacity active:opacity-70"
             >
               <ExternalLink className="h-4 w-4" strokeWidth={1.5} />
               Street View

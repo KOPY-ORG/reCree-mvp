@@ -159,17 +159,18 @@ export function PostComments({
 
   return (
     <section id="comments" className="px-4 mt-8 mb-6">
-      <h2 className="text-base font-bold mb-3">
-        Comments
-        {commentCount > 0 && (
-          <span className="font-normal text-muted-foreground ml-1">
-            ({commentCount})
-          </span>
-        )}
-      </h2>
-      <div className="rounded-2xl border border-secondary bg-white overflow-hidden">
+      {/* 제목은 Story 카드처럼 카드 안 머리에 둔다 */}
+      <div className="surface-card overflow-hidden">
+        <h2 className="px-4 pt-4 pb-3 text-sm font-bold">
+          Comments
+          {commentCount > 0 && (
+            <span className="font-normal text-muted-foreground ml-1">
+              ({commentCount})
+            </span>
+          )}
+        </h2>
         {/* 댓글 목록 */}
-        <div className="px-4 py-4 space-y-4">
+        <div className="px-4 pb-4 space-y-4">
           {comments.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               Be the first to comment

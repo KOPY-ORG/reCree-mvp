@@ -46,9 +46,12 @@ export function PostReCreeshotSection({ postId, shots, originalImageUrl, isLogge
         <button
           type="button"
           onClick={handleAdd}
-          className="mx-4 flex w-[calc(100%-2rem)] items-center gap-3 rounded-2xl border-2 border-dashed border-border bg-muted/30 px-4 py-4 text-left transition-colors hover:bg-muted/50"
+          className="surface-card mx-4 flex w-[calc(100%-2rem)] items-center gap-3 px-4 py-4 text-left transition-opacity active:opacity-70"
         >
-          <Camera className="size-6 shrink-0 text-muted-foreground" />
+          {/* 점선 상자 대신 면 원 안의 카메라 — 위아래 카드와 같은 표면에서 "추가" 를 말한다 */}
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
+            <Camera className="size-5 text-foreground" />
+          </span>
           <span className="min-w-0">
             <span className="block text-sm font-semibold">Add recreeshot</span>
             <span className="mt-0.5 block text-xs text-muted-foreground">

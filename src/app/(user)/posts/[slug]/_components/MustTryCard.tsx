@@ -1,13 +1,14 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
-import { Flame } from "lucide-react";
 
 interface Props {
   text: string;
 }
 
-// Spot Insight 에서 Must-try 만 떼어 낸 강조 카드. 4줄을 넘으면 접고 Show more 로 펼친다
+// Spot Insight 에서 Must-try 만 떼어 낸 강조 카드. 2줄을 넘으면 접고 Show more 로 펼친다.
+// 화면 제목은 "Do It Like Them" — 데이터 필드 이름(mustTry)은 그대로다.
+// 다른 카드와 같은 표면(surface-card)에 바탕만 브랜드 연두(brand-sub3)를 깔아 강조를 남긴다
 export function MustTryCard({ text }: Props) {
   const textRef = useRef<HTMLParagraphElement>(null);
   const [expanded, setExpanded] = useState(false);
@@ -25,14 +26,11 @@ export function MustTryCard({ text }: Props) {
   }, [expanded]);
 
   return (
-    <div className="mx-4 rounded-2xl border border-brand bg-brand/15 px-4 py-4">
-      <div className="flex items-center gap-1.5">
-        <Flame className="h-4 w-4 shrink-0 drop-shadow-[0_1px_1px_rgba(0,0,0,0.08)]" style={{ color: "#F46022" }} />
-        <p className="text-sm font-bold text-foreground">Must-try</p>
-      </div>
+    <div className="surface-card mx-4 bg-brand-sub3 px-4 py-4">
+      <p className="text-sm font-bold text-foreground">Do It Like Them</p>
       <p
         ref={textRef}
-        className={`mt-1.5 text-sm text-gray-900 leading-relaxed ${expanded ? "" : "line-clamp-4"}`}
+        className={`mt-1.5 text-sm text-gray-900 leading-relaxed ${expanded ? "" : "line-clamp-2"}`}
       >
         {text}
       </p>

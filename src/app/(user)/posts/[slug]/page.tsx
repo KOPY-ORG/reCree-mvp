@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import { LocationCard } from "./_components/LocationCard";
 import { prisma } from "@/lib/prisma";
 import { selectDetailLabels, type ResolvedLabel } from "@/lib/post-labels";
-import { MarkdownContent } from "./_components/MarkdownContent";
 import { PostDetailHeader } from "./_components/PostDetailHeader";
 import { BannerCarousel } from "./_components/BannerCarousel";
 import { OriginalSourceCards } from "./_components/OriginalSourceCards";
@@ -20,6 +19,7 @@ import { PostComments } from "./_components/PostComments";
 import { PostViewTracker } from "./_components/PostViewTracker";
 import { NearbyAttractionsSection } from "./_components/NearbyAttractionsSection";
 import { MustTryCard } from "./_components/MustTryCard";
+import { StoryCard } from "./_components/StoryCard";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -320,14 +320,8 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
 
       {/* 본문 */}
       {post.bodyEn && (
-        <div className={`${order[3]} mx-4 rounded-2xl border border-secondary bg-white overflow-hidden`}>
-          <div className="px-4 pt-4 pb-3">
-            <p className="text-sm font-bold">Story</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{storySubtitle}</p>
-          </div>
-          <div className="px-4 pb-4">
-            <MarkdownContent source={post.bodyEn} />
-          </div>
+        <div className={order[3]}>
+          <StoryCard subtitle={storySubtitle} body={post.bodyEn} />
         </div>
       )}
 
