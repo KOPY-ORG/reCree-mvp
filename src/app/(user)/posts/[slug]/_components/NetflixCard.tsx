@@ -15,7 +15,7 @@ export function NetflixCard({ url, sourceDetail }: Props) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex flex-row rounded-xl border border-gray-200 overflow-hidden min-h-20"
+      className="surface-card flex flex-row overflow-hidden min-h-20 transition-opacity active:opacity-70"
     >
       {/* 좌측 */}
       <div className="w-20 shrink-0 self-stretch flex items-center justify-center bg-black">

@@ -16,6 +16,12 @@ interface OgData {
   description: string | null;
 }
 
+// og:title · og:description 은 플랫폼이 감싼 따옴표와 글 속 따옴표가 겹쳐 ""HOMETOWN"" 처럼 온다.
+// 화면에서만 연달아 붙은 따옴표를 하나로 줄인다 (원본 응답은 그대로)
+function tidyQuotes(text: string): string {
+  return text.replace(/["“”＂]{2,}/g, '"');
+}
+
 function PlatformFallback({ platform }: { platform?: SourcePlatform }) {
   const p = platform?.toUpperCase();
 
@@ -58,7 +64,7 @@ export function BookmarkCard({ url, platform, sourceDetail }: Props) {
   } catch {}
 
   if (loading) {
-    return <div className="h-20 rounded-xl animate-pulse bg-gray-100" />;
+    return <div className="h-20 rounded-[var(--radius-card)] animate-pulse bg-muted" />;
   }
 
   return (
@@ -66,7 +72,8 @@ export function BookmarkCard({ url, platform, sourceDetail }: Props) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex flex-row rounded-xl border border-gray-200 overflow-hidden min-h-20"
+      // 왼쪽 썸네일 · 플랫폼 칸은 카드가 자르는 모서리(20px)를 그대로 따라간다 — 칸에 따로 모서리를 주지 않는다
+      className="surface-card flex flex-row overflow-hidden min-h-20 transition-opacity active:opacity-70"
     >
       {/* 좌측 썸네일 */}
       {og?.thumbnailUrl && !imgError ? (
@@ -89,16 +96,11 @@ export function BookmarkCard({ url, platform, sourceDetail }: Props) {
             className="text-[13px] font-medium text-foreground mt-0.5 leading-snug overflow-hidden"
             style={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 2 }}
           >
-            {og.title}
+            {tidyQuotes(og.title)}
           </p>
         )}
         {og?.description && (
-          <p
-            className="text-[12px] text-gray-500 mt-0.5 overflow-hidden"
-            style={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 1 }}
-          >
-            {og.description}
-          </p>
+          <p className="text-[12px] text-gray-500 mt-0.5 truncate">{tidyQuotes(og.description)}</p>
         )}
         {sourceDetail && (
           <p className="text-[11px] text-muted-foreground/70 mt-1 leading-snug italic">{sourceDetail}</p>
