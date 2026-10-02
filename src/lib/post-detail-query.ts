@@ -5,17 +5,17 @@ export type { CommentData as PostComment };
 
 export async function getPostDetail(
   slug: string,
-  opts: { userId?: string; isPreview?: boolean } = {}
+  opts: { userId?: string; isPreview?: boolean; voterKey?: string | null } = {}
 ) {
-  const { userId, isPreview = false } = opts;
+  const { userId, isPreview = false, voterKey = null } = opts;
 
   const post = await prisma.post.findUnique({
     where: { slug },
     // 저장된 likeCount · commentCount 는 계정 삭제(cascade) 때 줄지 않아 실제보다 커진다.
-    // 화면 숫자(댓글 수)는 그때그때 센다(_count). 좋아요 수는 화면에 내지 않는다. 저장 칼럼은 여기서 아예 빼 실수로 읽지 못하게 한다
+    // 화면 숫자(댓글 수 · 도움이 됐어요 수)는 그때그때 센다(_count). 좋아요 수는 화면에 내지 않는다. 저장 칼럼은 여기서 아예 빼 실수로 읽지 못하게 한다
     omit: { likeCount: true, commentCount: true },
     include: {
-      _count: { select: { comments: true } },
+      _count: { select: { comments: true, helpfulVotes: true } },
       postTopics: {
         where: { isVisible: true },
         orderBy: [{ topic: { level: "asc" } }, { displayOrder: "asc" }],
@@ -130,7 +130,7 @@ export async function getPostDetail(
 
   if (!post || (!isPreview && post.status !== "PUBLISHED")) return null;
 
-  const [comments, savedRecord, likedRecord] = await Promise.all([
+  const [comments, savedRecord, likedRecord, helpfulRecord] = await Promise.all([
     prisma.comment.findMany({
       where: { postId: post.id },
       orderBy: { createdAt: "desc" },
@@ -164,6 +164,13 @@ export async function getPostDetail(
           where: { userId_postId: { userId, postId: post.id } },
         })
       : null,
+    // "도움이 됐어요" 는 로그인과 무관하게 이 기기(voterKey 쿠키)가 눌렀는지로 본다
+    voterKey
+      ? prisma.postHelpfulVote.findUnique({
+          where: { postId_voterKey: { postId: post.id, voterKey } },
+          select: { id: true },
+        })
+      : null,
   ]);
 
   return {
@@ -171,5 +178,6 @@ export async function getPostDetail(
     comments,
     isSaved: !!savedRecord,
     isLikedByMe: !!likedRecord,
+    isHelpfulByMe: !!helpfulRecord,
   };
 }

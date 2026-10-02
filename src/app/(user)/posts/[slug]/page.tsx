@@ -22,6 +22,8 @@ import { NearbyAttractionsSection } from "./_components/NearbyAttractionsSection
 import { MustTryCard } from "./_components/MustTryCard";
 import { StoryCard } from "./_components/StoryCard";
 import { ViewOnMapButton } from "./_components/ViewOnMapButton";
+import { HelpfulVote } from "./_components/HelpfulVote";
+import { readVoterKey } from "@/lib/helpful-vote";
 import { getAllMapPlaces } from "@/lib/map-queries";
 import { getSavedPostIds } from "@/lib/post-queries";
 import { getTopicMarkerColor, getTopicMarkerGradient } from "@/lib/map-utils";
@@ -107,10 +109,10 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
     }),
   ]);
 
-  const result = await getPostDetail(slug, { userId: currentUser?.id, isPreview });
+  const result = await getPostDetail(slug, { userId: currentUser?.id, isPreview, voterKey: await readVoterKey() });
   if (!result) notFound();
 
-  const { post, comments, isSaved, isLikedByMe } = result;
+  const { post, comments, isSaved, isLikedByMe, isHelpfulByMe } = result;
 
   const reCreeshorts = await prisma.reCreeshot.findMany({
     where: { linkedPostId: post.id, status: "ACTIVE" },
@@ -205,16 +207,16 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
 
   // 블록은 전부 한 번만 렌더한다(유튜브 iframe · 지도 · h1 이 두 벌 생기지 않게). 그래서 DOM 은 lg 의 두 열 모양이고,
   // 모바일은 두 열 래퍼를 display: contents 로 풀어 블록들을 바깥 flex 열의 형제로 만든 뒤 order 로 순서를 되돌린다.
-  //   모바일: 사진·칩(+좋아요줄)·제목·Must-try 1 → 출처 2 → Story 4 → 위치 5 → recreeshot 6 → 주변 관광지 7 → 댓글 8 → 사진 크레딧 9
-  //   lg   : 왼쪽 = 사진·칩(+좋아요줄)·제목·Must-try → 출처 → 위치, 오른쪽 = Story → recreeshot → 주변 관광지 → 댓글 → 사진 크레딧
+  //   모바일: 사진·칩(+좋아요줄)·제목·Must-try 1 → 출처 2 → Story 4 → 위치 5 → recreeshot 6 → 주변 관광지 7 → 댓글 8 → 도움이 됐어요 9 → 사진 크레딧 10
+  //   lg   : 왼쪽 = 사진·칩(+좋아요줄)·제목·Must-try → 출처 → 위치, 오른쪽 = Story → recreeshot → 주변 관광지 → 댓글 → 도움이 됐어요 → 사진 크레딧
   //   (3 은 Must-try 가 쓰던 칸이라 비어 있다)
   // 배너가 없으면 lg 에서도 왼쪽이 비므로 두 열을 풀어 모바일 순서 그대로 한 줄로 둔다.
   // 블록 사이 간격은 바깥 열(과 lg 의 각 열)의 gap 이 맡고, 각 블록의 위아래 마진은 래퍼에서 지운다.
   const order = hasBanner
     ? ["order-1 lg:order-none", "order-2 lg:order-none", "order-3 lg:order-none", "order-4 lg:order-none",
        "order-5 lg:order-none", "order-6 lg:order-none", "order-7 lg:order-none", "order-8 lg:order-none",
-       "order-9 lg:order-none"]
-    : ["order-1", "order-2", "order-3", "order-4", "order-5", "order-6", "order-7", "order-8", "order-9"];
+       "order-9 lg:order-none", "order-10 lg:order-none"]
+    : ["order-1", "order-2", "order-3", "order-4", "order-5", "order-6", "order-7", "order-8", "order-9", "order-10"];
   const column = hasBanner ? "contents lg:flex lg:min-w-0 lg:flex-col lg:gap-6" : "contents";
   const block = "[&>*]:mt-0 [&>*]:mb-0";
 
@@ -395,9 +397,16 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
         />
       </div>
 
+      {/* 도움이 됐어요 — 댓글 바로 아래. 로그인 없이 누른다 (미리보기에선 숨김) */}
+      {!isPreview && (
+        <div className={order[8]}>
+          <HelpfulVote postId={post.id} initialVoted={isHelpfulByMe} initialCount={post._count.helpfulVotes} />
+        </div>
+      )}
+
       {/* 사진 크레딧 — 페이지 맨 아래. 없으면 컴포넌트가 null 이라 래퍼도 숨긴다 */}
       {credits.length > 0 && (
-        <div className={`${order[8]} ${block}`}>
+        <div className={`${order[9]} ${block}`}>
           <ImageCreditSection credits={credits} />
         </div>
       )}
