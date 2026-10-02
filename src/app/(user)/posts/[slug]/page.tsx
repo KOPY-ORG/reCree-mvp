@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { Sparkles, Waves, Flame, Lightbulb } from "lucide-react";
 import { LocationCard } from "./_components/LocationCard";
 import { prisma } from "@/lib/prisma";
 import { selectDetailLabels, type ResolvedLabel } from "@/lib/post-labels";
@@ -20,6 +19,7 @@ import { PurchaseButton } from "./_components/PurchaseButton";
 import { PostComments } from "./_components/PostComments";
 import { PostViewTracker } from "./_components/PostViewTracker";
 import { NearbyAttractionsSection } from "./_components/NearbyAttractionsSection";
+import { MustTryCard } from "./_components/MustTryCard";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -135,11 +135,9 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
   });
 
   const spotInsight = post.postPlaces[0] ?? null;
-  const insightEn = spotInsight?.insightEn as {
-    context?: string;
-    mustTry?: string;
-    tip?: string;
-  } | null;
+  // Spot Insight 중 화면에 남는 것은 Must-try 하나다. Context · Vibe · Tip 은 데이터는 그대로 두고 표시만 하지 않는다
+  const insightEn = spotInsight?.insightEn as { mustTry?: string } | null;
+  const mustTry = insightEn?.mustTry?.trim() || null;
 
   const placeLabel = spotInsight?.place.nameEn ?? spotInsight?.place.nameKo;
   const headline = placeLabel ?? (post.isShop && post.subtitle ? post.subtitle : null);
@@ -171,18 +169,33 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
     }),
   };
 
+
   const hasBanner = bannerImages.length > 0;
 
-  // 모바일 간격 보정 (아래 두 열 래퍼 주석 참고). 모두 모바일에서만 의미가 있고 lg 는 gap 이 간격을 맡는다.
-  // SourceSection · ImageCreditSection 이 스스로 null 을 돌려주는 조건과 같은 식이어야 한다.
+  // SourceSection 이 스스로 null 을 돌려주는 조건과 같은 식이어야 한다 — 빈 래퍼가 gap 을 남기지 않게
   const hasSource = post.postSources.some((s) => s.sourceType === "PRIMARY");
-  const hasTail =
-    post.postImages.some((img) => !!img.creditText) || !!post.source;
-  // Source(mb-6 = 24) 뒤에 크레딧(mt-2) · 출처(mt-6)가 오면 예전에는 둘이 겹쳐 24 였다 → 뒤쪽 첫 마진을 지운다
-  const sourceGapFix = hasSource ? "[&>:first-child]:mt-0" : "";
-  // Source 가 두 열의 마지막이면 그 mb-6 이 아래 Nearby(mt-6) · 댓글(mt-8)과 겹치던 것을 → 지워서 뒤쪽 마진만 남긴다.
-  // 크레딧이 마지막일 때(mb-4)는 order-7 래퍼의 [&>:last-child]:mb-0 이 같은 일을 한다
-  const tailGapFix = hasSource && !hasTail ? "[&>section]:mb-0" : "";
+  const credits = post.postImages
+    .filter((img): img is typeof img & { creditText: string } => !!img.creditText)
+    .map((img) => img.creditText);
+  const hasAttribution = hasSource || credits.length > 0 || !!post.source;
+  const showNearby =
+    !post.isShop &&
+    !!spotInsight &&
+    spotInsight.place.latitude !== null &&
+    spotInsight.place.longitude !== null;
+
+  // 블록은 전부 한 번만 렌더한다(유튜브 iframe · 지도 · h1 이 두 벌 생기지 않게). 그래서 DOM 은 lg 의 두 열 모양이고,
+  // 모바일은 두 열 래퍼를 display: contents 로 풀어 블록들을 바깥 flex 열의 형제로 만든 뒤 order 로 순서를 되돌린다.
+  //   모바일: 사진·제목 1 → 출처 2 → Must-try 3 → Story 4 → 위치 5 → recreeshot 6 → 주변 관광지 7 → 댓글 8
+  //   lg   : 왼쪽 = 사진·제목 → 출처 → 위치, 오른쪽 = Must-try → Story → recreeshot → 주변 관광지 → 댓글
+  // 배너가 없으면 lg 에서도 왼쪽이 비므로 두 열을 풀어 모바일 순서 그대로 한 줄로 둔다.
+  // 블록 사이 간격은 바깥 열(과 lg 의 각 열)의 gap 이 맡고, 각 블록의 위아래 마진은 래퍼에서 지운다.
+  const order = hasBanner
+    ? ["order-1 lg:order-none", "order-2 lg:order-none", "order-3 lg:order-none", "order-4 lg:order-none",
+       "order-5 lg:order-none", "order-6 lg:order-none", "order-7 lg:order-none", "order-8 lg:order-none"]
+    : ["order-1", "order-2", "order-3", "order-4", "order-5", "order-6", "order-7", "order-8"];
+  const column = hasBanner ? "contents lg:flex lg:min-w-0 lg:flex-col lg:gap-6" : "contents";
+  const block = "[&>*]:mt-0 [&>*]:mb-0";
 
   // lg: 상세는 1440 으로 퍼지지 않고 1120(+ 좌우 24)에서 멈춘다 — desktop-layout.md §15 원칙 4. 헤더와 같은 값
   return (
@@ -199,29 +212,21 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
         </div>
       )}
 
-      {/* lg: 두 열. 왼쪽 7 = 사진 → 제목 블록 → 위치 카드 → From the Source, 오른쪽 5 = 나머지(구매 · 인사이트 ·
-          recreeshot · Story · 크레딧 · 출처) 원래 순서. 왼쪽이 길어 sticky 없이 양쪽이 자연 스크롤한다.
-          배너가 없으면 왼쪽이 비므로 한 줄로 둔다.
-
-          블록은 전부 한 번만 렌더한다(지도 iframe · h1 이 두 벌 생기지 않게). 그래서 DOM 은 lg 의 두 열 모양이고,
-          모바일은 두 열 래퍼를 display: contents 로 풀어 조각들을 이 flex 열의 형제로 만든 뒤 order 로 원래 순서
-          (사진 1 → 제목 2 → 구매·인사이트 3 → 위치 4 → recreeshot·Story 5 → Source 6 → 크레딧·출처 7)를 되돌린다.
-
-          flex 항목 사이에서는 마진이 겹치지(collapse) 않는다. 모바일 간격이 그대로이려면 겹치던 자리를 손봐야 하는데,
-          조각 경계에서 양쪽 마진이 모두 있는 곳은 Source(mb-6) 뒤 두 군데뿐이다 — 아래 sourceGapFix · tailGapFix */}
       <div
         className={
           hasBanner
-            ? "flex flex-col lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start lg:gap-6 lg:px-6 lg:pt-20"
-            : "flex flex-col lg:mx-auto lg:max-w-2xl lg:pt-4"
+            ? "flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start lg:px-6 lg:pt-20"
+            : "flex flex-col gap-6 lg:mx-auto lg:max-w-2xl lg:pt-4"
         }
       >
       {/* 왼쪽 열 */}
-      <div className={hasBanner ? "contents lg:flex lg:min-w-0 lg:flex-col lg:gap-5" : "contents"}>
+      <div className={column}>
+      {/* 사진 + 제목 블록. 둘은 어느 화면에서나 붙어 있어 한 블록이다 */}
+      <div className={order[0]}>
       {/* 배너 캐러셀 — 헤더(h-12) 높이만큼 위로 올려 풀블리드 (미리보기엔 헤더 없으므로 margin 제거).
           lg 는 헤더가 불투명 바라 올리지 않고, 사진은 둥근 카드로 붙어 있다 */}
       {hasBanner && (
-        <div className={`order-1 lg:order-none lg:mx-4 lg:mt-0 lg:overflow-hidden lg:rounded-2xl ${isPreview ? "" : "-mt-12"}`}>
+        <div className={`lg:mx-4 lg:mt-0 lg:overflow-hidden lg:rounded-2xl ${isPreview ? "" : "-mt-12"}`}>
           <BannerCarousel images={bannerImages}>
             <OriginalSourceCards
               images={originalImages}
@@ -231,8 +236,6 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
         </div>
       )}
 
-      {/* 제목 블록 — 토픽·태그 칩 · 제목 · 부제 · 좋아요·댓글·공유·저장 */}
-      <div className={hasBanner ? "order-2 lg:order-none" : "order-2"}>
       {/* 배너 없을 때 소스 이미지 카드 (뱃지 위) */}
       {!hasBanner && (
         <OriginalSourceCards
@@ -269,11 +272,29 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
         initialLikeCount={post.likeCount}
         commentCount={post.commentCount}
       />
+
+      {/* 구매 버튼 (shop 포스트) */}
+      {post.isShop && post.purchaseUrl && (
+        <PurchaseButton purchaseUrl={post.purchaseUrl} isAffiliate={post.isAffiliate} />
+      )}
       </div>
 
-      {/* Location 카드. lg 는 간격을 열의 gap 이 맡는다 */}
+      {/* From the Source(유튜브가 맨 위) · 사진 크레딧 · 출처 문구 */}
+      {hasAttribution && (
+        <div className={`${order[1]} flex flex-col gap-3 ${block}`}>
+          <SourceSection sources={post.postSources.map((s) => ({ ...s, platform: s.platform as SourcePlatform | null }))} />
+          <ImageCreditSection credits={credits} />
+          {post.source && (
+            <p className="px-4 text-xs text-muted-foreground">
+              Source: {post.source}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Location 카드 */}
       {spotInsight && (
-        <div className={hasBanner ? "order-4 lg:order-none lg:[&>*]:mt-0" : "order-4"}>
+        <div className={`${order[4]} ${block}`}>
           <LocationCard
             placeId={spotInsight.place.id}
             nameEn={spotInsight.place.nameEn}
@@ -287,98 +308,19 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
           />
         </div>
       )}
-
-      <div className={`${hasBanner ? "order-6 lg:order-none lg:[&>*]:my-0" : "order-6"} ${tailGapFix}`}>
-      {/* From the Source */}
-      <SourceSection sources={post.postSources.map((s) => ({ ...s, platform: s.platform as SourcePlatform | null }))} />
-      </div>
       </div>
 
-      {/* 오른쪽 열. 첫 블록의 위 마진은 lg 에서 지워 사진과 윗선을 맞춘다 */}
-      <div className={hasBanner ? "contents lg:block lg:min-w-0 lg:[&>div:first-child>:first-child]:mt-0" : "contents"}>
-      <div className={hasBanner ? "order-3 lg:order-none" : "order-3"}>
-      {/* 구매 버튼 (shop 포스트) */}
-      {post.isShop && post.purchaseUrl && (
-        <PurchaseButton purchaseUrl={post.purchaseUrl} isAffiliate={post.isAffiliate} />
-      )}
-
-      {/* Spot Insight */}
-      {spotInsight && (
-        <div className="mx-4 mt-3 rounded-2xl border border-secondary bg-white overflow-hidden">
-          {/* 헤더 */}
-          <div className="px-4 pt-4 pb-3">
-            <p className="text-sm font-bold">Spot Insight</p>
-          </div>
-
-          <div className="px-4 pb-4 space-y-5">
-            {/* Context */}
-            {insightEn?.context && (
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-1.5">
-                  <Sparkles className="h-4 w-4 shrink-0 text-brand drop-shadow-[0_1px_1px_rgba(0,0,0,0.08)]" />
-                  <p className="text-sm font-bold text-foreground">Context</p>
-                </div>
-                <p className="text-sm text-gray-900 leading-relaxed pl-5">{insightEn.context}</p>
-              </div>
-            )}
-
-            {/* Vibe */}
-            {spotInsight.vibe.length > 0 && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-1.5">
-                  <Waves className="h-4 w-4 shrink-0 drop-shadow-[0_1px_1px_rgba(0,0,0,0.08)]" style={{ color: "#FFC60C" }} />
-                  <p className="text-sm font-bold text-foreground">Vibe</p>
-                </div>
-                <div className="flex flex-wrap gap-1.5 pl-5">
-                  {spotInsight.vibe.map((v, i) => (
-                    <span key={i} className="px-2.5 py-0.5 rounded-full bg-muted text-xs font-medium">
-                      {v}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Must-try */}
-            {insightEn?.mustTry && (
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-1.5">
-                  <Flame className="h-4 w-4 shrink-0 drop-shadow-[0_1px_1px_rgba(0,0,0,0.08)]" style={{ color: "#F46022" }} />
-                  <p className="text-sm font-bold text-foreground">Must-try</p>
-                </div>
-                <p className="text-sm text-gray-900 leading-relaxed pl-5">{insightEn.mustTry}</p>
-              </div>
-            )}
-
-            {/* Tip */}
-            {insightEn?.tip && (
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-1.5">
-                  <Lightbulb className="h-4 w-4 shrink-0 drop-shadow-[0_1px_1px_rgba(0,0,0,0.08)]" style={{ color: "#36D8FC" }} />
-                  <p className="text-sm font-bold text-foreground">Tip</p>
-                </div>
-                <p className="text-sm text-gray-900 leading-relaxed pl-5">{insightEn.tip}</p>
-              </div>
-            )}
-          </div>
+      {/* 오른쪽 열 */}
+      <div className={column}>
+      {mustTry && (
+        <div className={order[2]}>
+          <MustTryCard text={mustTry} />
         </div>
-      )}
-      </div>
-
-      <div className={hasBanner ? "order-5 lg:order-none" : "order-5"}>
-      {/* How others reCree'd + Tips (shop 포스트는 숨김) */}
-      {!post.isShop && (
-        <PostReCreeshotSection
-          postId={post.id}
-          shots={reCreeshorts}
-          originalImageUrl={originalImages[0]?.url ?? null}
-          isLoggedIn={!!currentUser}
-        />
       )}
 
       {/* 본문 */}
       {post.bodyEn && (
-        <div className="mx-4 mt-3 rounded-2xl border border-secondary bg-white overflow-hidden">
+        <div className={`${order[3]} mx-4 rounded-2xl border border-secondary bg-white overflow-hidden`}>
           <div className="px-4 pt-4 pb-3">
             <p className="text-sm font-bold">Story</p>
             <p className="text-xs text-muted-foreground mt-0.5">{storySubtitle}</p>
@@ -388,54 +330,44 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
           </div>
         </div>
       )}
-      </div>
 
-      <div className={`${hasBanner ? "order-7 lg:order-none" : "order-7"} ${sourceGapFix} [&>:last-child]:mb-0`}>
-      {/* Photo Credits */}
-      <ImageCreditSection
-        credits={post.postImages
-          .filter((img): img is typeof img & { creditText: string } => !!img.creditText)
-          .map((img) => img.creditText)}
-      />
-
-      {/* 출처 */}
-      {post.source && (
-        <p className="px-4 mt-6 text-xs text-muted-foreground">
-          Source: {post.source}
-        </p>
+      {/* How others reCree'd — 없으면 추가 카드만 (shop 포스트는 숨김) */}
+      {!post.isShop && (
+        <div className={`${order[5]} ${block}`}>
+          <PostReCreeshotSection
+            postId={post.id}
+            shots={reCreeshorts}
+            originalImageUrl={originalImages[0]?.url ?? null}
+            isLoggedIn={!!currentUser}
+          />
+        </div>
       )}
-      </div>
-      </div>
-      </div>
 
-      {/* lg: 아래 두 블록은 두 단 밑에서 전체 폭으로 이어진다. 댓글은 읽기 폭으로 좁힌다 */}
-      <div className="lg:px-6">
-
-      {/* Nearby Attractions (시안 :885) — 실패 · 0건 · 좌표 없음 · shop 일 때 사라지는
-          유일한 블록이라 꼬리에 둔다. 없어져도 위로 붙는 것이 댓글 하나뿐이고,
-          Story → Sources → Credits 로 이어지는 본문이 중간에 끊기지 않는다.
+      {/* Nearby Attractions (시안 :885) — 0건이면 컴포넌트가 null 을 돌려주므로 래퍼도 숨겨 gap 을 남기지 않는다.
           좌표 없는 Place 는 실측 0건이지만 latitude 가 nullable 이라 방어는 남긴다 */}
-      {!post.isShop &&
-        spotInsight &&
-        spotInsight.place.latitude !== null &&
-        spotInsight.place.longitude !== null && (
+      {showNearby && (
+        <div className={`${order[6]} ${block} empty:hidden`}>
           <NearbyAttractionsSection
             lat={Number(spotInsight.place.latitude)}
             lng={Number(spotInsight.place.longitude)}
             placeLabel={spotInsight.place.nameEn ?? spotInsight.place.nameKo}
           />
-        )}
+        </div>
+      )}
 
       {/* 댓글 섹션 */}
-      <PostComments
-        postId={post.id}
-        initialComments={comments}
-        initialCommentCount={post.commentCount}
-        currentUserId={currentUser?.id ?? null}
-        currentUserRole={currentUser?.role ?? null}
-        currentUserNickname={currentUser?.nickname ?? null}
-        currentUserProfileImageUrl={currentUser?.profileImageUrl ?? null}
-      />
+      <div className={`${order[7]} ${block}`}>
+        <PostComments
+          postId={post.id}
+          initialComments={comments}
+          initialCommentCount={post.commentCount}
+          currentUserId={currentUser?.id ?? null}
+          currentUserRole={currentUser?.role ?? null}
+          currentUserNickname={currentUser?.nickname ?? null}
+          currentUserProfileImageUrl={currentUser?.profileImageUrl ?? null}
+        />
+      </div>
+      </div>
       </div>
     </article>
   );

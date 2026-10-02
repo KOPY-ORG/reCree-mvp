@@ -41,12 +41,27 @@ export function PostReCreeshotSection({ postId, shots, originalImageUrl, isLogge
 
   return (
     <div className="mt-3">
+      {shots.length === 0 ? (
+        // 아직 아무도 올리지 않았으면 제목과 빈 줄 대신 추가 카드 하나만 둔다
+        <button
+          type="button"
+          onClick={handleAdd}
+          className="mx-4 flex w-[calc(100%-2rem)] items-center gap-3 rounded-2xl border-2 border-dashed border-border bg-muted/30 px-4 py-4 text-left transition-colors hover:bg-muted/50"
+        >
+          <Camera className="size-6 shrink-0 text-muted-foreground" />
+          <span className="min-w-0">
+            <span className="block text-sm font-semibold">Add recreeshot</span>
+            <span className="mt-0.5 block text-xs text-muted-foreground">
+              Share your recreation photo and compare it with the original.
+            </span>
+          </span>
+        </button>
+      ) : (
+      <>
       {/* 섹션 헤더 */}
       <div className="px-4 mb-2 flex items-center justify-between">
         <p className="text-sm font-bold">How others reCree&apos;d</p>
-        {shots.length > 0 && (
-          <span className="text-xs text-muted-foreground">{shots.length} shots</span>
-        )}
+        <span className="text-xs text-muted-foreground">{shots.length} shots</span>
       </div>
 
       {/* 가로 스크롤 */}
@@ -78,6 +93,8 @@ export function PostReCreeshotSection({ postId, shots, originalImageUrl, isLogge
           </button>
         ))}
       </div>
+      </>
+      )}
 
       <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
         <DialogContent className="max-w-xs rounded-2xl text-center">

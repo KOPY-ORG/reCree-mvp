@@ -29,7 +29,10 @@ function isNetflix(source: PostSource): boolean {
 }
 
 export function SourceSection({ sources }: Props) {
-  const visibleSources = sources.filter((s) => s.sourceType === "PRIMARY");
+  // 유튜브 임베드를 맨 위에, 나머지는 원래 순서대로 그 아래 (sort 는 안정 정렬)
+  const visibleSources = sources
+    .filter((s) => s.sourceType === "PRIMARY")
+    .sort((a, b) => Number(isYouTube(b)) - Number(isYouTube(a)));
 
   if (visibleSources.length === 0) return null;
 
