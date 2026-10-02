@@ -31,8 +31,19 @@
 | `ease-out-strong` | `cubic-bezier(.23,1,.32,1)` | 누름 · 사라짐 |
 | `.surface-card` | 배경 + 20px + `shadow-card` | 상세의 Do It Like Them · Story · 위치 · recreeshot 추가 · 댓글 · 출처 링크(Bookmark · Netflix) |
 | `.press-scale` | 160ms, `:active` scale .94, 모션 줄이기에서 끔 | 유튜브 소리 켜기 버튼 |
+| `.photo-action` | 누르는 칸 44 · 보이는 원 32, 검정 30% + blur 5, 흰 아이콘 20 | 상세 사진 위 뒤로가기 · 공유 · 저장 · 더보기 |
+| `.photo-action-camera` | 원 40, 회색 `rgba(40,40,46,.72)` + blur 8 | 상세 사진 우측 하단 recreeshot 추가 |
 
 `shadow-card` 만 홈에 없던 값이다. 검색바 그림자를 큰 카드 여러 장에 그대로 깔면 번져 화면이 뿌옇게 되어,
 같은 색으로 거리와 농도만 줄였다.
 
 하단 알약은 토큰으로 옮기지 않았다. 유리 표면(흰색 93% + blur + 가장자리)이라 값이 다르고, `src/lib/bottom-nav.ts` 와 짝으로 묶여 있다.
+
+## 사진 위 버튼
+
+사진 위에는 선 없는 반투명 원만 둔다. 사진 위쪽 28% · 아래쪽 22% 에 검정 그라데이션(40% · 18%)을 깔아
+밝은 사진에서도 흰 아이콘이 읽히게 하고, 사진 가운데는 어둡히지 않는다.
+저장된 북마크는 원 색은 두고 아이콘만 라임으로 채운다.
+
+`backdrop-filter` 는 표준 속성 하나만 적는다. `-webkit-` 를 같이 적으면 빌드(lightningcss)가 표준 쪽을 지워
+Chrome 에서 blur 가 빠진다. 접두사는 빌드가 붙인다.

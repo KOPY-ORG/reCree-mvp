@@ -120,8 +120,10 @@ export function BannerCarousel({ images, children }: Props) {
         ))}
       </div>
 
-      {/* 상단 그라디언트 */}
-      <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/40 to-transparent pointer-events-none z-10" />
+      {/* 위 · 아래 스크림 — 사진 위 버튼이 밝은 사진에서도 떠 보이게. 가장자리만 어둡히고 사진 가운데는 건드리지 않는다.
+          위: 사진 높이의 28%, 가장 진한 곳 검정 40%. 아래: 원본 장면 카드 · 카메라 쪽이라 22%, 검정 18% 로 아주 옅게 */}
+      <div className="absolute inset-x-0 top-0 h-[28%] bg-gradient-to-b from-black/40 to-transparent pointer-events-none z-10" />
+      <div className="absolute inset-x-0 bottom-0 h-[22%] bg-gradient-to-t from-black/[0.18] to-transparent pointer-events-none z-10" />
 
       {/* 화살표 버튼 (데스크톱, 2장 이상) */}
       {total >= 2 && (
@@ -148,7 +150,7 @@ export function BannerCarousel({ images, children }: Props) {
       {/* children overlay */}
       {children}
 
-      {/* dot indicator */}
+      {/* dot indicator — 몇 번째 사진인지는 점이 말한다. 우측 하단은 recreeshot 추가 버튼 자리라 숫자 카운터는 두지 않는다 */}
       {total >= 2 && (
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1 z-10">
           {images.map((_, i) => (
@@ -164,12 +166,6 @@ export function BannerCarousel({ images, children }: Props) {
         </div>
       )}
 
-      {/* 카운터 */}
-      {total >= 2 && (
-        <div className="absolute bottom-3 right-3 z-10 px-2 py-0.5 rounded-full bg-black/40 text-white text-[11px] font-medium">
-          {dotIndex + 1} / {total}
-        </div>
-      )}
     </div>
   );
 }

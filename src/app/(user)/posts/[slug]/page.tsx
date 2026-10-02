@@ -6,6 +6,7 @@ import { selectDetailLabels, type ResolvedLabel } from "@/lib/post-labels";
 import { PostDetailHeader } from "./_components/PostDetailHeader";
 import { BannerCarousel } from "./_components/BannerCarousel";
 import { OriginalSourceCards } from "./_components/OriginalSourceCards";
+import { BannerReCreeshotButton } from "./_components/BannerReCreeshotButton";
 import { SourceSection } from "./_components/SourceSection";
 import { ImageCreditSection } from "./_components/ImageCreditSection";
 import { PostMetaBar } from "./_components/PostMetaBar";
@@ -203,7 +204,10 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      {!isPreview && <PostDetailHeader postId={post.id} isLoggedIn={!!currentUser} />}
+      {/* 사진이 있으면 상단 버튼은 사진 안에서 렌더한다(lg 에서 사진 카드 위에 붙도록). 없으면 여기서 바로 */}
+      {!isPreview && !hasBanner && (
+        <PostDetailHeader postId={post.id} isLoggedIn={!!currentUser} isSaved={isSaved} titleEn={post.titleEn} />
+      )}
       {!isPreview && <PostViewTracker postId={post.id} />}
       {isPreview && (
         <div className="bg-amber-100 text-amber-800 text-xs text-center py-2 font-medium">
@@ -214,7 +218,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
       <div
         className={
           hasBanner
-            ? "flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start lg:px-6 lg:pt-20"
+            ? "flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start lg:px-6 lg:pt-8"
             : "flex flex-col gap-6 lg:mx-auto lg:max-w-2xl lg:pt-4"
         }
       >
@@ -222,15 +226,26 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
       <div className={column}>
       {/* 사진 + 제목 블록. 둘은 어느 화면에서나 붙어 있어 한 블록이다 */}
       <div className={order[0]}>
-      {/* 배너 캐러셀 — 헤더(h-12) 높이만큼 위로 올려 풀블리드 (미리보기엔 헤더 없으므로 margin 제거).
-          lg 는 헤더가 불투명 바라 올리지 않고, 사진은 둥근 카드로 붙어 있다 */}
+      {/* 배너 캐러셀 — 화면 맨 위까지 올려 풀블리드 (미리보기엔 헤더 없으므로 margin 제거).
+          상단 버튼(PostDetailHeader)은 이 안에서 렌더한다 — 모바일은 화면 위에 고정, lg 는 둥근 사진 카드 위쪽에 붙는다 */}
       {hasBanner && (
         <div className={`lg:mx-4 lg:mt-0 lg:overflow-hidden lg:rounded-2xl ${isPreview ? "" : "-mt-12"}`}>
           <BannerCarousel images={bannerImages}>
+            {!isPreview && (
+              <PostDetailHeader postId={post.id} isLoggedIn={!!currentUser} isSaved={isSaved} titleEn={post.titleEn} onPhoto />
+            )}
             <OriginalSourceCards
               images={originalImages}
               originalLinkUrls={originalLinkUrls}
             />
+            {/* recreeshot 추가 — 아래 recreeshot 섹션과 같은 조건(shop 은 숨김). 미리보기에선 누를 일이 없다 */}
+            {!post.isShop && !isPreview && (
+              <BannerReCreeshotButton
+                postId={post.id}
+                originalImageUrl={originalImages[0]?.url ?? null}
+                isLoggedIn={!!currentUser}
+              />
+            )}
           </BannerCarousel>
         </div>
       )}
@@ -245,12 +260,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
       )}
 
       {/* 배지 + 공유/스크랩 */}
-      <PostMetaBar
-        labels={labels}
-        isSaved={isSaved}
-        postId={post.id}
-        titleEn={post.titleEn}
-      />
+      <PostMetaBar labels={labels} />
 
       {/* 제목 */}
       <div className="px-4 pb-2 space-y-1">

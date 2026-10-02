@@ -58,9 +58,12 @@ export function PostActionBar({
           type="button"
           onClick={handleLike}
           disabled={pending}
+          aria-label={liked ? "Unlike" : "Like"}
+          aria-pressed={liked}
           className="flex items-center gap-1.5 transition-colors disabled:opacity-60"
         >
           <Heart
+            aria-hidden="true"
             className="size-5 text-muted-foreground"
             strokeWidth={1.5}
             style={liked ? { fill: "#ef4444", stroke: "#ef4444" } : undefined}
@@ -73,9 +76,10 @@ export function PostActionBar({
         <button
           type="button"
           onClick={handleCommentScroll}
+          aria-label="Go to comments"
           className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
         >
-          <MessageCircle className="size-5" strokeWidth={1.5} />
+          <MessageCircle className="size-5" strokeWidth={1.5} aria-hidden="true" />
           {commentCount > 0 && (
             <span className="text-sm">{commentCount}</span>
           )}

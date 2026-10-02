@@ -1,49 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { Share2, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { labelBackground, type ResolvedLabel } from "@/lib/post-labels";
 import { LabelBadge } from "@/components/LabelBadge";
-import { ScrapButton } from "@/app/(user)/_components/ScrapButton";
-import { useToast } from "@/app/(user)/_hooks/useToast";
 
 interface Props {
   labels: ResolvedLabel[];
-  isSaved: boolean;
-  postId: string;
-  titleEn: string;
 }
 
-export function PostMetaBar({ labels, isSaved, postId, titleEn }: Props) {
-  const { toast, showToast } = useToast();
+// 토픽 · 태그 칩 줄. 공유 · 저장은 사진 위(PostDetailHeader)로 옮겼다.
+// 칩은 .pill-badge 그대로에 크기만 한 단계 키운다 — 홈 토픽 칩(h-8, 15px)에 가깝게 14px · 높이 30
+const CHIP_SIZE = { "--pill-fs": "var(--text-sm)", "--pill-py": "0.5rem" } as React.CSSProperties;
 
-  async function handleShare() {
-    const url = window.location.href;
-
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: titleEn, url });
-      } catch {
-        // 사용자 취소 등 — 무시
-      }
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(url);
-      showToast("Link copied!");
-      return;
-    } catch {
-      // HTTP 등 clipboard 불가 → prompt fallback
-    }
-
-    prompt("Copy this link:", url);
-  }
-
+export function PostMetaBar({ labels }: Props) {
   return (
-    <div className="relative flex justify-between items-start px-4 pt-3 pb-2">
-      {/* 배지 영역 */}
-      <div className="flex flex-wrap gap-1.5 flex-1 min-w-0 mr-3">
+    // 넘치면 줄바꿈. 칩 사이(가로 6)보다 줄 사이(세로 8)를 조금 더 벌려 두 줄이 한 덩어리로 읽히게
+    <div className="px-4 pt-3 pb-2">
+      <div className="flex flex-wrap gap-x-1.5 gap-y-2" style={CHIP_SIZE}>
         {labels.map((label, i) =>
           label.slug ? (
             <Link key={i} href={`/topics/${label.slug}`} className="inline-flex">
@@ -51,9 +25,9 @@ export function PostMetaBar({ labels, isSaved, postId, titleEn }: Props) {
                 text={label.text}
                 background={labelBackground(label)}
                 color={label.textColorHex}
-                className="whitespace-nowrap shrink-0"
+                className="whitespace-nowrap shrink-0 px-3"
               >
-                <ChevronRight className="h-3 w-3 opacity-60" />
+                <ChevronRight className="size-3.5 opacity-60" />
               </LabelBadge>
             </Link>
           ) : (
@@ -62,25 +36,11 @@ export function PostMetaBar({ labels, isSaved, postId, titleEn }: Props) {
               text={label.text}
               background={labelBackground(label)}
               color={label.textColorHex}
-              className="whitespace-nowrap shrink-0"
+              className="whitespace-nowrap shrink-0 px-3"
             />
           )
         )}
       </div>
-
-      {/* 액션 버튼 */}
-      <div className="flex items-center gap-3 shrink-0">
-        <button type="button" onClick={handleShare} className="text-muted-foreground hover:text-foreground transition-colors">
-          <Share2 className="h-5 w-5" strokeWidth={1.5} />
-        </button>
-        <ScrapButton postId={postId} initialSaved={isSaved} size="md" />
-      </div>
-
-      {toast && (
-        <div className="fixed bottom-[var(--bottom-nav-space)] left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-black/50 text-white text-sm whitespace-nowrap shadow-lg pointer-events-none">
-          {toast.message}
-        </div>
-      )}
     </div>
   );
 }

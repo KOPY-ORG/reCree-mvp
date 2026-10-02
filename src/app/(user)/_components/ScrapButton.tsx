@@ -13,9 +13,12 @@ interface Props {
   savedStyle?: React.CSSProperties;
   strokeLinejoin?: React.SVGAttributes<SVGElement>["strokeLinejoin"];
   onSaveChange?: (saved: boolean) => void;
+  /** 버튼 자체의 모양. 없으면 아이콘만 있는 기본 버튼 */
+  className?: string;
+  strokeWidth?: number;
 }
 
-export function ScrapButton({ postId, initialSaved, size = "md", unsavedClassName, savedStyle, strokeLinejoin = "round", onSaveChange }: Props) {
+export function ScrapButton({ postId, initialSaved, size = "md", unsavedClassName, savedStyle, strokeLinejoin = "round", onSaveChange, className, strokeWidth = 1.5 }: Props) {
   const [saved, setSaved] = useState(initialSaved);
   const [isPending, startTransition] = useTransition();
   const { toast, showToast } = useToast();
@@ -60,11 +63,14 @@ export function ScrapButton({ postId, initialSaved, size = "md", unsavedClassNam
         type="button"
         onClick={handleClick}
         disabled={isPending}
-        className="transition-colors disabled:opacity-60"
+        aria-label={saved ? "Remove from saved" : "Save"}
+        aria-pressed={saved}
+        className={className ?? "transition-colors disabled:opacity-60"}
       >
         <Bookmark
+          aria-hidden="true"
           className={`${iconSize} ${saved ? "" : unsavedClass}`}
-          strokeWidth={1.5}
+          strokeWidth={strokeWidth}
           strokeLinejoin={strokeLinejoin}
           style={saved ? activeSavedStyle : undefined}
         />
