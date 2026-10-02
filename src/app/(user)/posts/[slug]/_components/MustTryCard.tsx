@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
+import { Star } from "lucide-react";
 
 interface Props {
   text: string;
@@ -27,7 +28,11 @@ export function MustTryCard({ text }: Props) {
 
   return (
     <div className="memo-card mx-4 px-4 py-4">
-      <p className="text-sm font-semibold text-foreground">Fan To-Do</p>
+      {/* 팬이 즐기는 가벼운 미션이라 별(Star). 라임 종이 위라 검정, 제목 글자 크기에 맞춘 16 */}
+      <div className="flex items-center gap-1.5">
+        <Star className="size-4 shrink-0 text-foreground" strokeWidth={2} aria-hidden="true" />
+        <p className="text-sm font-semibold text-foreground">Fan To-Do</p>
+      </div>
       <p
         ref={textRef}
         className={`mt-1.5 text-sm text-gray-900 leading-relaxed ${expanded ? "" : "line-clamp-2"}`}
