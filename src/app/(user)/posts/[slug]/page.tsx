@@ -283,16 +283,11 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
       )}
 
       {/* 토픽 · 태그 칩 + 좋아요 · 댓글 · 저장 */}
-      <PostMetaBar
-        labels={labels}
-        actions={
-          <PostActionBar
-            postId={post.id}
-            initialLiked={isLikedByMe}
-            isSaved={isSaved}
-          />
-        }
-      />
+      {/* 칩은 왼쪽에서 줄바꿈하고, 아이콘은 첫 줄 높이에 맞춰 오른쪽에 남는다 */}
+      <div className="flex items-start gap-2 px-4 pt-3 pb-2">
+        <PostMetaBar labels={labels} />
+        <PostActionBar postId={post.id} initialLiked={isLikedByMe} isSaved={isSaved} />
+      </div>
 
       {/* 제목 */}
       <div className="px-4 pb-2 space-y-1">
