@@ -9,12 +9,11 @@ import { ScrapButton } from "@/app/(user)/_components/ScrapButton";
 interface Props {
   postId: string;
   initialLiked: boolean;
-  commentCount: number;
   isSaved: boolean;
 }
 
-/** 세 버튼 공통 — 누르는 칸 44, 댓글 수가 붙으면 옆으로 늘어난다. 누르면 살짝 줄어든다 */
-const ACTION = "press-scale flex h-11 min-w-11 items-center justify-center gap-1.5 rounded-full px-2.5 transition-colors";
+/** 세 버튼 공통 — 누르는 칸 44, 아이콘만. 누르면 살짝 줄어든다 */
+const ACTION = "press-scale flex size-11 items-center justify-center rounded-full transition-colors";
 /** 아이콘 24, 선은 칩 옆에서도 묻히지 않게 진한 회색(gray-900) · 1.75 */
 const ICON = "size-6";
 const STROKE = 1.75;
@@ -22,7 +21,6 @@ const STROKE = 1.75;
 export function PostActionBar({
   postId,
   initialLiked,
-  commentCount,
   isSaved,
 }: Props) {
   const [liked, setLiked] = useState(initialLiked);
@@ -82,7 +80,6 @@ export function PostActionBar({
           className={`${ACTION} text-gray-900`}
         >
           <MessageCircle className={ICON} strokeWidth={STROKE} aria-hidden="true" />
-          {commentCount > 0 && <span className="text-sm">{commentCount}</span>}
         </button>
 
         {/* 저장되면 북마크를 라임으로 채운다 (윤곽선도 라임 — ScrapButton 기본 savedStyle). 사진 위 저장 버튼과 상태가 함께 바뀐다 */}

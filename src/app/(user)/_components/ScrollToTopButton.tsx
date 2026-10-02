@@ -90,7 +90,7 @@ export function ScrollToTopButton({ scrollRef }: Props = {}) {
             flex items-center justify-center
             backdrop-blur-sm
             bg-white/80
-            shadow-[0_4px_16px_rgba(0,0,0,0.18)]
+            shadow-floating-button
             transition-all duration-200
             focus-visible:outline-none focus-visible:ring-2
             focus-visible:ring-[#D3FD52] focus-visible:ring-offset-1

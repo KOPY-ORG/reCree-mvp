@@ -17,7 +17,7 @@ export function ViewOnMapButton({ placeId }: Props) {
     >
       <Link
         href={`/discover?place=${placeId}`}
-        className="press-scale pointer-events-auto flex h-10 items-center gap-1.5 rounded-full bg-brand px-4 text-sm font-semibold text-brand-foreground shadow-chip focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground"
+        className="press-scale pointer-events-auto flex h-10 items-center gap-1.5 rounded-full bg-brand px-4 text-sm font-semibold text-brand-foreground shadow-floating-button focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground"
       >
         <MapIcon className="size-4" strokeWidth={2} aria-hidden="true" />
         View on Map

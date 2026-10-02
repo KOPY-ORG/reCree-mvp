@@ -26,6 +26,7 @@
 |---|---|---|
 | `shadow-float` | `0 8px 50px rgba(17,12,46,.15)` | 홈 검색바 |
 | `shadow-chip` | `0 2px 10px rgba(17,12,46,.12)` | 홈 지역 칩 |
+| `shadow-floating-button` | `0 2px 10px rgba(17,12,46,.12)` | 화면 아래 뜨는 버튼 — View on Map · 맨 위로 (하단 내비 알약은 제외) |
 | `shadow-card` | `0 6px 30px rgba(17,12,46,.08)` | `.surface-card` |
 | `--radius-card` | `20px` | `.surface-card` |
 | `ease-out-strong` | `cubic-bezier(.23,1,.32,1)` | 누름 · 사라짐 |

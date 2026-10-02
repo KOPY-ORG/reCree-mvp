@@ -287,7 +287,6 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
           <PostActionBar
             postId={post.id}
             initialLiked={isLikedByMe}
-            commentCount={post._count.comments}
             isSaved={isSaved}
           />
         }
