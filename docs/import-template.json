@@ -1,0 +1,72 @@
+{
+  "_note": "게시글 1건 예시. 값은 전부 예시이며 실제 장소·영상과 대조하지 않았다. 컬럼 설명은 docs/import-spec.md. topics/tags 의 slug 는 어드민 /admin/categories 에서 실제 값으로 바꿀 것.",
+  "post": {
+    "titleKo": "지민 'Who' 뮤직비디오 촬영지",
+    "titleEn": "Where Jimin filmed the \"Who\" MV",
+    "slug": "jimin-who-mv-mangwon-hangang-park",
+    "bodyEn": "Jimin walks along the river at dusk in this scene. Come around sunset to catch the same golden light over the water.",
+    "bodyKo": "",
+    "status": "DRAFT",
+    "publishedAt": null,
+    "source": "",
+    "collectedBy": "Jane",
+    "collectedAt": "2026-09-20",
+    "memo": ""
+  },
+  "place": {
+    "nameKo": "망원한강공원",
+    "nameEn": "Mangwon Hangang Park",
+    "addressKo": "서울 마포구 망원동 467",
+    "addressEn": "467 Mangwon-dong, Mapo-gu, Seoul",
+    "latitude": 37.5551,
+    "longitude": 126.8946,
+    "googleMapsUrl": "https://www.google.com/maps/place/...",
+    "googlePlaceId": "",
+    "naverMapsUrl": "",
+    "streetViewUrl": "",
+    "placeTypes": ["Park", "Nature"],
+    "area": { "cityKo": "서울특별시", "districtKo": "마포구" },
+    "status": "OPEN"
+  },
+  "spotInsight": {
+    "mustTryEn": "Bring a picnic mat and sit on the steps where he filmed",
+    "mustTryKo": "그가 촬영한 계단에 돗자리 펴고 앉아보기",
+    "contextEn": "",
+    "contextKo": "",
+    "tipEn": "",
+    "tipKo": "",
+    "vibe": []
+  },
+  "sources": [
+    {
+      "url": "https://www.youtube.com/watch?v=VIDEO_ID&t=135",
+      "sourceType": "PRIMARY",
+      "platform": "YOUTUBE",
+      "sourceDetail": "2:15",
+      "isOriginalLink": false
+    },
+    {
+      "url": "https://www.instagram.com/p/POST_ID/",
+      "sourceType": "PRIMARY",
+      "platform": "INSTAGRAM",
+      "sourceDetail": "",
+      "isOriginalLink": false
+    },
+    {
+      "url": "https://x.com/fanaccount/status/0000000000",
+      "sourceType": "REFERENCE",
+      "platform": "X",
+      "sourceDetail": "",
+      "isOriginalLink": false
+    }
+  ],
+  "topics": [
+    { "slug": "TOPIC_SLUG_E.G._BTS", "isVisible": true, "displayOrder": 0 },
+    { "slug": "TOPIC_SLUG_E.G._JIMIN", "isVisible": true, "displayOrder": 1 }
+  ],
+  "tags": [
+    { "slug": "fan-spot", "isVisible": true, "displayOrder": 0 },
+    { "slug": "photo-spot", "isVisible": true, "displayOrder": 1 }
+  ],
+  "images": []
+}
