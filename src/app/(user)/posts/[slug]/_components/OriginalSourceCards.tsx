@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { isExternalImage, focalStyle } from "@/lib/image";
 import { Play, Camera, Link2 } from "lucide-react";
-import { youTubeThumbnail } from "./youtube-source";
+import { parseYouTubeSource, youTubeThumbnail } from "./youtube-source";
 
 interface OriginalImage {
   id: string;
@@ -18,8 +18,6 @@ interface OriginalImage {
 interface Props {
   images: OriginalImage[];
   originalLinkUrls?: string[];
-  // 출처가 유튜브인 게시글은 저장된 장면 이미지 대신 그 영상의 공식 썸네일을 보여준다 (DB 값은 그대로)
-  youTubeVideoId?: string | null;
   className?: string;
 }
 
@@ -125,13 +123,15 @@ function SourceCard({ image, youTubeVideoId, onClick }: { image: OriginalImage; 
   );
 }
 
-export function OriginalSourceCards({ images, originalLinkUrls, youTubeVideoId, className }: Props) {
+export function OriginalSourceCards({ images, originalLinkUrls, className }: Props) {
   if (images.length === 0) return null;
 
   return (
     <div className={className ?? "absolute bottom-3 left-3 sm:bottom-4 sm:left-4 flex gap-2 sm:gap-3 z-10"}>
       {images.map((img, i) => {
         const clickUrl = img.linkUrl ?? originalLinkUrls?.[i] ?? null;
+        // 카드가 유튜브를 열면 저장된 장면 이미지 대신 그 영상의 공식 썸네일을 보여준다 (DB 값은 그대로)
+        const youTubeVideoId = clickUrl ? parseYouTubeSource(clickUrl)?.videoId : null;
         const handleClick = clickUrl
           ? () => window.open(clickUrl, "_blank")
           : undefined;
