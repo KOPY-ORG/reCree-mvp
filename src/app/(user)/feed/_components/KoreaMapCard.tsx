@@ -147,7 +147,7 @@ function RegionChip({ href, label }: { href: string; label: string }) {
   return (
     <Link
       href={href}
-      className="shrink-0 inline-flex items-center gap-1.5 h-[38px] px-3.5 rounded-full bg-background text-foreground text-[13px] font-semibold shadow-[0_2px_10px_rgba(17,12,46,0.12)] transition-opacity active:opacity-70"
+      className="shrink-0 inline-flex items-center gap-1.5 h-[38px] px-3.5 rounded-full bg-background text-foreground text-[13px] font-semibold shadow-chip transition-opacity active:opacity-70"
     >
       <MapPinIcon size={14} />
       {label}

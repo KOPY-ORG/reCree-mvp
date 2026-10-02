@@ -62,6 +62,14 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
+
+  /* ── 떠 있는 표면 (docs/design/surface.md) ── */
+  /* 그림자 색은 하나(17,12,46)다. 홈 검색바 · 지역 칩에서 가져왔다 */
+  --shadow-float: 0 8px 50px rgba(17, 12, 46, 0.15); /* 홀로 뜬 컨트롤 — 홈 검색바 */
+  --shadow-chip: 0 2px 10px rgba(17, 12, 46, 0.12); /* 작은 알약 — 홈 지역 칩 */
+  --shadow-card: 0 6px 30px rgba(17, 12, 46, 0.08); /* 흐름 안의 카드 — 여러 장이 쌓여도 번지지 않게 옅게 */
+  --radius-card: 20px; /* 홈 지도 카드와 같은 모서리 */
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1); /* 누름 · 사라짐 */
 }
 
 /* ── 탭바 모션 ────────────────────────────────────────────────────────────────
@@ -266,6 +274,30 @@ html[data-nav-tucked] {
     padding-top: var(--pill-py, 0.1875rem);
     padding-bottom: var(--pill-py, 0.1875rem);
     font-size: var(--pill-fs, var(--text-xs));
+  }
+
+  /* ── 흐름 안의 카드 (docs/design/surface.md) ── */
+  /* 선을 긋지 않는다. 바탕과의 구분은 그림자가, 카드 안의 구분은 면(bg-muted)이 맡는다 */
+  .surface-card {
+    background: var(--background);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+  }
+
+  /* ── 누름 반응 — 영상·사진 위에 뜬 아이콘 버튼처럼 opacity 로는 눌림이 안 보이는 곳 ── */
+  .press-scale {
+    transition: transform 160ms var(--ease-out-strong);
+  }
+  .press-scale:active {
+    transform: scale(0.94);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .press-scale,
+  .press-scale:active {
+    transition: none;
+    transform: none;
   }
 }
 
