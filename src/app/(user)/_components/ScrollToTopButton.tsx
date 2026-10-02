@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { ArrowUp } from "lucide-react";
-import { isBottomNavHidden } from "@/lib/bottom-nav";
+import { isBottomNavHidden, isBottomNavHiddenOnMobile } from "@/lib/bottom-nav";
 
 /**
  * 기본은 탭바 바로 위 칸이다.
@@ -13,6 +13,7 @@ import { isBottomNavHidden } from "@/lib/bottom-nav";
  * FAB 높이 40 + 간격 12 = 52.
  *
  * 탭바가 숨는 화면에서는 비켜줄 대상이 없으니 화면 가장자리 여백만 남긴다.
+ * 모바일에서만 숨는 화면(게시글 상세)도 같다 — lg 에서는 두 값(--bottom-nav-bottom · --bottom-nav-space)이 24 로 같다.
  */
 const DEFAULT_BOTTOM = "var(--bottom-nav-space)";
 const STACKED_BOTTOM = "calc(var(--bottom-nav-space) + 52px)";
@@ -27,7 +28,7 @@ interface Props {
 export function ScrollToTopButton({ scrollRef }: Props = {}) {
   const [visible, setVisible] = useState(false);
   const pathname = usePathname();
-  const bottom = isBottomNavHidden(pathname)
+  const bottom = isBottomNavHidden(pathname) || isBottomNavHiddenOnMobile(pathname)
     ? NO_NAV_BOTTOM
     : FAB_ROUTES.includes(pathname)
       ? STACKED_BOTTOM

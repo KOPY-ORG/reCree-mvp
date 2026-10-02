@@ -135,9 +135,11 @@ function Pill({ children, barClassName }: { children: React.ReactNode; barClassN
 interface Props {
   isLoggedIn: boolean;
   profileImageUrl: string | null;
+  /** 모바일에서만 숨긴다 (lg 상단 바는 그대로) — isBottomNavHiddenOnMobile */
+  hiddenOnMobile?: boolean;
 }
 
-export function BottomNav({ isLoggedIn, profileImageUrl }: Props) {
+export function BottomNav({ isLoggedIn, profileImageUrl, hiddenOnMobile = false }: Props) {
   const pathname = usePathname();
 
   // startsWith(href) 만 쓰면 /feed 가 /feedback 까지 잡는다
@@ -161,7 +163,7 @@ export function BottomNav({ isLoggedIn, profileImageUrl }: Props) {
     // bottom 을 인라인 style 에서 클래스로 옮긴 건 lg: 로 덮기 위해서다 — 값은 같다.
     <div
       data-main-nav
-      className="nav-tuckable pointer-events-none fixed inset-x-0 bottom-[var(--bottom-nav-bottom)] z-40 lg:pointer-events-auto lg:top-0 lg:bottom-auto lg:h-[var(--top-nav-space)] lg:bg-background/95 lg:shadow-[0_1px_4px_rgba(0,0,0,0.07)] lg:backdrop-blur-sm"
+      className={`${hiddenOnMobile ? "max-lg:hidden " : ""}nav-tuckable pointer-events-none fixed inset-x-0 bottom-[var(--bottom-nav-bottom)] z-40 lg:pointer-events-auto lg:top-0 lg:bottom-auto lg:h-[var(--top-nav-space)] lg:bg-background/95 lg:shadow-[0_1px_4px_rgba(0,0,0,0.07)] lg:backdrop-blur-sm`}
     >
       {/* 아이콘 획을 깎는 필터. 아바타에는 걸지 않는다 — 사진은 깎을 획이 없다.
           한 번만 정의하고 다섯 아이콘이 id 로 참조한다. */}

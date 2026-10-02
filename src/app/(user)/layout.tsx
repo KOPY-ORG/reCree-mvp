@@ -5,6 +5,7 @@ import { ConditionalHeader } from "./_components/ConditionalHeader";
 import { ConditionalBottomNav } from "./_components/ConditionalBottomNav";
 import { MainArea } from "./_components/MainArea";
 import { ActivityTracker } from "./_components/ActivityTracker";
+import { InAppHistoryTracker } from "./_components/InAppHistoryTracker";
 import { ScrollToTopButton } from "./_components/ScrollToTopButton";
 import { getCurrentUser } from "@/lib/auth";
 
@@ -21,6 +22,7 @@ export default async function UserLayout({
     <div className="min-h-[100dvh] bg-muted lg:pt-[var(--top-nav-space)] lg:bg-background lg:has-[[data-narrow-layout]]:bg-muted">
       <div className="max-w-[var(--app-col-w)] mx-auto bg-background min-h-[100dvh] flex flex-col shadow-[1px_0_0_rgba(0,0,0,0.04),-1px_0_0_rgba(0,0,0,0.04)] lg:shadow-none lg:has-[[data-narrow-layout]]:shadow-[1px_0_0_rgba(0,0,0,0.04),-1px_0_0_rgba(0,0,0,0.04)]">
         <ActivityTracker />
+        <InAppHistoryTracker />
         <ConditionalHeader header={<AppHeader />} savedHeader={<SavedHeader />} shopHeader={<ShopHeader />} />
         <MainArea>{children}</MainArea>
         <ScrollToTopButton />

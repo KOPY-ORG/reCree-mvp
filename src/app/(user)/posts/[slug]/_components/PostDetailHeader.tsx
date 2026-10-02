@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, MoreVertical, Flag, Share2 } from "lucide-react";
 import { showError } from "@/lib/toast";
+import { canGoBackInApp } from "@/lib/in-app-history";
 import { ReportDialog } from "@/components/ReportDialog";
 import { ScrapButton } from "@/app/(user)/_components/ScrapButton";
 import { useToast } from "@/app/(user)/_hooks/useToast";
@@ -69,13 +70,8 @@ export function PostDetailHeader({ postId, isLoggedIn, isSaved = false, titleEn 
           <button
             type="button"
             aria-label="Back"
-            onClick={() => {
-              if (window.history.length > 1) {
-                router.back();
-              } else {
-                router.push("/discover");
-              }
-            }}
+            // 앞 페이지가 우리 사이트면 뒤로, 검색 · 공유 링크로 바로 들어왔으면 홈으로
+            onClick={() => (canGoBackInApp() ? router.back() : router.push("/feed"))}
             className={ROUND}
           >
             <ArrowLeft className={ICON} strokeWidth={2} aria-hidden="true" />

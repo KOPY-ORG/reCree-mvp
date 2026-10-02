@@ -94,6 +94,15 @@ export function bottomNavSpace(): number {
 }
 
 /**
+ * 모바일에서만 탭바를 숨기는 화면. lg 에서는 같은 컴포넌트가 상단 바라 그대로 둔다.
+ * 게시글 상세는 읽는 화면이라 아래를 비우고, 그 자리를 View on Map 같은 화면 고유 버튼이 쓴다.
+ * 이 화면에서 아래에 뜨는 것들은 --bottom-nav-space 대신 화면 아래(--bottom-nav-bottom)에 붙는다.
+ */
+export function isBottomNavHiddenOnMobile(pathname: string): boolean {
+  return pathname.startsWith("/posts/");
+}
+
+/**
  * 탭바를 숨기는 화면.
  * ConditionalBottomNav 가 쓰던 조건 그대로다 — main 하단 여백도 같은 판정을 써야
  * "탭바는 없는데 아래가 비어 있는" 화면이 생기지 않는다.
