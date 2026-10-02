@@ -110,14 +110,17 @@ html[data-nav-tucked] {
     visibility 0s;
 }
 
-html[data-nav-tucked] .nav-tuckable {
-  opacity: 0;
-  transform: translateY(var(--bottom-nav-inset));
-  visibility: hidden;
-  transition:
-    opacity 160ms var(--nav-exit),
-    transform 160ms var(--nav-exit),
-    visibility 0s 160ms;
+/* lg 의 왼쪽 레일은 지도 시트와 겹치지 않으므로 물러나지 않는다 */
+@media (width < 64rem) {
+  html[data-nav-tucked] .nav-tuckable {
+    opacity: 0;
+    transform: translateY(var(--bottom-nav-inset));
+    visibility: hidden;
+    transition:
+      opacity 160ms var(--nav-exit),
+      transform 160ms var(--nav-exit),
+      visibility 0s 160ms;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -135,6 +138,10 @@ html[data-nav-tucked] .nav-tuckable {
   --bottom-nav-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--bottom-nav-inset));
   --bottom-nav-space: calc(var(--bottom-nav-bottom) + var(--bottom-nav-pill-h) + var(--bottom-nav-gap));
   --sheet-scroll-pb: var(--bottom-nav-space);
+
+  /* 앱 기둥 폭. fixed 요소도 이 값으로 기둥에 맞춘다 — docs/design/desktop-layout.md */
+  --app-col-w: 540px;
+  --side-nav-space: 0px;
 
   /* ── Raw Palette ────────────────── */
   --palette-brand:      #D3FD52;
@@ -193,6 +200,33 @@ html[data-nav-tucked] .nav-tuckable {
   --sidebar-accent-foreground:  oklch(0.205 0 0);
   --sidebar-border:             oklch(0.922 0 0);
   --sidebar-ring:               oklch(0.708 0 0);
+}
+
+/* md(768~1023): 기둥만 넓힌다. 42rem = 페이지 안쪽 max-w-2xl 과 같은 폭이라 그 캡이 그대로 무효로 남는다. */
+@media (min-width: 48rem) {
+  :root {
+    --app-col-w: 42rem;
+  }
+}
+
+/* lg: 하단 알약이 왼쪽 레일(20+58+20)로 옮겨 간다. 바닥 여백은 떠 있는 요소가 가장자리에서 띄울 24 만 남긴다. */
+/* 기둥은 1440 넓은 컨테이너가 된다. 좌우 여백 40 = 페이지의 lg:px-6(24) + 콘텐츠 기존 px-4(16). */
+/* 지도 목록 패널은 약 42%, 440~680. 단 지도가 목록보다 좁아지지 않게 절반(간격 24 의 반을 뺀 값)을 넘지 않는다. */
+@media (min-width: 64rem) {
+  :root {
+    --bottom-nav-space: 24px;
+    --bottom-nav-bottom: 24px;
+    --side-nav-space: 98px;
+    --app-col-w: 1440px;
+    --discover-panel-w: clamp(min(440px, calc(50% - 12px)), 42%, 680px);
+  }
+  /* 만드는 흐름(편집기)은 PC 에서도 좁은 기둥을 쓴다. data-narrow-layout 요소를 렌더하면 된다 */
+  html:has([data-narrow-layout]) {
+    --app-col-w: 42rem;
+  }
+  .app-header {
+    padding-inline: 1.5rem;
+  }
 }
 
 @layer base {

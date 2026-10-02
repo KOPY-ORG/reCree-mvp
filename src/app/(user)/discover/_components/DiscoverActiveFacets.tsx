@@ -68,7 +68,7 @@ export function DiscoverActiveFacets({
   if (!showEventCollections && !hasQuery && !hasFilters) return null;
 
   return (
-    <div className={`absolute ${topClass} inset-x-0 z-[60] px-3 pb-2 space-y-1.5`}>
+    <div className={`absolute ${topClass} inset-x-0 z-[60] px-3 pb-2 space-y-1.5 lg:right-auto lg:w-[var(--discover-panel-w)]`}>
       {showEventCollections && (
         <div className="flex gap-2 overflow-x-auto py-[6px] -my-[6px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {eventCollections.map((col) => {

@@ -23,6 +23,8 @@ const HOTSPOT_COUNT = 8;
 
 /** 지도 폭(px). 높이는 viewBox 비율이 정한다 — 가로가 더 넓어 높이로 잡으면 글자를 밀어낸다 */
 const MAP_WIDTH = 160;
+/** stacked(lg 사이드) 에서는 지도가 제 줄을 통째로 쓴다 */
+const STACKED_MAP_WIDTH = 200;
 
 const HALO_FILTER_ID = "korea-hotspot-bloom";
 const HOTSPOT_GRADIENT_ID = "korea-hotspot-fill";
@@ -174,6 +176,7 @@ export function KoreaMapCard({
   title = "Where fans are going",
   subtitle = "Tap the map to explore spots around Korea",
   discoverHref = "/discover",
+  layout = "row",
 }: {
   counts: SidoPlaceCount[];
   maxCount: number;
@@ -194,6 +197,12 @@ export function KoreaMapCard({
   subtitle?: string | null;
   /** 카드를 눌렀을 때 가는 곳. 토픽 탭은 그 토픽을 필터로 걸고 간다 */
   discoverHref?: string;
+  /**
+   * row — 글자 왼쪽 · 지도 오른쪽, 지역 칩은 가로 스크롤 (모바일 흐름 속).
+   * stacked — 제목 → 설명 → 지도 → Open map → 지역 칩(줄바꿈). lg 홈의 오른쪽 사이드용이다.
+   * 사이드 폭(~400)에서는 row 의 글자 기둥이 좁아 제목 · 버튼 · 칩이 겹치고 잘렸다
+   */
+  layout?: "row" | "stacked";
 }) {
   const v = VARIANTS[variant];
   // counts 는 이미 count desc 다 (area-queries.ts:76).
@@ -220,7 +229,114 @@ export function KoreaMapCard({
   // 끝 색이 있을 때만 그라데이션을 건다. 단색을 그라데이션으로 감싸면
   // 같은 색 두 정지점이 되어 defs 만 늘고 그림은 같다
   const vector = GRADIENT_VECTOR[accentGradientDir] ?? GRADIENT_VECTOR["to bottom"];
-  const fill = accentColor2 ? `url(#${HOTSPOT_GRADIENT_ID})` : accentColor;
+  // SVG id 는 문서 안에서 유일해야 한다. 홈은 이 카드를 두 자리(모바일 흐름 · lg 사이드)에 둔다
+  const idSuffix = layout === "stacked" ? "-stacked" : "";
+  const haloFilterId = HALO_FILTER_ID + idSuffix;
+  const hotspotGradientId = HOTSPOT_GRADIENT_ID + idSuffix;
+  const fill = accentColor2 ? `url(#${hotspotGradientId})` : accentColor;
+
+  // 육지 색은 currentColor 다 — 래퍼의 text-* 가 정한다
+  const mapWidth = layout === "stacked" ? STACKED_MAP_WIDTH : MAP_WIDTH;
+  const mapSvg = (
+    <svg
+      viewBox={KOREA_VIEWBOX}
+      width={mapWidth}
+      className={`h-auto ${v.landClass}`}
+      role="img"
+      aria-label="Map of South Korea with the regions fans visit most"
+    >
+      <defs>
+        {/* 후광만 번지게 한다. 심지까지 흐려지면 "여기"가 사라진다.
+            필터 영역을 넉넉히 잡지 않으면 번진 가장자리가 잘린다 */}
+        <filter id={haloFilterId} x="-75%" y="-75%" width="250%" height="250%">
+          <feGaussianBlur stdDeviation={v.blur} />
+        </filter>
+
+        {/* 좌표가 objectBoundingBox 라 핀마다 제 크기에 맞춰 칠해진다 —
+            큰 핀만 그라데이션이 다 보이고 작은 핀은 잘리는 일이 없다 */}
+        {accentColor2 && (
+          <linearGradient id={hotspotGradientId} x1={vector.x1} y1={vector.y1} x2={vector.x2} y2={vector.y2}>
+            <stop offset="0" stopColor={accentColor} />
+            <stop offset={Math.min(accentGradientStop, 100) / 100} stopColor={accentColor2} />
+          </linearGradient>
+        )}
+      </defs>
+
+      <path d={KOREA_PATH_D} fill="currentColor" />
+
+      {/* 후광만 그린다 — 장소 수를 크기로 말한다.
+          가운데 심지(시도마다 같은 크기의 또렷한 원)가 있었는데 뺐다.
+          두 겹이 겹치면 핀처럼 읽혀 "정확히 이 지점" 이라고 말하게 되는데,
+          이 자리는 시도 대표 좌표라 그만큼 정확하지 않다. 번짐만 남기면
+          "이 근방이 붐빈다" 라는, 이 그림이 실제로 아는 만큼만 말한다 */}
+      {hotspots.map((h) => (
+        <circle
+          key={h.sido}
+          cx={h.x}
+          cy={h.y}
+          r={h.r}
+          fill={fill}
+          opacity={h.opacity}
+          filter={`url(#${haloFilterId})`}
+        />
+      ))}
+    </svg>
+  );
+
+  const heading = (
+    <>
+      {/* 토픽 이름은 제목이 아니라 그 위에 얹는다. 제목 자리에 넣으면
+          "BTS on the map"과 장소 수가 20px 을 두고 겨뤄 둘 다 작아진다 */}
+      {eyebrow && (
+        <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+          {eyebrow}
+        </span>
+      )}
+      {/* 20px 은 시안 값이다. 375px 에서 지도 160px 을 빼면 글자 기둥이 120px 뿐이라
+          한 단계만 키워도 "Where / fans are / going" 3줄로 깨진다 */}
+      <span className="text-[20px] font-bold leading-[1.2]">{title}</span>
+      {subtitle && (
+        <span className="text-[13px] leading-[1.4] text-muted-foreground">{subtitle}</span>
+      )}
+    </>
+  );
+
+  const openMapButton = (
+    <Link
+      href={discoverHref}
+      className="mt-1 self-start inline-flex items-center gap-1.5 h-[38px] px-3.5 rounded-full bg-foreground text-background text-[14px] font-semibold transition-opacity active:opacity-70"
+    >
+      <FoldedMapIcon size={15} />
+      Open map
+    </Link>
+  );
+
+  if (layout === "stacked") {
+    return (
+      <section>
+        <div className="rounded-[20px] bg-card border border-gray-200 p-5 flex flex-col gap-4">
+          <Link href={discoverHref} className="flex flex-col gap-1.5 transition-opacity hover:opacity-80">
+            {heading}
+          </Link>
+          <Link
+            href={discoverHref}
+            aria-label="Open the map"
+            className="flex justify-center py-1 transition-opacity hover:opacity-80"
+          >
+            {mapSvg}
+          </Link>
+          {openMapButton}
+          {v.showChips && topRegions.length > 0 && (
+            <div className="flex flex-wrap gap-2 pb-1">
+              {topRegions.map((r) => (
+                <RegionChip key={r.key} href={r.href} label={r.label} />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="px-4 mb-6">
@@ -228,75 +344,14 @@ export function KoreaMapCard({
         <div className="flex items-center gap-2">
           <div className="flex-1 flex flex-col gap-1.5">
             <Link href={discoverHref} className="flex flex-col gap-1.5 transition-opacity active:opacity-70">
-              {/* 토픽 이름은 제목이 아니라 그 위에 얹는다. 제목 자리에 넣으면
-                  "BTS on the map"과 장소 수가 20px 을 두고 겨뤄 둘 다 작아진다 */}
-              {eyebrow && (
-                <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-                  {eyebrow}
-                </span>
-              )}
-              {/* 20px 은 시안 값이다. 375px 에서 지도 160px 을 빼면 글자 기둥이 120px 뿐이라
-                  한 단계만 키워도 "Where / fans are / going" 3줄로 깨진다 */}
-              <span className="text-[20px] font-bold leading-[1.2]">{title}</span>
-              {subtitle && (
-                <span className="text-[13px] leading-[1.4] text-muted-foreground">{subtitle}</span>
-              )}
+              {heading}
             </Link>
 
-            <Link
-              href={discoverHref}
-              className="mt-1 self-start inline-flex items-center gap-1.5 h-[38px] px-3.5 rounded-full bg-foreground text-background text-[14px] font-semibold transition-opacity active:opacity-70"
-            >
-              <FoldedMapIcon size={15} />
-              Open map
-            </Link>
+            {openMapButton}
           </div>
 
-          {/* 육지 색은 currentColor 다 — 래퍼의 text-* 가 정한다 */}
           <Link href={discoverHref} aria-label="Open the map" className="shrink-0 transition-opacity active:opacity-70">
-            <svg
-              viewBox={KOREA_VIEWBOX}
-              width={MAP_WIDTH}
-              className={`h-auto ${v.landClass}`}
-              role="img"
-              aria-label="Map of South Korea with the regions fans visit most"
-            >
-              <defs>
-                {/* 후광만 번지게 한다. 심지까지 흐려지면 "여기"가 사라진다.
-                    필터 영역을 넉넉히 잡지 않으면 번진 가장자리가 잘린다 */}
-                <filter id={HALO_FILTER_ID} x="-75%" y="-75%" width="250%" height="250%">
-                  <feGaussianBlur stdDeviation={v.blur} />
-                </filter>
-
-                {/* 좌표가 objectBoundingBox 라 핀마다 제 크기에 맞춰 칠해진다 —
-                    큰 핀만 그라데이션이 다 보이고 작은 핀은 잘리는 일이 없다 */}
-                {accentColor2 && (
-                  <linearGradient id={HOTSPOT_GRADIENT_ID} x1={vector.x1} y1={vector.y1} x2={vector.x2} y2={vector.y2}>
-                    <stop offset="0" stopColor={accentColor} />
-                    <stop offset={Math.min(accentGradientStop, 100) / 100} stopColor={accentColor2} />
-                  </linearGradient>
-                )}
-              </defs>
-
-              <path d={KOREA_PATH_D} fill="currentColor" />
-
-              {/* 후광만 그린다 — 장소 수를 크기로 말한다.
-                  가운데 심지(시도마다 같은 크기의 또렷한 원)가 있었는데 뺐다.
-                  두 겹이 겹치면 핀처럼 읽혀 "정확히 이 지점" 이라고 말하게 되는데,
-                  이 자리는 시도 대표 좌표라 그만큼 정확하지 않다. 번짐만 남기면
-                  "이 근방이 붐빈다" 라는, 이 그림이 실제로 아는 만큼만 말한다 */}
-              {hotspots.map((h) => (
-                <circle
-                  key={h.sido}
-                  cx={h.x}
-                  cy={h.y}
-                  r={h.r}
-                  fill={fill}
-                  opacity={h.opacity}
-                  filter={`url(#${HALO_FILTER_ID})`}
-                />
-              ))}
-            </svg>
+            {mapSvg}
           </Link>
         </div>
 

@@ -42,7 +42,7 @@ export function DiscoverSearchBar({
 }: Props) {
   if (isOpen) {
     return (
-      <div className="fixed inset-0 z-[70] bg-white flex flex-col">
+      <div className="fixed inset-0 z-[70] bg-white flex flex-col lg:absolute lg:right-auto lg:w-[var(--discover-panel-w)]">
         {/* 상단 바 */}
         <div
           className="flex items-center gap-2 px-3 pt-3 pb-2 bg-white"
@@ -173,7 +173,7 @@ export function DiscoverSearchBar({
 
   /* Closed bar */
   return (
-    <div className="absolute top-0 inset-x-0 z-[60] px-3 pt-3 pb-2">
+    <div className="absolute top-0 inset-x-0 z-[60] px-3 pt-3 pb-2 lg:right-auto lg:w-[var(--discover-panel-w)]">
       <div className="flex items-center gap-2">
         <button
           type="button"

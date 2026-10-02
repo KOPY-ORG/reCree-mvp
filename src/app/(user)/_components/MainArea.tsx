@@ -34,7 +34,9 @@ export function MainArea({ children }: { children: React.ReactNode }) {
 
   return (
     <main
-      className={`w-full flex-1 ${allowSticky ? "overflow-x-clip" : "overflow-x-hidden"}`}
+      // lg 는 전 화면 clip — PC 배치의 sticky 사이드(홈 지도 카드 · 상세 미디어)가 붙어야 한다.
+      // 모바일의 /saved · /shop 탭바 문제는 lg 에서 top 오프셋으로 따로 비킨다
+      className={`w-full flex-1 ${allowSticky ? "overflow-x-clip" : "overflow-x-hidden lg:overflow-x-clip"}`}
       style={reserve ? { paddingBottom: "var(--bottom-nav-space)" } : undefined}
     >
       {children}

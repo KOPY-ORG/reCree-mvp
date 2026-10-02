@@ -49,6 +49,7 @@ export function PostCardCarousel({ posts, savedPostIds, tagGroupMap, placeTypes,
   }, [posts, placeImages, totalItems]);
 
   return (
+    // lg: 큰 카드 한 장씩 대신 240 짜리 작은 카드를 한 줄로 늘어놓는다 (PlaceBottomSheet lg)
     <div className="pb-3">
       <div
         ref={scrollRef}
@@ -59,7 +60,7 @@ export function PostCardCarousel({ posts, savedPostIds, tagGroupMap, placeTypes,
           <div
             key={post.id}
             ref={(el) => { cardRefs.current[i] = el; }}
-            className="snap-start shrink-0 w-[85%]"
+            className="snap-start shrink-0 w-[85%] lg:w-[240px]"
           >
             <PostCarouselCard
               post={post}
@@ -75,7 +76,7 @@ export function PostCardCarousel({ posts, savedPostIds, tagGroupMap, placeTypes,
           <div
             key={`place-img-${i}`}
             ref={(el) => { cardRefs.current[posts.length + i] = el; }}
-            className="snap-start shrink-0 w-[85%]"
+            className="snap-start shrink-0 w-[85%] lg:w-[240px]"
           >
             <div
               className="relative w-full rounded-xl overflow-hidden bg-muted"
@@ -94,8 +95,9 @@ export function PostCardCarousel({ posts, savedPostIds, tagGroupMap, placeTypes,
         ))}
       </div>
 
+      {/* lg: 작은 카드 여러 장이 한 줄에 보이므로 한 장씩 넘기는 점 표시가 필요 없다 */}
       {totalItems >= 2 && (
-        <div className="flex items-center justify-center gap-1 mt-2">
+        <div className="flex items-center justify-center gap-1 mt-2 lg:hidden">
           {Array.from({ length: totalItems }).map((_, i) => (
             <div
               key={i}
