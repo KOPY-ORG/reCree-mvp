@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Volume2 } from "lucide-react";
+import { VolumeX } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { parseYouTubeSource, type YouTubeSource } from "./youtube-source";
 
@@ -225,7 +225,9 @@ export function YouTubeEmbed({ url, autoplay = false }: Props) {
     <div className="relative aspect-video rounded-xl overflow-hidden w-full">
       <div ref={containerRef} className="absolute inset-0 [&>iframe]:size-full" />
       {skeleton}
-      {ready && muted && (
+      {/* 아이콘만 둔 반투명 원. 브랜드 라임 90% + blur 로 영상이 살짝 비친다. 라임 위 아이콘은 검정.
+          누르면 바로 줄어들고(press-scale), 소리가 켜지면 작아지며 사라진다. 사라진 뒤에는 포커스 순서에서도 빠진다 */}
+      {ready && (
         <button
           type="button"
           onClick={() => {
@@ -234,10 +236,13 @@ export function YouTubeEmbed({ url, autoplay = false }: Props) {
             setMuted(false);
           }}
           aria-label="Turn sound on"
-          className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-black shadow-md"
+          aria-hidden={!muted}
+          tabIndex={muted ? 0 : -1}
+          className={`press-scale absolute left-3 top-3 flex size-10 items-center justify-center rounded-full bg-brand/90 text-brand-foreground backdrop-blur-sm transition-[transform,scale,opacity,visibility] duration-150 ease-out-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${
+            muted ? "" : "invisible scale-90 opacity-0 delay-[0ms,0ms,0ms,150ms]"
+          }`}
         >
-          <Volume2 className="size-4" aria-hidden="true" />
-          Sound on
+          <VolumeX className="size-5" aria-hidden="true" />
         </button>
       )}
     </div>

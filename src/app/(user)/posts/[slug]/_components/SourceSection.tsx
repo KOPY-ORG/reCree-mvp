@@ -37,8 +37,8 @@ export function SourceSection({ sources }: Props) {
   if (visibleSources.length === 0) return null;
 
   return (
-    <section className="px-4 mt-8 mb-6">
-      <h2 className="text-base font-bold mb-3">From the Source</h2>
+    // 소제목 없이 카드만 둔다. 영상이 스스로 출처임을 말한다 — 제목은 스크린리더에만 남긴다
+    <section aria-label="From the Source" className="px-4 mt-8 mb-6">
       <div className="space-y-3">
         {visibleSources.map((source, i) =>
           isYouTube(source) ? (
