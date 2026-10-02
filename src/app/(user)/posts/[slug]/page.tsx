@@ -205,8 +205,8 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
 
   // 블록은 전부 한 번만 렌더한다(유튜브 iframe · 지도 · h1 이 두 벌 생기지 않게). 그래서 DOM 은 lg 의 두 열 모양이고,
   // 모바일은 두 열 래퍼를 display: contents 로 풀어 블록들을 바깥 flex 열의 형제로 만든 뒤 order 로 순서를 되돌린다.
-  //   모바일: 사진·제목·Must-try·좋아요줄 1 → 출처 2 → Story 4 → 위치 5 → recreeshot 6 → 주변 관광지 7 → 댓글 8 → 사진 크레딧 9
-  //   lg   : 왼쪽 = 사진·제목·Must-try·좋아요줄 → 출처 → 위치, 오른쪽 = Story → recreeshot → 주변 관광지 → 댓글 → 사진 크레딧
+  //   모바일: 사진·칩(+좋아요줄)·제목·Must-try 1 → 출처 2 → Story 4 → 위치 5 → recreeshot 6 → 주변 관광지 7 → 댓글 8 → 사진 크레딧 9
+  //   lg   : 왼쪽 = 사진·칩(+좋아요줄)·제목·Must-try → 출처 → 위치, 오른쪽 = Story → recreeshot → 주변 관광지 → 댓글 → 사진 크레딧
   //   (3 은 Must-try 가 쓰던 칸이라 비어 있다)
   // 배너가 없으면 lg 에서도 왼쪽이 비므로 두 열을 풀어 모바일 순서 그대로 한 줄로 둔다.
   // 블록 사이 간격은 바깥 열(과 lg 의 각 열)의 gap 이 맡고, 각 블록의 위아래 마진은 래퍼에서 지운다.
@@ -280,8 +280,18 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
         />
       )}
 
-      {/* 배지 + 공유/스크랩 */}
-      <PostMetaBar labels={labels} />
+      {/* 토픽 · 태그 칩 + 좋아요 · 댓글 · 저장 */}
+      <PostMetaBar
+        labels={labels}
+        actions={
+          <PostActionBar
+            postId={post.id}
+            initialLiked={isLikedByMe}
+            commentCount={post._count.comments}
+            isSaved={isSaved}
+          />
+        }
+      />
 
       {/* 제목 */}
       <div className="px-4 pb-2 space-y-1">
@@ -302,14 +312,6 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
         </div>
       )}
 
-      {/* 좋아요 · 댓글 · 저장 (아이콘만) */}
-      <PostActionBar
-        postId={post.id}
-        initialLiked={isLikedByMe}
-        initialLikeCount={post._count.likes}
-        commentCount={post._count.comments}
-        isSaved={isSaved}
-      />
 
       {/* 구매 버튼 (shop 포스트) */}
       {post.isShop && post.purchaseUrl && (

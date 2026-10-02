@@ -15,6 +15,7 @@ interface Props {
   onSaveChange?: (saved: boolean) => void;
   /** 버튼 자체의 모양. 없으면 아이콘만 있는 기본 버튼 */
   className?: string;
+  strokeWidth?: number;
 }
 
 // 같은 화면에 같은 글의 저장 버튼이 둘 있을 수 있다 (상세의 사진 위 · 좋아요 줄).
@@ -22,7 +23,7 @@ interface Props {
 const SCRAP_CHANGE = "scrap-change";
 type ScrapChange = CustomEvent<{ postId: string; saved: boolean }>;
 
-export function ScrapButton({ postId, initialSaved, size = "md", unsavedClassName, savedStyle, strokeLinejoin = "round", onSaveChange, className }: Props) {
+export function ScrapButton({ postId, initialSaved, size = "md", unsavedClassName, savedStyle, strokeLinejoin = "round", onSaveChange, className, strokeWidth = 1.5 }: Props) {
   const [saved, setSaved] = useState(initialSaved);
   const [isPending, startTransition] = useTransition();
   const { toast, showToast } = useToast();
@@ -85,7 +86,7 @@ export function ScrapButton({ postId, initialSaved, size = "md", unsavedClassNam
         <Bookmark
           aria-hidden="true"
           className={`${iconSize} ${saved ? "" : unsavedClass}`}
-          strokeWidth={1.5}
+          strokeWidth={strokeWidth}
           strokeLinejoin={strokeLinejoin}
           style={saved ? activeSavedStyle : undefined}
         />

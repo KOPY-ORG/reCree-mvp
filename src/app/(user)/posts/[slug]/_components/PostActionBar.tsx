@@ -9,44 +9,39 @@ import { ScrapButton } from "@/app/(user)/_components/ScrapButton";
 interface Props {
   postId: string;
   initialLiked: boolean;
-  initialLikeCount: number;
   commentCount: number;
   isSaved: boolean;
 }
 
-/** 세 버튼 공통 — 누르는 칸 44, 숫자가 붙으면 옆으로 늘어난다. 누르면 살짝 줄어든다 */
+/** 세 버튼 공통 — 누르는 칸 44, 댓글 수가 붙으면 옆으로 늘어난다. 누르면 살짝 줄어든다 */
 const ACTION = "press-scale flex h-11 min-w-11 items-center justify-center gap-1.5 rounded-full px-2.5 transition-colors";
+/** 아이콘 24, 선은 칩 옆에서도 묻히지 않게 진한 회색(gray-900) · 1.75 */
 const ICON = "size-6";
+const STROKE = 1.75;
 
 export function PostActionBar({
   postId,
   initialLiked,
-  initialLikeCount,
   commentCount,
   isSaved,
 }: Props) {
   const [liked, setLiked] = useState(initialLiked);
-  const [likeCount, setLikeCount] = useState(initialLikeCount);
   const [pending, startTransition] = useTransition();
   const { toast, showToast } = useToast();
 
   function handleLike() {
     const prevLiked = liked;
-    const prevCount = likeCount;
     setLiked(!prevLiked);
-    setLikeCount(prevCount + (prevLiked ? -1 : 1));
 
     startTransition(async () => {
       const result = await togglePostLike(postId);
       if (result.error === "unauthenticated") {
         setLiked(prevLiked);
-        setLikeCount(prevCount);
         showToast("Sign in to like");
         return;
       }
       if (result.error) {
         setLiked(prevLiked);
-        setLikeCount(prevCount);
         showToast("Something went wrong");
         return;
       }
@@ -60,33 +55,33 @@ export function PostActionBar({
 
   return (
     <>
-      {/* 좋아요 → 댓글 → 저장, 아이콘만 오른쪽 정렬. 아이콘 24 · 누르는 칸 44(좌우 10 여백).
-          마지막 칸의 여백만큼 줄을 오른쪽으로 밀어 북마크 아이콘이 본문 오른쪽 끝(px-4)에 맞는다 */}
-      <div className="flex items-center justify-end gap-1 px-4 py-1 -mr-2.5">
+      {/* 토픽 칩 줄의 오른쪽 끝에 붙는다 (PostMetaBar). 좋아요 → 댓글 → 저장, 아이콘만.
+          누르는 칸(44)이 칩(약 21)보다 커서 위아래로 넘치게 두어 칩 줄 높이를 늘리지 않는다.
+          마지막 칸의 여백만큼 오른쪽으로 밀어 북마크가 본문 오른쪽 끝에 맞는다 */}
+      <div className="-my-2.5 -mr-2.5 flex shrink-0 items-center">
         <button
           type="button"
           onClick={handleLike}
           disabled={pending}
           aria-label={liked ? "Unlike" : "Like"}
           aria-pressed={liked}
-          className={`${ACTION} text-muted-foreground disabled:opacity-60`}
+          className={`${ACTION} text-gray-900 disabled:opacity-60`}
         >
           <Heart
             aria-hidden="true"
             className={ICON}
-            strokeWidth={1.5}
+            strokeWidth={STROKE}
             style={liked ? { fill: "#ef4444", stroke: "#ef4444" } : undefined}
           />
-          {likeCount > 0 && <span className="text-sm">{likeCount}</span>}
         </button>
 
         <button
           type="button"
           onClick={handleCommentScroll}
           aria-label="Go to comments"
-          className={`${ACTION} text-muted-foreground hover:text-foreground`}
+          className={`${ACTION} text-gray-900`}
         >
-          <MessageCircle className={ICON} strokeWidth={1.5} aria-hidden="true" />
+          <MessageCircle className={ICON} strokeWidth={STROKE} aria-hidden="true" />
           {commentCount > 0 && <span className="text-sm">{commentCount}</span>}
         </button>
 
@@ -96,7 +91,8 @@ export function PostActionBar({
           initialSaved={isSaved}
           size="lg"
           className={`${ACTION} disabled:opacity-60`}
-          unsavedClassName="text-muted-foreground"
+          unsavedClassName="text-gray-900"
+          strokeWidth={STROKE}
         />
       </div>
 
