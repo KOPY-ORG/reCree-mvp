@@ -14,18 +14,17 @@
 export const BOTTOM_NAV_ICON = 24;
 
 /**
- * 아이콘 획을 얼마나 깎을지 (viewBox 단위).
+ * 탭바 아이콘 선 굵기 (viewBox 단위). 여섯 아이콘이 모두 이 값 하나를 쓴다.
  *
- * 가이드 SVG 는 다섯 중 넷이 선이 아니라 면이라 획 굵기 2.0 이 도형에 박혀 있다 —
- * stroke-width 로는 못 바꾸고, 크기를 줄이면 굵기와 함께 아이콘도 작아진다.
- * 그래서 렌더된 모양을 feMorphology 로 사방 0.25 씩 깎는다.
- * 획은 양쪽에서 깎이므로 2.0 → 1.5 가 되고, 바깥 실루엣은 0.25(24 중 1%)만 준다.
- * 크기는 그대로 두고 굵기만 내리는 유일한 방법이다.
+ * 가이드 원본은 2.0 인데 탭바에서는 1.75 로 내린다. 크기(24)는 그대로 두고 선만 가늘게 한다.
+ * (1.5 는 실제 화면에서 얇게 읽혀 한 단계 올렸다)
+ * 선으로 그린 아이콘(Home · Journeys)은 stroke-width 로, 선을 면으로 굳힌 넷(Camera · Map · Shop · User)은
+ * 벡터 마스크로 같은 굵기를 만든다 (components/icons/OutlinePath.tsx).
+ *
+ * 예전에는 렌더된 모양을 feMorphology 필터로 깎았는데, 픽셀을 깎는 방식이라
+ * 화면 밀도(1x · 2x · 3x)와 렌더러마다 굵기가 달라 어떤 화면에서는 1px 가까이 얇아졌다.
  */
-export const BOTTOM_NAV_ICON_ERODE = 0.25;
-
-/** 위 필터의 DOM id. BottomNav 가 한 번만 정의하고 다섯 아이콘이 참조한다 */
-export const BOTTOM_NAV_ICON_FILTER = "nav-icon-thin";
+export const BOTTOM_NAV_ICON_STROKE = 1.75;
 
 /**
  * 프로필 아바타 지름. 아이콘보다 크다.
@@ -48,8 +47,13 @@ export const BOTTOM_NAV_AVATAR = 32;
  */
 export const BOTTOM_NAV_ITEM = 48;
 
-/** 칸 사이. 인접한 두 칸의 원이 붙지 않을 만큼만 */
-export const BOTTOM_NAV_ITEM_GAP = 2;
+/**
+ * 칸 사이. 0 이다 — 활성 원은 한 번에 하나라 이웃 원과 붙을 일이 없다.
+ * 왼쪽 알약이 4칸(Profile · Shop · recreeshots · Journeys)이 되면서 360px 에서 두 알약이 맞닿아
+ * 하나로 읽혔다. 칸 크기(48) · 아이콘(24) · 높이(58)는 그대로 두고 간격만 뺐다.
+ * 360px 가용 320 = 좌 202 + 우 106 + 사이 12.
+ */
+export const BOTTOM_NAV_ITEM_GAP = 0;
 
 /** 알약 안쪽 여백 (테두리 1px 은 별도) */
 export const BOTTOM_NAV_PAD = 4;

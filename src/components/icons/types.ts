@@ -9,4 +9,6 @@ import type { SVGProps } from "react";
 export interface IconProps extends Omit<SVGProps<SVGSVGElement>, "width" | "height"> {
   /** 한 변 (px). viewBox 는 5개 모두 0 0 24 24 로 같다 */
   size?: number | string;
+  /** 선 굵기 (viewBox 단위). 가이드 원본은 2.0 — 줄이면 실루엣은 그대로 두고 선만 가늘어진다 (OutlinePath) */
+  weight?: number;
 }

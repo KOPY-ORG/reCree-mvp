@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bookmark, Heart, LogOut, Route, Search, User } from "lucide-react";
-import { CameraIcon, HomeIcon, MapIcon, ShopIcon } from "@/components/icons";
+import { Bookmark, Heart, LogOut, Search, User } from "lucide-react";
+import { CameraIcon, HomeIcon, MapIcon, RouteIcon, ShopIcon } from "@/components/icons";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import {
   DropdownMenu,
@@ -35,7 +35,7 @@ type Item = {
 const ITEMS: readonly Item[] = [
   { href: "/feed", label: "Home", Icon: HomeIcon },
   { href: "/discover", label: "Map", Icon: MapIcon },
-  { href: "/journeys", label: "Journeys", Icon: Route },
+  { href: "/journeys", label: "Journeys", Icon: RouteIcon },
   { href: "/recreeshot", label: "recreeshots", Icon: CameraIcon },
   { href: "/shop", label: "Shop", Icon: ShopIcon },
 ];

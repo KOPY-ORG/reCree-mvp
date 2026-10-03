@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CameraIcon, HomeIcon, MapIcon, ShopIcon, UserIcon, type IconProps } from "@/components/icons";
+import { CameraIcon, HomeIcon, MapIcon, RouteIcon, ShopIcon, UserIcon, type IconProps } from "@/components/icons";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import {
   BOTTOM_NAV_AVATAR,
   BOTTOM_NAV_ICON,
-  BOTTOM_NAV_ICON_ERODE,
-  BOTTOM_NAV_ICON_FILTER,
+  BOTTOM_NAV_ICON_STROKE,
   BOTTOM_NAV_ITEM,
   BOTTOM_NAV_ITEM_GAP,
   BOTTOM_NAV_PAD,
@@ -33,15 +32,19 @@ type Tab = {
   Icon: React.ComponentType<IconProps>;
 };
 
+// 이름(aria-label)은 PC 상단 바 메뉴(DesktopHeader)와 같게 쓴다.
+// Journeys 는 지도 아이콘과 헷갈리지 않게 Route — discover 의 "Create a journey here" 카드와 같은 아이콘이다.
+// 왼쪽 알약이 4칸이라 칸 사이 간격은 0 이다 (BOTTOM_NAV_ITEM_GAP 참고)
 const LEFT_TABS: readonly Tab[] = [
-  { href: "/profile", label: "profile", Icon: UserIcon },
-  { href: "/shop", label: "shop", Icon: ShopIcon },
-  { href: "/recreeshot", label: "recreeshot", Icon: CameraIcon },
+  { href: "/profile", label: "Profile", Icon: UserIcon },
+  { href: "/shop", label: "Shop", Icon: ShopIcon },
+  { href: "/recreeshot", label: "recreeshots", Icon: CameraIcon },
+  { href: "/journeys", label: "Journeys", Icon: RouteIcon },
 ];
 
 const RIGHT_TABS: readonly Tab[] = [
-  { href: "/feed", label: "home", Icon: HomeIcon },
-  { href: "/discover", label: "map", Icon: MapIcon },
+  { href: "/feed", label: "Home", Icon: HomeIcon },
+  { href: "/discover", label: "Map", Icon: MapIcon },
 ];
 
 /** 두 알약이 공유하는 표면. 유리 느낌은 여기 흰색 93% 와 blur 가 만든다 */
@@ -97,7 +100,8 @@ function NavItem({
         <Icon
           size={BOTTOM_NAV_ICON}
           className="relative transition-colors duration-200"
-          style={{ color: active ? ACTIVE : MUTED, filter: `url(#${BOTTOM_NAV_ICON_FILTER})` }}
+          weight={BOTTOM_NAV_ICON_STROKE}
+          style={{ color: active ? ACTIVE : MUTED }}
         />
       )}
     </Link>
@@ -152,14 +156,6 @@ export function BottomNav({ isLoggedIn, profileImageUrl, hiddenOnMobile = false 
     <div
       className={`${hiddenOnMobile ? "hidden " : ""}nav-tuckable pointer-events-none fixed inset-x-0 bottom-[var(--bottom-nav-bottom)] z-40 lg:hidden`}
     >
-      {/* 아이콘 획을 깎는 필터. 아바타에는 걸지 않는다 — 사진은 깎을 획이 없다.
-          한 번만 정의하고 다섯 아이콘이 id 로 참조한다. */}
-      <svg aria-hidden className="absolute size-0" focusable="false">
-        <filter id={BOTTOM_NAV_ICON_FILTER} x="-20%" y="-20%" width="140%" height="140%">
-          <feMorphology operator="erode" radius={BOTTOM_NAV_ICON_ERODE} />
-        </filter>
-      </svg>
-
       <nav
         aria-label="Main"
         className="nav-rise mx-auto flex max-w-[var(--app-col-w)] items-center justify-between px-5"
