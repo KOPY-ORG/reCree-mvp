@@ -3,6 +3,7 @@ import { getMyFollows } from "@/lib/follow-queries";
 import { resolveTopicColors, labelBackground } from "@/lib/post-labels";
 import { getCurrentUser } from "@/lib/auth";
 import { TopicsHeader } from "./_components/TopicsHeader";
+import { PageTitle } from "../_components/PageTitle";
 import {
   TopicsBrowser,
   type TopicGroup,
@@ -81,6 +82,7 @@ export default async function TopicsPage() {
   return (
     <div className="max-w-2xl mx-auto pb-14">
       <TopicsHeader />
+      <PageTitle title="Your topics" className="px-4" />
       <TopicsBrowser
         groups={groups}
         initialFollowedIds={followedIds}

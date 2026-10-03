@@ -40,7 +40,7 @@ export function TopicTabHeader({ topic }: { topic: FollowWithTopic["topic"] }) {
   const category = rootCategoryName(topic.parent);
 
   return (
-    <header className="flex items-center gap-3 px-4 pt-4 pb-5">
+    <header className="flex items-center gap-3 px-4 pt-4 pb-5 lg:px-[var(--page-gutter)]">
       <span aria-hidden className="size-12 flex-none rounded-xl" style={{ background }} />
 
       {/* min-w-0 이 없으면 긴 이름이 flex 기본 min-content 에 걸려 버튼을 밀어낸다 */}

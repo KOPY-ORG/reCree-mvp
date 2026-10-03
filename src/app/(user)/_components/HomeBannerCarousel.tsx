@@ -30,13 +30,14 @@ export function HomeBannerCarousel({ banners }: { banners: BannerItem[] }) {
   if (banners.length === 0) return null;
 
   return (
-    <div className="overflow-x-auto scrollbar-hide">
-      <div className="flex items-start gap-3 pl-4 pb-2">
+    // lg: 스크롤 상자를 본문 좌우선(px-4 안쪽)에서 자르고, 카드는 그 폭을 2장(xl 3장)으로 나눠 다음 카드가 몇 px 만 걸치지 않게 한다
+    <div className="overflow-x-auto scrollbar-hide lg:mx-4">
+      <div className="flex items-start gap-3 pl-4 pb-2 lg:pl-0">
         {banners.map((banner, index) => (
           <Link
             key={banner.slug}
             href={`/posts/${banner.slug}`}
-            className={`shrink-0 w-[85%] lg:w-[46%] xl:w-[32%] rounded-xl overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.06)] bg-background${index === banners.length - 1 ? " mr-4" : ""}`}
+            className={`shrink-0 w-[85%] lg:w-[calc((100%-0.75rem)/2)] xl:w-[calc((100%-1.5rem)/3)] rounded-xl overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.06)] bg-background${index === banners.length - 1 ? " mr-4 lg:mr-0" : ""}`}
           >
             {/* 사진 영역 */}
             <div className="relative aspect-video overflow-hidden bg-muted">

@@ -72,10 +72,11 @@ export function HScrollSection({
         </div>
       </div>
       {/* pb-2: 카드 box/drop-shadow가 overflow-x clip에 잘리지 않도록 하단 여백 확보 */}
-      <div ref={scrollerRef} onScroll={update} className="overflow-x-auto scrollbar-hide pb-2">
-        <div className="flex gap-3 pl-4 pb-1">
+      {/* lg: 스크롤 상자를 제목 줄과 같은 좌우선(px-4 안쪽)에서 자른다 — 옆 열(지도 카드) 쪽으로 카드가 걸치지 않는다 */}
+      <div ref={scrollerRef} onScroll={update} className="overflow-x-auto scrollbar-hide pb-2 lg:mx-4">
+        <div className="flex gap-3 pl-4 pb-1 lg:pl-0">
           {children}
-          <div className="shrink-0 w-1" />
+          <div className="shrink-0 w-1 lg:hidden" />
         </div>
       </div>
     </section>

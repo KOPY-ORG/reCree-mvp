@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { getMyFollows } from "@/lib/follow-queries";
 import { FollowingList } from "./_components/FollowingList";
+import { PageTitle } from "../../_components/PageTitle";
 
 export const metadata: Metadata = {
   title: "Following | reCree",
@@ -36,7 +37,7 @@ export default async function FollowingPage() {
 
   return (
     <div className="max-w-2xl mx-auto pb-14">
-      <header className="app-header">
+      <header className="app-header lg:hidden">
         <div className="h-12 flex items-center gap-1 px-2">
           <Link
             href="/profile"
@@ -52,6 +53,11 @@ export default async function FollowingPage() {
           </div>
         </div>
       </header>
+      <PageTitle
+        title="Following"
+        subtitle={`${follows.length} ${follows.length === 1 ? "topic" : "topics"}`}
+        className="px-4"
+      />
       <FollowingList initialFollows={follows} />
     </div>
   );

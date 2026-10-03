@@ -21,7 +21,7 @@ export function TopicHero({ topic, isFollowing, isLoggedIn, initialFollowerCount
   return (
     <>
       <section
-        className="flex flex-col justify-end px-4 pt-14 pb-5 h-[200px] md:h-[240px]"
+        className="flex flex-col justify-end px-4 pt-14 pb-5 h-[200px] md:h-[240px] lg:items-start lg:px-[var(--page-gutter)]"
         style={{ background, color: resolved.textColorHex }}
       >
         <h1 className="text-3xl font-bold mb-4">{topic.nameEn}</h1>
@@ -35,7 +35,7 @@ export function TopicHero({ topic, isFollowing, isLoggedIn, initialFollowerCount
           }
         />
       </section>
-      <div className="px-4 py-3 text-sm text-muted-foreground">
+      <div className="px-4 py-3 text-sm text-muted-foreground lg:px-[var(--page-gutter)]">
         {followerCount.toLocaleString()} followers
       </div>
     </>

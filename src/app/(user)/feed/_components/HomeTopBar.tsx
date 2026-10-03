@@ -37,7 +37,7 @@ export function HomeTopBar({
           <HomeSearchBar />
         </div>
       </div>
-      <div className="mt-4 lg:px-5">
+      <div className="mt-4 lg:px-[var(--page-gutter)]">
         <HomeTabBar activeTab={activeTab} topics={topics} isLoggedIn={isLoggedIn} />
       </div>
     </div>

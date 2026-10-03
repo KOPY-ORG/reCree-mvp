@@ -3,6 +3,7 @@ import { Plus } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { getMyCourses, getPublicCourses } from "@/lib/course-queries";
 import { CourseCard } from "./_components/CourseCard";
+import { PageTitle } from "../_components/PageTitle";
 
 export default async function JourneysPage() {
   const currentUser = await getCurrentUser();
@@ -15,7 +16,7 @@ export default async function JourneysPage() {
 
   return (
     <div className="pb-8">
-      <header className="app-header">
+      <header className="app-header lg:hidden">
         <div className="h-12 flex items-center justify-between px-4">
           <span className="font-bold text-base tracking-tight">Journeys</span>
           {currentUser && (
@@ -30,8 +31,25 @@ export default async function JourneysPage() {
         </div>
       </header>
 
+      {/* lg: 위 제목 바 대신. New 는 제목 줄 오른쪽으로 옮겨 온다 */}
+      <PageTitle
+        title="Journeys"
+        className="lg:px-[var(--page-gutter)]"
+        action={
+          currentUser && (
+            <Link
+              href="/journeys/new"
+              className="flex items-center gap-1 pl-2.5 pr-3.5 py-1.5 rounded-full bg-brand text-black text-sm font-semibold transition-opacity hover:opacity-80"
+            >
+              <Plus className="size-4" strokeWidth={2.5} />
+              New
+            </Link>
+          )
+        }
+      />
+
       {currentUser && (
-        <section className="pt-4">
+        <section className="pt-4 lg:pt-0">
           <h2 className="font-bold text-lg px-4 mb-3 lg:px-[var(--page-gutter)]">My Journeys</h2>
           {myCourses.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-3 text-center py-10 px-4">

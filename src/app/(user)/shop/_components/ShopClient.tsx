@@ -55,13 +55,13 @@ export function ShopClient({ posts, shopTags, tagGroupConfigs }: Props) {
   return (
     <div>
       {/* 그룹 탭 */}
-      <div className="flex border-b border-secondary sticky top-0 bg-background z-10 lg:top-[calc(var(--top-nav-space)+3rem)]">
+      <div className="flex border-b border-secondary sticky top-0 bg-background z-10 lg:top-[var(--top-nav-space)] lg:mx-[var(--page-gutter)] lg:shadow-[0_0_0_100vmax_var(--background)] lg:[clip-path:inset(0_-100vmax)] lg:gap-8">
         {SHOP_TAG_GROUPS.map((group) => (
           <button
             key={group}
             type="button"
             onClick={() => handleGroupChange(group)}
-            className={`flex-1 py-3 text-sm font-medium transition-colors relative ${
+            className={`flex-1 py-3 text-sm font-medium transition-colors relative lg:flex-none ${
               selectedGroup === group ? "text-foreground" : "text-muted-foreground"
             }`}
           >

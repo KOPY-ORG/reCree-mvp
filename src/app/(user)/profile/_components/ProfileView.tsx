@@ -78,7 +78,7 @@ export function ProfileView({
     // lg: 한 사람의 모음이라 1440 전체로 펼치지 않고 읽는 폭에서 멈춘다
     <div className="flex flex-col min-h-full lg:mx-auto lg:w-full lg:max-w-5xl">
       {/* 자체 헤더 */}
-      <header className="app-header">
+      <header className="app-header lg:hidden">
         <div className="h-12 flex items-center justify-between px-4">
           <span className="font-bold text-base tracking-tight">reCree</span>
           <button
@@ -90,6 +90,18 @@ export function ProfileView({
           </button>
         </div>
       </header>
+
+      {/* lg: 위 제목 바를 숨긴 대신 그 메뉴 버튼을 본문 맨 위 오른쪽에 둔다 */}
+      <div className="hidden lg:flex justify-end px-4 pt-[var(--space-page-top)]">
+        <button
+          type="button"
+          onClick={() => setDrawerOpen(true)}
+          aria-label="Settings"
+          className="flex items-center justify-center size-9 rounded-full transition-colors hover:bg-muted"
+        >
+          <Menu className="size-5" />
+        </button>
+      </div>
 
       {/* 프로필 정보 */}
       <div className="px-4 pt-4">

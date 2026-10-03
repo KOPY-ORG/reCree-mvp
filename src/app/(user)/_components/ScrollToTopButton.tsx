@@ -85,7 +85,7 @@ export function ScrollToTopButton({ scrollRef }: Props = {}) {
           aria-label="맨 위로"
           onClick={handleClick}
           className={`
-            absolute bottom-0 right-2 pointer-events-auto
+            absolute bottom-0 right-2 lg:right-[var(--page-gutter)] pointer-events-auto
             size-10 rounded-full
             flex items-center justify-center
             backdrop-blur-sm
