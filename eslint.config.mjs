@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // 도구 폴더 — 앱 코드가 아니다 (Claude Code 스킬 · Playwright MCP 결과물)
+    ".claude/**",
+    ".playwright-mcp/**",
   ]),
 ]);
 
