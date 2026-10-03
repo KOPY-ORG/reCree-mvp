@@ -117,7 +117,7 @@ export default async function HallDetailPage({
   if (shot.status === "DELETED") {
     return (
       <div className="max-w-2xl mx-auto min-h-dvh flex flex-col">
-        <div className="flex items-center h-12 px-2 bg-white border-b border-gray-100 shrink-0">
+        <div className="flex items-center h-12 px-2 bg-white border-b border-gray-100 shrink-0 lg:hidden">
           <HallDetailBackButton />
         </div>
         <div className="flex-1 flex flex-col items-center justify-center px-8 gap-4 text-center">
@@ -137,7 +137,7 @@ export default async function HallDetailPage({
   if (shot.status === "HIDDEN" || shot.status === "REPORT_HIDDEN") {
     return (
       <div className="max-w-2xl mx-auto min-h-dvh flex flex-col">
-        <div className="flex items-center h-12 px-2 bg-white border-b border-gray-100 shrink-0">
+        <div className="flex items-center h-12 px-2 bg-white border-b border-gray-100 shrink-0 lg:hidden">
           <HallDetailBackButton />
         </div>
         <div className="flex-1 flex flex-col items-center justify-center px-8 gap-4 text-center">

@@ -3,7 +3,6 @@ import { Plus } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { getMyCourses, getPublicCourses } from "@/lib/course-queries";
 import { CourseCard } from "./_components/CourseCard";
-import { PageTitle } from "../_components/PageTitle";
 
 export default async function JourneysPage() {
   const currentUser = await getCurrentUser();
@@ -31,22 +30,18 @@ export default async function JourneysPage() {
         </div>
       </header>
 
-      {/* lg: 위 제목 바 대신. New 는 제목 줄 오른쪽으로 옮겨 온다 */}
-      <PageTitle
-        title="Journeys"
-        className="lg:px-[var(--page-gutter)]"
-        action={
-          currentUser && (
-            <Link
-              href="/journeys/new"
-              className="flex items-center gap-1 pl-2.5 pr-3.5 py-1.5 rounded-full bg-brand text-black text-sm font-semibold transition-opacity hover:opacity-80"
-            >
-              <Plus className="size-4" strokeWidth={2.5} />
-              New
-            </Link>
-          )
-        }
-      />
+      {/* lg: 상단 바 메뉴에 Journeys 가 있어 큰 제목은 두지 않는다. 위 제목 바의 New 만 본문 오른쪽 위로 옮긴다 */}
+      <div className="hidden lg:flex justify-end px-[var(--page-gutter)] pt-[var(--space-page-top)]">
+        {currentUser && (
+          <Link
+            href="/journeys/new"
+            className="flex items-center gap-1 pl-2.5 pr-3.5 py-1.5 rounded-full bg-brand text-black text-sm font-semibold transition-opacity hover:opacity-80"
+          >
+            <Plus className="size-4" strokeWidth={2.5} />
+            New
+          </Link>
+        )}
+      </div>
 
       {currentUser && (
         <section className="pt-4 lg:pt-0">

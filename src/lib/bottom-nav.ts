@@ -120,6 +120,20 @@ export function isBottomNavHidden(pathname: string): boolean {
 }
 
 /**
+ * PC(lg+) 상단 바(DesktopHeader)를 숨기는 화면 — 만드는 흐름(편집기 · 온보딩)만.
+ * 모바일 탭바와 기준이 다르다. recreeshot 상세 · 약관 같은 읽는 화면은 모바일에서는
+ * 탭바를 치우지만 PC 에서는 상단 바가 그대로 길을 잡는다.
+ */
+export function isDesktopHeaderHidden(pathname: string): boolean {
+  return (
+    pathname === "/recreeshot/new" ||
+    pathname.endsWith("/edit") ||
+    pathname === "/journeys/new" ||
+    pathname === "/onboarding"
+  );
+}
+
+/**
  * 자기 높이를 스스로 관리하는 화면. main 에 하단 여백을 주지 않는다.
  *
  * 지도는 탭바가 지도 위에 떠야 반투명·blur·그림자가 의미를 갖는다.

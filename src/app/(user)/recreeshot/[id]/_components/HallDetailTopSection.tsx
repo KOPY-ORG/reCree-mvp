@@ -197,8 +197,9 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
       )}
 
       {/* 헤더 */}
-      <div className="flex items-center justify-between px-2 h-12 bg-white border-b border-gray-100">
-        <button type="button" onClick={handleBack} className="p-2 rounded-full">
+      {/* lg: 상단 바가 길을 잡으므로 뒤로가기는 숨기고, 더보기(⋮)만 바탕 · 경계선 없이 남긴다 */}
+      <div className="flex items-center justify-between px-2 h-12 bg-white border-b border-gray-100 lg:bg-transparent lg:border-b-0">
+        <button type="button" onClick={handleBack} className="p-2 rounded-full lg:invisible">
           <ChevronLeft className="size-5 text-black" />
         </button>
 

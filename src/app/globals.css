@@ -238,8 +238,8 @@ html[data-nav-tucked] {
   html:has([data-narrow-layout]) {
     --app-col-w: var(--w-narrow);
   }
-  /* 상단 바 높이. 바가 없는 화면(편집기 · 상세 일부)은 0 이라 위가 비지 않는다 */
-  html:has([data-main-nav]) {
+  /* 상단 바(DesktopHeader) 높이. 바가 없는 화면(편집기 · 온보딩)은 0 이라 위가 비지 않는다 */
+  html:has([data-desktop-header]) {
     --top-nav-space: 64px;
   }
   /* 안쪽 줄의 px-4(16) 를 더해 좌우 끝선이 gutter 에 온다 */
@@ -250,10 +250,6 @@ html[data-nav-tucked] {
   /* 좁은 기둥(편집기)의 헤더는 화면 폭과 상관없이 기둥 안에서 24 를 유지한다 */
   html:has([data-narrow-layout]) .app-header {
     padding-inline: 1.5rem;
-  }
-  /* 아래에서 떠오르는 등장은 하단 알약의 것이다. 위에 붙은 바에는 맞지 않는다 */
-  .nav-rise {
-    animation: none;
   }
 }
 

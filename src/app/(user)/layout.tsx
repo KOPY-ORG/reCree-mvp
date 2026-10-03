@@ -4,6 +4,7 @@ import { ShopHeader } from "./_components/ShopHeader";
 import { ConditionalHeader } from "./_components/ConditionalHeader";
 import { ConditionalBottomNav } from "./_components/ConditionalBottomNav";
 import { MainArea } from "./_components/MainArea";
+import { DesktopHeader } from "./_components/DesktopHeader";
 import { ActivityTracker } from "./_components/ActivityTracker";
 import { InAppHistoryTracker } from "./_components/InAppHistoryTracker";
 import { ScrollToTopButton } from "./_components/ScrollToTopButton";
@@ -21,6 +22,8 @@ export default async function UserLayout({
     // 폰 기둥을 구분하던 회색 바탕 · 옆선을 끈다 (편집기의 좁은 기둥은 남긴다 — data-narrow-layout).
     // 기둥 최소 높이에서 위 여백을 빼야 문서가 화면보다 64 길어지지 않는다 (지도 화면의 이중 스크롤)
     <div className="min-h-[100dvh] bg-muted lg:pt-[var(--top-nav-space)] lg:bg-background lg:has-[[data-narrow-layout]]:bg-muted">
+      {/* lg 상단 바. 모바일 탭바는 lg 에서 숨고 이 바가 맡는다. 키보드 Tab 이 본문보다 먼저 닿도록 DOM 맨 앞에 둔다 */}
+      <DesktopHeader isLoggedIn={!!user} profileImageUrl={user?.profileImageUrl ?? null} />
       <div className="max-w-[var(--app-col-w)] mx-auto bg-background min-h-[100dvh] lg:min-h-[calc(100dvh-var(--top-nav-space))] flex flex-col shadow-[1px_0_0_rgba(0,0,0,0.04),-1px_0_0_rgba(0,0,0,0.04)] lg:shadow-none lg:has-[[data-narrow-layout]]:shadow-[1px_0_0_rgba(0,0,0,0.04),-1px_0_0_rgba(0,0,0,0.04)]">
         <ActivityTracker />
         <InAppHistoryTracker />

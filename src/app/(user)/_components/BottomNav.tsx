@@ -76,17 +76,9 @@ function NavItem({
       href={href}
       aria-label={label}
       aria-current={active ? "page" : undefined}
-      className="group relative flex flex-none items-center justify-center rounded-full transition-transform active:scale-95 lg:focus-visible:outline-none lg:focus-visible:ring-2 lg:focus-visible:ring-foreground"
+      className="relative flex flex-none items-center justify-center rounded-full transition-transform active:scale-95"
       style={{ width: BOTTOM_NAV_ITEM, height: BOTTOM_NAV_ITEM }}
     >
-      {/* lg 상단 바에서만 쓰는 이름표(칸 아래). 모바일은 라벨을 없앤 이유(10px)가 그대로라 띄우지 않는다 */}
-      <span
-        aria-hidden
-        className="pointer-events-none absolute left-1/2 top-full mt-2 hidden -translate-x-1/2 whitespace-nowrap rounded-full bg-foreground px-3 py-1.5 text-sm font-medium text-background shadow-md lg:group-hover:block lg:group-focus-visible:block"
-      >
-        {label}
-      </span>
-
       {/* 라임 원을 배경이 아니라 별도 요소로 둔다. 활성이 될 때만 마운트되므로
           애니메이션이 "그때 한 번" 재생된다 — 배경색이면 다시 재생할 방법이 없다. */}
       {active && (
@@ -120,11 +112,10 @@ function NavItem({
  * Tailwind 가 스캔하지 못해 유틸리티가 아예 생성되지 않는다.
  * 리터럴로 두면 상수를 고쳐도 화면이 안 바뀌는 이중 관리가 된다.
  */
-function Pill({ children, barClassName }: { children: React.ReactNode; barClassName: string }) {
+function Pill({ children }: { children: React.ReactNode }) {
   return (
-    // lg 는 바 자체가 표면이라 알약의 흰 바탕 · 테두리 · 그림자를 지운다. 인라인 style 이라 ! 로 덮는다
     <div
-      className={`pointer-events-auto flex items-center rounded-full lg:border-transparent! lg:bg-transparent! lg:shadow-none! ${barClassName}`}
+      className="pointer-events-auto flex items-center rounded-full"
       style={{ ...SURFACE, gap: BOTTOM_NAV_ITEM_GAP, padding: BOTTOM_NAV_PAD }}
     >
       {children}
@@ -135,7 +126,7 @@ function Pill({ children, barClassName }: { children: React.ReactNode; barClassN
 interface Props {
   isLoggedIn: boolean;
   profileImageUrl: string | null;
-  /** 모바일에서만 숨긴다 (lg 상단 바는 그대로) — isBottomNavHiddenOnMobile */
+  /** 이 화면은 모바일 탭바도 띄우지 않는다 — isBottomNavHiddenOnMobile */
   hiddenOnMobile?: boolean;
 }
 
@@ -157,13 +148,9 @@ export function BottomNav({ isLoggedIn, profileImageUrl, hiddenOnMobile = false 
   return (
     // pointer-events-none 이 가운데 빈 공간을 통과시킨다. 알약만 auto 로 되살린다.
     // nav-tuckable 은 지도 시트가 끝까지 올라왔을 때의 퇴장을 맡는다 (globals.css).
-    //
-    // lg 에서는 화면 위 가로 바가 된다 (docs/design/desktop-layout.md §15 원칙 1). 높이는 --top-nav-space,
-    // 로고 · 홈 · 지도 왼쪽, recreeshot · shop · profile 오른쪽. 표면은 .app-header 와 같다.
-    // bottom 을 인라인 style 에서 클래스로 옮긴 건 lg: 로 덮기 위해서다 — 값은 같다.
+    // lg 는 DesktopHeader(상단 바)가 맡는다 — 이 탭바는 모바일 · 태블릿 전용이다.
     <div
-      data-main-nav
-      className={`${hiddenOnMobile ? "max-lg:hidden " : ""}nav-tuckable pointer-events-none fixed inset-x-0 bottom-[var(--bottom-nav-bottom)] z-40 lg:pointer-events-auto lg:top-0 lg:bottom-auto lg:h-[var(--top-nav-space)] lg:bg-background/95 lg:shadow-[0_1px_4px_rgba(0,0,0,0.07)] lg:backdrop-blur-sm`}
+      className={`${hiddenOnMobile ? "hidden " : ""}nav-tuckable pointer-events-none fixed inset-x-0 bottom-[var(--bottom-nav-bottom)] z-40 lg:hidden`}
     >
       {/* 아이콘 획을 깎는 필터. 아바타에는 걸지 않는다 — 사진은 깎을 획이 없다.
           한 번만 정의하고 다섯 아이콘이 id 로 참조한다. */}
@@ -175,14 +162,10 @@ export function BottomNav({ isLoggedIn, profileImageUrl, hiddenOnMobile = false 
 
       <nav
         aria-label="Main"
-        className="nav-rise mx-auto flex max-w-[var(--app-col-w)] items-center justify-between px-5 lg:h-full lg:justify-start lg:gap-6 lg:px-[var(--page-gutter)]"
+        className="nav-rise mx-auto flex max-w-[var(--app-col-w)] items-center justify-between px-5"
       >
-        {/* DOM 순서(모바일 왼→오)는 그대로 두고 lg 는 order 로 다시 놓는다 — 로고 · 홈/지도 | … | recreeshot · shop · profile */}
-        <Pill barClassName="lg:order-3 lg:ml-auto lg:flex-row-reverse">{LEFT_TABS.map(render)}</Pill>
-        <Pill barClassName="lg:order-2">{RIGHT_TABS.map(render)}</Pill>
-        <Link href="/feed" className="hidden text-xl font-bold tracking-tight lg:order-1 lg:block">
-          reCree
-        </Link>
+        <Pill>{LEFT_TABS.map(render)}</Pill>
+        <Pill>{RIGHT_TABS.map(render)}</Pill>
       </nav>
     </div>
   );
