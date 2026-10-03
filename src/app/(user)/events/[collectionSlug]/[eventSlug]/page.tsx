@@ -13,6 +13,7 @@ import { EventImage } from "@/components/events/EventImage";
 import { PerkCard } from "@/components/events/PerkCard";
 import { EventScrapButton } from "@/app/(user)/_components/EventScrapButton";
 import { EVENT_RED as ACCENT, getDDay } from "@/lib/event-format";
+import { hostnameOf } from "@/lib/url";
 
 // ── 헬퍼 ────────────────────────────────────────────────────────────────────────
 
@@ -63,11 +64,7 @@ function splitHoursNote(note: string): string[] {
 }
 
 function safeHostname(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, "");
-  } catch {
-    return url;
-  }
+  return hostnameOf(url, url);
 }
 
 function safeUrl(u: string | null | undefined): string | null {
@@ -278,9 +275,14 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
   const hasAbout = event.bodyBlocks.length > 0;
 
   return (
-    <div style={{ background: "#F4F5F7", minHeight: "100dvh" }}>
+    // lg: 왼쪽 포스터(sticky) · 오른쪽 정보 두 단. 포스터가 1:1 이라 5:6 이면 두 단 높이가 비슷하게 시작한다
+    <div
+     
+      className="lg:mx-auto lg:max-w-[73rem] lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start lg:gap-10 lg:px-10 lg:pt-[var(--space-page-top)]"
+      style={{ background: "#F4F5F7", minHeight: "100dvh" }}
+    >
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
-      <div className="relative w-full">
+      <div className="relative w-full lg:sticky lg:top-[calc(var(--top-nav-space)+var(--space-page-top))] lg:overflow-hidden lg:rounded-3xl">
         <EventImage
           src={event.bannerImageUrl}
           alt={eventName}
@@ -302,10 +304,11 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
       </div>
 
       {/* ── Sheet ────────────────────────────────────────────────────────────── */}
+      {/* 포스터 위로 22 겹치는 건 모바일 전용이다 — lg 는 옆에 서므로 겹치지 않는다.
+          그래서 marginTop 을 인라인 style 에서 같은 값의 클래스로 옮겼다 */}
       <div
-        className="relative px-4 pb-28"
+        className="relative px-4 pb-28 -mt-[22px] lg:mt-0"
         style={{
-          marginTop: -22,
           borderRadius: "22px 22px 0 0",
           background: "#F4F5F7",
           paddingTop: 8,

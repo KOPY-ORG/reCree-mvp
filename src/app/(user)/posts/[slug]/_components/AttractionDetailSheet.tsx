@@ -27,6 +27,8 @@ import type {
   AttractionIntroRow,
 } from "@/lib/tour-api/types";
 import { formatDistance } from "./attraction-distance";
+import { BOTTOM_SHEET_CONTENT, SheetHandle } from "@/components/bottom-sheet-frame";
+import { hostnameOf } from "@/lib/url";
 
 /** 이 길이를 넘으면 접는다. 실측 개요는 평균 273~727자에 최대 2,342자다 */
 const OVERVIEW_FOLD_CHARS = 400;
@@ -35,11 +37,7 @@ type Loadable<T> = T | "failed" | null;
 
 /** 주소만 남긴 링크 글자. www. 만 떼고 서브도메인은 남긴다 — hikr 을 지우면 어느 사이트인지 사라진다 */
 function linkLabel(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, "");
-  } catch {
-    return url;
-  }
+  return hostnameOf(url, url);
 }
 
 function Block({ title, children }: { title: string; children: React.ReactNode }) {
@@ -308,15 +306,9 @@ export function AttractionDetailSheet({
           e.preventDefault();
           shownTrigger?.focus({ preventScroll: true });
         }}
-        // 시트는 fixed 라 레이아웃의 540px 기둥 밖으로 나간다 — 그 폭을 여기서 다시 건다.
-        // (user)/layout.tsx:20 과 같은 값·같은 방식이고, 탭바(BottomNav.tsx:163)·
-        // 맵 탭바(ExploreTabBar.tsx:30)처럼 흐름을 벗어난 것들이 이미 쓰는 방법이다.
-        // inset-x-0 위에 max-w 와 mx-auto 를 얹으면 좌우 auto 가 남는 자리를 반씩 먹어 가운데로 간다
-        className="mx-auto flex max-h-[88vh] max-w-[540px] flex-col gap-0 rounded-t-2xl p-0"
+        className={BOTTOM_SHEET_CONTENT}
       >
-        <div className="flex flex-none justify-center pb-1 pt-3">
-          <div className="h-1 w-9 rounded-full bg-muted-foreground/25" />
-        </div>
+        <SheetHandle />
 
         <div className="flex flex-none items-start gap-2 px-4 pb-3">
           <div className="min-w-0 flex-1">

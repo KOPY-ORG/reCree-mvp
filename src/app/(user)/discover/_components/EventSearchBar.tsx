@@ -30,7 +30,7 @@ export function EventSearchBar({
   onSavedToggle,
 }: Props) {
   return (
-    <div className="absolute top-0 inset-x-0 z-[60] px-3 pt-3 pb-2">
+    <div className="absolute top-0 inset-x-0 z-[60] px-3 pt-3 pb-2 lg:right-auto lg:w-[var(--discover-panel-w)]">
       <div className="flex items-center gap-2">
         <div className="flex-1 flex items-center gap-2 bg-white rounded-full px-4 h-10 shadow-md">
           <Search className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -44,6 +44,7 @@ export function EventSearchBar({
             <button
               type="button"
               onClick={onClear}
+              aria-label="Clear search"
               className="shrink-0 text-muted-foreground flex items-center"
             >
               <X className="w-4 h-4" />

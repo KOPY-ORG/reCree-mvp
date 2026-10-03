@@ -311,7 +311,8 @@ export function ReCreeshotUploadFlow({
   const { title, progress } = getStepMeta(state.step);
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
+    // data-narrow-layout — lg 에서도 좁은 기둥을 쓴다. 만드는 흐름이다 (globals.css)
+    <div data-narrow-layout className="flex flex-col min-h-screen bg-background">
       {/* 헤더 */}
       <header className="app-header">
         <div className="relative h-12 flex items-center px-2">
@@ -319,6 +320,7 @@ export function ReCreeshotUploadFlow({
             <button
               type="button"
               onClick={handleBack}
+              aria-label="Back"
               className="flex items-center justify-center size-8"
             >
               <ChevronLeft className="size-5" />
@@ -428,7 +430,7 @@ export function ReCreeshotUploadFlow({
 
       {/* 이탈 확인 다이얼로그 */}
       {state.showLeaveDialog && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-4 pb-8">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-4 pb-8 lg:items-center lg:pb-0">
           <div className="w-full max-w-sm bg-background rounded-2xl overflow-hidden">
             <div className="px-5 pt-6 pb-4 text-center space-y-1.5">
               <p className="font-bold text-base">Leave this page?</p>

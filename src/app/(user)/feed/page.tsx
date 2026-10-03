@@ -88,10 +88,44 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
   // 배지에 쓰는 색 두 개를 그대로 넘긴다 — 카드가 SVG 그라데이션으로 옮긴다
   const topicColors = activeTopic ? resolveTopicColors(activeTopic) : null;
 
+  // 지도 카드는 두 자리에 선다 — 모바일은 배너 아래 흐름 속(row), lg 는 오른쪽 sticky 사이드(stacked).
+  // DOM 순서를 바꾸면 모바일 순서가 흔들리므로 같은 카드를 두 번 두고 폭으로 하나만 보인다.
+  // Hot 은 장소가 0곳이어도 지도를 남긴다 — 지금까지의 동작이다.
+  // 토픽 탭은 그 토픽의 장소가 없으면 내린다. 핀도 칩도 없는 지도만 남으면
+  // "이 토픽은 아직 어디에도 없다"가 아니라 고장으로 읽힌다
+  const showMapCard = isHot || sidoCounts.counts.length > 0;
+  const mapCard = (layout: "row" | "stacked") =>
+    showMapCard ? (
+      <KoreaMapCard
+        layout={layout}
+        counts={sidoCounts.counts}
+        maxCount={sidoCounts.maxCount}
+        variant={activeTopic ? "topic" : "brand"}
+        accentColor={topicColors?.colorHex ?? "var(--brand)"}
+        accentColor2={topicColors?.colorHex2 ?? null}
+        accentGradientDir={topicColors?.gradientDir}
+        accentGradientStop={topicColors?.gradientStop}
+        /* 토픽 탭은 지역 칩을 내지 않는다 — 칩이 가는 discover 는 토픽을 모른다.
+           대신 그 토픽에 몇 곳이 있는지를 제목이 직접 말한다 */
+        eyebrow={activeTopic ? `${activeTopic.nameEn} on the map` : undefined}
+        title={
+          activeTopic
+            ? `${sidoCounts.total} ${sidoCounts.total === 1 ? "spot" : "spots"} across Korea`
+            : undefined
+        }
+        subtitle={activeTopic ? null : undefined}
+        /* 카드에서 넘어간 지도는 같은 토픽만 보여야 한다 —
+           탭에서 좁혀 놓고 들어간 지도가 전국이면 좁힌 것이 풀린다 */
+        discoverHref={
+          activeTopic ? buildDiscoverHref({ topicSlugs: [activeTopic.slug] }) : undefined
+        }
+      />
+    ) : null;
+
   // ─── 메인 렌더링 ─────────────────────────────────────────────────────────────
 
   return (
-    <div className="pb-4 max-w-2xl mx-auto">
+    <div className="pb-4 max-w-2xl mx-auto lg:max-w-none">
       {/* 상단 바는 어떤 경우에도 남는다. 볼 게 없는 화면일수록 다른 탭으로 갈 길이 필요하다 */}
       <HomeTopBar activeTab={activeTab} topics={tabTopics} isLoggedIn={!!currentUser} />
 
@@ -99,123 +133,106 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
           구독을 끊고 나갈 길조차 없다 */}
       {activeTopic && <TopicTabHeader topic={activeTopic} />}
 
-      {isEmpty ? (
-        <div className="flex flex-col items-center justify-center gap-2 py-24 text-center px-4">
-          <p className="text-lg font-semibold">Nothing here yet</p>
-          <p className="text-sm text-muted-foreground">New spots are on the way. Check back soon.</p>
-        </div>
-      ) : (
-        <>
-          {hasBanners && (
-            <div className="mb-4">
-              <HomeBannerCarousel banners={bannerItems} />
+      {/* lg: 왼쪽은 흐름 그대로, 오른쪽 300(xl 360) 은 지도 카드. 모바일에서는 아무 스타일 없는 블록이다 */}
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-8 lg:px-[calc(var(--page-gutter)-1rem)] xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="lg:min-w-0">
+          {isEmpty ? (
+            <div className="flex flex-col items-center justify-center gap-2 py-24 text-center px-4">
+              <p className="text-lg font-semibold">Nothing here yet</p>
+              <p className="text-sm text-muted-foreground">New spots are on the way. Check back soon.</p>
             </div>
+          ) : (
+            <>
+              {hasBanners && (
+                <div className="mb-4">
+                  <HomeBannerCarousel banners={bannerItems} />
+                </div>
+              )}
+
+              {showMapCard && <div className="lg:hidden">{mapCard("row")}</div>}
+
+              {/* 이 섹션만 사용자별이라 캐시가 안 된다. 위의 Promise.all 에 넣으면
+                  캐시되는 배너·지도까지 이 쿼리를 기다리므로 경계를 따로 세운다 */}
+              {isHot && (
+                <Suspense fallback={<FollowFeedSkeleton />}>
+                  <FollowFeedSection />
+                </Suspense>
+              )}
+
+              {/* 공용 목록이고 단순 orderBy 라 경계를 세우지 않는다 — 페이지와 같이 기다린다.
+                  topicId 가 없으면 지금까지와 같은 전체 조회다. 토픽 탭에서 그 토픽 것이
+                  0건이면 섹션이 스스로 null 을 돌려주고 자리를 비운다 */}
+              <PopularReCreeshotSection
+                topicId={topicId}
+                title={activeTopic ? `${activeTopic.nameEn} recreeshots` : undefined}
+              />
+
+              {isHot && (
+                <CuratedSections
+                  sections={sections}
+                  sectionData={sectionData}
+                  tagGroupMap={tagGroupMap}
+                  savedPostIds={savedPostIds}
+                  guideVideo={guideVideo}
+                />
+              )}
+
+              {/* TourAPI 를 타는 유일한 줄이다. 캐시가 비면 최악 12초(4초 × 3페이지)에
+                  번역 5초가 붙어, 경계가 없으면 홈 첫 바이트가 그만큼 밀린다 */}
+              {isHot && (
+                <Suspense fallback={<FestivalSkeleton />}>
+                  <FestivalSection />
+                </Suspense>
+              )}
+
+              <JourneySection
+                topicId={topicId}
+                title={activeTopic ? `${activeTopic.nameEn} Journeys` : undefined}
+              />
+            </>
           )}
 
-          {/* Hot 은 장소가 0곳이어도 지도를 남긴다 — 지금까지의 동작이다.
-              토픽 탭은 그 토픽의 장소가 없으면 내린다. 핀도 칩도 없는 지도만 남으면
-              "이 토픽은 아직 어디에도 없다"가 아니라 고장으로 읽힌다 */}
-          {(isHot || sidoCounts.counts.length > 0) && (
-            <KoreaMapCard
-              counts={sidoCounts.counts}
-              maxCount={sidoCounts.maxCount}
-              variant={activeTopic ? "topic" : "brand"}
-              accentColor={topicColors?.colorHex ?? "var(--brand)"}
-              accentColor2={topicColors?.colorHex2 ?? null}
-              accentGradientDir={topicColors?.gradientDir}
-              accentGradientStop={topicColors?.gradientStop}
-              /* 토픽 탭은 지역 칩을 내지 않는다 — 칩이 가는 discover 는 토픽을 모른다.
-                 대신 그 토픽에 몇 곳이 있는지를 제목이 직접 말한다 */
-              eyebrow={activeTopic ? `${activeTopic.nameEn} on the map` : undefined}
-              title={
-                activeTopic
-                  ? `${sidoCounts.total} ${sidoCounts.total === 1 ? "spot" : "spots"} across Korea`
-                  : undefined
-              }
-              subtitle={activeTopic ? null : undefined}
-              /* 카드에서 넘어간 지도는 같은 토픽만 보여야 한다 —
-                 탭에서 좁혀 놓고 들어간 지도가 전국이면 좁힌 것이 풀린다 */
-              discoverHref={
-                activeTopic ? buildDiscoverHref({ topicSlugs: [activeTopic.slug] }) : undefined
-              }
-            />
-          )}
+          <div className="px-4 mb-4">
+            <FeedbackForm source="feed" />
+          </div>
 
-          {/* 이 섹션만 사용자별이라 캐시가 안 된다. 위의 Promise.all 에 넣으면
-              캐시되는 배너·지도까지 이 쿼리를 기다리므로 경계를 따로 세운다 */}
-          {isHot && (
-            <Suspense fallback={<FollowFeedSkeleton />}>
-              <FollowFeedSection />
-            </Suspense>
-          )}
+          {/* 상한은 Hot 에만 건다. 토픽 탭은 그 토픽의 포스트가 전부여서 끝이 보이고,
+              30 에서 끊으면 "더 있는데 안 보여준다"가 된다.
 
-          {/* 공용 목록이고 단순 orderBy 라 경계를 세우지 않는다 — 페이지와 같이 기다린다.
-              topicId 가 없으면 지금까지와 같은 전체 조회다. 토픽 탭에서 그 토픽 것이
-              0건이면 섹션이 스스로 null 을 돌려주고 자리를 비운다 */}
-          <PopularReCreeshotSection
-            topicId={topicId}
-            title={activeTopic ? `${activeTopic.nameEn} ReCreeshots` : undefined}
-          />
-
-          {isHot && (
-            <CuratedSections
-              sections={sections}
-              sectionData={sectionData}
-              tagGroupMap={tagGroupMap}
+              key 는 탭마다 다르다. 이것이 없으면 탭을 옮겨도 React 가 같은 자리의 같은
+              컴포넌트로 보아 무한 피드를 언마운트하지 않고, 목록을 쥔 useState 가
+              initialPosts 를 초기값으로만 받기 때문에 앞 탭의 포스트가 그대로 남는다 —
+              머리글만 새 토픽으로 바뀌고 아래는 전 토픽인 화면이 된다 */}
+          {hasLatest && (
+            <FreshDrops
+              key={topicId ?? "hot"}
+              initialPosts={latestFeedResult.posts}
+              initialCursor={latestFeedResult.nextCursor}
               savedPostIds={savedPostIds}
-              guideVideo={guideVideo}
+              tagGroupMap={tagGroupMap}
+              topicId={topicId}
+              title={isHot ? undefined : "All posts"}
+              maxItems={isHot ? HOT_TAB_MAX_ITEMS : undefined}
             />
           )}
 
-          {/* TourAPI 를 타는 유일한 줄이다. 캐시가 비면 최악 12초(4초 × 3페이지)에
-              번역 5초가 붙어, 경계가 없으면 홈 첫 바이트가 그만큼 밀린다 */}
-          {isHot && (
-            <Suspense fallback={<FestivalSkeleton />}>
-              <FestivalSection />
-            </Suspense>
-          )}
-
-          <JourneySection
-            topicId={topicId}
-            title={activeTopic ? `${activeTopic.nameEn} Journeys` : undefined}
-          />
-        </>
-      )}
-
-      <div className="px-4 mb-4">
-        <FeedbackForm source="feed" />
-      </div>
-
-      {/* 상한은 Hot 에만 건다. 토픽 탭은 그 토픽의 포스트가 전부여서 끝이 보이고,
-          30 에서 끊으면 "더 있는데 안 보여준다"가 된다.
-
-          key 는 탭마다 다르다. 이것이 없으면 탭을 옮겨도 React 가 같은 자리의 같은
-          컴포넌트로 보아 무한 피드를 언마운트하지 않고, 목록을 쥔 useState 가
-          initialPosts 를 초기값으로만 받기 때문에 앞 탭의 포스트가 그대로 남는다 —
-          머리글만 새 토픽으로 바뀌고 아래는 전 토픽인 화면이 된다 */}
-      {hasLatest && (
-        <FreshDrops
-          key={topicId ?? "hot"}
-          initialPosts={latestFeedResult.posts}
-          initialCursor={latestFeedResult.nextCursor}
-          savedPostIds={savedPostIds}
-          tagGroupMap={tagGroupMap}
-          topicId={topicId}
-          title={isHot ? undefined : "All posts"}
-          maxItems={isHot ? HOT_TAB_MAX_ITEMS : undefined}
-        />
-      )}
-
-      <footer className="px-4 pt-8 pb-6 text-sm text-muted-foreground">
-        <div className="flex flex-wrap gap-4 justify-center">
-          <Link href="/policy/privacy" className="hover:text-foreground underline underline-offset-4">
-            Privacy Policy
-          </Link>
-          <Link href="/policy/terms" className="hover:text-foreground underline underline-offset-4">
-            Terms of Service
-          </Link>
+          <footer className="px-4 pt-8 pb-6 text-sm text-muted-foreground">
+            <div className="flex flex-wrap gap-4 justify-center">
+              <Link href="/policy/privacy" className="hover:text-foreground underline underline-offset-4">
+                Privacy Policy
+              </Link>
+              <Link href="/policy/terms" className="hover:text-foreground underline underline-offset-4">
+                Terms of Service
+              </Link>
+            </div>
+          </footer>
         </div>
-      </footer>
+
+        <aside className="hidden lg:block">
+          {/* 상단 바(HomeTopBar) 아래에 붙는다 */}
+          <div className="sticky top-[calc(var(--top-nav-space)+124px)] pr-4">{mapCard("stacked")}</div>
+        </aside>
+      </div>
     </div>
   );
 }

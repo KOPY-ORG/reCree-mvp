@@ -1,85 +1,49 @@
 "use client";
 
 import Link from "next/link";
-import { Share2, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { labelBackground, type ResolvedLabel } from "@/lib/post-labels";
 import { LabelBadge } from "@/components/LabelBadge";
-import { ScrapButton } from "@/app/(user)/_components/ScrapButton";
-import { useToast } from "@/app/(user)/_hooks/useToast";
 
 interface Props {
   labels: ResolvedLabel[];
-  isSaved: boolean;
-  postId: string;
-  titleEn: string;
 }
 
-export function PostMetaBar({ labels, isSaved, postId, titleEn }: Props) {
-  const { toast, showToast } = useToast();
+// 토픽 · 태그 칩. 모바일에서 같은 줄 오른쪽의 댓글 · 저장(PostActionBar)은 page 의 격자가 옆에 나란히 놓는다 —
+// 서버에서 만든 요소를 이 클라이언트 컴포넌트에 prop 으로 넘기면 React 가 key 경고를 내서다.
+// 칩은 .pill-badge 기본 모양(글자 12 · 위아래 3 · 좌우 8 · 화살표 12)을 비율 그대로 키운다 — 모바일 1.15배, lg 1.3배(글자 약 15.6).
+// 글자 · 여백 · 아이콘을 같은 배율(--chip-scale)로 함께 키워 모양이 뚱뚱해지지 않게 한다
+const CHIP_SIZE = {
+  "--pill-fs": "calc(0.75rem * var(--chip-scale))",
+  "--pill-py": "calc(0.1875rem * var(--chip-scale))",
+} as React.CSSProperties;
+const CHIP_CLASS = "whitespace-nowrap shrink-0 px-[calc(0.5rem*var(--chip-scale))] gap-[calc(0.25rem*var(--chip-scale))]";
 
-  async function handleShare() {
-    const url = window.location.href;
-
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: titleEn, url });
-      } catch {
-        // 사용자 취소 등 — 무시
-      }
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(url);
-      showToast("Link copied!");
-      return;
-    } catch {
-      // HTTP 등 clipboard 불가 → prompt fallback
-    }
-
-    prompt("Copy this link:", url);
-  }
-
+export function PostMetaBar({ labels }: Props) {
   return (
-    <div className="relative flex justify-between items-start px-4 pt-3 pb-2">
-      {/* 배지 영역 */}
-      <div className="flex flex-wrap gap-1.5 flex-1 min-w-0 mr-3">
-        {labels.map((label, i) =>
-          label.slug ? (
-            <Link key={i} href={`/topics/${label.slug}`} className="inline-flex">
-              <LabelBadge
-                text={label.text}
-                background={labelBackground(label)}
-                color={label.textColorHex}
-                className="whitespace-nowrap shrink-0"
-              >
-                <ChevronRight className="h-3 w-3 opacity-60" />
-              </LabelBadge>
-            </Link>
-          ) : (
+    // 넘치면 이 칸 안에서 줄바꿈. 칩 사이(가로 7)보다 줄 사이(세로 8)를 조금 더 벌려 두 줄이 한 덩어리로 읽히게
+    <div className="flex min-w-0 flex-1 flex-wrap gap-x-[7px] gap-y-2 [--chip-scale:1.15] lg:[--chip-scale:1.3]" style={CHIP_SIZE}>
+      {labels.map((label, i) =>
+        label.slug ? (
+          <Link key={i} href={`/topics/${label.slug}`} className="inline-flex">
             <LabelBadge
-              key={i}
               text={label.text}
               background={labelBackground(label)}
               color={label.textColorHex}
-              className="whitespace-nowrap shrink-0"
-            />
-          )
-        )}
-      </div>
-
-      {/* 액션 버튼 */}
-      <div className="flex items-center gap-3 shrink-0">
-        <button type="button" onClick={handleShare} className="text-muted-foreground hover:text-foreground transition-colors">
-          <Share2 className="h-5 w-5" strokeWidth={1.5} />
-        </button>
-        <ScrapButton postId={postId} initialSaved={isSaved} size="md" />
-      </div>
-
-      {toast && (
-        <div className="fixed bottom-[var(--bottom-nav-space)] left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-black/50 text-white text-sm whitespace-nowrap shadow-lg pointer-events-none">
-          {toast.message}
-        </div>
+              className={CHIP_CLASS}
+            >
+              <ChevronRight className="size-[calc(0.75rem*var(--chip-scale))] opacity-60" />
+            </LabelBadge>
+          </Link>
+        ) : (
+          <LabelBadge
+            key={i}
+            text={label.text}
+            background={labelBackground(label)}
+            color={label.textColorHex}
+            className={CHIP_CLASS}
+          />
+        )
       )}
     </div>
   );

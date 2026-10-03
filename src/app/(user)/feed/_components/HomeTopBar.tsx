@@ -30,11 +30,14 @@ export function HomeTopBar({
   isLoggedIn: boolean;
 }) {
   return (
-    <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm pt-[calc(env(safe-area-inset-top,0px)+16px)] pb-5">
-      <div className="px-5">
-        <HomeSearchBar />
+    <div className="sticky top-0 z-40 lg:top-[var(--top-nav-space)] bg-background/95 backdrop-blur-sm pt-[calc(env(safe-area-inset-top,0px)+16px)] pb-5">
+      <div className="px-5 lg:px-[var(--page-gutter)]">
+        {/* lg: 검색창이 1000px 넘게 늘어나지 않게 읽기 좋은 폭에서 멈춘다 */}
+        <div className="lg:max-w-xl">
+          <HomeSearchBar />
+        </div>
       </div>
-      <div className="mt-4">
+      <div className="mt-4 lg:px-[var(--page-gutter)]">
         <HomeTabBar activeTab={activeTab} topics={topics} isLoggedIn={isLoggedIn} />
       </div>
     </div>

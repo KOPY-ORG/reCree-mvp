@@ -5,27 +5,31 @@ import { prisma } from "@/lib/prisma";
 import { getPostsWithLabels, getShopPostsWithLabels } from "@/lib/post-queries";
 import type { EventCollectionMapMarker } from "@/lib/event-collection-queries";
 import { SavedClient } from "./_components/SavedClient";
+import { PageTitle } from "../_components/PageTitle";
 
 export default async function SavedPage() {
   const currentUser = await getCurrentUser();
 
   if (!currentUser) {
     return (
-      <div className="flex flex-col items-center justify-center h-[60vh] gap-4 text-center px-4">
-        <LogIn className="h-10 w-10 text-muted-foreground" strokeWidth={1.5} />
-        <div className="space-y-1">
-          <p className="text-lg font-semibold">Sign in to view saved places</p>
-          <p className="text-sm text-muted-foreground">
-            Save your favorite posts and access them anytime.
-          </p>
+      <>
+        <PageTitle title="Saved" className="max-w-2xl mx-auto px-4" />
+        <div className="flex flex-col items-center justify-center h-[60vh] gap-4 text-center px-4">
+          <LogIn className="h-10 w-10 text-muted-foreground" strokeWidth={1.5} />
+          <div className="space-y-1">
+            <p className="text-lg font-semibold">Sign in to view saved places</p>
+            <p className="text-sm text-muted-foreground">
+              Save your favorite posts and access them anytime.
+            </p>
+          </div>
+          <Link
+            href="/login"
+            className="mt-2 px-5 py-2.5 rounded-full bg-brand text-black text-sm font-semibold transition-opacity hover:opacity-80"
+          >
+            Sign in
+          </Link>
         </div>
-        <Link
-          href="/login"
-          className="mt-2 px-5 py-2.5 rounded-full bg-brand text-black text-sm font-semibold transition-opacity hover:opacity-80"
-        >
-          Sign in
-        </Link>
-      </div>
+      </>
     );
   }
 

@@ -6,6 +6,7 @@ import { isExternalImage, focalStyle } from "@/lib/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ReCreeshotImage } from "@/components/recreeshot-image";
 import { ScrapButton } from "../../_components/ScrapButton";
+import { PageTitle } from "../../_components/PageTitle";
 import { PostBadges } from "../../_components/PostCard";
 import { EventListCard } from "@/components/maps/EventListCard";
 import { type TagGroupColorMap } from "@/lib/post-labels";
@@ -116,8 +117,9 @@ export function SavedClient({ posts, shopPosts, recreeshots, tagGroupConfigs, sa
 
   return (
     <div>
+      <PageTitle title="Saved" className="max-w-2xl mx-auto px-4" />
       {/* 탭 바 */}
-      <div className="flex border-b border-secondary sticky top-0 bg-background z-10 max-w-2xl mx-auto overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex border-b border-secondary sticky top-0 bg-background z-10 lg:top-[var(--top-nav-space)] max-w-2xl mx-auto overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {TABS.map((t) => (
           <button
             key={t}
@@ -226,8 +228,8 @@ export function SavedClient({ posts, shopPosts, recreeshots, tagGroupConfigs, sa
               </p>
             </div>
           ) : (
-            <div className="px-4 py-4">
-            <div className="grid grid-cols-2 gap-2">
+            <div className="px-4 py-4 lg:mx-auto lg:max-w-2xl">
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
               {recreeshots.map((shot) => (
                 <Link
                   key={shot.id}

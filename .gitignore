@@ -26,6 +26,7 @@
 
 # claude code
 .claude/
+skills-lock.json
 CLAUDE.md
 
 # debug
@@ -56,3 +57,6 @@ prisma/scripts/tour-api-spike-2-result.json
 
 # Area 재등록 스냅샷 (일회성 백업)
 prisma/scripts/backups/
+
+# playwright MCP 로그
+.playwright-mcp/

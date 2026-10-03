@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect } from "react";
 import { useSheetDrag } from "@/app/(user)/_hooks/useSheetDrag";
-import { BOTTOM_NAV_SPACE, setBottomNavTucked } from "@/lib/bottom-nav";
+import { bottomNavSpace, setBottomNavTucked } from "@/lib/bottom-nav";
 
 export type PlaceListSheetState = "hidden" | "tab-only" | "half" | "full";
 
@@ -65,9 +65,10 @@ export function PlaceListSheet({ state, onStateChange, topOffset = 24, hasActive
   // safe-area 는 빠진 근사다 — 그려지는 높이는 CSS 변수라 기기에서 정확하고,
   // 여기 몇십 px 차이는 "어느 상태로 붙일지" 판정만 바꾼다.
   function getSnapHeights() {
+    const navSpace = bottomNavSpace();
     return [
-      tabOnlyH + BOTTOM_NAV_SPACE,
-      Math.round((window.innerHeight - BOTTOM_NAV_SPACE) * 0.5) + BOTTOM_NAV_SPACE,
+      tabOnlyH + navSpace,
+      Math.round((window.innerHeight - navSpace) * 0.5) + navSpace,
       window.innerHeight - fullTop,
     ];
   }
@@ -101,6 +102,9 @@ export function PlaceListSheet({ state, onStateChange, topOffset = 24, hasActive
     onDragMove: tuckForHeight,
   });
 
+  // 높이는 인라인 그대로 둔다 — useSheetDrag 가 드래그 중 style.height 를 직접 쓰고,
+  // 놓은 뒤 React 가 이 값으로 되돌리는 구조라 CSS 변수로 옮기면 드래그 높이가 남는다.
+  // lg 는 아래 lg:h-auto! (important) 가 인라인을 이긴다.
   const sheetStyle: React.CSSProperties = {
     height: getSheetHeight(state, tabOnlyH, fullTop),
     transition: isDragging ? "none" : "height 300ms ease",
@@ -109,9 +113,12 @@ export function PlaceListSheet({ state, onStateChange, topOffset = 24, hasActive
   return (
     // 시트는 화면 바닥까지 내려간다. 탭바는 시트 위에 뜨고,
     // 가려지지 않게 하는 건 아래 스크롤 영역의 padding-bottom 이다.
+    //
+    // lg: 왼쪽 패널 — 검색바 · 토픽 칩 · facet 줄(~136) 아래부터 바닥까지. 모바일 full 상태처럼 facet 자리를 늘 비워 둔다. 드래그할 것이 없어 핸들을 치운다.
+    // hidden(장소 선택 중)은 모바일에서 높이 0 으로 사라지는데 lg 는 top/bottom 으로 높이가 서므로 따로 감춘다.
     <div
       ref={sheetRef}
-      className="absolute inset-x-0 bottom-0 z-40 bg-white rounded-t-[2rem] flex flex-col shadow-[0_-8px_40px_rgba(0,0,0,0.18)] overflow-hidden"
+      className={`absolute inset-x-0 bottom-0 z-40 bg-white rounded-t-[2rem] flex flex-col shadow-[0_-8px_40px_rgba(0,0,0,0.18)] overflow-hidden lg:right-auto lg:top-[136px] lg:h-auto! lg:w-[var(--discover-panel-w)] lg:rounded-none lg:shadow-none ${state === "hidden" ? "lg:hidden" : ""}`}
       style={sheetStyle}
     >
       {/* 드래그 핸들 */}
@@ -119,7 +126,7 @@ export function PlaceListSheet({ state, onStateChange, topOffset = 24, hasActive
         <div
           ref={handleRef}
           {...dragHandlers}
-          className="shrink-0 flex justify-center items-center bg-white"
+          className="shrink-0 flex justify-center items-center bg-white lg:hidden"
           style={{ height: 44, touchAction: "none" }}
         >
           <div className="w-14 h-1 rounded-full bg-muted-foreground/30" />
@@ -133,9 +140,10 @@ export function PlaceListSheet({ state, onStateChange, topOffset = 24, hasActive
 
       {/* 콘텐츠 — 시트가 바닥까지 내려가므로 마지막 줄이 탭바에 가리지 않게 여기서 비운다.
           탭바가 물러난 상태(full)에서는 --sheet-scroll-pb 가 알아서 줄어든다 */}
+      {/* lg:@container — 목록의 2열 전환을 패널 폭으로 가르는 기준 (ExploreMapView) */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto"
+        className="flex-1 overflow-y-auto lg:@container"
         style={{ paddingBottom: "var(--sheet-scroll-pb)" }}
       >
         {children}
@@ -143,7 +151,7 @@ export function PlaceListSheet({ state, onStateChange, topOffset = 24, hasActive
         {state !== "hidden" && (
           <div
             {...dragHandlers}
-            className="w-full h-16"
+            className="w-full h-16 lg:hidden"
             style={{ touchAction: "none" }}
           />
         )}

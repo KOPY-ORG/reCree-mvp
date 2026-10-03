@@ -25,6 +25,7 @@ import type { CourseListItem } from "@/lib/course-queries";
 import { deleteAccount } from "../_actions/profile-actions";
 import { signOut } from "@/lib/actions/auth";
 import { showError } from "@/lib/toast";
+import { MobileTitleBar } from "@/app/(user)/_components/MobileTitleBar";
 
 /** 프로필에 미리 보여줄 코스 개수. 넘으면 "See all" 로 /journeys 에 넘긴다 */
 const PROFILE_COURSE_LIMIT = 6;
@@ -75,20 +76,34 @@ export function ProfileView({
   }
 
   return (
-    <div className="flex flex-col min-h-full">
+    // lg: 한 사람의 모음이라 1440 전체로 펼치지 않고 읽는 폭에서 멈춘다
+    <div className="flex flex-col min-h-full lg:mx-auto lg:w-full lg:max-w-5xl">
       {/* 자체 헤더 */}
-      <header className="app-header">
-        <div className="h-12 flex items-center justify-between px-4">
-          <span className="font-bold text-base tracking-tight">reCree</span>
+      <MobileTitleBar
+        title="reCree"
+        action={
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
+            aria-label="Settings"
             className="flex items-center justify-center size-8"
           >
             <Menu className="size-5" />
           </button>
-        </div>
-      </header>
+        }
+      />
+
+      {/* lg: 위 제목 바를 숨긴 대신 그 메뉴 버튼을 본문 맨 위 오른쪽에 둔다 */}
+      <div className="hidden lg:flex justify-end px-4 pt-[var(--space-page-top)]">
+        <button
+          type="button"
+          onClick={() => setDrawerOpen(true)}
+          aria-label="Settings"
+          className="flex items-center justify-center size-9 rounded-full transition-colors hover:bg-muted"
+        >
+          <Menu className="size-5" />
+        </button>
+      </div>
 
       {/* 프로필 정보 */}
       <div className="px-4 pt-4">
@@ -220,7 +235,7 @@ export function ProfileView({
           </Link>
         </div>
       ) : (
-        <div className="px-2 grid grid-cols-2 gap-2 bg-background">
+        <div className="px-2 grid grid-cols-2 gap-2 bg-background md:grid-cols-3 lg:grid-cols-4">
           {recreeshots.map((shot) => {
             const isHidden = shot.status === "HIDDEN" || shot.status === "REPORT_HIDDEN";
             return (
@@ -263,6 +278,7 @@ export function ProfileView({
               <button
                 type="button"
                 onClick={() => setDrawerOpen(false)}
+                aria-label="Close"
                 className="size-8 flex items-center justify-center"
               >
                 <X className="size-4" />
@@ -320,12 +336,12 @@ export function ProfileView({
 
       {/* 계정 탈퇴 확인 다이얼로그 */}
       {showDeleteDialog && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-4 pb-8">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-4 pb-8 lg:items-center lg:pb-0">
           <div className="w-full max-w-sm bg-background rounded-2xl overflow-hidden">
             <div className="px-5 pt-6 pb-4 text-center space-y-2">
               <p className="font-bold text-base">Delete account?</p>
               <p className="text-sm text-muted-foreground">
-                All your data including saves and reCreeshots will be
+                All your data including saves and recreeshots will be
                 permanently deleted. This cannot be undone.
               </p>
             </div>

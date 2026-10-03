@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
+import { ensureVoterKey, hashRequestIp, hitBurstLimit, HELPFUL_LIMITS } from "@/lib/helpful-vote";
 
 // ─── Zod 스키마 ─────────────────────────────────────────────────────────────
 
@@ -191,5 +192,65 @@ export async function deleteComment(
   } catch (e) {
     console.error("[deleteComment] server_error", e);
     return { error: "server_error" };
+  }
+}
+
+// ─── toggleHelpfulVote ───────────────────────────────────────────────────────
+// "도움이 됐어요" — 로그인 없이 누른다. 같은 기기(voterKey 쿠키)는 글마다 한 번, 다시 누르면 취소.
+// 남용 방지: 순간 연타(메모리) → 같은 곳의 10분 · 글별 24시간 한도(DB) 순으로 막는다 (src/lib/helpful-vote.ts)
+
+export async function toggleHelpfulVote(
+  postId: string
+): Promise<{ voted: boolean; count: number; error?: "invalid_input" | "not_found" | "rate_limited" | "server_error" }> {
+  const parsed = postIdSchema.safeParse(postId);
+  if (!parsed.success) return { voted: false, count: 0, error: "invalid_input" };
+
+  try {
+    const post = await prisma.post.findUnique({
+      where: { id: parsed.data },
+      select: { status: true },
+    });
+    if (!post || post.status !== "PUBLISHED") return { voted: false, count: 0, error: "not_found" };
+
+    const ipHash = await hashRequestIp();
+    if (!ipHash) return { voted: false, count: 0, error: "server_error" };
+    const voterKey = await ensureVoterKey();
+    const where = { postId_voterKey: { postId: parsed.data, voterKey } };
+    const countVotes = () => prisma.postHelpfulVote.count({ where: { postId: parsed.data } });
+
+    if (hitBurstLimit(ipHash)) {
+      const existing = await prisma.postHelpfulVote.findUnique({ where, select: { id: true } });
+      return { voted: !!existing, count: await countVotes(), error: "rate_limited" };
+    }
+
+    // 이미 눌렀으면 취소
+    const removed = await prisma.postHelpfulVote.deleteMany({ where: { postId: parsed.data, voterKey } });
+    if (removed.count > 0) return { voted: false, count: await countVotes() };
+
+    // 새로 남기기 전에 같은 곳의 한도를 센다
+    const now = Date.now();
+    const { perIp, perPostPerIp } = HELPFUL_LIMITS;
+    const [ipRecent, postIpRecent] = await Promise.all([
+      prisma.postHelpfulVote.count({
+        where: { ipHash, createdAt: { gte: new Date(now - perIp.windowMs) } },
+      }),
+      prisma.postHelpfulVote.count({
+        where: { postId: parsed.data, ipHash, createdAt: { gte: new Date(now - perPostPerIp.windowMs) } },
+      }),
+    ]);
+    if (ipRecent >= perIp.max || postIpRecent >= perPostPerIp.max) {
+      return { voted: false, count: await countVotes(), error: "rate_limited" };
+    }
+
+    try {
+      await prisma.postHelpfulVote.create({ data: { postId: parsed.data, voterKey, ipHash } });
+    } catch (e) {
+      // 같은 기기의 동시 요청 — 이미 남아 있으므로 눌린 상태로 본다
+      if (!(e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002")) throw e;
+    }
+    return { voted: true, count: await countVotes() };
+  } catch (e) {
+    console.error("[toggleHelpfulVote] server_error", e);
+    return { voted: false, count: 0, error: "server_error" };
   }
 }

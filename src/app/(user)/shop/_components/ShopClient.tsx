@@ -5,6 +5,8 @@ import type { ShopPostItem } from "@/lib/post-queries";
 import type { TagGroupColorMap } from "@/lib/post-labels";
 import { SHOP_TAG_GROUPS, SHOP_GROUP_LABELS, type ShopTagGroup } from "../_constants";
 import { ShopCard } from "./ShopCard";
+import { PageContainer } from "../../_components/PageContainer";
+import { CARD_GRID } from "@/app/(user)/_components/card-grid";
 
 type ShopTag = { id: string; name: string; group: string };
 type TagGroupConfigRow = {
@@ -54,13 +56,13 @@ export function ShopClient({ posts, shopTags, tagGroupConfigs }: Props) {
   return (
     <div>
       {/* 그룹 탭 */}
-      <div className="flex border-b border-secondary sticky top-0 bg-background z-10">
+      <div className="flex border-b border-secondary sticky top-0 bg-background z-10 lg:top-[var(--top-nav-space)] lg:mx-[var(--page-gutter)] lg:shadow-[0_0_0_100vmax_var(--background)] lg:[clip-path:inset(0_-100vmax)] lg:gap-8">
         {SHOP_TAG_GROUPS.map((group) => (
           <button
             key={group}
             type="button"
             onClick={() => handleGroupChange(group)}
-            className={`flex-1 py-3 text-sm font-medium transition-colors relative ${
+            className={`flex-1 py-3 text-sm font-medium transition-colors relative lg:flex-none ${
               selectedGroup === group ? "text-foreground" : "text-muted-foreground"
             }`}
           >
@@ -73,7 +75,7 @@ export function ShopClient({ posts, shopTags, tagGroupConfigs }: Props) {
       </div>
 
       {/* 태그 칩 */}
-      <div className="flex gap-2 overflow-x-auto px-4 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex gap-2 overflow-x-auto px-4 py-3 lg:px-[var(--page-gutter)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <button
           type="button"
           onClick={() => setSelectedTagId(null)}
@@ -98,19 +100,19 @@ export function ShopClient({ posts, shopTags, tagGroupConfigs }: Props) {
       </div>
 
       {/* 2열 그리드 */}
-      <div className="px-4 pb-8">
+      <PageContainer variant="wide" className="px-4 pb-8">
         {filteredPosts.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-[40vh] text-center">
             <p className="text-sm text-muted-foreground">No products yet</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className={CARD_GRID}>
             {filteredPosts.map((post) => (
               <ShopCard key={post.id} post={post} tagGroupMap={tagGroupMap} />
             ))}
           </div>
         )}
-      </div>
+      </PageContainer>
     </div>
   );
 }

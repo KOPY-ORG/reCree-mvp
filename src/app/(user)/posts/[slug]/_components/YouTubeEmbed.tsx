@@ -1,40 +1,215 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
+import { VolumeX } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { parseYouTubeSource, type YouTubeSource } from "./youtube-source";
+import { afterPageLoad } from "./after-page-load";
+import { EMBED_SKELETON_OVERLAY } from "./embed-styles";
+
 interface Props {
   url: string;
+  // 페이지에서 맨 위 유튜브 하나만 true — 나머지는 눌러서 재생
+  autoplay?: boolean;
 }
 
-function extractVideoId(url: string): string | null {
-  try {
-    const u = new URL(url);
-    if (u.hostname.includes("youtube.com") && u.pathname === "/watch") {
-      return u.searchParams.get("v");
+// YouTube IFrame API 중 여기서 쓰는 것만
+interface YTPlayer {
+  playVideo(): void;
+  unMute(): void;
+  destroy(): void;
+  getIframe(): HTMLIFrameElement;
+}
+
+interface YTNamespace {
+  Player: new (
+    el: HTMLElement,
+    opts: {
+      host: string;
+      videoId: string;
+      width: string;
+      height: string;
+      playerVars: Record<string, string | number>;
+      events: {
+        onReady: () => void;
+      };
     }
-    if (u.hostname === "youtu.be") {
-      return u.pathname.slice(1);
-    }
-    if (u.hostname.includes("youtube.com") && u.pathname.startsWith("/shorts/")) {
-      return u.pathname.split("/shorts/")[1];
-    }
-  } catch {
-    return null;
+  ) => YTPlayer;
+}
+
+declare global {
+  interface Window {
+    YT?: YTNamespace;
+    onYouTubeIframeAPIReady?: () => void;
   }
-  return null;
 }
 
-export function YouTubeEmbed({ url }: Props) {
-  const videoId = extractVideoId(url);
-  if (!videoId) return null;
+let apiPromise: Promise<YTNamespace> | null = null;
+
+function loadYouTubeApi(): Promise<YTNamespace> {
+  if (window.YT?.Player) return Promise.resolve(window.YT);
+  if (!apiPromise) {
+    apiPromise = new Promise((resolve) => {
+      const prev = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        prev?.();
+        resolve(window.YT!);
+      };
+      const script = document.createElement("script");
+      script.src = "https://www.youtube.com/iframe_api";
+      script.async = true;
+      document.head.appendChild(script);
+    });
+  }
+  return apiPromise;
+}
+
+// 플레이어 틀 — 16:9, 모바일 모서리 12, lg 는 카드 모서리(--radius-card). 눌러서 재생 · 자동재생 두 갈래가 같이 쓴다
+const FRAME = "relative aspect-video rounded-xl overflow-hidden w-full lg:rounded-card";
+
+function prefersNoAutoplay(): boolean {
+  const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+  return (
+    connection?.saveData === true ||
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
+// 영어 자막을 기본으로 켜고 플레이어 UI 도 영어로. 자동재생 · 눌러서 재생 두 경로 공통
+const CAPTION_PARAMS = { cc_load_policy: "1", cc_lang_pref: "en", hl: "en" };
+
+function embedSrc({ videoId, start }: YouTubeSource): string {
+  const params = new URLSearchParams({ playsinline: "1", rel: "0", ...CAPTION_PARAMS });
+  if (start > 0) params.set("start", String(start));
+  return `https://www.youtube-nocookie.com/embed/${videoId}?${params}`;
+}
+
+export function YouTubeEmbed({ url, autoplay = false }: Props) {
+  const source = parseYouTubeSource(url);
+  // "auto" 는 서버·첫 렌더 값. 마운트 후 데이터 절약·모션 줄이기면 "tap" 으로 내린다
+  const [mode, setMode] = useState<"auto" | "tap">(autoplay ? "auto" : "tap");
+  const [muted, setMuted] = useState(true);
+  const [ready, setReady] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const playerRef = useRef<YTPlayer | null>(null);
+
+  useEffect(() => {
+    if (mode !== "auto" || !source) return;
+    if (prefersNoAutoplay()) {
+      setMode("tap");
+      return;
+    }
+    const container = containerRef.current;
+    if (!container) return;
+
+    let cancelled = false;
+    let observer: IntersectionObserver | null = null;
+
+    const createPlayer = async () => {
+      const YT = await loadYouTubeApi();
+      if (cancelled) return;
+      // YT.Player 가 이 요소를 iframe 으로 갈아끼우므로 React 가 모르는 요소를 쓴다
+      const target = document.createElement("div");
+      container.appendChild(target);
+      playerRef.current = new YT.Player(target, {
+        host: "https://www.youtube-nocookie.com",
+        videoId: source.videoId,
+        width: "100%",
+        height: "100%",
+        playerVars: {
+          autoplay: 1,
+          mute: 1,
+          playsinline: 1,
+          rel: 0,
+          ...CAPTION_PARAMS,
+          ...(source.start > 0 && { start: source.start }),
+        },
+        events: {
+          onReady: () => {
+            if (cancelled) return;
+            // 플레이어가 만든 iframe 에 제목이 없으면 붙인다 (스크린리더가 읽을 이름). YouTube 가 붙였으면 그대로 둔다
+            const frame = playerRef.current?.getIframe();
+            if (frame && !frame.title) frame.title = "YouTube video";
+            setReady(true);
+          },
+        },
+      });
+    };
+
+    const cancelWait = afterPageLoad(() => {
+      if (cancelled) return;
+      // 처음 화면에 들어올 때 플레이어를 만들고, 그 뒤로는 보는지 여부를 따지지 않는다 —
+      // 스크롤로 화면 밖에 나가도 멈추지 않고 페이지에 있는 동안 계속 재생한다(소리 켠 채 글을 읽을 수 있게).
+      // 멈춤은 사용자가 플레이어에서 누를 때뿐이고, 그 영상을 다시 틀지 않는다. 페이지를 떠나면 아래 정리에서 플레이어를 없앤다
+      observer = new IntersectionObserver(
+        ([entry]) => {
+          if (!entry.isIntersecting) return;
+          observer?.disconnect();
+          void createPlayer();
+        },
+        { threshold: 0.5 }
+      );
+      observer.observe(container);
+    });
+
+    return () => {
+      cancelled = true;
+      cancelWait();
+      observer?.disconnect();
+      playerRef.current?.destroy();
+      playerRef.current = null;
+      container.replaceChildren();
+    };
+    // source 는 url 에서 매 렌더 새로 만들어지므로 url 로 의존한다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, url]);
+
+  if (!source) return null;
+
+  // 플레이어가 준비되기 전까지 같은 크기의 스켈레톤을 덮는다
+  const skeleton = !ready && <Skeleton className={EMBED_SKELETON_OVERLAY} />;
+
+  if (mode === "tap") {
+    return (
+      <div className={FRAME}>
+        <iframe
+          src={embedSrc(source)}
+          className="w-full h-full border-0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          loading="lazy"
+          title="YouTube video"
+          onLoad={() => setReady(true)}
+        />
+        {skeleton}
+      </div>
+    );
+  }
 
   return (
-    <div className="aspect-video rounded-xl overflow-hidden w-full">
-      <iframe
-        src={`https://www.youtube.com/embed/${videoId}`}
-        className="w-full h-full border-0"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowFullScreen
-        title="YouTube video"
-      />
+    <div className={FRAME}>
+      <div ref={containerRef} className="absolute inset-0 [&>iframe]:size-full" />
+      {skeleton}
+      {/* 아이콘만 둔 반투명 원. 브랜드 라임 90% + blur 로 영상이 살짝 비친다. 라임 위 아이콘은 검정.
+          누르면 바로 줄어들고(press-scale), 소리가 켜지면 작아지며 사라진다. 사라진 뒤에는 포커스 순서에서도 빠진다 */}
+      {ready && (
+        <button
+          type="button"
+          onClick={() => {
+            playerRef.current?.unMute();
+            playerRef.current?.playVideo();
+            setMuted(false);
+          }}
+          aria-label="Turn sound on"
+          aria-hidden={!muted}
+          tabIndex={muted ? 0 : -1}
+          className={`press-scale absolute left-3 top-3 flex size-10 items-center justify-center rounded-full bg-brand/90 text-brand-foreground backdrop-blur-sm transition-[transform,scale,opacity,visibility] duration-150 ease-out-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${
+            muted ? "" : "invisible scale-90 opacity-0 delay-[0ms,0ms,0ms,150ms]"
+          }`}
+        >
+          <VolumeX className="size-5" aria-hidden="true" />
+        </button>
+      )}
     </div>
   );
 }
