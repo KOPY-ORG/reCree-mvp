@@ -196,6 +196,7 @@ export function PostComments({
                         <button
                           type="button"
                           onClick={() => handleDelete(comment.id)}
+                          aria-label="Delete comment"
                           className="text-muted-foreground hover:text-destructive transition-colors"
                         >
                           <Trash2 className="size-3.5" />

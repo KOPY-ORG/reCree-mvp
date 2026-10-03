@@ -5,6 +5,8 @@ import Image from "next/image";
 import { isExternalImage, focalStyle } from "@/lib/image";
 import { Play, Camera, Link2 } from "lucide-react";
 import { parseYouTubeSource, youTubeThumbnail } from "./youtube-source";
+import { hostnameOf } from "@/lib/url";
+import { ORIGINAL_CARDS_OVERLAY } from "./source-card-styles";
 
 interface OriginalImage {
   id: string;
@@ -22,15 +24,11 @@ interface Props {
 }
 
 function getShortDomain(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, "").split(".")[0];
-  } catch {
-    return "";
-  }
+  return hostnameOf(url, "").split(".")[0];
 }
 
 function getHostname(url: string): string {
-  try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return ""; }
+  return hostnameOf(url, "");
 }
 
 function DomainFallback({ url }: { url: string }) {
@@ -105,13 +103,13 @@ function SourceCard({ image, youTubeVideoId, onClick }: { image: OriginalImage; 
       onClick={onClick}
     >
       {youTubeVideoId ? (
-        <YouTubeThumbnail videoId={youTubeVideoId} alt="youtube" />
+        <YouTubeThumbnail videoId={youTubeVideoId} alt="Original scene on YouTube" />
       ) : error ? (
         <DomainFallback url={image.url} />
       ) : (
         <Image
           src={image.url}
-          alt={shortDomain}
+          alt={shortDomain ? `Original scene from ${shortDomain}` : "Original scene"}
           fill
           unoptimized={isExternalImage(image.url)}
           className="object-cover"
@@ -129,7 +127,7 @@ export function OriginalSourceCards({ images, originalLinkUrls, className }: Pro
 
   return (
     // lg 표시 여부는 부르는 쪽이 정한다 — 사진 미디어 칸 위에만 띄우고, 영상이 미디어 칸인 글에서는 숨긴다
-    <div className={className ?? "absolute bottom-3 left-3 sm:bottom-4 sm:left-4 flex gap-2 sm:gap-3 z-10"}>
+    <div className={className ?? ORIGINAL_CARDS_OVERLAY}>
       {images.map((img, i) => {
         const clickUrl = img.linkUrl ?? originalLinkUrls?.[i] ?? null;
         // 카드가 유튜브를 열면 저장된 장면 이미지 대신 그 영상의 공식 썸네일을 보여준다 (DB 값은 그대로)

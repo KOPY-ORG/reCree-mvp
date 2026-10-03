@@ -153,7 +153,7 @@ export function InfiniteFeed({
       {/* 상한("capped")으로 멈춘 경우는 더 볼 게 남아 있으므로 아무것도 알리지 않는다 */}
       {endReason === "caught-up" && !isLoading && !error && posts.length > 0 && (
         <p className="mt-8 text-center text-sm text-muted-foreground">
-          You're all caught up.
+          You&apos;re all caught up.
         </p>
       )}
 

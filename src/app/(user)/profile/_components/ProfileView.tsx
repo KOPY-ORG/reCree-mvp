@@ -25,6 +25,7 @@ import type { CourseListItem } from "@/lib/course-queries";
 import { deleteAccount } from "../_actions/profile-actions";
 import { signOut } from "@/lib/actions/auth";
 import { showError } from "@/lib/toast";
+import { MobileTitleBar } from "@/app/(user)/_components/MobileTitleBar";
 
 /** 프로필에 미리 보여줄 코스 개수. 넘으면 "See all" 로 /journeys 에 넘긴다 */
 const PROFILE_COURSE_LIMIT = 6;
@@ -78,18 +79,19 @@ export function ProfileView({
     // lg: 한 사람의 모음이라 1440 전체로 펼치지 않고 읽는 폭에서 멈춘다
     <div className="flex flex-col min-h-full lg:mx-auto lg:w-full lg:max-w-5xl">
       {/* 자체 헤더 */}
-      <header className="app-header lg:hidden">
-        <div className="h-12 flex items-center justify-between px-4">
-          <span className="font-bold text-base tracking-tight">reCree</span>
+      <MobileTitleBar
+        title="reCree"
+        action={
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
+            aria-label="Settings"
             className="flex items-center justify-center size-8"
           >
             <Menu className="size-5" />
           </button>
-        </div>
-      </header>
+        }
+      />
 
       {/* lg: 위 제목 바를 숨긴 대신 그 메뉴 버튼을 본문 맨 위 오른쪽에 둔다 */}
       <div className="hidden lg:flex justify-end px-4 pt-[var(--space-page-top)]">
@@ -276,6 +278,7 @@ export function ProfileView({
               <button
                 type="button"
                 onClick={() => setDrawerOpen(false)}
+                aria-label="Close"
                 className="size-8 flex items-center justify-center"
               >
                 <X className="size-4" />
@@ -338,7 +341,7 @@ export function ProfileView({
             <div className="px-5 pt-6 pb-4 text-center space-y-2">
               <p className="font-bold text-base">Delete account?</p>
               <p className="text-sm text-muted-foreground">
-                All your data including saves and reCreeshots will be
+                All your data including saves and recreeshots will be
                 permanently deleted. This cannot be undone.
               </p>
             </div>

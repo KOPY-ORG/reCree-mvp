@@ -199,7 +199,7 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
       {/* 헤더 */}
       {/* lg: 상단 바가 길을 잡으므로 뒤로가기는 숨기고, 더보기(⋮)만 바탕 · 경계선 없이 남긴다 */}
       <div className="flex items-center justify-between px-2 h-12 bg-white border-b border-gray-100 lg:bg-transparent lg:border-b-0">
-        <button type="button" onClick={handleBack} className="p-2 rounded-full lg:invisible">
+        <button type="button" onClick={handleBack} aria-label="Back" className="p-2 rounded-full lg:invisible">
           <ChevronLeft className="size-5 text-black" />
         </button>
 
@@ -208,6 +208,8 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
             type="button"
             onClick={() => setMenuOpen((v) => !v)}
             disabled={isDeleting}
+            aria-label="More options"
+            aria-expanded={menuOpen}
             className="p-2 rounded-full disabled:opacity-50"
           >
             <MoreVertical className="size-5 text-black" />
@@ -267,7 +269,7 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
         {/* eslint-disable-next-line @next/next/no-img-element -- HTML 오버레이 렌더링(CORS 불필요), 사용자 업로드 이미지 */}
         <img
           src={imageUrl}
-          alt="recreeshot"
+          alt="recreeshot photo"
           className="w-full h-full object-cover"
         />
 
@@ -296,7 +298,7 @@ export function HallDetailTopSection({ id, isOwner, isLoggedIn, imageUrl, refere
               }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element -- 레퍼런스 오버레이: 외부 사용자 이미지 */}
-              <img src={referencePhotoUrl} alt="original" className="w-full h-full object-cover" />
+              <img src={referencePhotoUrl} alt="Original reference photo" className="w-full h-full object-cover" />
             </div>
           </div>
         )}

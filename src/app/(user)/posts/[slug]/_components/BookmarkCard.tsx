@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { Play, Camera, Music, ExternalLink } from "lucide-react";
 import type { SourcePlatform } from "@/types";
+import { SOURCE_CARD, SOURCE_CARD_BADGE, SOURCE_CARD_LG_THUMB, SOURCE_DETAIL } from "./source-card-styles";
+import { hostnameOf } from "@/lib/url";
 
 interface Props {
   url: string;
@@ -22,16 +24,10 @@ function tidyQuotes(text: string): string {
   return text.replace(/["“”＂]{2,}/g, '"');
 }
 
-/**
- * lg — 오른쪽 열(350~380) 폭에 맞춘 한 줄 카드. 왼쪽 칸은 카드 높이를 채우는 띠 대신 44 둥근 네모가 된다.
- * 모바일 모양은 그대로다
- */
-const LG_THUMB = "lg:ml-3.5 lg:size-11 lg:self-center lg:rounded-xl";
-
 function PlatformFallback({ platform }: { platform?: SourcePlatform }) {
   const p = platform?.toUpperCase();
 
-  const base = `w-20 shrink-0 self-stretch flex items-center justify-center ${LG_THUMB}`;
+  const base = SOURCE_CARD_BADGE;
   if (p === "YOUTUBE") {
     return <div className={`${base} bg-red-600`}><Play className="h-6 w-6 text-white fill-white" /></div>;
   }
@@ -64,13 +60,10 @@ export function BookmarkCard({ url, platform, sourceDetail }: Props) {
       .finally(() => setLoading(false));
   }, [url]);
 
-  let hostname = "";
-  try {
-    hostname = new URL(url).hostname.replace(/^www\./, "");
-  } catch {}
+  const hostname = hostnameOf(url, "");
 
   if (loading) {
-    return <div className="h-20 rounded-[var(--radius-card)] animate-pulse bg-muted lg:h-[72px]" />;
+    return <div className="h-20 rounded-card animate-pulse bg-muted lg:h-[72px]" />;
   }
 
   return (
@@ -78,8 +71,7 @@ export function BookmarkCard({ url, platform, sourceDetail }: Props) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      // 왼쪽 썸네일 · 플랫폼 칸은 카드가 자르는 모서리(20px)를 그대로 따라간다 — 칸에 따로 모서리를 주지 않는다
-      className="surface-card flex flex-row overflow-hidden min-h-20 transition-opacity active:opacity-70 lg:min-h-[72px] lg:items-center lg:hover:opacity-80"
+      className={SOURCE_CARD}
     >
       {/* 좌측 썸네일 */}
       {og?.thumbnailUrl && !imgError ? (
@@ -87,7 +79,7 @@ export function BookmarkCard({ url, platform, sourceDetail }: Props) {
         <img
           src={og.thumbnailUrl}
           alt={og.title ?? ""}
-          className={`w-20 shrink-0 self-stretch object-cover ${LG_THUMB}`}
+          className={`w-20 shrink-0 self-stretch object-cover ${SOURCE_CARD_LG_THUMB}`}
           onError={() => setImgError(true)}
         />
       ) : (
@@ -109,7 +101,7 @@ export function BookmarkCard({ url, platform, sourceDetail }: Props) {
           <p className="text-[12px] text-gray-500 mt-0.5 truncate lg:text-[13px]">{tidyQuotes(og.description)}</p>
         )}
         {sourceDetail && (
-          <p className="text-[11px] text-muted-foreground/70 mt-1 leading-snug italic">{sourceDetail}</p>
+          <p className={SOURCE_DETAIL}>{sourceDetail}</p>
         )}
       </div>
       <ExternalLink className="mr-4 hidden size-4 shrink-0 text-muted-foreground lg:block" aria-hidden="true" />

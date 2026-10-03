@@ -47,21 +47,21 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
             </div>
             <div className="flex items-center gap-1.5 shrink-0 lg:order-3">
               {place.googleMapsUrl && (
-                <a href={place.googleMapsUrl} target="_blank" rel="noopener noreferrer" className={iconBtnCls}>
+                <a href={place.googleMapsUrl} target="_blank" rel="noopener noreferrer" aria-label="Open in Google Maps" className={iconBtnCls}>
                   <ExternalLink className="size-4" />
                 </a>
               )}
               {place.naverMapsUrl && (
-                <a href={place.naverMapsUrl} target="_blank" rel="noopener noreferrer" className={iconBtnCls}>
+                <a href={place.naverMapsUrl} target="_blank" rel="noopener noreferrer" aria-label="Open in NAVER Map" className={iconBtnCls}>
                   <ExternalLink className="size-4" />
                 </a>
               )}
               {place.streetViewUrl && (
-                <a href={place.streetViewUrl} target="_blank" rel="noopener noreferrer" className={iconBtnCls}>
+                <a href={place.streetViewUrl} target="_blank" rel="noopener noreferrer" aria-label="Open Street View" className={iconBtnCls}>
                   <Map className="size-4" />
                 </a>
               )}
-              <button type="button" onClick={onClose} className="shrink-0 active:opacity-60">
+              <button type="button" onClick={onClose} aria-label="Close" className="shrink-0 active:opacity-60">
                 <X className="size-5 text-muted-foreground" />
               </button>
             </div>
@@ -78,6 +78,7 @@ export function PlaceBottomSheet({ place, savedPostIds, tagGroupMap, onClose }: 
                 <button
                   type="button"
                   onClick={() => copyToClipboard(address)}
+                  aria-label="Copy address"
                   className="shrink-0 active:opacity-60"
                 >
                   <Copy className="w-3 h-3" />

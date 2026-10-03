@@ -14,6 +14,7 @@ import {
 import { fetchNearbyAttractions } from "@/app/(user)/_actions/tour-actions";
 import { TOUR_API_ATTRIBUTION } from "@/lib/tour-api/attribution";
 import { CHIP_BG, INK, LINE, MUTED, PAPER, SUB } from "../_constants";
+import { BOTTOM_SHEET_CONTENT, SheetHandle } from "@/components/bottom-sheet-frame";
 
 // ─── 상수 ────────────────────────────────────────────────────────────────────
 
@@ -561,13 +562,9 @@ export function PlaceAddSheet({
         side="bottom"
         showCloseButton={false}
         aria-describedby={undefined}
-        // 시트는 fixed 라 레이아웃 기둥(--app-col-w) 밖으로 나간다 — 그 폭을 여기서 다시 건다
-        // ((user)/layout.tsx:20 과 같은 값·같은 방식. AttractionDetailSheet.tsx:266 참고)
-        className="mx-auto flex max-h-[88vh] max-w-[var(--app-col-w)] flex-col gap-0 rounded-t-2xl p-0"
+        className={BOTTOM_SHEET_CONTENT}
       >
-        <div className="flex flex-none justify-center pb-1 pt-3">
-          <div className="h-1 w-9 rounded-full bg-muted-foreground/25 lg:hidden" />
-        </div>
+        <SheetHandle />
 
         <div className="flex flex-none items-center gap-2 px-3 pb-1">
           <SheetTitle className="min-w-0 flex-1 pl-2 text-[15px] font-bold" style={{ color: INK }}>

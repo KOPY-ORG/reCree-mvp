@@ -2,7 +2,9 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { LG_QUERY } from "@/lib/bottom-nav";
 import { afterPageLoad } from "./after-page-load";
+import { EMBED_FADE, EMBED_SKELETON_OVERLAY } from "./embed-styles";
 import type { SocialEmbedSource } from "./social-source";
 
 /**
@@ -17,7 +19,6 @@ import type { SocialEmbedSource } from "./social-source";
  * 불러오기는 페이지가 다 그려진 뒤, 블록이 화면 가까이 올 때 시작한다. 카드 글은 영어로 고정한다(인스타 hl=en, X lang=en).
  */
 
-const LG_QUERY = "(min-width: 64rem)";
 const LOAD_TIMEOUT_MS = 8000;
 // 기준 줄(좋아요 · 저장 · 도움이 됐어요)이 없는 글(미리보기)의 lg 미디어 높이 · 가장 낮은 높이
 const DEFAULT_MEDIA_H = 480;
@@ -187,6 +188,11 @@ type CardProps = {
   fail: () => void;
 };
 
+// lg 에서 카드 크기를 알기 전 자리 — 미디어 높이에 어림 비율(폭 / 높이)의 폭
+function placeholderBox(media: Media, ratio: number) {
+  return { width: media.h * ratio, height: media.h };
+}
+
 // lg 에서 카드를 미디어 높이에 맞춘 배율. 쓸 수 있는 폭을 넘으면 폭에 맞춘다
 function lgScale(media: Media, natural: { w: number; h: number }): number {
   return Math.min(media.h / natural.h, media.maxW / natural.w);
@@ -231,7 +237,7 @@ function InstagramCard({ id, go, media, onLoad }: CardProps) {
       src={`https://www.instagram.com/p/${id}/embed/?hl=en`}
       title="Instagram post"
       scrolling="no"
-      className={`border-0 bg-white transition-opacity duration-200 ease-out ${
+      className={`border-0 bg-white ${EMBED_FADE} ${
         media ? "absolute left-0 top-0 origin-top-left" : ready ? "block w-full" : "absolute inset-x-0 top-0"
       } ${ready ? "opacity-100" : "opacity-0"}`}
       style={media ? { width: IG_LG_W, height: height ?? 600, transform: `scale(${s})` } : { height: height ?? 600 }}
@@ -240,11 +246,11 @@ function InstagramCard({ id, go, media, onLoad }: CardProps) {
 
   if (media) {
     // 축소 · 확대는 transform 이라 자리를 차지하지 않는다 — 보이는 크기만큼 자리를 잡는다
-    const box = height !== null ? { width: IG_LG_W * s, height: height * s } : { width: media.h * 0.6, height: media.h };
+    const box = height !== null ? { width: IG_LG_W * s, height: height * s } : placeholderBox(media, 0.6);
     return (
       <div className="relative overflow-hidden" style={box}>
         {frame}
-        {!ready && <Skeleton className="absolute inset-0 rounded-none" />}
+        {!ready && <Skeleton className={EMBED_SKELETON_OVERLAY} />}
       </div>
     );
   }
@@ -393,16 +399,16 @@ function XCard({ id, go, media, onLoad, fail }: CardProps) {
 
   if (media) {
     const s = ready && natural ? lgScale(media, natural) : 1;
-    const box = ready && natural ? { width: natural.w * s, height: natural.h * s } : { width: media.h * 0.75, height: media.h };
+    const box = ready && natural ? { width: natural.w * s, height: natural.h * s } : placeholderBox(media, 0.75);
     return (
       <div className="relative overflow-hidden" style={box}>
         {/* 축소 · 확대한 iframe 도 누르고 넘기는 것은 그대로 된다 */}
         <div
           ref={holderRef}
-          className={`absolute left-0 top-0 origin-top-left transition-opacity duration-200 ease-out ${ready ? "opacity-100" : "opacity-0"}`}
+          className={`absolute left-0 top-0 origin-top-left ${EMBED_FADE} ${ready ? "opacity-100" : "opacity-0"}`}
           style={{ transform: `scale(${s})` }}
         />
-        {!ready && <Skeleton className="absolute inset-0 rounded-none" />}
+        {!ready && <Skeleton className={EMBED_SKELETON_OVERLAY} />}
       </div>
     );
   }
@@ -411,7 +417,7 @@ function XCard({ id, go, media, onLoad, fail }: CardProps) {
       {!ready && <Skeleton className="h-[420px] rounded-none" />}
       <div
         ref={holderRef}
-        className={`transition-opacity duration-200 ease-out ${ready ? "opacity-100" : "absolute inset-x-0 top-0 opacity-0"}`}
+        className={`${EMBED_FADE} ${ready ? "opacity-100" : "absolute inset-x-0 top-0 opacity-0"}`}
       />
     </div>
   );

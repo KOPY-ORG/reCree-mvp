@@ -71,6 +71,7 @@ export function DiscoverSearchBar({
                 <button
                   type="button"
                   onClick={onClearQuery}
+                  aria-label="Clear search"
                   className="shrink-0 text-muted-foreground flex items-center"
                 >
                   <X className="w-4 h-4" />
@@ -130,6 +131,7 @@ export function DiscoverSearchBar({
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); onRemoveRecent(term); }}
+                      aria-label={`Remove ${term}`}
                       className="shrink-0 text-muted-foreground flex items-center"
                     >
                       <X className="w-4 h-4" />

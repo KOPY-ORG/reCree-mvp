@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { GuideVideoCard } from "../../_components/GuideVideoCard";
 import { ReCreeshotImage } from "@/components/recreeshot-image";
+import { CARD_GRID } from "@/app/(user)/_components/card-grid";
 
 interface LabelItem {
   text: string;
@@ -37,7 +38,7 @@ export function HallGrid({ shots, guideVideo }: Props) {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+    <div className={CARD_GRID}>
       {guideVideo && (
         <GuideVideoCard
           videoUrl={guideVideo.videoUrl}

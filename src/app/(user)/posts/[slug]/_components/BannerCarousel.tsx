@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import Image from "next/image";
 import { isExternalImage, focalStyle } from "@/lib/image";
 import { ImageIcon, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from "lucide-react";
+import { isRailLayout } from "@/lib/bottom-nav";
 
 interface BannerImage {
   id: string;
@@ -25,9 +26,6 @@ interface Props {
    */
   lgLayout?: "media" | "strip" | "column";
 }
-
-/** lg 판정 — 화살표가 한 장씩 넘길지(모바일 캐러셀), 줄을 스크롤할지(lg strip) 정한다. globals.css 의 lg(64rem)와 같은 값 */
-const LG_QUERY = "(min-width: 64rem)";
 
 export function BannerCarousel({ images, children, lgLayout = "media" }: Props) {
   const strip = lgLayout === "strip";
@@ -64,7 +62,8 @@ export function BannerCarousel({ images, children, lgLayout = "media" }: Props) 
   // lg strip · column 은 트랙이 스크롤 상자가 된다 — 화살표는 사진 한 장(+ 간격)만큼 스크롤한다 (column 은 세로로)
   function scrollStrip(dir: 1 | -1): boolean {
     const track = trackRef.current;
-    if (!scrolls || !track || !window.matchMedia(LG_QUERY).matches) return false;
+    // lg 판정 — 화살표가 한 장씩 넘길지(모바일 캐러셀), 줄을 스크롤할지(lg strip · column) 정한다
+    if (!scrolls || !track || !isRailLayout()) return false;
     const slide = track.querySelector<HTMLElement>("[data-strip-slide]");
     const cs = getComputedStyle(track);
     if (column) {
@@ -209,14 +208,14 @@ export function BannerCarousel({ images, children, lgLayout = "media" }: Props) 
       <div className="absolute inset-x-0 top-0 h-[28%] bg-gradient-to-b from-black/40 to-transparent pointer-events-none z-10 lg:hidden" />
       <div className={`absolute inset-x-0 bottom-0 h-[22%] bg-gradient-to-t from-black/[0.18] to-transparent pointer-events-none z-10 ${lg.overlay}`} />
 
-      {/* 화살표 버튼 (데스크톱, 2장 이상) */}
+      {/* 화살표 버튼 (데스크톱, 2장 이상). sm~md 는 마우스를 올렸을 때만 보이므로, 키보드로 닿으면 포커스 링과 함께 보이게 한다 */}
       {total >= 2 && (
         <>
           <button
             type="button"
             onClick={prev}
-            className={`hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 z-20 items-center justify-center w-9 h-9 rounded-full bg-black/40 text-white opacity-0 hover:opacity-100 group-hover:opacity-100 transition-opacity hover:bg-black/60 ${arrowLg} ${lg.arrowSide.prev} ${lg.arrowHide}`}
-            aria-label="이전 이미지"
+            className={`hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 z-20 items-center justify-center w-9 h-9 rounded-full bg-black/40 text-white opacity-0 hover:opacity-100 group-hover:opacity-100 transition-opacity hover:bg-black/60 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${arrowLg} ${lg.arrowSide.prev} ${lg.arrowHide}`}
+            aria-label="Previous photo"
           >
             <ChevronLeft className={`h-5 w-5 ${column ? "lg:hidden" : ""}`} />
             {column && <ChevronUp className="hidden h-5 w-5 lg:block" />}
@@ -224,8 +223,8 @@ export function BannerCarousel({ images, children, lgLayout = "media" }: Props) 
           <button
             type="button"
             onClick={next}
-            className={`hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 z-20 items-center justify-center w-9 h-9 rounded-full bg-black/40 text-white opacity-0 hover:opacity-100 group-hover:opacity-100 transition-opacity hover:bg-black/60 ${arrowLg} ${lg.arrowSide.next} ${lg.arrowHide}`}
-            aria-label="다음 이미지"
+            className={`hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 z-20 items-center justify-center w-9 h-9 rounded-full bg-black/40 text-white opacity-0 hover:opacity-100 group-hover:opacity-100 transition-opacity hover:bg-black/60 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${arrowLg} ${lg.arrowSide.next} ${lg.arrowHide}`}
+            aria-label="Next photo"
           >
             <ChevronRight className={`h-5 w-5 ${column ? "lg:hidden" : ""}`} />
             {column && <ChevronDown className="hidden h-5 w-5 lg:block" />}
@@ -244,6 +243,8 @@ export function BannerCarousel({ images, children, lgLayout = "media" }: Props) 
               key={i}
               type="button"
               onClick={() => { if (!transitioning) goTo(i + 1); }}
+              aria-label={`Photo ${i + 1} of ${total}`}
+              aria-current={i === dotIndex ? "true" : undefined}
               className={`rounded-full transition-all duration-200 ${
                 i === dotIndex ? "w-3 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/50"
               }`}

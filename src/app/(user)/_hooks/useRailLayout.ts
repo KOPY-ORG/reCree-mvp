@@ -1,8 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-
-const QUERY = "(min-width: 64rem)";
+import { LG_QUERY as QUERY } from "@/lib/bottom-nav";
 
 function subscribe(onChange: () => void) {
   const mql = window.matchMedia(QUERY);

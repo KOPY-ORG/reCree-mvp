@@ -5,6 +5,7 @@ import { VolumeX } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { parseYouTubeSource, type YouTubeSource } from "./youtube-source";
 import { afterPageLoad } from "./after-page-load";
+import { EMBED_SKELETON_OVERLAY } from "./embed-styles";
 
 interface Props {
   url: string;
@@ -17,6 +18,7 @@ interface YTPlayer {
   playVideo(): void;
   unMute(): void;
   destroy(): void;
+  getIframe(): HTMLIFrameElement;
 }
 
 interface YTNamespace {
@@ -61,6 +63,9 @@ function loadYouTubeApi(): Promise<YTNamespace> {
   }
   return apiPromise;
 }
+
+// 플레이어 틀 — 16:9, 모바일 모서리 12, lg 는 카드 모서리(--radius-card). 눌러서 재생 · 자동재생 두 갈래가 같이 쓴다
+const FRAME = "relative aspect-video rounded-xl overflow-hidden w-full lg:rounded-card";
 
 function prefersNoAutoplay(): boolean {
   const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
@@ -122,6 +127,9 @@ export function YouTubeEmbed({ url, autoplay = false }: Props) {
         events: {
           onReady: () => {
             if (cancelled) return;
+            // 플레이어가 만든 iframe 에 제목이 없으면 붙인다 (스크린리더가 읽을 이름). YouTube 가 붙였으면 그대로 둔다
+            const frame = playerRef.current?.getIframe();
+            if (frame && !frame.title) frame.title = "YouTube video";
             setReady(true);
           },
         },
@@ -159,11 +167,11 @@ export function YouTubeEmbed({ url, autoplay = false }: Props) {
   if (!source) return null;
 
   // 플레이어가 준비되기 전까지 같은 크기의 스켈레톤을 덮는다
-  const skeleton = !ready && <Skeleton className="absolute inset-0 rounded-none" />;
+  const skeleton = !ready && <Skeleton className={EMBED_SKELETON_OVERLAY} />;
 
   if (mode === "tap") {
     return (
-      <div className="relative aspect-video rounded-xl overflow-hidden w-full lg:rounded-[20px]">
+      <div className={FRAME}>
         <iframe
           src={embedSrc(source)}
           className="w-full h-full border-0"
@@ -179,7 +187,7 @@ export function YouTubeEmbed({ url, autoplay = false }: Props) {
   }
 
   return (
-    <div className="relative aspect-video rounded-xl overflow-hidden w-full lg:rounded-[20px]">
+    <div className={FRAME}>
       <div ref={containerRef} className="absolute inset-0 [&>iframe]:size-full" />
       {skeleton}
       {/* 아이콘만 둔 반투명 원. 브랜드 라임 90% + blur 로 영상이 살짝 비친다. 라임 위 아이콘은 검정.

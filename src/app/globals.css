@@ -2,6 +2,9 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* docs/ 는 설계 문서 · 시안이다 — 거기 적힌 클래스 이름으로 CSS 를 만들지 않는다 */
+@source not "../../docs";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -119,17 +122,14 @@ html[data-nav-tucked] {
     visibility 0s;
 }
 
-/* lg 의 상단 바는 지도 시트와 겹치지 않으므로 물러나지 않는다 */
-@media (width < 64rem) {
-  html[data-nav-tucked] .nav-tuckable {
-    opacity: 0;
-    transform: translateY(var(--bottom-nav-inset));
-    visibility: hidden;
-    transition:
-      opacity 160ms var(--nav-exit),
-      transform 160ms var(--nav-exit),
-      visibility 0s 160ms;
-  }
+html[data-nav-tucked] .nav-tuckable {
+  opacity: 0;
+  transform: translateY(var(--bottom-nav-inset));
+  visibility: hidden;
+  transition:
+    opacity 160ms var(--nav-exit),
+    transform 160ms var(--nav-exit),
+    visibility 0s 160ms;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -230,7 +230,6 @@ html[data-nav-tucked] {
     --w-reading: 1200px;
     --w-narrow: 42rem;
     --space-page-top: 32px;
-    --space-section: 48px;
     --app-col-w: calc(var(--w-wide) + 2 * var(--page-gutter));
     --discover-panel-w: clamp(min(440px, calc(50% - 12px)), 42%, 680px);
   }

@@ -59,13 +59,13 @@ export const BOTTOM_NAV_ITEM_GAP = 0;
 export const BOTTOM_NAV_PAD = 4;
 
 /** 알약 높이. 48 + 4·2 + 테두리 1·2 */
-export const BOTTOM_NAV_PILL_H = BOTTOM_NAV_ITEM + BOTTOM_NAV_PAD * 2 + 2; // 58
+const BOTTOM_NAV_PILL_H = BOTTOM_NAV_ITEM + BOTTOM_NAV_PAD * 2 + 2; // 58
 
 /** 화면 가장자리에서 탭바까지. 좌·우·아래가 같아야 "떠 있는 물체"로 읽힌다 */
-export const BOTTOM_NAV_INSET = 20;
+const BOTTOM_NAV_INSET = 20;
 
 /** 탭바와 콘텐츠 사이 최소 간격 */
-export const BOTTOM_NAV_GAP = 12;
+const BOTTOM_NAV_GAP = 12;
 
 /**
  * 탭바가 콘텐츠에서 가져가는 세로 공간.
@@ -77,10 +77,13 @@ export const BOTTOM_NAV_GAP = 12;
 export const BOTTOM_NAV_SPACE = BOTTOM_NAV_INSET + BOTTOM_NAV_PILL_H + BOTTOM_NAV_GAP; // 90
 
 /**
- * lg(≥1024) 에서 탭바가 가져가는 세로 공간. 알약이 상단 바로 옮겨 가서
+ * lg(≥1024) 에서 탭바가 가져가는 세로 공간. 탭바가 없고(상단 바 DesktopHeader)
  * 떠 있는 요소가 바닥에서 띄우는 24 만 남는다 (globals.css 의 lg --bottom-nav-space 와 짝).
  */
-export const BOTTOM_NAV_SPACE_LG = 24;
+const BOTTOM_NAV_SPACE_LG = 24;
+
+/** lg(≥1024) 미디어 쿼리. globals.css 의 lg(64rem)와 같은 값이다 — JS 판정은 모두 이 문자열을 쓴다 */
+export const LG_QUERY = "(min-width: 64rem)";
 
 /**
  * lg 레이아웃(상단 바 · 지도 옆 패널)인지.
@@ -89,7 +92,7 @@ export const BOTTOM_NAV_SPACE_LG = 24;
  * 이 함수는 지도 카메라 여백 · 시트 스냅처럼 이벤트 · effect 안에서 도는 JS 계산에만 쓴다.
  */
 export function isRailLayout(): boolean {
-  return typeof window !== "undefined" && window.matchMedia("(min-width: 64rem)").matches;
+  return typeof window !== "undefined" && window.matchMedia(LG_QUERY).matches;
 }
 
 /** JS 계산용 탭바 공간. 모바일은 BOTTOM_NAV_SPACE 그대로다 */
@@ -98,7 +101,7 @@ export function bottomNavSpace(): number {
 }
 
 /**
- * 모바일에서만 탭바를 숨기는 화면. lg 에서는 같은 컴포넌트가 상단 바라 그대로 둔다.
+ * 탭바를 숨기는 화면. 탭바는 원래 모바일 · 태블릿 전용이다(lg 는 DesktopHeader).
  * 게시글 상세는 읽는 화면이라 아래를 비우고, 그 자리를 View on Map 같은 화면 고유 버튼이 쓴다.
  * 이 화면에서 아래에 뜨는 것들은 --bottom-nav-space 대신 화면 아래(--bottom-nav-bottom)에 붙는다.
  */
@@ -158,4 +161,9 @@ export function isFullBleedScreen(pathname: string): boolean {
  */
 export function setBottomNavTucked(tucked: boolean): void {
   document.documentElement.toggleAttribute("data-nav-tucked", tucked);
+}
+
+/** 내비 항목이 지금 화면인지. startsWith(href) 만 쓰면 /feed 가 /feedback 까지 잡는다 (BottomNav · DesktopHeader) */
+export function isNavActive(pathname: string, href: string): boolean {
+  return pathname === href || pathname.startsWith(href + "/");
 }

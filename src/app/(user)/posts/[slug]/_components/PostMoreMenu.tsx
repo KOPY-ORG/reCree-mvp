@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Flag, MoreVertical } from "lucide-react";
-import { showError } from "@/lib/toast";
+import { MoreVertical } from "lucide-react";
 import { ReportDialog } from "@/components/ReportDialog";
 import { ACTION, ICON, STROKE } from "./PostActionBar";
+import { ReportMenuPanel } from "./ReportMenuPanel";
 
 interface Props {
   postId: string;
@@ -31,19 +31,12 @@ export function PostMoreMenu({ postId, isLoggedIn }: Props) {
       </button>
 
       {menuOpen && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-          <div className="absolute top-11 right-0 z-20 bg-white/80 backdrop-blur-md rounded-xl shadow-md overflow-hidden min-w-[160px]">
-            <button
-              type="button"
-              onClick={() => { setMenuOpen(false); if (!isLoggedIn) { showError("Please sign in to report content."); return; } setReportOpen(true); }}
-              className="flex items-center gap-2 w-full px-4 py-3 text-sm font-medium text-gray-800 hover:bg-gray-50 transition-colors"
-            >
-              <Flag className="size-4 shrink-0" />
-              Report
-            </button>
-          </div>
-        </>
+        <ReportMenuPanel
+          isLoggedIn={isLoggedIn}
+          positionClassName="right-0"
+          onClose={() => setMenuOpen(false)}
+          onReport={() => setReportOpen(true)}
+        />
       )}
 
       <ReportDialog open={reportOpen} onClose={() => setReportOpen(false)} postId={postId} />

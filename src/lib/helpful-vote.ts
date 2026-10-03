@@ -6,7 +6,7 @@
 import { createHmac, randomUUID } from "node:crypto";
 import { cookies, headers } from "next/headers";
 
-export const VOTER_COOKIE = "recree_vid";
+const VOTER_COOKIE = "recree_vid";
 // 브라우저가 허용하는 최대 쿠키 수명(400일)
 const VOTER_COOKIE_MAX_AGE = 60 * 60 * 24 * 400;
 const VOTER_KEY_PATTERN = /^[0-9a-f-]{36}$/;

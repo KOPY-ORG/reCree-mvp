@@ -11,6 +11,7 @@ import {
   BOTTOM_NAV_ITEM,
   BOTTOM_NAV_ITEM_GAP,
   BOTTOM_NAV_PAD,
+  isNavActive,
 } from "@/lib/bottom-nav";
 
 /**
@@ -130,15 +131,12 @@ function Pill({ children }: { children: React.ReactNode }) {
 interface Props {
   isLoggedIn: boolean;
   profileImageUrl: string | null;
-  /** 이 화면은 모바일 탭바도 띄우지 않는다 — isBottomNavHiddenOnMobile */
-  hiddenOnMobile?: boolean;
 }
 
-export function BottomNav({ isLoggedIn, profileImageUrl, hiddenOnMobile = false }: Props) {
+export function BottomNav({ isLoggedIn, profileImageUrl }: Props) {
   const pathname = usePathname();
 
-  // startsWith(href) 만 쓰면 /feed 가 /feedback 까지 잡는다
-  const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
+  const isActive = (href: string) => isNavActive(pathname, href);
 
   const render = (tab: Tab) => (
     <NavItem
@@ -154,7 +152,7 @@ export function BottomNav({ isLoggedIn, profileImageUrl, hiddenOnMobile = false 
     // nav-tuckable 은 지도 시트가 끝까지 올라왔을 때의 퇴장을 맡는다 (globals.css).
     // lg 는 DesktopHeader(상단 바)가 맡는다 — 이 탭바는 모바일 · 태블릿 전용이다.
     <div
-      className={`${hiddenOnMobile ? "hidden " : ""}nav-tuckable pointer-events-none fixed inset-x-0 bottom-[var(--bottom-nav-bottom)] z-40 lg:hidden`}
+      className="nav-tuckable pointer-events-none fixed inset-x-0 bottom-[var(--bottom-nav-bottom)] z-40 lg:hidden"
     >
       <nav
         aria-label="Main"

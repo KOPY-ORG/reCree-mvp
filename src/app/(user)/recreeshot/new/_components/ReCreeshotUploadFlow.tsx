@@ -320,6 +320,7 @@ export function ReCreeshotUploadFlow({
             <button
               type="button"
               onClick={handleBack}
+              aria-label="Back"
               className="flex items-center justify-center size-8"
             >
               <ChevronLeft className="size-5" />

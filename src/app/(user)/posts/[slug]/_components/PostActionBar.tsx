@@ -4,6 +4,7 @@ import { Heart, MessageCircle, Share2 } from "lucide-react";
 import { ScrapButton } from "@/app/(user)/_components/ScrapButton";
 import { usePostLike } from "./PostLikeProvider";
 import { useSharePost } from "./useSharePost";
+import { ShareToast } from "./ShareToast";
 
 interface Props {
   postId: string;
@@ -76,11 +77,7 @@ export function PostActionBar({ postId, isSaved, isLoggedIn, titleEn }: Props) {
         <Share2 className={ICON} strokeWidth={STROKE} aria-hidden="true" />
       </button>
 
-      {toast && (
-        <div className="fixed bottom-[var(--bottom-nav-space)] left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-black/50 text-white text-sm whitespace-nowrap shadow-lg pointer-events-none">
-          {toast.message}
-        </div>
-      )}
+      <ShareToast toast={toast} />
     </div>
   );
 }

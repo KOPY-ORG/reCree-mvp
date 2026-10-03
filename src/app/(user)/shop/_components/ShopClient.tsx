@@ -6,6 +6,7 @@ import type { TagGroupColorMap } from "@/lib/post-labels";
 import { SHOP_TAG_GROUPS, SHOP_GROUP_LABELS, type ShopTagGroup } from "../_constants";
 import { ShopCard } from "./ShopCard";
 import { PageContainer } from "../../_components/PageContainer";
+import { CARD_GRID } from "@/app/(user)/_components/card-grid";
 
 type ShopTag = { id: string; name: string; group: string };
 type TagGroupConfigRow = {
@@ -105,7 +106,7 @@ export function ShopClient({ posts, shopTags, tagGroupConfigs }: Props) {
             <p className="text-sm text-muted-foreground">No products yet</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <div className={CARD_GRID}>
             {filteredPosts.map((post) => (
               <ShopCard key={post.id} post={post} tagGroupMap={tagGroupMap} />
             ))}

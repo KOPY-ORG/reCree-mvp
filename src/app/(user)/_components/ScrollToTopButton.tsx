@@ -52,15 +52,18 @@ export function ScrollToTopButton({ scrollRef }: Props = {}) {
     };
 
     if (scrollRef) {
+      // 리스너를 단 요소를 기억해 두고 정리 때 그 요소에서 뗀다 (정리 시점의 ref 는 바뀌었을 수 있다)
+      let attached: HTMLElement | null = null;
       const attach = () => {
         if (!scrollRef.current) { rafId = requestAnimationFrame(attach); return; }
         check();
-        scrollRef.current.addEventListener("scroll", handleScroll, { passive: true });
+        attached = scrollRef.current;
+        attached.addEventListener("scroll", handleScroll, { passive: true });
       };
       attach();
       return () => {
         cancelAnimationFrame(rafId);
-        scrollRef.current?.removeEventListener("scroll", handleScroll);
+        attached?.removeEventListener("scroll", handleScroll);
       };
     } else {
       setVisible(window.scrollY > 600);
@@ -82,7 +85,7 @@ export function ScrollToTopButton({ scrollRef }: Props = {}) {
       <div className="max-w-[var(--app-col-w)] mx-auto h-full relative">
         <button
           type="button"
-          aria-label="맨 위로"
+          aria-label="Back to top"
           onClick={handleClick}
           className={`
             absolute bottom-0 right-2 lg:right-[var(--page-gutter)] pointer-events-auto

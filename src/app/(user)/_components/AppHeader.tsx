@@ -1,23 +1,22 @@
 import Link from "next/link";
 import { LayoutGrid } from "lucide-react";
-// import { LanguageSelector } from "./LanguageSelector";
+import { MobileTitleBar } from "./MobileTitleBar";
 
 export function AppHeader() {
   return (
-    <header className="app-header lg:hidden">
-      <div className="h-12 flex items-center justify-between px-4">
-        <span className="font-bold text-base tracking-tight">reCree</span>
-
+    <MobileTitleBar
+      title="reCree"
+      action={
         <div className="flex items-center gap-1">
           <Link
             href="/topics"
+            aria-label="Topics"
             className="text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center size-8"
           >
-            <LayoutGrid className="size-5" />
+            <LayoutGrid className="size-5" aria-hidden="true" />
           </Link>
-          {/* <LanguageSelector /> */}
         </div>
-      </div>
-    </header>
+      }
+    />
   );
 }

@@ -6,6 +6,7 @@ import { selectDetailLabels, type ResolvedLabel } from "@/lib/post-labels";
 import { PostDetailHeader } from "./_components/PostDetailHeader";
 import { BannerCarousel } from "./_components/BannerCarousel";
 import { OriginalSourceCards } from "./_components/OriginalSourceCards";
+import { ORIGINAL_CARDS_OVERLAY } from "./_components/source-card-styles";
 import { BannerReCreeshotButton } from "./_components/BannerReCreeshotButton";
 import { SourceSection, splitSources } from "./_components/SourceSection";
 import { SocialEmbed, SocialEmbedProvider, SocialEmbedSwitch, SocialMediaRow } from "./_components/SocialEmbed";
@@ -32,6 +33,11 @@ import { readVoterKey } from "@/lib/helpful-vote";
 import { getAllMapPlaces } from "@/lib/map-queries";
 import { getSavedPostIds } from "@/lib/post-queries";
 import { getTopicMarkerColor, getTopicMarkerGradient } from "@/lib/map-utils";
+import { buildPostJsonLd, fallbackDescription, postUrl } from "./_lib/post-seo";
+import { makeDetailLayout } from "./_lib/detail-layout";
+
+// 상세 큰 제목 — 장소 이름(있으면) 또는 글 제목
+const TITLE_LG = "text-xl font-bold leading-tight lg:text-[28px] lg:leading-[1.2]";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -72,14 +78,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     ? `${post.titleEn} | ${placeLabel}`
     : post.titleEn;
 
-  const description = post.bodyEn
-    ? post.bodyEn.slice(0, 160)
-    : placeLabel
-      ? `Visit ${placeLabel}, the exact filming location from ${post.titleEn}. Discover iconic K-content spots with reCree.`
-      : "Discover iconic K-content spots with reCree.";
+  const description = post.bodyEn ? post.bodyEn.slice(0, 160) : fallbackDescription(post.titleEn, placeLabel);
 
   const imageUrl = post.postImages[0]?.url ?? "https://recree.io/og-default.png";
-  const pageUrl = `https://recree.io/posts/${post.slug}`;
+  const pageUrl = postUrl(post.slug);
   const fullTitle = `${title} | reCree`;
 
   return {
@@ -153,33 +155,14 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
 
   const placeLabel = spotInsight?.place.nameEn ?? spotInsight?.place.nameKo;
   const headline = placeLabel ?? (post.isShop && post.subtitle ? post.subtitle : null);
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Article",
-    "headline": post.titleEn,
-    "description": post.bodyEn?.slice(0, 160) ?? (placeLabel
-      ? `Visit ${placeLabel}, the exact filming location from ${post.titleEn}. Discover iconic K-content spots with reCree.`
-      : "Discover iconic K-content spots with reCree."),
-    "image": bannerImages.map((img) => ({
-      "@type": "ImageObject",
-      "url": img.url,
-      "contentUrl": img.url,
-    })),
-    "url": `https://recree.io/posts/${post.slug}`,
-    "publisher": {
-      "@type": "Organization",
-      "name": "reCree",
-      "url": "https://recree.io",
-    },
-    ...(spotInsight && {
-      "about": {
-        "@type": "TouristAttraction",
-        "name": placeLabel,
-        "address": spotInsight.place.addressEn ?? undefined,
-      },
-    }),
-  };
-
+  const jsonLd = buildPostJsonLd({
+    slug: post.slug,
+    titleEn: post.titleEn,
+    bodyEn: post.bodyEn,
+    imageUrls: bannerImages.map((img) => img.url),
+    placeLabel,
+    place: spotInsight?.place ?? null,
+  });
 
   const hasBanner = bannerImages.length > 0;
 
@@ -211,11 +194,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
     isSaved: mapPlace?.posts.some((p) => savedPostIds.has(p.id)) ?? false,
   };
 
-  const showNearby =
-    !post.isShop &&
-    !!spotInsight &&
-    spotInsight.place.latitude !== null &&
-    spotInsight.place.longitude !== null;
+  const showNearby = !post.isShop && hasLocation;
 
   // 블록은 전부 한 번만 렌더한다(유튜브 iframe · 지도 · h1 이 두 벌 생기지 않게). 그래서 DOM 은 lg 의 두 열 모양이고,
   // 모바일은 두 열 래퍼를 display: contents 로 풀어 블록들을 바깥 flex 열의 형제로 만든 뒤 order 로 순서를 되돌린다.
@@ -229,15 +208,12 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
   // 칩 · 제목 · Fan To-Do 는 모바일에서 사진에 붙어 있지만 lg 에서는 다른 열이라 gap 하나로는 둘 다 맞출 수 없다.
   // 각 블록 안쪽 요소의 위아래 마진은 래퍼에서 지운다(block)
   const twoCol = !!youTube || !!social || hasBanner;
-  const ORDER = ["order-1", "order-2", "order-3", "order-4", "order-5", "order-6",
-                 "order-7", "order-8", "order-9", "order-10", "order-11", "order-12"];
-  // 모바일 바깥 틀은 2칸 격자다 — 칩(1fr) 옆에 댓글 · 저장(auto)이 서고, 나머지 블록은 두 칸을 다 쓴다(SPAN).
-  // 칩과 아이콘 줄이 lg 에서 서로 다른 열로 갈리므로 한 블록 안 격자로는 둘 다 맞출 수 없다
-  const SPAN = "col-span-2 min-w-0";
-  const order = (n: number) => `${SPAN} ${twoCol ? `${ORDER[n - 1]} lg:order-none` : ORDER[n - 1]}`;
-  const gap = twoCol ? "mt-6 lg:mt-0" : "mt-6";
-  const column = (lgGap: string) => (twoCol ? `contents lg:flex lg:min-w-0 lg:flex-col ${lgGap}` : "contents");
-  const block = "[&>*]:mt-0 [&>*]:mb-0";
+  const { order, gap, column, block } = makeDetailLayout(twoCol);
+
+  // 모바일 상단 버튼(뒤로 · 공유 · 저장 · 더보기). 사진이 있으면 사진 안에서, 없으면 글 맨 위에서 렌더한다. lg 는 숨는다
+  const detailHeader = !isPreview && (
+    <PostDetailHeader postId={post.id} isLoggedIn={!!currentUser} isSaved={isSaved} titleEn={post.titleEn} />
+  );
 
   // 배너 캐러셀 — 모바일은 화면 맨 위까지 올려 풀블리드 (미리보기엔 헤더 없으므로 margin 제거).
   // 상단 버튼(PostDetailHeader)은 이 안에서 렌더한다 — 모바일은 화면 위에 고정, lg 는 숨는다.
@@ -248,20 +224,18 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
     // 사진이 미디어 칸이 아니면(영상 · 임베드 옆 사진 줄) 원본 장면 카드 · 카메라 버튼은 숨긴다 — 영상 · 임베드가 원본이고, 오른쪽 열 recreeshot 카드가 카메라를 맡는다
     const photoRow = lgLayout !== "media";
     const outer = { media: "", strip: "lg:-mt-3", column: "lg:min-w-0 lg:flex-1" }[lgLayout];
-    const inner = { media: "lg:mx-4 lg:overflow-hidden lg:rounded-[20px]", strip: "lg:mx-4", column: "" }[lgLayout];
+    const inner = { media: "lg:mx-4 lg:overflow-hidden lg:rounded-card", strip: "lg:mx-4", column: "" }[lgLayout];
     return (
       <div className={`${order(1)} mt-0 ${outer}`}>
         <div className={`lg:mt-0 ${inner} ${isPreview ? "" : "-mt-12"}`}>
           <BannerCarousel images={bannerImages} lgLayout={lgLayout}>
-            {!isPreview && (
-              <PostDetailHeader postId={post.id} isLoggedIn={!!currentUser} isSaved={isSaved} titleEn={post.titleEn} />
-            )}
+            {detailHeader}
             {/* 원본 장면 카드 — 왼쪽 아래. lg 는 사진이 미디어 칸일 때만(영상 글의 사진 줄에서는 숨긴다).
                 lg 줄 폭은 가운데 점 앞(50% − 64)에서 멈추고 카드가 그 안에서 줄어든다. 화살표(세로 가운데) · 카메라(오른쪽 아래)와는 자리가 갈린다 */}
             <OriginalSourceCards
               images={originalImages}
               originalLinkUrls={originalLinkUrls}
-              className={`absolute bottom-3 left-3 sm:bottom-4 sm:left-4 flex gap-2 sm:gap-3 z-10 ${photoRow ? "lg:hidden" : "lg:max-w-[calc(50%-4rem)]"}`}
+              className={`${ORIGINAL_CARDS_OVERLAY} ${photoRow ? "lg:hidden" : "lg:max-w-[calc(50%-4rem)]"}`}
             />
             {/* recreeshot 추가 — 아래 recreeshot 섹션과 같은 조건(shop 은 숨김). 미리보기에선 누를 일이 없다.
                 lg 사진 줄에서는 뺀다 — 오른쪽 열 recreeshot 카드가 맡는다 */}
@@ -296,7 +270,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
     );
   };
 
-  // lg: 상세는 1440 으로 퍼지지 않고 1200(+ 좌우 48)에서 멈춘다 — desktop-layout.md §15 원칙 4, post-detail-pc-mock.html.
+  // lg: 상세는 1440 으로 퍼지지 않고 1200(+ 좌우 48)에서 멈춘다 — docs/design/desktop-layout.md §15 원칙 4, docs/design/post-detail-pc-mock.html.
   // 블록마다 모바일 좌우 여백 16 을 그대로 두므로, 바깥 여백(32)과 열 사이(8)에 그만큼을 덜 준다 → 실제 여백 48 · 열 사이 40.
   // 오른쪽 열은 내용 폭 350, 넓은 화면(1400~)에서 380
   return (
@@ -306,9 +280,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       {/* 모바일 상단 버튼. 사진이 있으면 사진 안에서 렌더한다. lg 는 숨고 제목 아래 아이콘 줄이 대신한다 */}
-      {!isPreview && !hasBanner && (
-        <PostDetailHeader postId={post.id} isLoggedIn={!!currentUser} isSaved={isSaved} titleEn={post.titleEn} />
-      )}
+      {!hasBanner && detailHeader}
       {!isPreview && <PostViewTracker postId={post.id} />}
       {isPreview && (
         <div className="bg-amber-100 text-amber-800 text-xs text-center py-2 font-medium">
@@ -430,7 +402,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
         </div>
         <div className="order-2 col-span-2 min-w-0 space-y-1 px-4 pt-2 pb-2 lg:order-1 lg:p-0">
           {headline && (
-            <p className="text-xl font-bold leading-tight lg:text-[28px] lg:leading-[1.2]">
+            <p className={TITLE_LG}>
               {headline}
             </p>
           )}
@@ -438,7 +410,7 @@ export default async function PostDetailPage({ params, searchParams }: Props) {
             className={
               headline
                 ? "text-sm text-muted-foreground leading-snug lg:pt-1 lg:text-base"
-                : "text-xl font-bold leading-tight lg:text-[28px] lg:leading-[1.2]"
+                : TITLE_LG
             }
           >
             {post.titleEn}

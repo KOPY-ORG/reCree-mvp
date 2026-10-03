@@ -15,6 +15,7 @@ import { LabelBadge } from "@/components/LabelBadge";
 import { labelBackground, resolveTopicColors } from "@/lib/post-labels";
 import { getCourseTopicOptions, type CourseTopicOption } from "../../_actions/course-actions";
 import { CHIP_BG, INK, MUTED, SUB } from "../_constants";
+import { BOTTOM_SHEET_CONTENT, SheetHandle } from "@/components/bottom-sheet-frame";
 
 /** course-actions 의 MAX_TOPICS 와 같은 값. 넘기면 서버가 invalid_input 을 돌려준다 */
 const MAX_TOPICS = 3;
@@ -105,11 +106,9 @@ export function TopicPickSheet({ open, onOpenChange, selected, onConfirm }: Topi
         side="bottom"
         showCloseButton={false}
         aria-describedby={undefined}
-        className="mx-auto flex max-h-[88vh] max-w-[var(--app-col-w)] flex-col gap-0 rounded-t-2xl p-0"
+        className={BOTTOM_SHEET_CONTENT}
       >
-        <div className="flex flex-none justify-center pb-1 pt-3">
-          <div className="h-1 w-9 rounded-full bg-muted-foreground/25 lg:hidden" />
-        </div>
+        <SheetHandle />
 
         <div className="flex flex-none items-center gap-2 px-3 pb-1">
           <SheetTitle className="min-w-0 flex-1 pl-2 text-[15px] font-bold" style={{ color: INK }}>

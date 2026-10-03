@@ -164,7 +164,7 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
                   0건이면 섹션이 스스로 null 을 돌려주고 자리를 비운다 */}
               <PopularReCreeshotSection
                 topicId={topicId}
-                title={activeTopic ? `${activeTopic.nameEn} ReCreeshots` : undefined}
+                title={activeTopic ? `${activeTopic.nameEn} recreeshots` : undefined}
               />
 
               {isHot && (

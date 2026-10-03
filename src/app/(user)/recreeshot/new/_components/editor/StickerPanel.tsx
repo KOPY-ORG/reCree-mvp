@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, useRef } from "react";
 import Image from "next/image";
-import { MapPin, Loader2, Search, X, Check, ImageIcon, PlusCircle } from "lucide-react";
+import { MapPin, Search, X, Check, ImageIcon, PlusCircle } from "lucide-react";
 import { isExternalImage } from "@/lib/image";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { LabelBadge } from "@/components/LabelBadge";
@@ -297,7 +297,7 @@ export function StickerPanel({
             <div className="flex items-center gap-2 bg-muted/50 rounded-2xl px-3.5 py-2.5">
               <Search className="size-4 text-muted-foreground shrink-0" />
               <input type="text" placeholder="Search places..." value={locationQuery} onChange={(e) => setLocationQuery(e.target.value)} className="flex-1 text-sm bg-transparent outline-none placeholder:text-muted-foreground" />
-              {locationQuery && <button type="button" onClick={() => setLocationQuery("")}><X className="size-3.5 text-muted-foreground" /></button>}
+              {locationQuery && <button type="button" onClick={() => setLocationQuery("")} aria-label="Clear search"><X className="size-3.5 text-muted-foreground" /></button>}
             </div>
           </div>
           <div className="flex-1 overflow-y-auto px-4 pb-4">
@@ -425,7 +425,7 @@ export function StickerPanel({
                   return (
                     <span key={id} className="pill-badge text-xs" style={{ background: bg, color: resolved.textColorHex }}>
                       {tag.name}
-                      <button type="button" onClick={() => toggleTag(id)} className="opacity-60 hover:opacity-100 -mr-0.5"><X className="size-3" /></button>
+                      <button type="button" onClick={() => toggleTag(id)} aria-label={`Remove ${tag.name}`} className="opacity-60 hover:opacity-100 -mr-0.5"><X className="size-3" /></button>
                     </span>
                   );
                 })}
@@ -437,7 +437,7 @@ export function StickerPanel({
                   return (
                     <span key={id} className="pill-badge text-xs" style={{ background: bg, color: colors.textHex }}>
                       {topic.nameEn}
-                      <button type="button" onClick={() => toggleTopic(id)} className="opacity-60 hover:opacity-100 -mr-0.5"><X className="size-3" /></button>
+                      <button type="button" onClick={() => toggleTopic(id)} aria-label={`Remove ${topic.nameEn}`} className="opacity-60 hover:opacity-100 -mr-0.5"><X className="size-3" /></button>
                     </span>
                   );
                 })}
@@ -480,7 +480,7 @@ export function StickerPanel({
                 <div className="flex items-center gap-2 bg-muted/50 border border-border/60 rounded-xl px-3 py-2 mb-3">
                   <Search className="size-3.5 text-muted-foreground shrink-0" />
                   <input type="text" placeholder={`Search in ${topicTree.find((t) => t.id === (activeThemeL0Id ?? topicTree[0]?.id))?.nameEn ?? ""}...`} value={themeSearchQuery} onChange={(e) => setThemeSearchQuery(e.target.value)} className="flex-1 text-sm bg-transparent outline-none placeholder:text-muted-foreground" />
-                  {themeSearchQuery && <button type="button" onClick={() => setThemeSearchQuery("")}><X className="size-3.5 text-muted-foreground" /></button>}
+                  {themeSearchQuery && <button type="button" onClick={() => setThemeSearchQuery("")} aria-label="Clear search"><X className="size-3.5 text-muted-foreground" /></button>}
                 </div>
                 {(() => {
                   if (filteredThemeTopics.length === 0) {
@@ -544,6 +544,8 @@ export function StickerPanel({
                                 <button
                                   type="button"
                                   onClick={() => setExpandedGroupId(isExpanded ? null : parent.id)}
+                                  aria-label={`Show ${parent.nameEn} subtopics`}
+                                  aria-expanded={isExpanded}
                                   className="pr-2 active:opacity-70 text-[10px] leading-none"
                                   style={{ paddingTop: "var(--pill-py, 0.1875rem)", paddingBottom: "var(--pill-py, 0.1875rem)" }}
                                 >

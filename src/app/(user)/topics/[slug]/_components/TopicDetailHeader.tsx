@@ -13,6 +13,7 @@ export function TopicDetailHeader() {
         <button
           type="button"
           onClick={() => router.back()}
+          aria-label="Back"
           className="flex items-center justify-center h-8 w-8"
         >
           <ArrowLeft className="h-5 w-5 text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]" />

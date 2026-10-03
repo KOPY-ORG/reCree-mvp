@@ -3,12 +3,11 @@ import { KOREA_PATH_D } from "@/lib/korea-path";
 import {
   KOREA_VIEWBOX,
   SIDO_PIN,
-  HOTSPOT_MIN_R,
-  HOTSPOT_MAX_R,
   hotspotRadius,
   projectKorea,
 } from "@/lib/korea-projection";
-import { getPlaceRegionSlug } from "@/lib/region-utils";
+import { haloOpacity, regionParam } from "./korea-map-utils";
+import { FoldedMapIcon, MapPinIcon } from "./korea-map-icons";
 import { buildDiscoverHref } from "@/lib/filter-params";
 import type { SidoPlaceCount } from "@/lib/area-queries";
 
@@ -77,67 +76,6 @@ const GRADIENT_VECTOR: Record<string, { x1: number; y1: number; x2: number; y2: 
   "to top right": { x1: 0, y1: 1, x2: 1, y2: 0 },
   "to top left": { x1: 1, y1: 1, x2: 0, y2: 0 },
 };
-
-/**
- * 반지름을 그대로 불투명도로 옮긴다. 장소 수를 로그로 누른 결과가 반지름이므로
- * 여기서 다시 count 를 보면 두 축이 서로 다른 곡선을 타게 된다.
- *
- * 받는 r 은 배율을 걸기 전 값이다. 키웠다고 더 진해지면 크기와 진하기가 같은 말을
- * 두 번 하게 되고, 작은 시도가 큰 시도보다 옅어 보이는 순서도 깨진다.
- */
-function haloOpacity(r: number, min: number, max: number): number {
-  const t = (r - HOTSPOT_MIN_R) / (HOTSPOT_MAX_R - HOTSPOT_MIN_R);
-  return min + (max - min) * t;
-}
-
-/**
- * discover 의 ?region= 은 Area.nameEn 을 소문자로 내린 값과 정확히 비교된다
- * (region-utils.ts 의 slugifyRegion). 같은 규칙을 두 벌로 적지 않으려고
- * 장소가 아니어도 그 함수를 그대로 쓴다 — 규칙이 바뀌면 같이 바뀌어야 한다.
- */
-function regionParam(areaNameEn: string): string | null {
-  return getPlaceRegionSlug({ nameEn: areaNameEn, level: 0, parent: null });
-}
-
-/** 접힌 지도 — "지도를 연다"는 동작에 붙는다 */
-function FoldedMapIcon({ size }: { size: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      className="shrink-0"
-    >
-      <path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z" />
-      <path d="M9 4v14M15 6v14" />
-    </svg>
-  );
-}
-
-/** 지도 핀 — "이 지역"에 붙는다 */
-function MapPinIcon({ size }: { size: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.2"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      className="shrink-0"
-    >
-      <path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z" />
-      <circle cx="12" cy="10" r="2.5" />
-    </svg>
-  );
-}
 
 /**
  * 흰 알약 칩. 카드도 흰색이라 경계는 그림자가 만든다 —
@@ -314,7 +252,7 @@ export function KoreaMapCard({
   if (layout === "stacked") {
     return (
       <section>
-        <div className="rounded-[20px] bg-card border border-gray-200 p-5 flex flex-col gap-4">
+        <div className="rounded-card bg-card border border-gray-200 p-5 flex flex-col gap-4">
           <Link href={discoverHref} className="flex flex-col gap-1.5 transition-opacity hover:opacity-80">
             {heading}
           </Link>
@@ -340,7 +278,7 @@ export function KoreaMapCard({
 
   return (
     <section className="px-4 mb-6">
-      <div className="rounded-[20px] bg-card border border-gray-200 p-4 flex flex-col gap-3">
+      <div className="rounded-card bg-card border border-gray-200 p-4 flex flex-col gap-3">
         <div className="flex items-center gap-2">
           <div className="flex-1 flex flex-col gap-1.5">
             <Link href={discoverHref} className="flex flex-col gap-1.5 transition-opacity active:opacity-70">

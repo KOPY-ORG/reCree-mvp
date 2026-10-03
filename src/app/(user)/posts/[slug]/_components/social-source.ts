@@ -11,7 +11,7 @@ export type SocialEmbedSource =
 const INSTAGRAM_POST = /^https?:\/\/(?:www\.)?instagram\.com\/(?:[\w.]+\/)?(?:p|reels?|tv)\/([\w-]+)/i;
 const X_POST = /^https?:\/\/(?:www\.|mobile\.)?(?:x|twitter)\.com\/\w+\/status(?:es)?\/(\d+)/i;
 
-export function parseSocialEmbed(url: string): SocialEmbedSource | null {
+function parseSocialEmbed(url: string): SocialEmbedSource | null {
   const ig = url.match(INSTAGRAM_POST);
   if (ig) return { platform: "INSTAGRAM", id: ig[1] };
   const x = url.match(X_POST);

@@ -44,6 +44,7 @@ export function EventSearchBar({
             <button
               type="button"
               onClick={onClear}
+              aria-label="Clear search"
               className="shrink-0 text-muted-foreground flex items-center"
             >
               <X className="w-4 h-4" />

@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, MoreVertical, Flag, Share2 } from "lucide-react";
-import { showError } from "@/lib/toast";
+import { ArrowLeft, MoreVertical, Share2 } from "lucide-react";
 import { canGoBackInApp } from "@/lib/in-app-history";
 import { ReportDialog } from "@/components/ReportDialog";
 import { ScrapButton } from "@/app/(user)/_components/ScrapButton";
 import { useSharePost } from "./useSharePost";
+import { ReportMenuPanel } from "./ReportMenuPanel";
+import { ShareToast } from "./ShareToast";
 
 interface Props {
   postId?: string;
@@ -70,30 +71,19 @@ export function PostDetailHeader({ postId, isLoggedIn, isSaved = false, titleEn 
               </button>
 
               {menuOpen && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                  <div className="absolute top-11 right-0.5 z-20 bg-white/80 backdrop-blur-md rounded-xl shadow-md overflow-hidden min-w-[160px]">
-                    <button
-                      type="button"
-                      onClick={() => { setMenuOpen(false); if (!isLoggedIn) { showError("Please sign in to report content."); return; } setReportOpen(true); }}
-                      className="flex items-center gap-2 w-full px-4 py-3 text-sm font-medium text-gray-800 hover:bg-gray-50 transition-colors"
-                    >
-                      <Flag className="size-4 shrink-0" />
-                      Report
-                    </button>
-                  </div>
-                </>
+                <ReportMenuPanel
+                  isLoggedIn={!!isLoggedIn}
+                  positionClassName="right-0.5"
+                  onClose={() => setMenuOpen(false)}
+                  onReport={() => setReportOpen(true)}
+                />
               )}
             </div>
           )}
         </div>
       </div>
 
-      {toast && (
-        <div className="fixed bottom-[var(--bottom-nav-space)] left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-black/50 text-white text-sm whitespace-nowrap shadow-lg pointer-events-none">
-          {toast.message}
-        </div>
-      )}
+      <ShareToast toast={toast} />
 
       <ReportDialog
         open={reportOpen}

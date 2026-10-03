@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { signOut } from "@/lib/actions/auth";
-import { isDesktopHeaderHidden } from "@/lib/bottom-nav";
+import { isDesktopHeaderHidden, isNavActive } from "@/lib/bottom-nav";
 
 /**
  * PC(lg+) 상단 바. 모바일 하단 알약(BottomNav)은 lg 에서 숨고 이 바가 그 자리를 맡는다.
@@ -56,8 +56,7 @@ export function DesktopHeader({
   profileImageUrl: string | null;
 }) {
   const pathname = usePathname();
-  // startsWith(href) 만 쓰면 /feed 가 /feedback 까지 잡는다
-  const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
+  const isActive = (href: string) => isNavActive(pathname, href);
 
   if (isDesktopHeaderHidden(pathname)) return null;
 
