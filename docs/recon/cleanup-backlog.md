@@ -27,6 +27,7 @@
 | 7-9 | `LocationCard` | 장식용 지도 iframe 에 Tab 이 닿는다 | 접근성 묶음으로 | 중간 |
 | 7-10 | `DiscoverSearchBar` | button 안에 span role=button 이 중첩돼 있다 | 구조를 바꿔야 한다 | 높음 |
 | 10-3 | `docs/design/desktop-redesign-plan.md` §4.4 · §4.6 · §4.10 | Journeys · Shop(· recreeshot) 큰 제목: 계획은 PageTitle, `PageTitle.tsx` 규칙은 "상단 바 메뉴에 이름이 있는 화면은 안 씀", 코드에는 PageTitle 없음 | 어느 쪽으로 할지 결정 후 계획 문서 수정 | 낮음 |
+| 범위 밖 | `src/app/api/og-image/route.ts` `ALLOWED_DOMAINS` | **OG 메타 미수집 도메인 목록, allowlist 정책 검토 필요.** 허용 목록 밖이라 제목 · 설명 · 썸네일을 가져오지 않는 출처 13개(발행 글 PRIMARY 기준, 2026-10-03): enewstoday.co.kr 2 · royal.khs.go.kr 2 · yna.co.kr · museum.go.kr · vlive.tv · facebook.com · programs.sbs.co.kr · lifefourcuts.com · hankyung.com · ddp.or.kr · sunshinestudio.co.kr. 허용 목록 안이지만 메타가 없는 것 2개: pin.it(Pinterest 단축 링크) · namu.wiki. 지금은 카드가 도메인 · "Visit website" 로 대신 채워진다 | 허용 목록은 서버가 임의 URL 을 가져오지 않게 막는 장치라, 넓힐지 · 다른 방식(예: 저장된 메타)으로 갈지 정책 결정이 먼저다 | 낮음 |
 | 범위 밖 | `journeys/loading.tsx` | 로딩 화면 `.app-header` 에 lg 숨김이 없다 — lg 에서 로딩 중에만 이중 헤더 | 발견만 | 낮음 |
 | 범위 밖 | `CourseEditorSkeleton.tsx` | `data-narrow-layout` 이 없다 (계획 §4.7) | 발견만 | 낮음 |
 | 범위 밖 | DB `PostSource` | platform 'X' 인데 URL 이 netflix.com 인 행 3개 | DB 데이터 — 읽기 전용, 코드로 고치지 않는다 | 낮음 |
