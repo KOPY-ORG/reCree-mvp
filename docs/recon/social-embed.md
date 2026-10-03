@@ -2,6 +2,8 @@
 
 작성 2026-10-03 · READ-ONLY 정찰 (코드 수정 없음, DB 는 읽기 전용 트랜잭션으로만 조회)
 
+> §1~§4 는 정찰 당시 기록이다. 실제로 만든 것은 맨 아래 **5. 구현 결과** 가 기준이다.
+
 목표: 출처가 인스타그램 · X 인 글도 유튜브 글처럼 미디어 칸(16:9)에 원본 게시물을 크게 띄운다.
 칸 비율은 16:9 그대로, 그 안에 게시물 카드가 원본 비율대로 가운데 들어간다.
 
@@ -14,7 +16,7 @@
 | 항목 | 내용 |
 |---|---|
 | 위치 | `src/app/(user)/events/[collectionSlug]/[eventSlug]/_components/InstagramEmbed.tsx` |
-| 쓰는 곳 | 같은 폴더 `page.tsx:755` — 이벤트 본문 블록 `type === "INSTAGRAM"` 일 때 `block.embedUrl` |
+| 쓰는 곳 | 같은 폴더 `page.tsx:755`(조건) · 756(렌더) — 이벤트 본문 블록 `type === "INSTAGRAM"` 일 때 `block.embedUrl` |
 | 데이터 | `EventBlock.embedUrl` (schema.prisma:797). 관리자 저장 시 `INSTAGRAM_URL_RE = /^https?:\/\/(www\.)?instagram\.com\/(p\|reel)\/[\w-]+/` 로 검증 (`admin/events/_actions/event-actions.ts:63`) |
 | 방식 | **공식 embed.js + blockquote**. `<blockquote class="instagram-media" data-instgrm-permalink=… data-instgrm-version="14">` 를 그리고 `https://www.instagram.com/embed.js` 를 body 에 한 번 붙인 뒤 `instgrm.Embeds.process()` |
 | 크기 | `minHeight: 480`, 가로 가운데 정렬만. 칸에 맞추는 계산 없음 — 카드가 제 크기(폭 326~658)대로 늘어난다 |
@@ -263,7 +265,36 @@ PRIMARY 출처 중
 4. (선택) 모바일 B 안
 5. (별도 결정) 쿠키 동의 / 클릭해서 불러오기 · 개인정보처리방침 문구
 
-부품 이름 `SocialEmbed` 는 가칭 — 확정 전 확인 필요.
+부품 이름 `SocialEmbed` 는 확정됐다 (§5).
+
+---
+
+## 5. 구현 결과 (2026-10-03, feature/recree-desktop)
+
+파일: `src/app/(user)/posts/[slug]/_components/SocialEmbed.tsx` · `social-source.ts`, 배치는 `posts/[slug]/page.tsx`.
+
+**어느 글이 임베드가 되나** — §4.1 그대로. PRIMARY 에 유튜브가 없을 때 첫 인스타 게시물 · X 게시물(`pickSocialEmbed`).
+
+**서버 판정** — `isSocialEmbeddable` 이 oEmbed 로 확인한다(인스타 토큰 없음, X `dnt=true`). 결과는 `unstable_cache` 1일.
+"안 된다"가 분명한 답(인스타 오류 코드 24 · 100, X 404 · 403)만 캐시하고, 한도 초과 · 장애는 던져서 캐시에 남기지 않는다. 요청 시간 제한 3초.
+
+**lg** — §4.2 의 "16:9 칸 + 회색 바탕" 안이 아니다.
+- 미디어 줄 = 왼쪽 임베드 카드 + 오른쪽 장소 사진 세로 캐러셀(`BannerCarousel` lgLayout `"column"`).
+- 카드 높이 목표 = 미디어 줄 위 끝 ~ 오른쪽 열 Like · Save · Helpful 줄(`data-media-end`)의 아래 끝. 카드는 원래 비율째 맞춘다.
+- 폭이 모자라 카드가 그보다 낮아지면 낮은 높이 그대로 둔다. 사진 세로 캐러셀은 카드의 실제 높이(`--social-media-h`)를 따른다.
+- 회색 바탕 상자 없음. 세로 캐러셀 화살표는 반투명 검정 원 + 흰 아이콘(위 · 아래).
+- 원본 장면 카드 · 사진 위 recreeshot 추가 버튼은 lg 에서 숨긴다(유튜브 글과 같음).
+
+**모바일 · 태블릿** — §4.3 의 **B 안**. 출처 카드 자리(유튜브 글의 영상과 같은 순서)에 임베드 카드만, 좌우 16 여백 안 전체 폭. X 카드는 최대 550, 가운데.
+
+**공통**
+- 카드 글은 영어로 고정: 인스타 iframe `?hl=en`, X `createTweet` 의 `lang: "en"`, `dnt: true`.
+- 불러오기는 페이지 load 뒤(`afterPageLoad`) + 블록이 화면 300px 안으로 올 때(IntersectionObserver rootMargin).
+- 불러오기 시작 후 8초 안에 카드가 안 뜨면 실패 → 지금 화면(사진 미디어 칸 · 원본 장면 카드 · 출처 카드)으로 돌아간다(`SocialEmbedSwitch`).
+- 임베드된 출처는 출처 카드 목록에서 뺀다. 나머지 출처는 그대로 카드.
+- DB · 스키마 변경 없음.
+
+남은 정리(중복 훅 · 로더 · 파일 분할)는 `docs/recon/cleanup-backlog.md` 3-11 · 3-12 · 5-2.
 
 ---
 

@@ -1,12 +1,15 @@
 # PC(lg+) 재설계안 v2 — 사용자 화면 전체
 
-> 작성 2026-10-03 · 상태: **설계안 (승인 전, 코드 변경 없음)**
+> 작성 2026-10-03 · 상태: **일부 구현** (feature/recree-desktop)
+> 구현됨: 청크 1(폭 · 여백 토큰, `PageContainer`, discover 문서 높이), `PageTitle`, 청크 3(이중 헤더 정리, 읽기 화면 상단 바),
+> PC 상단 바 `DesktopHeader`(§3.1), 모바일 하단 알약에 Journeys, 게시글 상세 SNS 임베드(`docs/recon/social-embed.md`).
+> 남은 것: 글자 토큰 · 나머지 공통 부품(청크 2), 청크 4~10. 보류 항목은 `docs/recon/cleanup-backlog.md`.
 >
 > 범위: `lg`(1024) 이상의 사용자 화면 전체. `< 768` 모바일은 픽셀 단위로 그대로, 768–1023 태블릿은 지금 동작 그대로.
 > 브랜드: 라임 `--brand` #D3FD52, 라임 위 글자 검정, 폰트(출시본 GeistSans), 표기(reCree, recreeshot)는 바꾸지 않는다. 새 색 없음.
 > 선행 문서: `desktop-layout.md`(§14–17 레퍼런스 실측, 상단 바 결정) · `surface.md`(홈 기준 표면 규칙).
 > v1(홈 · discover · 게시글 상세 3화면)을 이 문서가 대체한다. v1 의 원칙 P1–P7 과 검색창 · 칩 · 카드 규칙은 §3 에 그대로 옮겼다.
-> 게시글 상세는 `post-detail-pc-mock.html.html` 대로 **구현 완료**. 구조는 건드리지 않고 공통 폭 · 여백 · 글자 토큰만 적용한다(§4.1).
+> 게시글 상세는 `docs/design/post-detail-pc-mock.html` 대로 **구현 완료**. 구조는 건드리지 않고 공통 폭 · 여백 · 글자 토큰만 적용한다(§4.1).
 
 ---
 
@@ -39,6 +42,8 @@
 
 ### 2.1 페이지 목록 · 헤더 · 폭 (lg, 1440 실측)
 
+> §2 는 설계 당시(2026-10-03, 구현 전) 기록이다. 해결된 것은 §2.2 표의 "지금" 열에 적었다.
+
 | 화면 | 종류 | 상단 바 | 페이지 자체 헤더 (lg 에서도 보임) | 본문 좌/우 (바 40/1385) | 지금 폭 |
 |---|---|---|---|---|---|
 | `/feed` | wide | O | 검색 + 칩 sticky 126 (보조 바, 이중 아님) | 40 / 1385 | 1440 셸 |
@@ -63,25 +68,27 @@
 | `/policy/[type]` | reading | **X** | ← 제목 바 | 349–1072 | 768 |
 
 - **이중 헤더 8곳:** `/recreeshot` · `/login`(AppHeader), `/saved`(SavedHeader), `/shop`(ShopHeader), `/journeys`, `/topics`, `/profile`, `/profile/following`
-  - 원인: `.app-header` 가 lg 에서 `top: var(--top-nav-space)` 로 상단 바 아래에 다시 붙는다(`globals.css:239`). `lg:hidden` 이 있는 곳은 게시글 상세 하나
+  - 원인: `.app-header` 가 lg 에서 `top: var(--top-nav-space)` 로 상단 바 아래에 다시 붙는다(당시 `globals.css:239`, 지금 lg 블록의 `.app-header` 규칙). `lg:hidden` 이 있는 곳은 게시글 상세 하나
+  - 해결: AppHeader · SavedHeader · ShopHeader · TopicsHeader · journeys · ProfileView · following · policy 헤더에 lg 숨김. 남은 것은 `journeys/loading.tsx` (backlog)
 - **상단 바가 사라지는 읽기 화면 2곳:** `/recreeshot/[id]`, `/policy/[type]` — `isBottomNavHidden`(모바일 하단 알약 규칙)을 lg 상단 바가 그대로 따른다
+  - 해결: 상단 바는 `isDesktopHeaderHidden`(`src/lib/bottom-nav.ts`)으로 따로 판정한다. 숨기는 곳은 편집기 · 온보딩뿐
 - 본문 왼쪽 시작선: 40 / 16 / 18 / 113 / 376 / 393 — 페이지마다 다르다
 - 1920 에서 셸이 1440 에 묶여 로고 x=273, 좌우 각 233 이 빈다
 - 가로 스크롤: 1024 · 1280 · 1440 · 1920 전부 0 ✓
 
 ### 2.2 우선순위 문제
 
-| 등급 | 문제 | 근거 |
-|---|---|---|
-| **P0** | 이중 헤더 8곳, 읽기 화면 2곳에서 상단 바 사라짐 | §2.1 |
-| **P0** | discover 문서가 64 세로 스크롤(docH 964 / 900) | `layout.tsx:22` lg 위 여백 + 안쪽 `min-h-[100dvh]` |
-| **P1** | 정렬축 없음. 시작선 6종, 1920 에서 1440 박스 | §2.1 |
-| **P1** | 모바일을 늘린 컨트롤: "Make it mine" 1389×54, 토픽 Follow 1393×36, shop 탭 713×2, 여정 장소 줄 1389 | 1440 실측 |
-| **P1** | 672 기둥이 넓은 화면에 떠 있음: /topics, /saved, /following, /recreeshot/[id] | 1440 실측 |
-| **P2** | 부품이 페이지마다 따로: 페이지 제목 8벌 복붙(`.app-header` 안쪽 `h-12 px-4`), 섹션 제목 17곳 수작업, 탭 2벌 복붙, 빈 화면 18벌, 칩 8종 · 높이 4종, 카드 모서리 6종 · 그림자 3체계 | §2.3 |
-| **P2** | 빈 캔버스: /journeys 카드 2장, 홈 Fresh Drops 465 카드 2열 | 1440 실측 |
-| **P3** | 글자 크기: 사용자 코드에 26종(`text-[10.5px]` 17곳, `text-[13px]` 30곳 …), 이벤트 상세 inline `fontSize` 34곳. 한 화면에 11종 | §2.4 |
-| **P3** | discover: 칩 줄 사이 50 빈칸, 카테고리 칩 잘림, 저장 아이콘이 카드 위로 5 삐져나옴 | 실측 |
+| 등급 | 문제 | 근거 | 지금 |
+|---|---|---|---|
+| **P0** | 이중 헤더 8곳, 읽기 화면 2곳에서 상단 바 사라짐 | §2.1 | 해결 (청크 3) |
+| **P0** | discover 문서가 64 세로 스크롤(docH 964 / 900) | 당시 `layout.tsx:22` lg 위 여백 + 안쪽 기둥 최소 높이 100dvh | 해결 (청크 1, 기둥 최소 높이에서 바 높이를 뺌) |
+| **P1** | 정렬축 없음. 시작선 6종, 1920 에서 1440 박스 | §2.1 | 기둥 · 상단 바 · gutter 는 해결 (청크 1). 페이지별 시작선은 청크 4~ |
+| **P1** | 모바일을 늘린 컨트롤: "Make it mine" 1389×54, 토픽 Follow 1393×36, shop 탭 713×2, 여정 장소 줄 1389 | 1440 실측 | 남음 |
+| **P1** | 672 기둥이 넓은 화면에 떠 있음: /topics, /saved, /following, /recreeshot/[id] | 1440 실측 | 남음 |
+| **P2** | 부품이 페이지마다 따로: 페이지 제목 8벌 복붙(`.app-header` 안쪽 `h-12 px-4`), 섹션 제목 17곳 수작업, 탭 2벌 복붙, 빈 화면 18벌, 칩 8종 · 높이 4종, 카드 모서리 6종 · 그림자 3체계 | §2.3 | 페이지 제목만 `PageTitle` 로. 나머지 남음 |
+| **P2** | 빈 캔버스: /journeys 카드 2장, 홈 Fresh Drops 465 카드 2열 | 1440 실측 | 남음 |
+| **P3** | 글자 크기: 사용자 코드에 26종(임의값 10.5px 17곳, 13px 30곳 …), 이벤트 상세 inline `fontSize` 34곳. 한 화면에 11종 | §2.4 | 남음 (글자 토큰 미정의) |
+| **P3** | discover: 칩 줄 사이 50 빈칸, 카테고리 칩 잘림, 저장 아이콘이 카드 위로 5 삐져나옴 | 실측 | 확인 안 함 |
 
 ### 2.3 부품 비교표
 
@@ -145,10 +152,16 @@
 --w-narrow        42rem    집중 화면 (지금 data-narrow-layout 의 672 그대로)
 ```
 
-- **1440 고정 셸을 없앤다.** `layout.tsx` 기둥의 `max-w-[var(--app-col-w)]` 는 lg 에서 화면 전체가 되고, 폭은 각 페이지가 위 3토큰 중 하나로 정한다
-  - `--app-col-w` 는 모바일 540 · md 672 를 위해 남긴다. fixed 요소 10곳(ScrollToTop · FAB · 시트 등)이 쓰므로 lg 값을 `--w-wide` 에 맞춰 둔다
-- **상단 바 안쪽** = `max-w: var(--w-wide)` + `px: var(--page-gutter)`. 디자인(로고 · 아이콘 · 크기 · 간격 · 높이 · 색 · 현재 표시)은 그대로
+- **1440 고정 셸을 없앤다.** `layout.tsx` 기둥의 최대 폭은 `--app-col-w` 를 그대로 쓰고, lg 에서 그 값이 `--w-wide` + 2 × `--page-gutter` 가 된다(globals.css lg 블록). 폭은 각 페이지가 위 3토큰 중 하나로 정한다
+  - `--app-col-w` 는 모바일 540 · md 42rem 이다. fixed 요소 10곳(ScrollToTop · FAB · 시트 등)도 같은 값을 쓴다. 편집기(`data-narrow-layout`)에서는 lg 에서도 `--w-narrow`
+- **상단 바 안쪽** = 최대 폭 `--app-col-w` + 좌우 여백 `--page-gutter`. 결과적으로 wide 본문과 같은 좌우 끝선
   - 읽기 화면에서도 바는 wide. 본문만 reading 폭에서 가운데
+- **상단 바는 별도 컴포넌트 `DesktopHeader`** (`src/app/(user)/_components/DesktopHeader.tsx`, 구현 후 결정). 처음 안(BottomNav 를 lg 에서 바로 바꾸고 디자인은 그대로)과 다르다
+  - 왼쪽: 로고 reCree + 글자 메뉴 Home · Map · Journeys · recreeshots · Shop (아이콘 18 + 글자)
+  - 현재 표시: 검정 굵은 글자 + 바 아래 끝 검정 밑줄 2px. 바 안에 라임은 쓰지 않는다. Create 버튼 없음
+  - 오른쪽: 검색(/discover 링크) · 계정. 로그인 = 아바타 드롭다운(Profile · Saved · Following · Log out), 로그아웃 = 검정 Log in 알약
+  - 높이 64. 바가 있으면 `html:has([data-desktop-header])` 로 `--top-nav-space` 가 64 가 된다
+  - 모바일 하단 알약(BottomNav)은 lg 에서 숨는다. 모바일 알약에도 Journeys 가 들어갔다(왼쪽 Profile · Shop · recreeshots · Journeys, 오른쪽 Home · Map)
 - 실제 위치 (스크롤바 15 제외)
 
 | 화면 폭 | gutter | wide 본문 | reading 본문 |
@@ -161,7 +174,8 @@
 
 - 게시글 상세: 지금 `81rem` + `px-8` + 블록 `px-4` = 본문 1200 이다. reading 토큰과 같은 값이라 1440 · 1920 에서는 모양이 그대로이고, 1024 · 1280 의 바깥 여백만 48 → 32 · 40 이 된다
 - 클래스 형태: 페이지 바깥 래퍼 하나(`PageContainer`)가 lg 에서 가운데 정렬 · 최대 폭(폭 토큰 + 좌우 gutter) · 좌우 여백 gutter 를 갖는다.
-  - 문서에 Tailwind 클래스 모양의 글자를 그대로 적지 않는다. Tailwind 가 docs 까지 훑어 그 글자로 CSS 를 만들고, 잘못된 값이면 dev 전체가 500 이 된다(2026-10-03 실제로 겪음) 래퍼 안의 콘텐츠가 모바일용 `px-4` 를 가진 경우는 lg 에서 `lg:px-0` 으로 지운다(게시글 상세처럼 블록이 px-4 를 품은 곳은 gutter 에서 16 을 빼서 맞춘다)
+  - 문서에 Tailwind 클래스 모양의 글자를 그대로 적지 않는다. Tailwind 가 docs 까지 훑어 그 글자로 CSS 를 만들고, 잘못된 값이면 dev 전체가 500 이 된다(2026-10-03 실제로 겪음). 지금은 globals.css 의 `@source not` 으로 docs/ 를 스캔에서 뺐지만 규칙은 유지한다
+  - 래퍼 안의 콘텐츠가 모바일용 `px-4` 를 가진 경우는 lg 에서 `lg:px-0` 으로 지운다(게시글 상세처럼 블록이 px-4 를 품은 곳은 gutter 에서 16 을 빼서 맞춘다)
 
 ### 3.2 간격 단위 (lg)
 
@@ -170,7 +184,7 @@
 | 이름 | 값 | 관계 |
 |---|---|---|
 | `--space-page-top` | 32 | 상단 바 → 첫 콘텐츠 (페이지 제목 · 검색 줄 · 미디어) |
-| `--space-section` | 48 | 섹션 사이 |
+| (섹션 사이) | 48 | 섹션 사이. 토큰은 처음 쓸 때 만든다 (`--space-section` 은 쓰는 곳이 없어 지웠다) |
 | (클래스) | 16 | 섹션 제목 → 내용, 카드 사이 |
 | (클래스) | 24 | 페이지 제목 → 탭 · 칩 줄 → 본문 |
 
@@ -217,12 +231,15 @@ recreeshot 타일(폴라로이드)은 예외 — 흰 테두리 + 그림자가 re
 
 | 부품(가칭) | 내용 | 모바일 | lg | 대체하는 것 |
 |---|---|---|---|---|
-| `PageTitle` | h1 + 부제(선택) + 오른쪽 행동(선택) | **렌더하지 않음**(`hidden lg:flex`) — 모바일은 지금 헤더 바가 계속 맡는다 | `text-page-title` 700, 부제 `text-meta` muted, 행동은 알약 버튼 자동 폭. 아래 24 | 이중 헤더 8곳의 제목 역할 |
+| `PageTitle` | h1 + 부제(선택) + 오른쪽 행동(선택) | **렌더하지 않음** — 모바일은 지금 헤더 바가 계속 맡는다 | `text-page-title` 700, 부제 `text-meta` muted, 행동은 알약 버튼 자동 폭. 아래 24 | 이중 헤더 8곳의 제목 역할 |
 | `SectionHeader` | 제목 + "More ›" + lg ‹ › | `HScrollSection` 의 지금 모양 그대로 | `text-section-title`, 링크 `text-meta` | HScrollSection 안쪽 머리 + 수작업 17곳 중 모바일 모양이 같은 것 |
 | `UnderlineTabs` | 밑줄 탭 | saved · shop 지금 모양 그대로(두 배치: 스크롤 / 꽉 채움) | 왼쪽 정렬 · 글자 폭(`flex-none px-5`), 탭 줄 아래 선은 본문 폭 | saved · shop 탭 복붙 |
 | `EmptyState` | 아이콘(선택) + 제목 + 설명 + CTA(선택) | 로그인 유도 3벌의 모양(아이콘 40 · 18/600 · 14 · 라임 알약) | 같은 모양, 글자만 토큰 | 18벌 중 모바일 모양이 같은 것부터. 나머지는 차이를 보고 |
 | `CardGrid` | 카드 그리드 | 지금 `grid-cols-2 gap-3` 그대로 | `repeat(auto-fill, minmax(var(--card-min), 1fr))` gap 16 — 열 수가 폭으로 정해진다 | 그리드 4벌 복붙 + saved · 프로필 |
 | `PageContainer` | 폭 래퍼 `variant: wide · reading · narrow` | 클래스 없음(모바일 무변화) | §3.1 | 페이지마다 흩어진 `max-w-*` · `lg:px-10` |
+
+- **구현 (확정 이름):** `PageContainer` · `PageTitle` 은 `src/app/(user)/_components/` 에 있다. `PageTitle` 의 h1 은 아직 글자 토큰 없이 28 리터럴이다
+- **`PageTitle` 규칙 (PageTitle.tsx:6):** 상단 바 메뉴에 이름이 있는 화면(recreeshots · Shop 등)은 쓰지 않는다 — 바가 이미 어디인지 말한다. 지금 쓰는 곳: /saved · /topics · /profile/following
 
 **카드 최소 폭 `--card-min` (P9)**
 
@@ -443,6 +460,7 @@ y=80 │ [🔍 Search places ··][⚙][⌑]│    │                     [◎]
 - 페이지 구성 요소의 종류 · 순서 변경 (배치만)
 - 게시글 상세 구조 · 유튜브 자동재생 · 지도 카드 동작
 - 상단 바 디자인(로고 · 아이콘 · 크기 · 간격 · 높이 · 색 · 현재 표시)
+  - 이후 변경: 상단 바는 별도 `DesktopHeader` 로 새로 만들었다(글자 메뉴 · 검정 밑줄 · 계정 드롭다운, §3.1). 이 항목은 당시 계획이다
 
 ## 6. 구현 청크
 
@@ -450,7 +468,7 @@ y=80 │ [🔍 Search places ··][⚙][⌑]│    │                     [◎]
 
 | # | 청크 | 확인 |
 |---|---|---|
-| 1 | **셸 · 폭 토큰.** `--page-gutter` · `--w-*` · `--space-*`, 1440 기둥 해제, 상단 바 안쪽 정렬, `PageContainer`, discover 문서 높이 P0 | 상단 바 로고 x = gutter(32/40/48/80), discover docH = 뷰포트 |
+| 1 | **셸 · 폭 토큰.** `--page-gutter` · `--w-*` · `--space-page-top`, 1440 기둥 해제, 상단 바 안쪽 정렬, `PageContainer`, discover 문서 높이 P0 | 상단 바 로고 x = gutter(32/40/48/80), discover docH = 뷰포트 |
 | 2 | **글자 토큰 + 공통 부품 뼈대.** `text-*` 5개, `PageTitle` · `SectionHeader`(HScrollSection 에서 추출) · `UnderlineTabs` · `EmptyState` · `CardGrid` | 모바일 계산 스타일 HEAD 와 동일, HScrollSection 쓰는 6곳 모양 그대로 |
 | 3 | **이중 헤더 정리.** 8곳 `.app-header` lg 숨김 + `PageTitle`, recreeshot 상세 · 약관 lg 상단 바 | lg 에서 64 바 아래 sticky 헤더 0개 |
 | 4 | **그리드 · 가로 줄 열 규칙.** `CardGrid` 적용(recreeshot · shop · 토픽 상세 · 여정 · saved · 프로필), HScrollSection 카드 폭 = 열 기준 | 가로 줄 마지막 카드 잘림 0 |
@@ -472,8 +490,8 @@ y=80 │ [🔍 Search places ··][⚙][⌑]│    │                     [◎]
 
 ## 8. 정할 것
 
-1. **새 이름 6개** — `PageContainer` · `PageTitle` · `SectionHeader` · `UnderlineTabs` · `EmptyState` · `CardGrid`, 토큰 `--page-gutter` · `--w-wide/reading/narrow` · `--space-page-top/section` · `text-page-title/section-title/card-title/body/meta`
+1. **새 이름 6개** — `PageContainer` · `PageTitle` · `SectionHeader` · `UnderlineTabs` · `EmptyState` · `CardGrid`, 토큰 `--page-gutter` · `--w-wide/reading/narrow` · `--space-page-top`(섹션 간격 토큰은 처음 쓸 때) · `text-page-title/section-title/card-title/body/meta`
 2. **로고만 있던 헤더 화면의 PC 제목** — `/recreeshot` 에 "recreeshot" 제목을 새로 둘지(추천: 둔다. 토픽 아이콘 링크 · New 를 붙일 자리가 필요), `/profile` · `/login` 은 제목 없음(추천)
-3. **읽기 화면 상단 바** — `/recreeshot/[id]` · `/policy` 에서 lg 상단 바를 보이게(추천). 편집기 · 온보딩 · 프로필 편집은 지금처럼 바 없이
-4. **폭 값** — gutter 32/40/48/80, wide 1760, reading 1200, 위 여백 32 · 섹션 48
+3. **읽기 화면 상단 바** — `/recreeshot/[id]` · `/policy` 에서 lg 상단 바를 보이게(추천). 편집기 · 온보딩 · 프로필 편집은 지금처럼 바 없이 — 적용됨(`isDesktopHeaderHidden`, 프로필 편집은 `/edit` 끝 규칙으로 함께 숨김)
+4. **폭 값** — gutter 32/40/48/80, wide 1760, reading 1200, 위 여백 32 · 섹션 48 (적용됨, 섹션 48 은 토큰 없이)
 5. **로그인 화면 실측** — 프로필 · 온보딩 · 여정 편집은 로그인이 필요하다. 청크 7 · 8 전에 playwright 브라우저에서 한 번 로그인해 주면 실측한다

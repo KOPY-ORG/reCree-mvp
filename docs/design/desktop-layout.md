@@ -3,8 +3,9 @@
 > 작성 2026-09-30 · 상태: 구현됨 (커밋 전) — lg 방향은 구현 중 바뀌었다. 맨 아래 "구현 기록" §8 이 기준이다
 >
 > 범위: `src/app/(user)` 사용자 화면. admin 제외.
-> 브랜드 표기·색은 현재 코드 기준(`BRAND.name`, `var(--brand)`)을 따른다.
-> CLAUDE.md 의 디자인 토큰 표(#C8FF09 등)는 최근 리브랜딩 커밋과 어긋나 있어 인용하지 않는다.
+> 브랜드 표기·색은 현재 코드 기준(표기 reCree, `var(--brand)` = #D3FD52)을 따른다.
+> `BRAND` 상수(`src/lib/brand.ts`)는 concertrip 브랜치에만 있다. 이 브랜치에는 없다.
+> CLAUDE.md 의 디자인 토큰 표는 2026-10-03 에 globals.css 값으로 고쳤다.
 
 ---
 
@@ -21,6 +22,9 @@
   CSS 변수 값이 폭에 따라 바뀌게 해서 소비처가 알아서 맞춰지게 한다.
 - JS 로 폭을 판정하지 않는다 (`matchMedia` · `useMediaQuery` 도입 안 함). 현재 코드에도 없다.
   SSR 첫 페인트에서 모바일/PC 가 뒤바뀌는 깜빡임을 원천 차단한다.
+  - 이후 변경: 렌더 배치에는 여전히 쓰지 않는다. 다만 effect · 이벤트 안의 JS 계산에는 `matchMedia` 를 쓴다 —
+    쿼리 문자열은 `src/lib/bottom-nav.ts` 의 `LG_QUERY`(64rem) 한 곳이다. 쓰는 곳: `isRailLayout()`(지도 카메라 여백 · 시트 스냅 ·
+    `BannerCarousel` 화살표), `useRailLayout`(discover 장소 선택), `SocialEmbed`(lg 높이 맞춤). 서버 스냅샷은 모바일과 같다.
 - 만드는 흐름(recreeshot 편집기, 코스 편집기, 온보딩, 로그인)은 PC 에서도 **좁은 컬럼**을 유지한다.
   집중 작업이라 넓힐 이유가 없고, 회귀 위험이 가장 큰 곳이기도 하다.
 
@@ -482,6 +486,8 @@ md 는 공통으로 "컬럼 720 + 그리드 2→3열" 이고, 아래는 lg 만 �
 - 청크 10: 프로필 PC 배치(왼쪽 프로필 카드 sticky, 설정 드로어 → 팝오버)
 - 청크 11: 이미지 `sizes` 전면 정리, hover · focus-visible 상태
 - 알려진 것: 게시글 댓글은 lg 에서 1440 전체 폭으로 펼쳐진다(읽기 폭 제한 필요). recreeshot 상세 · 편집 계열은 레일 없이(`isBottomNavHidden`) 좁은 기둥.
+  - 이후 변경: PC 상단 바는 `isDesktopHeaderHidden` 으로 따로 판정한다. 숨기는 곳은 만드는 흐름(편집기 · 온보딩)뿐이다.
+    recreeshot 상세 · 약관은 모바일에서만 탭바를 치우고, PC 에서는 상단 바가 보인다 (§18).
 
 ---
 
@@ -538,6 +544,8 @@ md 는 공통으로 "컬럼 720 + 그리드 2→3열" 이고, 아래는 lg 만 �
 
 - **PC 내비게이션 = 상단 바** (사용자 결정). 레퍼런스 셋 모두 상단 바다. discover 지도 세로는 64 줄었다.
 
+> 아래 표는 2026-10-02 결정 당시 기록이다. 상단 바 구현 · 상세 폭 · 좌우 여백은 이후 바뀌었다 — §18 이 기준이다.
+
 | 원칙 | 변경 | 파일 |
 |---|---|---|
 | 1 | 하단 알약이 lg 에서 높이 64 의 상단 바가 된다. 왼쪽 = 로고(reCree, 홈 링크) · 홈 · 지도, 오른쪽 = recreeshot · shop · profile. 같은 칸 · 같은 라임 활성 원, 알약 표면은 지우고 바가 `.app-header` 와 같은 표면을 갖는다. 이름표는 칸 아래로 | `BottomNav.tsx` |
@@ -562,3 +570,23 @@ md 는 공통으로 "컬럼 720 + 그리드 2→3열" 이고, 아래는 lg 만 �
 - 390px: HEAD 와 15개 화면 비교. 13개 완전 일치. feed · discover 는 가로 줄 제목 줄의 래퍼 div(More 링크와 같은 좌표 ·
   크기)만 늘었고 보이는 요소 좌표 · 페이지 높이는 같다.
 - 1280 · 1440 · 1920: 홈 · discover · 게시글 · shop · saved 가로 스크롤 없음, `--brand` = #d3fd52, 핑크 계열 색 0.
+
+## 18. 이후 변경 (2026-10-03)
+
+§17 의 결정(PC 내비 = 상단 바)은 그대로다. 구현 방식과 몇몇 값이 바뀌었다.
+
+| 항목 | 이전 | 지금 코드 |
+|---|---|---|
+| 상단 바 구현 | BottomNav 가 lg 에서 상단 바로 바뀜 | 별도 컴포넌트 `DesktopHeader` (`src/app/(user)/_components/DesktopHeader.tsx`). BottomNav 는 lg 에서 숨고 모바일 · 태블릿 전용 |
+| 상단 바 구성 | 로고 · 홈 · 지도 / recreeshot · shop · profile, 라임 활성 원 | 왼쪽 = 로고(reCree, /feed) + 글자 메뉴 Home · Map · Journeys · recreeshots · Shop (아이콘 18 + 글자). 오른쪽 = 검색 링크(/discover) · 계정 |
+| 활성 표시 | 라임 원 | 검정 굵은 글자 + 바 아래 끝 검정 밑줄 2px. 바 안에 라임은 쓰지 않는다 (페이지 안 선택 칩과 구분) |
+| 계정 | profile 칸 | 로그인: 아바타 버튼 → 드롭다운 Profile · Saved · Following · Log out. 로그아웃: 검정 Log in 알약 |
+| Create 버튼 | — | 없음 |
+| `--top-nav-space` 선택자 | `html:has([data-main-nav])` | `html:has([data-desktop-header])` |
+| 바를 숨기는 화면 | `isBottomNavHidden` 과 같음 (recreeshot 상세 포함) | `isDesktopHeaderHidden` — `/recreeshot/new` · `…/edit` · `/journeys/new` · `/onboarding` 만 |
+| 게시글 상세 폭 | 1120 + 좌우 24 (73rem) | 본문 1200 + 좌우 48 = 81rem. 이벤트 상세는 아직 73rem · 좌우 40 고정 (docs/recon/cleanup-backlog.md 4-3) |
+| 좌우 여백 | 40 고정 | `--page-gutter` 32 (1024~) · 40 (1280~) · 48 (1440~) · 80 (1920~) |
+| 기둥 폭 | 1440 | `--app-col-w` = `--w-wide`(1760) + 2 × `--page-gutter` |
+| 모바일 하단 알약 | Journeys 없음 (recreeshot · shop · profile + 홈 · 지도) | 왼쪽 Profile · Shop · recreeshots · Journeys (4칸, 칸 사이 0), 오른쪽 Home · Map. 아이콘 선 굵기는 `BOTTOM_NAV_ICON_STROKE`(1.75) 한 곳 |
+
+- `isRailLayout` · `useRailLayout` 이름은 여전히 그대로다.

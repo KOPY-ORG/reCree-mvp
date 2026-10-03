@@ -15,10 +15,12 @@
 ## 규칙
 
 1. **선을 긋지 않는다.** 바탕과의 구분은 그림자가 한다. 카드 안의 구분(버튼 · 지도 칸)은 면 `bg-muted` 이 한다.
+   - 예외: 홈 지도 카드 `KoreaMapCard` 의 카드 외곽은 회색 테두리(gray-200, 1px)다 (`KoreaMapCard.tsx` 317 · 343, 두 배치 모두).
+     지도 일러스트 카드의 윤곽 — 예외로 둔다. 그래서 그 안의 지역 칩은 테두리 없이 그림자만 쓴다(선이 두 겹이 되지 않게).
 2. **그림자 색은 하나** — `rgba(17,12,46,α)`. 위치가 높을수록(홀로 뜬 것일수록) 멀고 진하게, 흐름 안에 쌓이는 것일수록 옅게.
 3. **선택은 브랜드색 하나로만 말한다.** 강조 카드도 테두리 대신 바탕(`bg-brand-sub3`)으로.
 4. **컨트롤은 알약, 카드는 20px.** 버튼 · 칩은 `rounded-full`, 카드는 홈 지도 카드와 같은 20px.
-5. **누름은 즉시.** 제자리 링크 · 칩은 `active:opacity-70`. 사진 · 영상 위에 뜬 아이콘 버튼은 opacity 로는 눌림이 안 보여 `.press-scale`(160ms, scale .94).
+5. **누름은 즉시.** 제자리 링크 · 칩은 `active:opacity-70`. 사진 · 영상 위에 뜬 버튼과 게시글 상세의 행동 버튼은 `.press-scale`(160ms, scale .94).
 
 ## 토큰 · 클래스 (`src/app/globals.css`)
 
@@ -32,9 +34,9 @@
 | `ease-out-strong` | `cubic-bezier(.23,1,.32,1)` | 누름 · 사라짐 |
 | `.surface-card` | 배경 + 20px + `shadow-card` | 상세의 Story · 위치 · recreeshot 추가 · 댓글 · 출처 링크(Bookmark · Netflix) |
 | `.memo-card` | 연한 라임(`brand-sub3` 에 검정 1.5%) 종이, 그림자 없음, 오른쪽 위 18px 접힘(`brand` 55% + `brand-sub3`) | 상세 Fan To-Do |
-| `.press-scale` | 160ms, `:active` scale .94, 모션 줄이기에서 끔 | 유튜브 소리 켜기 버튼 |
-| `.photo-action` | 누르는 칸 44 · 보이는 원 32, 검정 30% + blur 5, 흰 아이콘 20 | 상세 사진 위 뒤로가기 · 공유 · 저장 · 더보기 |
-| `.photo-action-camera` | 원 40, 회색 `rgba(40,40,46,.72)` + blur 8 | 상세 사진 우측 하단 recreeshot 추가 |
+| `.press-scale` | 160ms, `:active` scale .94, 모션 줄이기에서 끔 | 게시글 상세: 사진 위 원 버튼(`PostDetailHeader`) · recreeshot 추가(`BannerReCreeshotButton`) · 유튜브 소리 켜기 · 행동 버튼(`PostActionBar` ACTION, PostMoreMenu 도 씀) · Helpful · 좋아요 · 저장 알약(`HelpfulVote` VOTE_PILL) · View on Map(`ViewOnMapButton`, lg 는 `LocationCard` 버튼) |
+| `.photo-action` | 누르는 칸 44 · 보이는 원 40, 검정 18% + blur 12, 흰 아이콘 20. blur 미지원이면 검정 35% | 상세 사진 위 뒤로가기 · 공유 · 저장 · 더보기 |
+| `.photo-action-camera` | 원 40, 회색 `rgba(40,40,46,.72)` + blur 8 (미지원 .85) | 상세 사진 우측 하단 recreeshot 추가 |
 
 `shadow-card` 만 홈에 없던 값이다. 검색바 그림자를 큰 카드 여러 장에 그대로 깔면 번져 화면이 뿌옇게 되어,
 같은 색으로 거리와 농도만 줄였다.
