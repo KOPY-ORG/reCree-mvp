@@ -1,4 +1,5 @@
 import { SKELETON_1, SKELETON_2, SKELETON_3 } from "./_constants";
+import { CARD_GRID, CARD_GRID_GUTTER } from "@/app/(user)/_components/card-grid";
 
 // 헤더가 page.tsx 안에 있어 로딩 중에는 없다 — 제목은 정적이라 그대로 그려 전환이 튀지 않게 한다.
 // New 버튼은 로그인 여부에 달려 있어 자리표시를 두지 않는다 (비로그인엔 아예 없는 버튼이다).
@@ -34,7 +35,7 @@ export default function JourneysLoading() {
           className="mx-4 mb-3 h-[18px] w-32 rounded animate-pulse"
           style={{ background: SKELETON_1 }}
         />
-        <div className="grid grid-cols-2 gap-3 px-4">
+        <div className={`${CARD_GRID} ${CARD_GRID_GUTTER}`}>
           {CARD_TONES.map((tone, i) => (
             <CardSkeleton key={i} tone={tone} />
           ))}

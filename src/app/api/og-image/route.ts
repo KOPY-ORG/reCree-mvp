@@ -77,7 +77,9 @@ export async function GET(req: NextRequest) {
     clearTimeout(timer);
 
     const html = await res.text();
-    const thumbnailUrl = extractOgImage(html);
+    // 메타 태그 속 URL 은 HTML 엔티티로 적혀 있다(& → &amp;). 그대로 쓰면 쿼리가 깨져 인스타 · X 이미지가 404 가 된다
+    const rawThumbnail = extractOgImage(html);
+    const thumbnailUrl = rawThumbnail ? decodeHtmlEntities(rawThumbnail) : null;
     const title =
       extractMeta(html, "og:title") ??
       extractMeta(html, "twitter:title", "name") ??

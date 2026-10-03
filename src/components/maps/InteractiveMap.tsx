@@ -1,14 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useImperativeHandle, forwardRef } from "react";
+import { useCallback, useEffect, useImperativeHandle, useRef, forwardRef } from "react";
 import { APIProvider, Map, AdvancedMarker, useMap } from "@vis.gl/react-google-maps";
 import { PlaceMarker } from "./PlaceMarker";
 import type { MarkerGradient } from "@/lib/map-utils";
-import { BOTTOM_NAV_SPACE } from "@/lib/bottom-nav";
+import { BOTTOM_NAV_SPACE, isRailLayout } from "@/lib/bottom-nav";
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 const MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID ?? "DEMO_MAP_ID";
 const TARGET_ZOOM = 15;
+/** 다른 화면에서 장소를 지정해 들어왔을 때(?place=) 처음 보여줄 줌 — 골목과 주변 동네가 같이 보인다 */
+const ENTRY_ZOOM = 16;
 
 type MarkerPlace = {
   id: string;
@@ -45,6 +47,11 @@ interface Props {
    * 이 키는 지역이 있을 때만 값을 갖고, 벗으면 비어서 카메라가 그대로 있는다.
    */
   regionKey?: string | null;
+  /**
+   * 처음 열릴 때 이 장소로 카메라를 맞춘다 (게시글 → View on Map 처럼 장소를 지정해 들어온 경우).
+   * 첫 한 번만 쓴다 — 그 뒤 boundsKey 가 바뀌면(필터 등) 지금처럼 전체 마커에 맞춘다. 없으면 동작이 그대로다
+   */
+  initialFocusPlaceId?: string | null;
   onMarkerClick: (placeId: string) => void;
   onMapClick?: () => void;
   className?: string;
@@ -59,6 +66,7 @@ function MapContent({
   highlightedIds,
   boundsKey,
   regionKey,
+  initialFocusPlaceId,
   onMarkerClick,
   onMapClick,
   bottomOffset = BOTTOM_NAV_SPACE,
@@ -67,14 +75,31 @@ function MapContent({
 }: Omit<Props, "className"> & { cameraRef: React.Ref<FocusCameraHandle> }) {
   const map = useMap();
 
+  // 카메라가 비켜 줄 영역. 모바일은 아래 시트가 지도의 40% 를 덮는다고 보고 그만큼 비우고
+  // 초점을 12% 아래로 내린다. lg 는 시트가 지도 옆 패널이라 지도 위에 덮이는 것이 없다.
+  //
+  // focusOffsetY 는 마커 하나를 골랐을 때만 쓴다. lg 는 고른 장소의 카드가 지도 아래 40% 까지 뜨므로
+  // 마커를 지도 높이의 10% 만큼 위로 올려 카드 위 영역에 둔다. 모바일은 offsetY 와 같다.
+  const cameraInsets = useCallback(() => {
+    if (isRailLayout()) {
+      return { sheetPeekH: 0, offsetY: 0, focusOffsetY: Math.round(window.innerHeight * 0.1) };
+    }
+    const containerH = window.innerHeight - bottomOffset;
+    const offsetY = Math.round(containerH * 0.12);
+    return {
+      sheetPeekH: Math.round(containerH * 0.4),
+      offsetY,
+      focusOffsetY: offsetY,
+    };
+  }, [bottomOffset]);
+
   const fitAllMarkers = useCallback(() => {
     if (!map || places.length === 0) return;
-    const containerH = window.innerHeight - bottomOffset;
-    const sheetPeekH = Math.round(containerH * 0.4);
+    const { sheetPeekH, offsetY } = cameraInsets();
     if (places.length === 1) {
       map.panTo({ lat: places[0].latitude, lng: places[0].longitude });
       map.setZoom(13);
-      map.panBy(0, Math.round(containerH * 0.12));
+      map.panBy(0, offsetY);
       return;
     }
     try {
@@ -84,13 +109,11 @@ function MapContent({
     } catch {
       // google.maps 미로드 시 무시
     }
-  }, [map, places, bottomOffset]);
+  }, [map, places, cameraInsets]);
 
   const fitMarkers = useCallback((coords: { lat: number; lng: number }[]) => {
     if (!map || coords.length === 0) return;
-    const containerH = window.innerHeight - bottomOffset;
-    const sheetPeekH = Math.round(containerH * 0.4);
-    const offsetY = Math.round(containerH * 0.12);
+    const { sheetPeekH, offsetY } = cameraInsets();
     if (coords.length === 1) {
       map.moveCamera({ center: coords[0], zoom: TARGET_ZOOM });
       map.panBy(0, offsetY);
@@ -103,13 +126,12 @@ function MapContent({
     } catch {
       // google.maps 미로드 시 무시
     }
-  }, [map, bottomOffset]);
+  }, [map, cameraInsets]);
 
   useImperativeHandle(cameraRef, () => ({
     focusCamera({ lat, lng }) {
       if (!map) return;
-      const containerH = window.innerHeight - bottomOffset;
-      const offsetY = Math.round(containerH * 0.12);
+      const { focusOffsetY: offsetY } = cameraInsets();
       const current = map.getZoom();
       const zoom = current == null || current < TARGET_ZOOM ? TARGET_ZOOM : current;
       map.moveCamera({ center: { lat, lng }, zoom });
@@ -117,11 +139,34 @@ function MapContent({
     },
     fitAllMarkers,
     fitMarkers,
-  }), [map, bottomOffset, fitAllMarkers, fitMarkers]);
+  }), [map, cameraInsets, fitAllMarkers, fitMarkers]);
 
-  // 초기 bounds — boundsKey 변경 시 전체 마커가 보이도록 맞춤
+  // 장소를 지정해 들어왔을 때 첫 카메라. 모바일은 아래 장소 카드가 지도의 아래 절반 가까이를 덮으므로
+  // 핀을 카드 위 빈 곳(위에서 약 30%)에 두도록 지도 높이의 20% 만큼 올린다. lg 는 카드가 지도 아래 40% 라 focusOffsetY 를 그대로 쓴다
+  const initialFocusDone = useRef(false);
+  const focusOnEntry = useCallback((coords: { lat: number; lng: number }) => {
+    if (!map) return;
+    const offsetY = isRailLayout()
+      ? cameraInsets().focusOffsetY
+      : Math.round((window.innerHeight - bottomOffset) * 0.2);
+    // 첫 진입에는 지도가 아직 크기를 잡기 전이라 panBy 가 먹지 않는다. 그래서 옮길 픽셀을 위도로 바꿔
+    // 가운데 자체를 장소보다 남쪽에 둔다 (메르카토르, 256px 타일). 그러면 핀이 그만큼 위에 보인다
+    const degPerPx = (360 / (256 * 2 ** ENTRY_ZOOM)) * Math.cos((coords.lat * Math.PI) / 180);
+    map.moveCamera({ center: { lat: coords.lat - offsetY * degPerPx, lng: coords.lng }, zoom: ENTRY_ZOOM });
+  }, [map, cameraInsets, bottomOffset]);
+
+  // 초기 bounds — boundsKey 변경 시 전체 마커가 보이도록 맞춤.
+  // 단 장소를 지정해 들어온 첫 번에는 그 장소로 맞춘다 (map 이 붙은 뒤 한 번)
   useEffect(() => {
     if (!boundsKey) return;
+    if (map && initialFocusPlaceId && !initialFocusDone.current) {
+      initialFocusDone.current = true;
+      const target = places.find((p) => p.id === initialFocusPlaceId);
+      if (target) {
+        focusOnEntry({ lat: target.latitude, lng: target.longitude });
+        return;
+      }
+    }
     fitAllMarkers();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, boundsKey]);
@@ -146,9 +191,7 @@ function MapContent({
 
     if (coords.length === 0) return;
 
-    const containerH = window.innerHeight - bottomOffset;
-    const sheetPeekH = Math.round(containerH * 0.4);
-    const offsetY = Math.round(containerH * 0.12);
+    const { sheetPeekH, offsetY } = cameraInsets();
 
     if (coords.length === 1) {
       const current = map.getZoom();
@@ -222,7 +265,7 @@ function MapContent({
 }
 
 export const InteractiveMap = forwardRef<FocusCameraHandle, Props>(function InteractiveMap(
-  { places, selectedPlaceId, focusedPlaceIds, highlightedIds, boundsKey, regionKey, onMarkerClick, onMapClick, className, bottomOffset = BOTTOM_NAV_SPACE, userLocation },
+  { places, selectedPlaceId, focusedPlaceIds, highlightedIds, boundsKey, regionKey, initialFocusPlaceId, onMarkerClick, onMapClick, className, bottomOffset = BOTTOM_NAV_SPACE, userLocation },
   ref
 ) {
   if (!API_KEY) {
@@ -243,6 +286,7 @@ export const InteractiveMap = forwardRef<FocusCameraHandle, Props>(function Inte
           highlightedIds={highlightedIds}
           boundsKey={boundsKey}
           regionKey={regionKey}
+          initialFocusPlaceId={initialFocusPlaceId}
           onMarkerClick={onMarkerClick}
           onMapClick={onMapClick}
           bottomOffset={bottomOffset}

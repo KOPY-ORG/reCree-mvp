@@ -6,7 +6,7 @@ import { X } from "lucide-react";
 export function TopicsHeader() {
   const router = useRouter();
   return (
-    <header className="app-header">
+    <header className="app-header lg:hidden">
       <div className="relative flex h-12 items-center justify-center px-2">
         <p className="text-base font-semibold">Your topics</p>
         {/* 되돌아가는 동작은 그대로다. 화살표에서 X 로 바뀐 것은 이 화면이 훑고 나가는

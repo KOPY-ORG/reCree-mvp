@@ -4,12 +4,12 @@ import { Plus } from "lucide-react";
 export function NewReCreeshotFab() {
   return (
     <div className="fixed bottom-[var(--bottom-nav-space)] inset-x-0 z-50 h-10 pointer-events-none">
-      <div className="max-w-[540px] mx-auto h-full relative">
+      <div className="max-w-[var(--app-col-w)] mx-auto h-full relative">
         <Link
           href="/recreeshot/new"
           aria-label="New recreeshot"
           className="
-            absolute bottom-0 right-2 pointer-events-auto
+            absolute bottom-0 right-2 lg:right-[var(--page-gutter)] pointer-events-auto
             size-10 rounded-full
             flex items-center justify-center
             backdrop-blur-sm

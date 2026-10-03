@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { isBottomNavHidden, isFullBleedScreen } from "@/lib/bottom-nav";
+import { isBottomNavHidden, isBottomNavHiddenOnMobile, isFullBleedScreen } from "@/lib/bottom-nav";
 
 /**
  * 가로 넘침은 어느 화면에서나 잘라낸다. 자르는 방식만 갈린다.
@@ -22,6 +22,7 @@ const STICKY_TOP_ROUTES = ["/feed"];
  *
  * 여백은 세 갈래다.
  *   탭바 있음        → var(--bottom-nav-space) 만큼 비운다
+ *   모바일만 숨김    → 화면 아래 여백 + 그 자리에 뜨는 버튼 한 줄(40 + 간격 12). lg 는 탭바 있음과 같다
  *   탭바 숨김        → 0. 안 그러면 아래가 이유 없이 비어 보인다
  *   자기 높이 관리   → 0. 지도가 100dvh 를 그대로 쓰고 안쪽에서 알아서 비킨다
  *
@@ -29,12 +30,17 @@ const STICKY_TOP_ROUTES = ["/feed"];
  */
 export function MainArea({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const reserve = !isBottomNavHidden(pathname) && !isFullBleedScreen(pathname);
+  const mobileHidden = isBottomNavHiddenOnMobile(pathname);
+  const reserve = !mobileHidden && !isBottomNavHidden(pathname) && !isFullBleedScreen(pathname);
   const allowSticky = STICKY_TOP_ROUTES.includes(pathname);
 
   return (
     <main
-      className={`w-full flex-1 ${allowSticky ? "overflow-x-clip" : "overflow-x-hidden"}`}
+      // lg 는 전 화면 clip — PC 배치의 sticky 사이드(홈 지도 카드 · 상세 미디어)가 붙어야 한다.
+      // 모바일의 /saved · /shop 탭바 문제는 lg 에서 top 오프셋으로 따로 비킨다
+      className={`w-full flex-1 ${allowSticky ? "overflow-x-clip" : "overflow-x-hidden lg:overflow-x-clip"} ${
+        mobileHidden ? "pb-[calc(var(--bottom-nav-bottom)+52px)] lg:pb-[var(--bottom-nav-space)]" : ""
+      }`}
       style={reserve ? { paddingBottom: "var(--bottom-nav-space)" } : undefined}
     >
       {children}

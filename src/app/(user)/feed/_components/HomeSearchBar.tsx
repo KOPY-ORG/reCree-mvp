@@ -15,7 +15,7 @@ export function HomeSearchBar() {
     <Link
       href="/discover"
       aria-label="Search"
-      className="flex items-center gap-3 h-[42px] px-4 rounded-full bg-background shadow-[0_8px_50px_rgba(17,12,46,0.15)] transition-opacity active:opacity-70"
+      className="flex items-center gap-3 h-[42px] px-4 rounded-full bg-background shadow-float transition-opacity active:opacity-70"
     >
       <Search className="size-5 shrink-0 text-muted-foreground" />
       <span className="text-base text-muted-foreground">Search</span>

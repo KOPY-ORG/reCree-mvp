@@ -72,7 +72,7 @@ export function HomeTabBar({
 }) {
   return (
     <nav aria-label="Home tabs" className="overflow-x-auto scrollbar-hide">
-      <div className="flex items-center gap-2 px-5">
+      <div className="flex items-center gap-2 px-5 lg:px-0">
         <Tab href={feedTabHref(HOT_TAB)} active={activeTab.kind === "hot"}>
           Hot
         </Tab>

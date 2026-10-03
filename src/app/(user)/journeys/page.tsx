@@ -3,6 +3,8 @@ import { Plus } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { getMyCourses, getPublicCourses } from "@/lib/course-queries";
 import { CourseCard } from "./_components/CourseCard";
+import { MobileTitleBar } from "../_components/MobileTitleBar";
+import { CARD_GRID, CARD_GRID_GUTTER } from "@/app/(user)/_components/card-grid";
 
 export default async function JourneysPage() {
   const currentUser = await getCurrentUser();
@@ -15,10 +17,10 @@ export default async function JourneysPage() {
 
   return (
     <div className="pb-8">
-      <header className="app-header">
-        <div className="h-12 flex items-center justify-between px-4">
-          <span className="font-bold text-base tracking-tight">Journeys</span>
-          {currentUser && (
+      <MobileTitleBar
+        title="Journeys"
+        action={
+          currentUser ? (
             <Link
               href="/journeys/new"
               className="flex items-center gap-1 pl-2.5 pr-3.5 py-1.5 rounded-full bg-brand text-black text-sm font-semibold transition-opacity hover:opacity-80"
@@ -26,13 +28,26 @@ export default async function JourneysPage() {
               <Plus className="size-4" strokeWidth={2.5} />
               New
             </Link>
-          )}
-        </div>
-      </header>
+          ) : null
+        }
+      />
+
+      {/* lg: 상단 바 메뉴에 Journeys 가 있어 큰 제목은 두지 않는다. 위 제목 바의 New 만 본문 오른쪽 위로 옮긴다 */}
+      <div className="hidden lg:flex justify-end px-[var(--page-gutter)] pt-[var(--space-page-top)]">
+        {currentUser && (
+          <Link
+            href="/journeys/new"
+            className="flex items-center gap-1 pl-2.5 pr-3.5 py-1.5 rounded-full bg-brand text-black text-sm font-semibold transition-opacity hover:opacity-80"
+          >
+            <Plus className="size-4" strokeWidth={2.5} />
+            New
+          </Link>
+        )}
+      </div>
 
       {currentUser && (
-        <section className="pt-4">
-          <h2 className="font-bold text-lg px-4 mb-3">My Journeys</h2>
+        <section className="pt-4 lg:pt-0">
+          <h2 className="font-bold text-lg px-4 mb-3 lg:px-[var(--page-gutter)]">My Journeys</h2>
           {myCourses.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-3 text-center py-10 px-4">
               <p className="text-base font-semibold">No journeys yet</p>
@@ -47,7 +62,7 @@ export default async function JourneysPage() {
               </Link>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3 px-4">
+            <div className={`${CARD_GRID} ${CARD_GRID_GUTTER}`}>
               {myCourses.map((course) => (
                 <CourseCard key={course.id} course={course} isMine />
               ))}
@@ -57,7 +72,7 @@ export default async function JourneysPage() {
       )}
 
       <section className="pt-6">
-        <h2 className="font-bold text-lg px-4 mb-3">Public Journeys</h2>
+        <h2 className="font-bold text-lg px-4 mb-3 lg:px-[var(--page-gutter)]">Public Journeys</h2>
         {publicCourses.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 text-center py-10 px-4">
             <p className="text-base font-semibold">No public journeys yet</p>
@@ -66,7 +81,7 @@ export default async function JourneysPage() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3 px-4">
+          <div className={`${CARD_GRID} ${CARD_GRID_GUTTER}`}>
             {publicCourses.map((course) => (
               <CourseCard key={course.id} course={course} />
             ))}

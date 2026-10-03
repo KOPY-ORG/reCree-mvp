@@ -1,3 +1,5 @@
+import { SOURCE_CARD, SOURCE_CARD_BADGE, SOURCE_DETAIL } from "./source-card-styles";
+
 interface Props {
   url: string;
   sourceDetail?: string | null;
@@ -15,10 +17,11 @@ export function NetflixCard({ url, sourceDetail }: Props) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex flex-row rounded-xl border border-gray-200 overflow-hidden min-h-20"
+      className={SOURCE_CARD}
     >
       {/* 좌측 */}
-      <div className="w-20 shrink-0 self-stretch flex items-center justify-center bg-black">
+      {/* lg 는 BookmarkCard 와 같은 44 둥근 네모 */}
+      <div className={`${SOURCE_CARD_BADGE} bg-black`}>
         <svg viewBox="0 0 24 24" className="h-7 w-7" fill="#DC211E">
           <polygon points="5,3 21,12 5,21" />
         </svg>
@@ -33,7 +36,7 @@ export function NetflixCard({ url, sourceDetail }: Props) {
           Watch on Netflix
         </p>
         {sourceDetail && (
-          <p className="text-[11px] text-muted-foreground/70 mt-1 leading-snug italic">{sourceDetail}</p>
+          <p className={SOURCE_DETAIL}>{sourceDetail}</p>
         )}
       </div>
     </a>

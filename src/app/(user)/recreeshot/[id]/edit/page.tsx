@@ -23,10 +23,11 @@ export default async function HallEditPage({
   if (shot.userId !== currentUser.id) redirect("/recreeshot/" + id);
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
+    // data-narrow-layout — lg 에서도 좁은 기둥을 쓴다. 만드는 흐름이다 (globals.css)
+    <div data-narrow-layout className="flex flex-col min-h-screen bg-background">
       <header className="app-header">
         <div className="relative h-12 flex items-center px-2">
-          <Link replace href={`/recreeshot/${id}`} className="flex items-center justify-center size-8">
+          <Link replace href={`/recreeshot/${id}`} aria-label="Back" className="flex items-center justify-center size-8">
             <ChevronLeft className="size-5" />
           </Link>
           <span className="absolute left-1/2 -translate-x-1/2 font-bold text-base tracking-tight">

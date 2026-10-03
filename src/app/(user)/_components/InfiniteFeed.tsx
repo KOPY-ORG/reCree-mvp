@@ -106,7 +106,7 @@ export function InfiniteFeed({
 
   return (
     <div>
-      <div className="flex flex-col gap-10">
+      <div className="flex flex-col gap-10 lg:grid lg:grid-cols-2 lg:gap-x-6">
         {posts.map((post) => (
           <FeedCard
             key={post.id}
@@ -118,7 +118,7 @@ export function InfiniteFeed({
       </div>
 
       {isLoading && (
-        <div className="flex flex-col gap-10 mt-6">
+        <div className="flex flex-col gap-10 mt-6 lg:grid lg:grid-cols-2 lg:gap-x-6">
           {[0, 1].map((i) => (
             <div key={i} className="animate-pulse">
               <div className="aspect-video rounded-lg bg-muted" />
@@ -153,7 +153,7 @@ export function InfiniteFeed({
       {/* 상한("capped")으로 멈춘 경우는 더 볼 게 남아 있으므로 아무것도 알리지 않는다 */}
       {endReason === "caught-up" && !isLoading && !error && posts.length > 0 && (
         <p className="mt-8 text-center text-sm text-muted-foreground">
-          You're all caught up.
+          You&apos;re all caught up.
         </p>
       )}
 
