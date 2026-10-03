@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { VolumeX } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { parseYouTubeSource, type YouTubeSource } from "./youtube-source";
+import { afterPageLoad } from "./after-page-load";
 
 interface Props {
   url: string;
@@ -59,26 +60,6 @@ function loadYouTubeApi(): Promise<YTNamespace> {
     });
   }
   return apiPromise;
-}
-
-// 사진·제목이 다 그려진 뒤(load) 브라우저가 한가할 때 플레이어를 부른다
-function afterPageLoad(cb: () => void): () => void {
-  let idleId: number | null = null;
-  const run = () => {
-    if ("requestIdleCallback" in window) {
-      idleId = window.requestIdleCallback(cb, { timeout: 2000 });
-    } else {
-      idleId = globalThis.setTimeout(cb, 0) as unknown as number;
-    }
-  };
-  if (document.readyState === "complete") run();
-  else window.addEventListener("load", run, { once: true });
-  return () => {
-    window.removeEventListener("load", run);
-    if (idleId === null) return;
-    if ("cancelIdleCallback" in window) window.cancelIdleCallback(idleId);
-    else globalThis.clearTimeout(idleId);
-  };
 }
 
 function prefersNoAutoplay(): boolean {
