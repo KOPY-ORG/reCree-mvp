@@ -32,7 +32,7 @@ export default async function JourneysPage() {
 
       {currentUser && (
         <section className="pt-4">
-          <h2 className="font-bold text-lg px-4 mb-3 lg:px-10">My Journeys</h2>
+          <h2 className="font-bold text-lg px-4 mb-3 lg:px-[var(--page-gutter)]">My Journeys</h2>
           {myCourses.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-3 text-center py-10 px-4">
               <p className="text-base font-semibold">No journeys yet</p>
@@ -47,7 +47,7 @@ export default async function JourneysPage() {
               </Link>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3 px-4 md:grid-cols-3 lg:grid-cols-4 lg:px-10 xl:grid-cols-5">
+            <div className="grid grid-cols-2 gap-3 px-4 md:grid-cols-3 lg:grid-cols-4 lg:px-[var(--page-gutter)] xl:grid-cols-5">
               {myCourses.map((course) => (
                 <CourseCard key={course.id} course={course} isMine />
               ))}
@@ -57,7 +57,7 @@ export default async function JourneysPage() {
       )}
 
       <section className="pt-6">
-        <h2 className="font-bold text-lg px-4 mb-3 lg:px-10">Public Journeys</h2>
+        <h2 className="font-bold text-lg px-4 mb-3 lg:px-[var(--page-gutter)]">Public Journeys</h2>
         {publicCourses.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 text-center py-10 px-4">
             <p className="text-base font-semibold">No public journeys yet</p>
@@ -66,7 +66,7 @@ export default async function JourneysPage() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3 px-4 md:grid-cols-3 lg:grid-cols-4 lg:px-10 xl:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 px-4 md:grid-cols-3 lg:grid-cols-4 lg:px-[var(--page-gutter)] xl:grid-cols-5">
             {publicCourses.map((course) => (
               <CourseCard key={course.id} course={course} />
             ))}

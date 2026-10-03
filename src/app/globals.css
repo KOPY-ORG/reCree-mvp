@@ -219,30 +219,58 @@ html[data-nav-tucked] {
 }
 
 /* lg: 하단 알약이 상단 바(64)로 옮겨 간다. 바닥 여백은 떠 있는 요소가 가장자리에서 띄울 24 만 남긴다. */
-/* 기둥은 1440 넓은 컨테이너가 된다. 좌우 여백 40 = 페이지의 lg:px-6(24) + 콘텐츠 기존 px-4(16). */
 /* 지도 목록 패널은 약 42%, 440~680. 단 지도가 목록보다 좁아지지 않게 절반(간격 24 의 반을 뺀 값)을 넘지 않는다. */
+/* 폭 · 여백 토큰은 docs/design/desktop-redesign-plan.md §3.1 — 기둥은 wide 폭 + 좌우 gutter 에서 멈추고, 페이지가 PageContainer 로 wide · reading · narrow 중 하나를 고른다. */
 @media (min-width: 64rem) {
   :root {
     --bottom-nav-space: 24px;
     --bottom-nav-bottom: 24px;
-    --app-col-w: 1440px;
+    --page-gutter: 32px;
+    --w-wide: 1760px;
+    --w-reading: 1200px;
+    --w-narrow: 42rem;
+    --space-page-top: 32px;
+    --space-section: 48px;
+    --app-col-w: calc(var(--w-wide) + 2 * var(--page-gutter));
     --discover-panel-w: clamp(min(440px, calc(50% - 12px)), 42%, 680px);
   }
   /* 만드는 흐름(편집기)은 PC 에서도 좁은 기둥을 쓴다. data-narrow-layout 요소를 렌더하면 된다 */
   html:has([data-narrow-layout]) {
-    --app-col-w: 42rem;
+    --app-col-w: var(--w-narrow);
   }
   /* 상단 바 높이. 바가 없는 화면(편집기 · 상세 일부)은 0 이라 위가 비지 않는다 */
   html:has([data-main-nav]) {
     --top-nav-space: 64px;
   }
+  /* 안쪽 줄의 px-4(16) 를 더해 좌우 끝선이 gutter 에 온다 */
   .app-header {
     top: var(--top-nav-space);
+    padding-inline: calc(var(--page-gutter) - 1rem);
+  }
+  /* 좁은 기둥(편집기)의 헤더는 화면 폭과 상관없이 기둥 안에서 24 를 유지한다 */
+  html:has([data-narrow-layout]) .app-header {
     padding-inline: 1.5rem;
   }
   /* 아래에서 떠오르는 등장은 하단 알약의 것이다. 위에 붙은 바에는 맞지 않는다 */
   .nav-rise {
     animation: none;
+  }
+}
+
+/* 좌우 여백은 화면이 넓을수록 커진다: 32 (1024) · 40 (1280) · 48 (1440) · 80 (1920) */
+@media (min-width: 80rem) {
+  :root {
+    --page-gutter: 40px;
+  }
+}
+@media (min-width: 90rem) {
+  :root {
+    --page-gutter: 48px;
+  }
+}
+@media (min-width: 120rem) {
+  :root {
+    --page-gutter: 80px;
   }
 }
 

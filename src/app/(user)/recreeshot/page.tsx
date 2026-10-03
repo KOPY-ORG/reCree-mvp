@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { PUBLIC_RECREESHOT_WHERE } from "@/lib/visibility";
 import { HallGrid } from "./_components/HallGrid";
 import { NewReCreeshotFab } from "./_components/NewReCreeshotFab";
+import { PageContainer } from "../_components/PageContainer";
 
 export default async function ReCreeshotPage() {
   const shots = await prisma.reCreeshot.findMany({
@@ -22,9 +23,9 @@ export default async function ReCreeshotPage() {
 
   return (
     <>
-      <div className="px-4 py-4 max-w-2xl mx-auto lg:max-w-none lg:px-10">
+      <PageContainer variant="wide" className="px-4 py-4 max-w-2xl mx-auto">
         <HallGrid shots={hallShots} />
-      </div>
+      </PageContainer>
       <NewReCreeshotFab />
     </>
   );

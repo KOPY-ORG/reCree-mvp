@@ -9,6 +9,7 @@ import type { TagGroupColorMap } from "@/lib/post-labels";
 import { TopicDetailHeader } from "./_components/TopicDetailHeader";
 import { TopicHero } from "./_components/TopicHero";
 import { PostsGrid } from "./_components/PostsGrid";
+import { PageContainer } from "../../_components/PageContainer";
 
 type Params = { slug: string };
 
@@ -92,13 +93,13 @@ export default async function TopicDetailPage({
         isLoggedIn={!!user}
         initialFollowerCount={followerCount}
       />
-      <div className="px-4 py-4 lg:px-10">
+      <PageContainer variant="wide" className="px-4 py-4">
         <PostsGrid
           posts={posts}
           tagGroupMap={tagGroupMap}
           savedPostIds={savedPostIds}
         />
-      </div>
+      </PageContainer>
     </div>
   );
 }

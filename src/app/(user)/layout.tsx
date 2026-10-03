@@ -17,10 +17,11 @@ export default async function UserLayout({
   const user = await getCurrentUser();
 
   return (
-    // lg 의 위 여백은 상단 바 자리다(바가 없는 화면은 0). 기둥은 그 아래 가운데 서는 1440 컨테이너라
-    // 폰 기둥을 구분하던 회색 바탕 · 옆선을 끈다 (편집기의 좁은 기둥은 남긴다 — data-narrow-layout)
+    // lg 의 위 여백은 상단 바 자리다(바가 없는 화면은 0). 기둥은 그 아래 가운데 서는 wide 컨테이너라
+    // 폰 기둥을 구분하던 회색 바탕 · 옆선을 끈다 (편집기의 좁은 기둥은 남긴다 — data-narrow-layout).
+    // 기둥 최소 높이에서 위 여백을 빼야 문서가 화면보다 64 길어지지 않는다 (지도 화면의 이중 스크롤)
     <div className="min-h-[100dvh] bg-muted lg:pt-[var(--top-nav-space)] lg:bg-background lg:has-[[data-narrow-layout]]:bg-muted">
-      <div className="max-w-[var(--app-col-w)] mx-auto bg-background min-h-[100dvh] flex flex-col shadow-[1px_0_0_rgba(0,0,0,0.04),-1px_0_0_rgba(0,0,0,0.04)] lg:shadow-none lg:has-[[data-narrow-layout]]:shadow-[1px_0_0_rgba(0,0,0,0.04),-1px_0_0_rgba(0,0,0,0.04)]">
+      <div className="max-w-[var(--app-col-w)] mx-auto bg-background min-h-[100dvh] lg:min-h-[calc(100dvh-var(--top-nav-space))] flex flex-col shadow-[1px_0_0_rgba(0,0,0,0.04),-1px_0_0_rgba(0,0,0,0.04)] lg:shadow-none lg:has-[[data-narrow-layout]]:shadow-[1px_0_0_rgba(0,0,0,0.04),-1px_0_0_rgba(0,0,0,0.04)]">
         <ActivityTracker />
         <InAppHistoryTracker />
         <ConditionalHeader header={<AppHeader />} savedHeader={<SavedHeader />} shopHeader={<ShopHeader />} />

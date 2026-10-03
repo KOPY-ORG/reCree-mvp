@@ -175,7 +175,7 @@ export function BottomNav({ isLoggedIn, profileImageUrl, hiddenOnMobile = false 
 
       <nav
         aria-label="Main"
-        className="nav-rise mx-auto flex max-w-[var(--app-col-w)] items-center justify-between px-5 lg:h-full lg:justify-start lg:gap-6 lg:px-10"
+        className="nav-rise mx-auto flex max-w-[var(--app-col-w)] items-center justify-between px-5 lg:h-full lg:justify-start lg:gap-6 lg:px-[var(--page-gutter)]"
       >
         {/* DOM 순서(모바일 왼→오)는 그대로 두고 lg 는 order 로 다시 놓는다 — 로고 · 홈/지도 | … | recreeshot · shop · profile */}
         <Pill barClassName="lg:order-3 lg:ml-auto lg:flex-row-reverse">{LEFT_TABS.map(render)}</Pill>

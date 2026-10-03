@@ -134,7 +134,7 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
       {activeTopic && <TopicTabHeader topic={activeTopic} />}
 
       {/* lg: 왼쪽은 흐름 그대로, 오른쪽 300(xl 360) 은 지도 카드. 모바일에서는 아무 스타일 없는 블록이다 */}
-      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-8 lg:px-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-8 lg:px-[calc(var(--page-gutter)-1rem)] xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="lg:min-w-0">
           {isEmpty ? (
             <div className="flex flex-col items-center justify-center gap-2 py-24 text-center px-4">

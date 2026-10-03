@@ -34,7 +34,7 @@ export default function JourneysLoading() {
           className="mx-4 mb-3 h-[18px] w-32 rounded animate-pulse"
           style={{ background: SKELETON_1 }}
         />
-        <div className="grid grid-cols-2 gap-3 px-4 md:grid-cols-3 lg:grid-cols-4 lg:px-10 xl:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 px-4 md:grid-cols-3 lg:grid-cols-4 lg:px-[var(--page-gutter)] xl:grid-cols-5">
           {CARD_TONES.map((tone, i) => (
             <CardSkeleton key={i} tone={tone} />
           ))}

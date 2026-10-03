@@ -5,6 +5,7 @@ import type { ShopPostItem } from "@/lib/post-queries";
 import type { TagGroupColorMap } from "@/lib/post-labels";
 import { SHOP_TAG_GROUPS, SHOP_GROUP_LABELS, type ShopTagGroup } from "../_constants";
 import { ShopCard } from "./ShopCard";
+import { PageContainer } from "../../_components/PageContainer";
 
 type ShopTag = { id: string; name: string; group: string };
 type TagGroupConfigRow = {
@@ -73,7 +74,7 @@ export function ShopClient({ posts, shopTags, tagGroupConfigs }: Props) {
       </div>
 
       {/* 태그 칩 */}
-      <div className="flex gap-2 overflow-x-auto px-4 py-3 lg:px-10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex gap-2 overflow-x-auto px-4 py-3 lg:px-[var(--page-gutter)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <button
           type="button"
           onClick={() => setSelectedTagId(null)}
@@ -98,7 +99,7 @@ export function ShopClient({ posts, shopTags, tagGroupConfigs }: Props) {
       </div>
 
       {/* 2열 그리드 */}
-      <div className="px-4 pb-8 lg:px-10">
+      <PageContainer variant="wide" className="px-4 pb-8">
         {filteredPosts.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-[40vh] text-center">
             <p className="text-sm text-muted-foreground">No products yet</p>
@@ -110,7 +111,7 @@ export function ShopClient({ posts, shopTags, tagGroupConfigs }: Props) {
             ))}
           </div>
         )}
-      </div>
+      </PageContainer>
     </div>
   );
 }
